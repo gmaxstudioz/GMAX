@@ -1,52 +1,71 @@
 import { z } from "zod";
+import { ServiceSchema } from "./service.schema";
+import { MemberSchema, StudioSchema } from "./studio.schema";
+import { ClientSchema } from "./client.schema";
+import { PaymentSchema } from "./payment.schema";
+import { PhotoSchema } from "./photo.schema";
 
-export const BookingStatusEnum = z.enum([
-    "PENDING",
-    "CONFIRMED",
-    "COMPLETED",
-    "CANCELLED"
-], {message: "Invalid booking status"});
-
-
-export const PaymentStatusEnum = z.enum([
-    "PENDING",
-    "CANCELLED",
-    "PAID",
-    "PARTIALLY_PAID",
-], {message: "Invalid payment status"});
-
-
-export const DeliveryStatusEnum = z.enum([
-    "PENDING",
-    "DELIVERED",
-    "CANCELLED"
-], {message: "Invalid delivery status"});
+// ─── Enums ────────────────────────────────────────────────────────────────────
+ 
+export const BookingStatusEnum = z.enum(["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"]);
+export const PaymentStatusEnum = z.enum(["PENDING", "PAID", "PARTIALLY_PAID", "CANCELLED"]);
+export const DeliveryStatusEnum = z.enum(["PENDING", "DELIVERED", "CANCELLED"]);
+ 
+export type BookingStatus = z.infer<typeof BookingStatusEnum>;
+export type PaymentStatus = z.infer<typeof PaymentStatusEnum>;
+export type DeliveryStatus = z.infer<typeof DeliveryStatusEnum>;
 
 
+
+// ─── Booking ──────────────────────────────────────────────────────────────────
+ 
 export const BookingSchema = z.object({
-    bookingDate:    z.date(),
-    sessionCount:   z.number().min(1, "At least 1 session must be booked"),
-    notes:          z.string().optional(),
-    
-    bookingStatus:  BookingStatusEnum,
-    paymentStatus:  PaymentStatusEnum,
-    deliveryStatus: DeliveryStatusEnum,
-
-    serviceId:      z.string(),
-    studioId:       z.string(),
-    clientId:       z.string(),
-    memberId:       z.string(),
-    createdBy:      z.string(),
+  id: z.string(),
+  bookingDate: z.coerce.date(),
+  sessionCount: z.number().int().positive().default(1),
+  notes: z.string().nullable().optional(),
+  bookingStatus: BookingStatusEnum.default("PENDING"),
+  paymentStatus: PaymentStatusEnum.default("PENDING"),
+  deliveryStatus: DeliveryStatusEnum.default("PENDING"),
+  serviceId: z.string(),
+  studioId: z.string(),
+  clientId: z.string(),
+  createdBy: z.string(),
+  memberId: z.string(),
+ 
+  /** IDs of addon services attached to this booking */
+  addonIds: z.array(z.string()).optional(),
+ 
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
 });
-
+ 
 export const CreateBookingSchema = BookingSchema.omit({
-    createdBy: true,
-    studioId: true,
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  bookingStatus: true,
+  paymentStatus: true,
+  deliveryStatus: true,
 }).extend({
-    addonIds: z.array(z.string()).optional(),
+  bookingStatus: BookingStatusEnum.default("PENDING").optional(),
+  paymentStatus: PaymentStatusEnum.default("PENDING").optional(),
+  deliveryStatus: DeliveryStatusEnum.default("PENDING").optional(),
 });
-
-export type CreateBookingInput = z.infer<typeof CreateBookingSchema>;
+ 
+export const UpdateBookingSchema = CreateBookingSchema.partial();
+ 
+/** Used for status-only transitions (e.g., confirm, cancel, deliver) */
+export const BookingStatusUpdateSchema = z.object({
+  bookingStatus: BookingStatusEnum.optional(),
+  paymentStatus: PaymentStatusEnum.optional(),
+  deliveryStatus: DeliveryStatusEnum.optional(),
+});
+ 
+export type BookingType = z.infer<typeof BookingSchema>;
+export type CreateBookingType = z.infer<typeof CreateBookingSchema>;
+export type UpdateBookingType = z.infer<typeof UpdateBookingSchema>;
+export type BookingStatusUpdate = z.infer<typeof BookingStatusUpdateSchema>;
 
 export const PendingMoveSchema = z.object({
     bookingId: z.string(),
@@ -60,12 +79,13 @@ export const BookingPerDaySchema = z.object({
     isCurrentMonth: z.boolean(),
 });
 
-export const UpdateBookingSchema = BookingSchema.partial().extend({
-    addonIds: z.array(z.string()).optional(),
-});
-export type UpdateBookingInput = z.infer<typeof UpdateBookingSchema>;
+// Public Booking Schema
 
-export const PublicBookingSchema = z.object({
+export const PublicBookingSchema = BookingSchema.omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+}).extend({
     clientName: z.string().min(2, "Name must be at least 2 characters"),
     clientPhone: z.string().optional(),
     clientEmail: z.email("Invalid email address").optional(),
@@ -83,9 +103,6 @@ export const PublicBookingSchema = z.object({
 export type PublicBookingInput = z.infer<typeof PublicBookingSchema>;
 
 export type Booking         = z.infer<typeof BookingSchema>;
-export type BookingStatus   = z.infer<typeof BookingStatusEnum>;
-export type PaymentStatus   = z.infer<typeof PaymentStatusEnum>;
-export type DeliveryStatus  = z.infer<typeof DeliveryStatusEnum>;
 export type PendingMove     = z.infer<typeof PendingMoveSchema>;
 export type BookingPerDay   = z.infer<typeof BookingPerDaySchema>;
 
@@ -120,35 +137,6 @@ export const UpdateBookingStatusSchema = z.object({
     studioId:       z.string().min(1, "Studio ID is required"),
 });
 export type UpdateBookingStatusInput = z.infer<typeof UpdateBookingStatusSchema>;
-
-// Upload Booking Photo Schema
-export const UploadBookingPhotoSchema = z.object({
-    bookingId: z.string().min(1, "Booking ID is required"),
-    r2Key: z.string().min(1, "R2 key is required"),
-    fileName: z.string().min(1, "File name is required"),
-    fileSize: z.number().min(1, "File size is required"),
-    mimeType: z.string().min(1, "Mime type is required"),
-});
-export type UploadBookingPhotoInput = z.infer<typeof UploadBookingPhotoSchema>;
-
-// Approve Photo Schema
-export const ApprovePhotoSchema = z.object({
-    photoId: z.string().min(1, "Photo ID is required"),
-});
-export type ApprovePhotoInput = z.infer<typeof ApprovePhotoSchema>;
-
-// Reject Photo Schema
-export const RejectPhotoSchema = z.object({
-    photoId: z.string().min(1, "Photo ID is required"),
-    reason: z.string().optional(),
-});
-export type RejectPhotoInput = z.infer<typeof RejectPhotoSchema>;
-
-// Delete Photo Schema
-export const DeletePhotoSchema = z.object({
-    photoId: z.string().min(1, "Photo ID is required"),
-});
-export type DeletePhotoInput = z.infer<typeof DeletePhotoSchema>;
 
 // Delete booking schema
 export const DeleteBookingSchema = z.object({
