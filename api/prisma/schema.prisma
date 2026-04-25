@@ -1,0 +1,413 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String       @id
+  name          String
+  email         String
+  emailVerified Boolean      @default(false)
+  image         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  members       Member[]
+  invitations   Invitation[]
+  bookings      Booking[]
+  payments      Payment[]
+  photos        Photo[]
+
+  phoneNumber         String?
+  phoneNumberVerified Boolean?
+
+  @@unique([email])
+  @@unique([phoneNumber])
+  @@map("user")
+}
+
+model Session {
+  id                   String   @id
+  expiresAt            DateTime
+  token                String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  ipAddress            String?
+  userAgent            String?
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeOrganizationId String?
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model Studio {
+  id             String          @id @default(uuid())
+  name           String
+  slug           String
+  logo           String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  metadata       Json?
+  members        Member[]
+  invitations    Invitation[]
+  categories     Category[]
+  studioSessions StudioSession[]
+  clients        Client[]
+  bookings       Booking[]
+  roles          Role[]
+
+  @@unique([slug])
+  @@map("studio")
+}
+
+model Role {
+  id         String   @id
+  studio     Studio   @relation(fields: [studioId], references: [id])
+  studioId   String
+  role       String
+  permission String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("table")
+}
+
+model StudioSession {
+  id        String    @id
+  name      String
+  duration  Int       @default(45)
+  studioId  String    @map("studioId")
+  studio    Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  services  Service[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([studioId])
+  @@map("studioSession")
+}
+
+model Member {
+  id        String    @id
+  studioId  String    @map("studioId")
+  studio    Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String    @default("member")
+  createdAt DateTime
+  bookings  Booking[]
+
+  @@index([studioId])
+  @@index([userId])
+  @@map("member")
+}
+
+model Invitation {
+  id        String   @id
+  studioId  String   @map("studioId")
+  studio    Studio   @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  email     String
+  role      String?
+  status    String   @default("pending")
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  inviterId String
+  user      User     @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([studioId])
+  @@index([email])
+  @@map("invitation")
+}
+
+model Service {
+  id              String        @id
+  name            String
+  type            String
+  description     String
+  features        String[]
+  price           Float
+  salePrice       Float?
+  bookings        Booking[]
+  addonBookings   Booking[]     @relation("BookingAddons")
+  categoryId      String
+  category        Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  studioSessionId String        @map("studioSessionId")
+  studioSession   StudioSession @relation(fields: [studioSessionId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([categoryId])
+  @@map("service")
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  name      String
+  type      String
+  services  Service[]
+  studioId  String    @map("studioId")
+  studio    Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([studioId])
+  @@map("category")
+}
+
+model Client {
+  id        String    @id @default(uuid())
+  name      String
+  phone     String[]  @unique
+  email     String?   @unique
+  address   String?
+  image     String?
+  notes     String?   @db.Text
+  type      String
+  bookings  Booking[]
+  
+  studioId  String    @map("studioId")
+  studio    Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([studioId])
+  @@map("client")
+}
+
+model Booking {
+  id String @id @default(uuid())
+
+  bookingDate DateTime
+  sessionCount  Int      @default(1)
+  notes       String?  @db.Text
+
+  bookingStatus  BookingStatus  @default(PENDING)
+  paymentStatus  PaymentStatus  @default(PENDING)
+  deliveryStatus DeliveryStatus @default(PENDING)
+
+  payments Payment[]
+  photos   Photo[]
+  addons   Service[] @relation("BookingAddons")
+
+  serviceId String  @map("serviceId")
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  studioId  String  @map("studioId")
+  studio    Studio  @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  clientId  String  @map("clientId")
+  client    Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdBy String  @map("userId")
+  creator   User    @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  memberId  String
+  member    Member  @relation(fields: [memberId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studioId])
+  @@index([clientId])
+  @@map("booking")
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  PARTIALLY_PAID
+  CANCELLED
+}
+
+enum DeliveryStatus {
+  PENDING
+  DELIVERED
+  CANCELLED
+}
+
+model Payment {
+  id String @id @default(uuid())
+
+  amount Decimal       @db.Decimal(10, 2)
+  method PaymentMethod @default(CASH)
+  status PaymentStatus @default(PENDING)
+
+  // Paystack Integration
+  paystackReference String? @unique
+  paystackResponse  Json?
+
+  // Receipt
+  receiptNumber String  @unique
+  receiptUrl    String?
+
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  // Recorded By
+  recordedById String
+  recordedBy   User   @relation(fields: [recordedById], references: [id])
+
+  paymentDate DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([bookingId])
+  @@index([status])
+  @@index([paymentDate])
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  POS
+}
+
+enum PhotoApprovalStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+model Photo {
+  id String @id @default(cuid())
+
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  // R2 Storage
+  r2Key        String
+  fileName     String
+  fileSize     Int
+  mimeType     String
+  thumbnailKey String?
+
+  uploadedAt DateTime @default(now())
+  expiresAt  DateTime // 30 days from upload
+
+  downloaded    Boolean   @default(false)
+  downloadedAt  DateTime?
+  downloadCount Int       @default(0)
+
+  // Approval workflow
+  approvalStatus  PhotoApprovalStatus @default(PENDING_REVIEW)
+  rejectionReason String?
+  approvedAt      DateTime?
+  approvedById    String?
+
+  uploadedById String
+  uploadedBy   User   @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([expiresAt])
+  @@index([approvalStatus])
+}
+
+model Notification {
+  id String @id @default(cuid())
+
+  clientPhone String
+  clientEmail String
+  clientName  String
+
+  type    NotificationType
+  message String                @db.Text
+  channel NotificationChannel[]
+
+  status       NotificationStatus @default(PENDING)
+  sentAt       DateTime?
+  deliveredAt  DateTime?
+  errorMessage String?            @db.Text
+
+  bookingId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([status])
+  @@index([bookingId])
+  @@index([sentAt])
+}
+
+enum NotificationType {
+  BOOKING_CONFIRMATION
+  PAYMENT_REMINDER
+  PHOTOS_READY
+  PHOTOS_EXPIRING
+  STAFF_INVITATION
+}
+
+enum NotificationChannel {
+  SMS
+  WHATSAPP
+  EMAIL
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model Product {
+  id           String   @id @default(cuid())
+  title        String
+  description  String   @db.Text
+  price        Float
+  salePrice    Float?
+  
+  r2Key        String?
+  fileName     String?
+  fileSize     Int?
+  mimeType     String?
+  thumbnailKey String?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("product")
+}
