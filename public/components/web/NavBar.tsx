@@ -8,11 +8,12 @@ import { buttonVariants } from "../ui/button";
 import { ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import Magnetic from "../ui/magnetic";
 
 const navLinks = [
     { href: "/", label: "Home" },
     { href: "/about", label: "About" },
-    { href: "/work", label: "Our Work" },
+    { href: "/works", label: "Our Work" },
     { href: "/shop", label: "Shop" },
 ];
 
@@ -128,15 +129,17 @@ export default function NavBar() {
 
                 {/* Desktop CTA */}
                 {!isMobile && (
-                    <Link
-                        href="/contact"
-                        className={cn("inline-flex items-center gap-2")}
-                    >
-                        <span className={buttonVariants({ variant: "default", size: "lg" })}>Book Us</span>
-                        <span className={buttonVariants({ variant: "default", size: "icon-lg" })}>
-                            <ArrowUpRight size={20} />
-                        </span>
-                    </Link>
+                    <Magnetic>
+                        <Link
+                            href="/book"
+                            className={cn("inline-flex items-center gap-2")}
+                        >
+                            <span className={buttonVariants({ variant: "default", size: "lg" })}>Book Us</span>
+                            <span className={buttonVariants({ variant: "default", size: "icon-lg" })}>
+                                <ArrowUpRight size={20} />
+                            </span>
+                        </Link>
+                    </Magnetic>
                 )}
 
                 {/* Mobile hamburger – custom 3-bar icon for GSAP morphing */}
@@ -179,16 +182,18 @@ export default function NavBar() {
                             {link.label}
                         </Link>
                     ))}
-                    <Link
-                        href="/contact"
-                        className={cn("mobile-nav-link inline-flex items-center gap-2 mt-2")}
-                        onClick={handleLinkClick}
-                    >
-                        <span className={buttonVariants({ variant: "default", size: "lg" })}>Book Us</span>
-                        <span className={buttonVariants({ variant: "default", size: "icon-lg" })}>
-                            <ArrowUpRight size={20} />
-                        </span>
-                    </Link>
+                    <Magnetic>
+                        <Link
+                            href="/contact"
+                            className={cn("mobile-nav-link inline-flex items-center gap-2 mt-2")}
+                            onClick={handleLinkClick}
+                        >
+                            <span className={buttonVariants({ variant: "default", size: "lg" })}>Book Us</span>
+                            <span className={buttonVariants({ variant: "default", size: "icon-lg" })}>
+                                <ArrowUpRight size={20} />
+                            </span>
+                        </Link>
+                    </Magnetic>
                 </nav>
             )}
         </header>

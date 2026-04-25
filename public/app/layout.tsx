@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 import NavBar from "@/components/web/NavBar";
 import { ThemeProvider } from "@/components/web/theme-provider";
 
+import Footer from "@/components/web/Footer";
+
 const playfairDisplayHeading = Playfair_Display({subsets:['latin'],variable:'--font-heading'});
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
@@ -44,6 +46,7 @@ export default function RootLayout({
           >
             <NavBar />
             {children}
+            <Footer />
           </ThemeProvider>
       </body>
     </html>
