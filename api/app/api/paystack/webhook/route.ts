@@ -2,20 +2,31 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 
-const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || "";
+const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY!;
+
+if (!PAYSTACK_SECRET) {
+    throw new Error("PAYSTACK_SECRET_KEY is not configured");
+}
 
 export async function POST(req: Request) {
     try {
         const body = await req.text();
 
-        // Verify HMAC signature
+                // Verify HMAC signature (constant-time)
         const signature = req.headers.get("x-paystack-signature");
+        if (!signature) {
+            return NextResponse.json({ error: "Missing signature" }, { status: 401 });
+        }
         const hash = crypto
             .createHmac("sha512", PAYSTACK_SECRET)
             .update(body)
             .digest("hex");
-
-        if (signature !== hash) {
+        const sigBuf = Buffer.from(signature, "hex");
+        const hashBuf = Buffer.from(hash, "hex");
+        if (
+            sigBuf.length !== hashBuf.length ||
+            !crypto.timingSafeEqual(sigBuf, hashBuf)
+        ) {
             return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
         }
 

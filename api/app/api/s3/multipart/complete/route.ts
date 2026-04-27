@@ -1,6 +1,8 @@
 import { CompleteMultipartUploadCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from "next/server";
 import { S3 } from "@/lib/S3Client";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import z from "zod";
 
 const schema = z.object({
@@ -16,6 +18,12 @@ const schema = z.object({
 
 export async function POST(req: Request) {
     try {
+        // ── 1. Authentication ──────────────────────────────────────────
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (!session?.user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         const body = await req.json();
         const validation = schema.safeParse(body);
 
