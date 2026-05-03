@@ -51,6 +51,10 @@ export const CreateBookingSchema = BookingSchema.omit({
   bookingStatus: BookingStatusEnum.default("PENDING").optional(),
   paymentStatus: PaymentStatusEnum.default("PENDING").optional(),
   deliveryStatus: DeliveryStatusEnum.default("PENDING").optional(),
+
+  // Optional for public bookings — resolved server-side to the studio owner/default member
+  createdBy: z.string().optional(),
+  memberId: z.string().optional(),
 });
  
 export const UpdateBookingSchema = CreateBookingSchema.partial();
@@ -143,3 +147,8 @@ export const DeleteBookingSchema = z.object({
     bookingId: z.string().min(1, "Booking ID is required"),
 });
 export type DeleteBookingInput = z.infer<typeof DeleteBookingSchema>;
+
+export const GetBookingSchema = z.object({
+    bookingId: z.string().min(1, "Booking ID is required"),
+});
+export type GetBookingInput = z.infer<typeof GetBookingSchema>;

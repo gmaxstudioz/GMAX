@@ -58,3 +58,9 @@ export type UpdateService = z.infer<typeof UpdateServiceSchema>;
 
 export type CategoryPayload = z.infer<typeof CategorySchema>;
 export type ServicePayload = z.infer<typeof ServiceSchema>;
+
+// Delete service schema
+export const DeleteServiceSchema = z.object({
+    serviceId: z.string().min(1, "Service ID is required"),
+});
+export type DeleteServiceInput = z.infer<typeof DeleteServiceSchema>;
