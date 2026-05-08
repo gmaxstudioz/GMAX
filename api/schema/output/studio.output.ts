@@ -35,6 +35,44 @@ export const StudioSummaryOutputSchema = StudioOutputSchema.extend({
 
 export const StudioListOutputSchema = PaginatedOutput(StudioSummaryOutputSchema);
 
+export const PublicServiceOutputSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    type: z.string(),
+    description: z.string(),
+    features: z.array(z.string()),
+    price: z.number(),
+    salePrice: z.number().nullable(),
+});
+
+export const PublicCategoryOutputSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    type: z.string(),
+    services: z.array(PublicServiceOutputSchema),
+});
+
+export const PublicStudioSessionOutputSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    duration: z.number(),
+});
+
+export const PublicStudioOutputSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    slug: z.string(),
+    logo: z.string().nullable(),
+    metadata: z.record(z.string(), z.unknown()).nullable(),
+    createdAt: z.iso.datetime(),
+    updatedAt: z.iso.datetime(),
+    categories: z.array(PublicCategoryOutputSchema),
+    studioSessions: z.array(PublicStudioSessionOutputSchema),
+    addons: z.array(PublicServiceOutputSchema),
+});
+
+export type PublicStudioOutput = z.infer<typeof PublicStudioOutputSchema>;
+
 // ─── Member Output ────────────────────────────────────────────────────────────
 
 export const MemberOutputSchema = z.object({

@@ -29,8 +29,10 @@ export const PaystackInitOutputSchema = z.object({
   reference: z.string(),
 });
 
+export const PaystackWebhookOutputSchema = z.object({ received: z.boolean() });
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type PaymentOutput = z.infer<typeof PaymentOutputSchema>;
 export type PaymentListOutput = z.infer<typeof PaymentListOutputSchema>;
 export type PaystackInitOutput = z.infer<typeof PaystackInitOutputSchema>;
+export type PaystackWebhookOutput = z.infer<typeof PaystackWebhookOutputSchema>;

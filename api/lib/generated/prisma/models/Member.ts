@@ -326,9 +326,9 @@ export type MemberMinOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
 }
 
-export type MemberScalarRelationFilter = {
-  is?: Prisma.MemberWhereInput
-  isNot?: Prisma.MemberWhereInput
+export type MemberNullableScalarRelationFilter = {
+  is?: Prisma.MemberWhereInput | null
+  isNot?: Prisma.MemberWhereInput | null
 }
 
 export type MemberCreateNestedManyWithoutUserInput = {
@@ -421,10 +421,12 @@ export type MemberCreateNestedOneWithoutBookingsInput = {
   connect?: Prisma.MemberWhereUniqueInput
 }
 
-export type MemberUpdateOneRequiredWithoutBookingsNestedInput = {
+export type MemberUpdateOneWithoutBookingsNestedInput = {
   create?: Prisma.XOR<Prisma.MemberCreateWithoutBookingsInput, Prisma.MemberUncheckedCreateWithoutBookingsInput>
   connectOrCreate?: Prisma.MemberCreateOrConnectWithoutBookingsInput
   upsert?: Prisma.MemberUpsertWithoutBookingsInput
+  disconnect?: Prisma.MemberWhereInput | boolean
+  delete?: Prisma.MemberWhereInput | boolean
   connect?: Prisma.MemberWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.MemberUpdateToOneWithWhereWithoutBookingsInput, Prisma.MemberUpdateWithoutBookingsInput>, Prisma.MemberUncheckedUpdateWithoutBookingsInput>
 }

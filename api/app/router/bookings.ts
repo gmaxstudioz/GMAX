@@ -1,7 +1,10 @@
-import { contract } from "@/contract";
+import { contract } from "@/app/contract";
 import { prisma } from "@/lib/prisma";
 import { implement } from "@orpc/server";
 import { optionalAuthMiddleware, authMiddleware, BaseContext } from "./middleware";
+import { calculateGrandTotal } from "@/lib/pricing";
+import { v4 as uuidv4 } from "uuid";
+import { paystackFetch } from "@/lib/paystack";
 
 const os = implement(contract).$context<BaseContext>();
 
@@ -9,11 +12,9 @@ const mapBookingToOutput = (data: any) => {
     const totalPaid = data.payments
         .filter((p: any) => p.status === "PAID")
         .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
-    
-    const servicePrice = data.service.salePrice ?? data.service.price ?? 0;
-    const addonsTotal = data.addons.reduce((sum: number, a: any) => sum + (a.salePrice ?? a.price ?? 0), 0);
-    const grandTotal = (servicePrice * data.sessionCount) + addonsTotal;
-    const balanceDue = grandTotal - totalPaid;
+
+        const grandTotal = calculateGrandTotal(data.service, data.addons, data.sessionCount);
+        const balanceDue = grandTotal - totalPaid;
 
     return {
         id: data.id,
@@ -98,9 +99,7 @@ const mapBookingSummaryToOutput = (data: any) => {
         .filter((p: any) => p.status === "PAID")
         .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
     
-    const servicePrice = data.service.salePrice ?? data.service.price ?? 0;
-    const addonsTotal = data.addons.reduce((sum: number, a: any) => sum + (a.salePrice ?? a.price ?? 0), 0);
-    const grandTotal = (servicePrice * data.sessionCount) + addonsTotal;
+    const grandTotal = calculateGrandTotal(data.service, data.addons, data.sessionCount);
     const balanceDue = grandTotal - totalPaid;
 
     return {
@@ -193,7 +192,7 @@ export const createBookings = os.booking.create.use(optionalAuthMiddleware).hand
     },
 );
 
-export const getBookingById = os.booking.getById.use(authMiddleware).handler(
+export const getBookingById = os.booking.getById.use(optionalAuthMiddleware).handler(
     async ({ input, context, errors }) => {
         const data = await prisma.booking.findUnique({
             where: { id: input.bookingId },
@@ -366,3 +365,183 @@ export const updateBookingStatus = os.booking.updateStatus.use(authMiddleware).h
         return mapBookingToOutput(data);
     }
 );
+
+function generateReceiptNumber(): string {
+    return `RCP-${Date.now()}-${uuidv4().slice(0, 8).toUpperCase()}`;
+}
+
+export const createPublicBooking = os.booking.createPublic
+    .use(optionalAuthMiddleware)
+    .handler(async ({ input, errors }) => {
+        const studio = await prisma.studio.findUnique({
+            where: { id: input.studioId },
+            include: { members: true },
+        });
+        if (!studio) throw errors.NOT_FOUND({
+            data: { resourceType: "Studio", resourceId: input.studioId },
+        });
+
+        // Duplicate booking guard
+        if (input.existingClientId) {
+            const recentDuplicate = await prisma.booking.findFirst({
+                where: {
+                    studioId: input.studioId,
+                    clientId: input.existingClientId,
+                    serviceId: input.selectedServiceId,
+                    bookingStatus: "PENDING",
+                    createdAt: { gte: new Date(Date.now() - 5 * 60 * 1000) },
+                },
+            });
+            if (recentDuplicate) throw errors.BAD_REQUEST({
+                message: "A booking for this service was already submitted recently.",
+            });
+        }
+
+        // Resolve client
+        let clientId = input.existingClientId;
+
+        if (!clientId) {
+            const phones = input.clientPhone!
+                .split(",")
+                .map((p) => p.trim())
+                .filter(Boolean);
+
+            const client = await prisma.client.create({
+                data: {
+                    name: input.clientName,
+                    phone: phones,
+                    email: input.clientEmail ?? null,
+                    type: "regular",
+                    studioId: input.studioId,
+                },
+            });
+            clientId = client.id;
+        }
+
+        const defaultMember =
+            studio.members.find((m) => m.role === "owner") ?? studio.members[0];
+        if (!defaultMember) throw errors.BAD_REQUEST({
+            message: "No available staff member",
+        });
+
+        const [y, mo, d] = input.bookingDate.split("-").map(Number);
+        const bookingDateUTC = new Date(Date.UTC(y, mo - 1, d));
+
+        const booking = await prisma.booking.create({
+            data: {
+                bookingDate: bookingDateUTC,
+                sessionCount: input.sessionCount,
+                notes: input.notes ?? null,
+                bookingStatus: "PENDING",
+                paymentStatus: "PENDING",
+                deliveryStatus: "PENDING",
+                serviceId: input.selectedServiceId,
+                studioId: input.studioId,
+                clientId,
+                memberId: defaultMember.id,
+                createdBy: defaultMember.userId,
+                addons: input.selectedAddonIds?.length
+                    ? { connect: input.selectedAddonIds.map((id) => ({ id })) }
+                    : undefined,
+            },
+            include: { service: true, addons: true, client: true },
+        });
+
+        const grandTotal = calculateGrandTotal(
+            booking.service,
+            booking.addons,
+            booking.sessionCount,
+        );
+
+        const reference = `gmax-pub-${uuidv4().slice(0, 8)}`;
+        const receiptNumber = generateReceiptNumber();
+
+        await prisma.payment.create({
+            data: {
+                amount: grandTotal,
+                method: "TRANSFER",
+                status: "PENDING",
+                paystackReference: reference,
+                receiptNumber,
+                bookingId: booking.id,
+                recordedById: defaultMember.userId,
+            },
+        });
+
+        const clientEmail = input.clientEmail ?? booking.client?.email;
+
+        if (!clientEmail) {
+            console.warn(
+                `[PublicBooking] No email for booking ${booking.id} — Paystack init skipped.`,
+            );
+            return {
+                bookingId: booking.id,
+                paymentUrl: null,
+                reference,
+                amount: grandTotal,
+                warning: "No email provided — payment link must be sent manually.",
+            };
+        }
+
+        try {
+            const paystackRes = await paystackFetch<{
+                data: { authorization_url: string; reference: string };
+            }>("/transaction/initialize", {
+                method: "POST",
+                body: JSON.stringify({
+                    email: clientEmail,
+                    amount: Math.round(grandTotal * 100),
+                    reference,
+                    currency: "NGN",
+                    callback_url: `${process.env.PORTAL_URL}/pay/${reference}?status=success`,
+                    metadata: {
+                        booking_id: booking.id,
+                        studio_name: studio.name,
+                    },
+                }),
+            });
+
+            return {
+                bookingId: booking.id,
+                paymentUrl: paystackRes.data.authorization_url,
+                reference: paystackRes.data.reference,
+                amount: grandTotal,
+            };
+        } catch (e) {
+            console.error("[PublicBooking] Paystack init failed:", e);
+            return {
+                bookingId: booking.id,
+                paymentUrl: null,
+                reference,
+                amount: grandTotal,
+                warning: "Payment link could not be generated. Please contact the studio.",
+            };
+        }
+    });
+
+export const checkClient = os.booking.checkClient
+    .use(optionalAuthMiddleware)
+    .handler(async ({ input }) => {
+        const existing = await prisma.client.findFirst({
+            where: {
+                studioId: input.studioId,
+                name: { equals: input.name, mode: "insensitive" },
+                email: { equals: input.email, mode: "insensitive" },
+            },
+            select: { id: true, name: true, phone: true },
+        });
+
+        if (!existing) return { exists: false as const };
+
+        const firstPhone = existing.phone[0] ?? "";
+        const digitsOnly = firstPhone.replace(/\D/g, "");
+        const maskedPhone = digitsOnly.length >= 6
+            ? digitsOnly.replace(/^(\d{3}).*(\d{3})$/, "$1****$2")
+            : null;
+
+        return {
+            exists: true as const,
+            client: { id: existing.id, name: existing.name, maskedPhone },
+        };
+    });
+

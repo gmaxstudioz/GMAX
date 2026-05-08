@@ -114,7 +114,7 @@ model Role {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  @@map("table")
+  @@map("role")
 }
 
 model StudioSession {
@@ -199,20 +199,20 @@ model Category {
 }
 
 model Client {
-  id        String    @id @default(uuid())
-  name      String
-  phone     String[]  @unique
-  email     String?   @unique
-  address   String?
-  image     String?
-  notes     String?   @db.Text
-  type      String
-  bookings  Booking[]
-  
-  studioId  String    @map("studioId")
-  studio    Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id       String    @id @default(uuid())
+  name     String
+  phone    String[]  @unique
+  email    String?   @unique
+  address  String?
+  image    String?
+  notes    String?   @db.Text
+  type     String
+  bookings Booking[]
+
+  studioId  String   @map("studioId")
+  studio    Studio   @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([studioId])
   @@map("client")
@@ -221,9 +221,9 @@ model Client {
 model Booking {
   id String @id @default(uuid())
 
-  bookingDate DateTime
-  sessionCount  Int      @default(1)
-  notes       String?  @db.Text
+  bookingDate  DateTime
+  sessionCount Int      @default(1)
+  notes        String?  @db.Text
 
   bookingStatus  BookingStatus  @default(PENDING)
   paymentStatus  PaymentStatus  @default(PENDING)
@@ -241,8 +241,8 @@ model Booking {
   client    Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
   createdBy String  @map("userId")
   creator   User    @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  memberId  String
-  member    Member  @relation(fields: [memberId], references: [id])
+  memberId  String?
+  member    Member?  @relation(fields: [memberId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -279,20 +279,19 @@ model Payment {
   method PaymentMethod @default(CASH)
   status PaymentStatus @default(PENDING)
 
-  // Paystack Integration
   paystackReference String? @unique
   paystackResponse  Json?
 
-  // Receipt
   receiptNumber String  @unique
   receiptUrl    String?
 
-  bookingId String
-  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
-  // Recorded By
-  recordedById String
-  recordedBy   User   @relation(fields: [recordedById], references: [id])
+  productAccess   ProductAccess? @relation("ProductAccessPayment")
+
+  recordedById String?
+  recordedBy   User?   @relation(fields: [recordedById], references: [id])
 
   paymentDate DateTime @default(now())
   createdAt   DateTime @default(now())
@@ -393,21 +392,97 @@ enum NotificationStatus {
   FAILED
 }
 
+model ProductCategory {
+  id   String @id @default(cuid())
+  name String @unique
+  slug String @unique
+
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("product_category")
+}
+
 model Product {
-  id           String   @id @default(cuid())
-  title        String
-  description  String   @db.Text
-  price        Float
-  salePrice    Float?
-  
+  id          String @id @default(cuid())
+  title       String
+  description String @db.Text
+  price       Float
+  salePrice   Float?
+
+  categoryId String?
+  category   ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
   r2Key        String?
   fileName     String?
   fileSize     Int?
   mimeType     String?
   thumbnailKey String?
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  isPublished Boolean         @default(false)
+  purchases   ProductAccess[]
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
   @@map("product")
+}
+
+model Buyer {
+  id    String @id @default(cuid())
+  name  String
+  phone String @unique
+  email String @unique
+
+  purchases    ProductAccess[]
+  accessTokens BuyerAccessToken[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("buyer")
+}
+
+model BuyerAccessToken {
+  id String @id @default(cuid())
+
+  buyerId String
+  buyer   Buyer  @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([buyerId])
+  @@index([token])
+  @@map("buyer_access_token")
+}
+
+model ProductAccess {
+  id String @id @default(cuid())
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  buyerId String
+  buyer   Buyer  @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+
+  paymentId String? @unique
+  payment   Payment? @relation("ProductAccessPayment", fields: [paymentId], references: [id])
+
+  downloadCount  Int       @default(0)
+  lastDownloadAt DateTime?
+  expiresAt      DateTime?
+
+  grantedAt DateTime @default(now())
+
+  @@unique([productId, buyerId])
+  @@index([buyerId])
+  @@index([productId])
+  @@map("product_access")
 }

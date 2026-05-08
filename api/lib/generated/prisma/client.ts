@@ -121,3 +121,28 @@ export type Photo = Prisma.PhotoModel
  * 
  */
 export type Notification = Prisma.NotificationModel
+/**
+ * Model ProductCategory
+ * 
+ */
+export type ProductCategory = Prisma.ProductCategoryModel
+/**
+ * Model Product
+ * 
+ */
+export type Product = Prisma.ProductModel
+/**
+ * Model Buyer
+ * 
+ */
+export type Buyer = Prisma.BuyerModel
+/**
+ * Model BuyerAccessToken
+ * 
+ */
+export type BuyerAccessToken = Prisma.BuyerAccessTokenModel
+/**
+ * Model ProductAccess
+ * 
+ */
+export type ProductAccess = Prisma.ProductAccessModel

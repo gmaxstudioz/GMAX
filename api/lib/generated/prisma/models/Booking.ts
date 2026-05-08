@@ -245,7 +245,7 @@ export type BookingGroupByOutputType = {
   studioId: string
   clientId: string
   createdBy: string
-  memberId: string
+  memberId: string | null
   createdAt: Date
   updatedAt: Date
   _count: BookingCountAggregateOutputType | null
@@ -285,7 +285,7 @@ export type BookingWhereInput = {
   studioId?: Prisma.StringFilter<"Booking"> | string
   clientId?: Prisma.StringFilter<"Booking"> | string
   createdBy?: Prisma.StringFilter<"Booking"> | string
-  memberId?: Prisma.StringFilter<"Booking"> | string
+  memberId?: Prisma.StringNullableFilter<"Booking"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Booking"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Booking"> | Date | string
   payments?: Prisma.PaymentListRelationFilter
@@ -295,7 +295,7 @@ export type BookingWhereInput = {
   studio?: Prisma.XOR<Prisma.StudioScalarRelationFilter, Prisma.StudioWhereInput>
   client?: Prisma.XOR<Prisma.ClientScalarRelationFilter, Prisma.ClientWhereInput>
   creator?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
-  member?: Prisma.XOR<Prisma.MemberScalarRelationFilter, Prisma.MemberWhereInput>
+  member?: Prisma.XOR<Prisma.MemberNullableScalarRelationFilter, Prisma.MemberWhereInput> | null
 }
 
 export type BookingOrderByWithRelationInput = {
@@ -310,7 +310,7 @@ export type BookingOrderByWithRelationInput = {
   studioId?: Prisma.SortOrder
   clientId?: Prisma.SortOrder
   createdBy?: Prisma.SortOrder
-  memberId?: Prisma.SortOrder
+  memberId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   payments?: Prisma.PaymentOrderByRelationAggregateInput
@@ -338,7 +338,7 @@ export type BookingWhereUniqueInput = Prisma.AtLeast<{
   studioId?: Prisma.StringFilter<"Booking"> | string
   clientId?: Prisma.StringFilter<"Booking"> | string
   createdBy?: Prisma.StringFilter<"Booking"> | string
-  memberId?: Prisma.StringFilter<"Booking"> | string
+  memberId?: Prisma.StringNullableFilter<"Booking"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Booking"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Booking"> | Date | string
   payments?: Prisma.PaymentListRelationFilter
@@ -348,7 +348,7 @@ export type BookingWhereUniqueInput = Prisma.AtLeast<{
   studio?: Prisma.XOR<Prisma.StudioScalarRelationFilter, Prisma.StudioWhereInput>
   client?: Prisma.XOR<Prisma.ClientScalarRelationFilter, Prisma.ClientWhereInput>
   creator?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
-  member?: Prisma.XOR<Prisma.MemberScalarRelationFilter, Prisma.MemberWhereInput>
+  member?: Prisma.XOR<Prisma.MemberNullableScalarRelationFilter, Prisma.MemberWhereInput> | null
 }, "id">
 
 export type BookingOrderByWithAggregationInput = {
@@ -363,7 +363,7 @@ export type BookingOrderByWithAggregationInput = {
   studioId?: Prisma.SortOrder
   clientId?: Prisma.SortOrder
   createdBy?: Prisma.SortOrder
-  memberId?: Prisma.SortOrder
+  memberId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.BookingCountOrderByAggregateInput
@@ -388,7 +388,7 @@ export type BookingScalarWhereWithAggregatesInput = {
   studioId?: Prisma.StringWithAggregatesFilter<"Booking"> | string
   clientId?: Prisma.StringWithAggregatesFilter<"Booking"> | string
   createdBy?: Prisma.StringWithAggregatesFilter<"Booking"> | string
-  memberId?: Prisma.StringWithAggregatesFilter<"Booking"> | string
+  memberId?: Prisma.StringNullableWithAggregatesFilter<"Booking"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Booking"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Booking"> | Date | string
 }
@@ -410,7 +410,7 @@ export type BookingCreateInput = {
   studio: Prisma.StudioCreateNestedOneWithoutBookingsInput
   client: Prisma.ClientCreateNestedOneWithoutBookingsInput
   creator: Prisma.UserCreateNestedOneWithoutBookingsInput
-  member: Prisma.MemberCreateNestedOneWithoutBookingsInput
+  member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
 }
 
 export type BookingUncheckedCreateInput = {
@@ -425,7 +425,7 @@ export type BookingUncheckedCreateInput = {
   studioId: string
   clientId: string
   createdBy: string
-  memberId: string
+  memberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
@@ -450,7 +450,7 @@ export type BookingUpdateInput = {
   studio?: Prisma.StudioUpdateOneRequiredWithoutBookingsNestedInput
   client?: Prisma.ClientUpdateOneRequiredWithoutBookingsNestedInput
   creator?: Prisma.UserUpdateOneRequiredWithoutBookingsNestedInput
-  member?: Prisma.MemberUpdateOneRequiredWithoutBookingsNestedInput
+  member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
 }
 
 export type BookingUncheckedUpdateInput = {
@@ -465,7 +465,7 @@ export type BookingUncheckedUpdateInput = {
   studioId?: Prisma.StringFieldUpdateOperationsInput | string
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
-  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
@@ -485,7 +485,7 @@ export type BookingCreateManyInput = {
   studioId: string
   clientId: string
   createdBy: string
-  memberId: string
+  memberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -514,7 +514,7 @@ export type BookingUncheckedUpdateManyInput = {
   studioId?: Prisma.StringFieldUpdateOperationsInput | string
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
-  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -586,6 +586,11 @@ export type BookingMinOrderByAggregateInput = {
 
 export type BookingSumOrderByAggregateInput = {
   sessionCount?: Prisma.SortOrder
+}
+
+export type BookingNullableScalarRelationFilter = {
+  is?: Prisma.BookingWhereInput | null
+  isNot?: Prisma.BookingWhereInput | null
 }
 
 export type BookingScalarRelationFilter = {
@@ -859,10 +864,12 @@ export type BookingCreateNestedOneWithoutPaymentsInput = {
   connect?: Prisma.BookingWhereUniqueInput
 }
 
-export type BookingUpdateOneRequiredWithoutPaymentsNestedInput = {
+export type BookingUpdateOneWithoutPaymentsNestedInput = {
   create?: Prisma.XOR<Prisma.BookingCreateWithoutPaymentsInput, Prisma.BookingUncheckedCreateWithoutPaymentsInput>
   connectOrCreate?: Prisma.BookingCreateOrConnectWithoutPaymentsInput
   upsert?: Prisma.BookingUpsertWithoutPaymentsInput
+  disconnect?: Prisma.BookingWhereInput | boolean
+  delete?: Prisma.BookingWhereInput | boolean
   connect?: Prisma.BookingWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.BookingUpdateToOneWithWhereWithoutPaymentsInput, Prisma.BookingUpdateWithoutPaymentsInput>, Prisma.BookingUncheckedUpdateWithoutPaymentsInput>
 }
@@ -897,7 +904,7 @@ export type BookingCreateWithoutCreatorInput = {
   service: Prisma.ServiceCreateNestedOneWithoutBookingsInput
   studio: Prisma.StudioCreateNestedOneWithoutBookingsInput
   client: Prisma.ClientCreateNestedOneWithoutBookingsInput
-  member: Prisma.MemberCreateNestedOneWithoutBookingsInput
+  member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
 }
 
 export type BookingUncheckedCreateWithoutCreatorInput = {
@@ -911,7 +918,7 @@ export type BookingUncheckedCreateWithoutCreatorInput = {
   serviceId: string
   studioId: string
   clientId: string
-  memberId: string
+  memberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
@@ -960,7 +967,7 @@ export type BookingScalarWhereInput = {
   studioId?: Prisma.StringFilter<"Booking"> | string
   clientId?: Prisma.StringFilter<"Booking"> | string
   createdBy?: Prisma.StringFilter<"Booking"> | string
-  memberId?: Prisma.StringFilter<"Booking"> | string
+  memberId?: Prisma.StringNullableFilter<"Booking"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Booking"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Booking"> | Date | string
 }
@@ -981,7 +988,7 @@ export type BookingCreateWithoutStudioInput = {
   service: Prisma.ServiceCreateNestedOneWithoutBookingsInput
   client: Prisma.ClientCreateNestedOneWithoutBookingsInput
   creator: Prisma.UserCreateNestedOneWithoutBookingsInput
-  member: Prisma.MemberCreateNestedOneWithoutBookingsInput
+  member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
 }
 
 export type BookingUncheckedCreateWithoutStudioInput = {
@@ -995,7 +1002,7 @@ export type BookingUncheckedCreateWithoutStudioInput = {
   serviceId: string
   clientId: string
   createdBy: string
-  memberId: string
+  memberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
@@ -1109,7 +1116,7 @@ export type BookingCreateWithoutServiceInput = {
   studio: Prisma.StudioCreateNestedOneWithoutBookingsInput
   client: Prisma.ClientCreateNestedOneWithoutBookingsInput
   creator: Prisma.UserCreateNestedOneWithoutBookingsInput
-  member: Prisma.MemberCreateNestedOneWithoutBookingsInput
+  member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
 }
 
 export type BookingUncheckedCreateWithoutServiceInput = {
@@ -1123,7 +1130,7 @@ export type BookingUncheckedCreateWithoutServiceInput = {
   studioId: string
   clientId: string
   createdBy: string
-  memberId: string
+  memberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
@@ -1157,7 +1164,7 @@ export type BookingCreateWithoutAddonsInput = {
   studio: Prisma.StudioCreateNestedOneWithoutBookingsInput
   client: Prisma.ClientCreateNestedOneWithoutBookingsInput
   creator: Prisma.UserCreateNestedOneWithoutBookingsInput
-  member: Prisma.MemberCreateNestedOneWithoutBookingsInput
+  member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
 }
 
 export type BookingUncheckedCreateWithoutAddonsInput = {
@@ -1172,7 +1179,7 @@ export type BookingUncheckedCreateWithoutAddonsInput = {
   studioId: string
   clientId: string
   createdBy: string
-  memberId: string
+  memberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
@@ -1232,7 +1239,7 @@ export type BookingCreateWithoutClientInput = {
   service: Prisma.ServiceCreateNestedOneWithoutBookingsInput
   studio: Prisma.StudioCreateNestedOneWithoutBookingsInput
   creator: Prisma.UserCreateNestedOneWithoutBookingsInput
-  member: Prisma.MemberCreateNestedOneWithoutBookingsInput
+  member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
 }
 
 export type BookingUncheckedCreateWithoutClientInput = {
@@ -1246,7 +1253,7 @@ export type BookingUncheckedCreateWithoutClientInput = {
   serviceId: string
   studioId: string
   createdBy: string
-  memberId: string
+  memberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
@@ -1296,7 +1303,7 @@ export type BookingCreateWithoutPaymentsInput = {
   studio: Prisma.StudioCreateNestedOneWithoutBookingsInput
   client: Prisma.ClientCreateNestedOneWithoutBookingsInput
   creator: Prisma.UserCreateNestedOneWithoutBookingsInput
-  member: Prisma.MemberCreateNestedOneWithoutBookingsInput
+  member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
 }
 
 export type BookingUncheckedCreateWithoutPaymentsInput = {
@@ -1311,7 +1318,7 @@ export type BookingUncheckedCreateWithoutPaymentsInput = {
   studioId: string
   clientId: string
   createdBy: string
-  memberId: string
+  memberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
@@ -1350,7 +1357,7 @@ export type BookingUpdateWithoutPaymentsInput = {
   studio?: Prisma.StudioUpdateOneRequiredWithoutBookingsNestedInput
   client?: Prisma.ClientUpdateOneRequiredWithoutBookingsNestedInput
   creator?: Prisma.UserUpdateOneRequiredWithoutBookingsNestedInput
-  member?: Prisma.MemberUpdateOneRequiredWithoutBookingsNestedInput
+  member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutPaymentsInput = {
@@ -1365,7 +1372,7 @@ export type BookingUncheckedUpdateWithoutPaymentsInput = {
   studioId?: Prisma.StringFieldUpdateOperationsInput | string
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
-  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
@@ -1388,7 +1395,7 @@ export type BookingCreateWithoutPhotosInput = {
   studio: Prisma.StudioCreateNestedOneWithoutBookingsInput
   client: Prisma.ClientCreateNestedOneWithoutBookingsInput
   creator: Prisma.UserCreateNestedOneWithoutBookingsInput
-  member: Prisma.MemberCreateNestedOneWithoutBookingsInput
+  member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
 }
 
 export type BookingUncheckedCreateWithoutPhotosInput = {
@@ -1403,7 +1410,7 @@ export type BookingUncheckedCreateWithoutPhotosInput = {
   studioId: string
   clientId: string
   createdBy: string
-  memberId: string
+  memberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
@@ -1442,7 +1449,7 @@ export type BookingUpdateWithoutPhotosInput = {
   studio?: Prisma.StudioUpdateOneRequiredWithoutBookingsNestedInput
   client?: Prisma.ClientUpdateOneRequiredWithoutBookingsNestedInput
   creator?: Prisma.UserUpdateOneRequiredWithoutBookingsNestedInput
-  member?: Prisma.MemberUpdateOneRequiredWithoutBookingsNestedInput
+  member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutPhotosInput = {
@@ -1457,7 +1464,7 @@ export type BookingUncheckedUpdateWithoutPhotosInput = {
   studioId?: Prisma.StringFieldUpdateOperationsInput | string
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
-  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
@@ -1475,7 +1482,7 @@ export type BookingCreateManyCreatorInput = {
   serviceId: string
   studioId: string
   clientId: string
-  memberId: string
+  memberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1496,7 +1503,7 @@ export type BookingUpdateWithoutCreatorInput = {
   service?: Prisma.ServiceUpdateOneRequiredWithoutBookingsNestedInput
   studio?: Prisma.StudioUpdateOneRequiredWithoutBookingsNestedInput
   client?: Prisma.ClientUpdateOneRequiredWithoutBookingsNestedInput
-  member?: Prisma.MemberUpdateOneRequiredWithoutBookingsNestedInput
+  member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutCreatorInput = {
@@ -1510,7 +1517,7 @@ export type BookingUncheckedUpdateWithoutCreatorInput = {
   serviceId?: Prisma.StringFieldUpdateOperationsInput | string
   studioId?: Prisma.StringFieldUpdateOperationsInput | string
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
-  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
@@ -1529,7 +1536,7 @@ export type BookingUncheckedUpdateManyWithoutCreatorInput = {
   serviceId?: Prisma.StringFieldUpdateOperationsInput | string
   studioId?: Prisma.StringFieldUpdateOperationsInput | string
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
-  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1545,7 +1552,7 @@ export type BookingCreateManyStudioInput = {
   serviceId: string
   clientId: string
   createdBy: string
-  memberId: string
+  memberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1566,7 +1573,7 @@ export type BookingUpdateWithoutStudioInput = {
   service?: Prisma.ServiceUpdateOneRequiredWithoutBookingsNestedInput
   client?: Prisma.ClientUpdateOneRequiredWithoutBookingsNestedInput
   creator?: Prisma.UserUpdateOneRequiredWithoutBookingsNestedInput
-  member?: Prisma.MemberUpdateOneRequiredWithoutBookingsNestedInput
+  member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutStudioInput = {
@@ -1580,7 +1587,7 @@ export type BookingUncheckedUpdateWithoutStudioInput = {
   serviceId?: Prisma.StringFieldUpdateOperationsInput | string
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
-  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
@@ -1599,7 +1606,7 @@ export type BookingUncheckedUpdateManyWithoutStudioInput = {
   serviceId?: Prisma.StringFieldUpdateOperationsInput | string
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
-  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1685,7 +1692,7 @@ export type BookingCreateManyServiceInput = {
   studioId: string
   clientId: string
   createdBy: string
-  memberId: string
+  memberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1706,7 +1713,7 @@ export type BookingUpdateWithoutServiceInput = {
   studio?: Prisma.StudioUpdateOneRequiredWithoutBookingsNestedInput
   client?: Prisma.ClientUpdateOneRequiredWithoutBookingsNestedInput
   creator?: Prisma.UserUpdateOneRequiredWithoutBookingsNestedInput
-  member?: Prisma.MemberUpdateOneRequiredWithoutBookingsNestedInput
+  member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutServiceInput = {
@@ -1720,7 +1727,7 @@ export type BookingUncheckedUpdateWithoutServiceInput = {
   studioId?: Prisma.StringFieldUpdateOperationsInput | string
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
-  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
@@ -1739,7 +1746,7 @@ export type BookingUncheckedUpdateManyWithoutServiceInput = {
   studioId?: Prisma.StringFieldUpdateOperationsInput | string
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
-  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1760,7 +1767,7 @@ export type BookingUpdateWithoutAddonsInput = {
   studio?: Prisma.StudioUpdateOneRequiredWithoutBookingsNestedInput
   client?: Prisma.ClientUpdateOneRequiredWithoutBookingsNestedInput
   creator?: Prisma.UserUpdateOneRequiredWithoutBookingsNestedInput
-  member?: Prisma.MemberUpdateOneRequiredWithoutBookingsNestedInput
+  member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutAddonsInput = {
@@ -1775,7 +1782,7 @@ export type BookingUncheckedUpdateWithoutAddonsInput = {
   studioId?: Prisma.StringFieldUpdateOperationsInput | string
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
-  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
@@ -1794,7 +1801,7 @@ export type BookingUncheckedUpdateManyWithoutAddonsInput = {
   studioId?: Prisma.StringFieldUpdateOperationsInput | string
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
-  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1810,7 +1817,7 @@ export type BookingCreateManyClientInput = {
   serviceId: string
   studioId: string
   createdBy: string
-  memberId: string
+  memberId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1831,7 +1838,7 @@ export type BookingUpdateWithoutClientInput = {
   service?: Prisma.ServiceUpdateOneRequiredWithoutBookingsNestedInput
   studio?: Prisma.StudioUpdateOneRequiredWithoutBookingsNestedInput
   creator?: Prisma.UserUpdateOneRequiredWithoutBookingsNestedInput
-  member?: Prisma.MemberUpdateOneRequiredWithoutBookingsNestedInput
+  member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutClientInput = {
@@ -1845,7 +1852,7 @@ export type BookingUncheckedUpdateWithoutClientInput = {
   serviceId?: Prisma.StringFieldUpdateOperationsInput | string
   studioId?: Prisma.StringFieldUpdateOperationsInput | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
-  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
@@ -1864,7 +1871,7 @@ export type BookingUncheckedUpdateManyWithoutClientInput = {
   serviceId?: Prisma.StringFieldUpdateOperationsInput | string
   studioId?: Prisma.StringFieldUpdateOperationsInput | string
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
-  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1940,7 +1947,7 @@ export type BookingSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
   client?: boolean | Prisma.ClientDefaultArgs<ExtArgs>
   creator?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
+  member?: boolean | Prisma.Booking$memberArgs<ExtArgs>
   _count?: boolean | Prisma.BookingCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["booking"]>
 
@@ -1963,7 +1970,7 @@ export type BookingSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
   client?: boolean | Prisma.ClientDefaultArgs<ExtArgs>
   creator?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
+  member?: boolean | Prisma.Booking$memberArgs<ExtArgs>
 }, ExtArgs["result"]["booking"]>
 
 export type BookingSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1985,7 +1992,7 @@ export type BookingSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
   client?: boolean | Prisma.ClientDefaultArgs<ExtArgs>
   creator?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
+  member?: boolean | Prisma.Booking$memberArgs<ExtArgs>
 }, ExtArgs["result"]["booking"]>
 
 export type BookingSelectScalar = {
@@ -2014,7 +2021,7 @@ export type BookingInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
   client?: boolean | Prisma.ClientDefaultArgs<ExtArgs>
   creator?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
+  member?: boolean | Prisma.Booking$memberArgs<ExtArgs>
   _count?: boolean | Prisma.BookingCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type BookingIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2022,14 +2029,14 @@ export type BookingIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
   client?: boolean | Prisma.ClientDefaultArgs<ExtArgs>
   creator?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
+  member?: boolean | Prisma.Booking$memberArgs<ExtArgs>
 }
 export type BookingIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   service?: boolean | Prisma.ServiceDefaultArgs<ExtArgs>
   studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
   client?: boolean | Prisma.ClientDefaultArgs<ExtArgs>
   creator?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
+  member?: boolean | Prisma.Booking$memberArgs<ExtArgs>
 }
 
 export type $BookingPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2042,7 +2049,7 @@ export type $BookingPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     studio: Prisma.$StudioPayload<ExtArgs>
     client: Prisma.$ClientPayload<ExtArgs>
     creator: Prisma.$UserPayload<ExtArgs>
-    member: Prisma.$MemberPayload<ExtArgs>
+    member: Prisma.$MemberPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2056,7 +2063,7 @@ export type $BookingPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     studioId: string
     clientId: string
     createdBy: string
-    memberId: string
+    memberId: string | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["booking"]>
@@ -2460,7 +2467,7 @@ export interface Prisma__BookingClient<T, Null = never, ExtArgs extends runtime.
   studio<T extends Prisma.StudioDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudioDefaultArgs<ExtArgs>>): Prisma.Prisma__StudioClient<runtime.Types.Result.GetResult<Prisma.$StudioPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   client<T extends Prisma.ClientDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ClientDefaultArgs<ExtArgs>>): Prisma.Prisma__ClientClient<runtime.Types.Result.GetResult<Prisma.$ClientPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   creator<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  member<T extends Prisma.MemberDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MemberDefaultArgs<ExtArgs>>): Prisma.Prisma__MemberClient<runtime.Types.Result.GetResult<Prisma.$MemberPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  member<T extends Prisma.Booking$memberArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Booking$memberArgs<ExtArgs>>): Prisma.Prisma__MemberClient<runtime.Types.Result.GetResult<Prisma.$MemberPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2974,6 +2981,25 @@ export type Booking$addonsArgs<ExtArgs extends runtime.Types.Extensions.Internal
   take?: number
   skip?: number
   distinct?: Prisma.ServiceScalarFieldEnum | Prisma.ServiceScalarFieldEnum[]
+}
+
+/**
+ * Booking.member
+ */
+export type Booking$memberArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Member
+   */
+  select?: Prisma.MemberSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Member
+   */
+  omit?: Prisma.MemberOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.MemberInclude<ExtArgs> | null
+  where?: Prisma.MemberWhereInput
 }
 
 /**

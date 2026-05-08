@@ -1,4 +1,4 @@
-import { contract } from "@/contract";
+import { contract } from "@/app/contract";
 import { auth } from "@/lib/auth";
 import { implement } from "@orpc/server";
 
@@ -18,13 +18,7 @@ export interface OptionalAuthContext extends BaseContext {
     user: User | null;
 }
 
-function parseToken(authorization: string | null): User | null {
-    if(!authorization) return null;
-    const token = authorization.split(" ")[1];
-    if (!token) return null;
 
-    return { id: token };
-}
 
 const os = implement(contract)
 
