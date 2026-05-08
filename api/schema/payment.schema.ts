@@ -20,7 +20,7 @@ export const PaymentSchema = z.object({
 
   // Paystack integration
   paystackReference: z.string().nullable().optional(),
-  paystackResponse: z.record(z.string(), z.string()).optional(),
+  paystackResponse: z.record(z.string(), z.unknown()).optional(),
 
   // Receipt
   receiptNumber: z.string().min(1),
@@ -51,7 +51,26 @@ export const PaystackCallbackSchema = z.object({
   status: PaymentStatusEnum,
 });
 
+
+export const InitPaystackPaymentSchema = z.object({
+    bookingId: z.string().min(1),
+    amount: z.string().regex(/^\d+(\.\d{1,2})?$/),
+    email: z.email(),
+    callbackUrl: z.url().optional(),
+});
+
+export const PaystackWebhookRequestSchema = z.object({
+    event: z.string(),
+    data: z.object({
+        reference: z.string(),
+        status: z.string(),
+        amount: z.number(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
+    }),
+})
+
 export type Payment = z.infer<typeof PaymentSchema>;
 export type CreatePayment = z.infer<typeof CreatePaymentSchema>;
 export type UpdatePayment = z.infer<typeof UpdatePaymentSchema>;
 export type PaystackCallback = z.infer<typeof PaystackCallbackSchema>;
+export type InitPaystackPayment = z.infer<typeof InitPaystackPaymentSchema>;

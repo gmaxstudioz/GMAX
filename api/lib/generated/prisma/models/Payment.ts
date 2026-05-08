@@ -226,8 +226,8 @@ export type PaymentGroupByOutputType = {
   paystackResponse: runtime.JsonValue | null
   receiptNumber: string
   receiptUrl: string | null
-  bookingId: string
-  recordedById: string
+  bookingId: string | null
+  recordedById: string | null
   paymentDate: Date
   createdAt: Date
   _count: PaymentCountAggregateOutputType | null
@@ -264,12 +264,13 @@ export type PaymentWhereInput = {
   paystackResponse?: Prisma.JsonNullableFilter<"Payment">
   receiptNumber?: Prisma.StringFilter<"Payment"> | string
   receiptUrl?: Prisma.StringNullableFilter<"Payment"> | string | null
-  bookingId?: Prisma.StringFilter<"Payment"> | string
-  recordedById?: Prisma.StringFilter<"Payment"> | string
+  bookingId?: Prisma.StringNullableFilter<"Payment"> | string | null
+  recordedById?: Prisma.StringNullableFilter<"Payment"> | string | null
   paymentDate?: Prisma.DateTimeFilter<"Payment"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"Payment"> | Date | string
-  booking?: Prisma.XOR<Prisma.BookingScalarRelationFilter, Prisma.BookingWhereInput>
-  recordedBy?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  booking?: Prisma.XOR<Prisma.BookingNullableScalarRelationFilter, Prisma.BookingWhereInput> | null
+  productAccess?: Prisma.XOR<Prisma.ProductAccessNullableScalarRelationFilter, Prisma.ProductAccessWhereInput> | null
+  recordedBy?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
 }
 
 export type PaymentOrderByWithRelationInput = {
@@ -281,11 +282,12 @@ export type PaymentOrderByWithRelationInput = {
   paystackResponse?: Prisma.SortOrderInput | Prisma.SortOrder
   receiptNumber?: Prisma.SortOrder
   receiptUrl?: Prisma.SortOrderInput | Prisma.SortOrder
-  bookingId?: Prisma.SortOrder
-  recordedById?: Prisma.SortOrder
+  bookingId?: Prisma.SortOrderInput | Prisma.SortOrder
+  recordedById?: Prisma.SortOrderInput | Prisma.SortOrder
   paymentDate?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   booking?: Prisma.BookingOrderByWithRelationInput
+  productAccess?: Prisma.ProductAccessOrderByWithRelationInput
   recordedBy?: Prisma.UserOrderByWithRelationInput
 }
 
@@ -301,12 +303,13 @@ export type PaymentWhereUniqueInput = Prisma.AtLeast<{
   status?: Prisma.EnumPaymentStatusFilter<"Payment"> | $Enums.PaymentStatus
   paystackResponse?: Prisma.JsonNullableFilter<"Payment">
   receiptUrl?: Prisma.StringNullableFilter<"Payment"> | string | null
-  bookingId?: Prisma.StringFilter<"Payment"> | string
-  recordedById?: Prisma.StringFilter<"Payment"> | string
+  bookingId?: Prisma.StringNullableFilter<"Payment"> | string | null
+  recordedById?: Prisma.StringNullableFilter<"Payment"> | string | null
   paymentDate?: Prisma.DateTimeFilter<"Payment"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"Payment"> | Date | string
-  booking?: Prisma.XOR<Prisma.BookingScalarRelationFilter, Prisma.BookingWhereInput>
-  recordedBy?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  booking?: Prisma.XOR<Prisma.BookingNullableScalarRelationFilter, Prisma.BookingWhereInput> | null
+  productAccess?: Prisma.XOR<Prisma.ProductAccessNullableScalarRelationFilter, Prisma.ProductAccessWhereInput> | null
+  recordedBy?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
 }, "id" | "paystackReference" | "receiptNumber">
 
 export type PaymentOrderByWithAggregationInput = {
@@ -318,8 +321,8 @@ export type PaymentOrderByWithAggregationInput = {
   paystackResponse?: Prisma.SortOrderInput | Prisma.SortOrder
   receiptNumber?: Prisma.SortOrder
   receiptUrl?: Prisma.SortOrderInput | Prisma.SortOrder
-  bookingId?: Prisma.SortOrder
-  recordedById?: Prisma.SortOrder
+  bookingId?: Prisma.SortOrderInput | Prisma.SortOrder
+  recordedById?: Prisma.SortOrderInput | Prisma.SortOrder
   paymentDate?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.PaymentCountOrderByAggregateInput
@@ -341,8 +344,8 @@ export type PaymentScalarWhereWithAggregatesInput = {
   paystackResponse?: Prisma.JsonNullableWithAggregatesFilter<"Payment">
   receiptNumber?: Prisma.StringWithAggregatesFilter<"Payment"> | string
   receiptUrl?: Prisma.StringNullableWithAggregatesFilter<"Payment"> | string | null
-  bookingId?: Prisma.StringWithAggregatesFilter<"Payment"> | string
-  recordedById?: Prisma.StringWithAggregatesFilter<"Payment"> | string
+  bookingId?: Prisma.StringNullableWithAggregatesFilter<"Payment"> | string | null
+  recordedById?: Prisma.StringNullableWithAggregatesFilter<"Payment"> | string | null
   paymentDate?: Prisma.DateTimeWithAggregatesFilter<"Payment"> | Date | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Payment"> | Date | string
 }
@@ -358,8 +361,9 @@ export type PaymentCreateInput = {
   receiptUrl?: string | null
   paymentDate?: Date | string
   createdAt?: Date | string
-  booking: Prisma.BookingCreateNestedOneWithoutPaymentsInput
-  recordedBy: Prisma.UserCreateNestedOneWithoutPaymentsInput
+  booking?: Prisma.BookingCreateNestedOneWithoutPaymentsInput
+  productAccess?: Prisma.ProductAccessCreateNestedOneWithoutPaymentInput
+  recordedBy?: Prisma.UserCreateNestedOneWithoutPaymentsInput
 }
 
 export type PaymentUncheckedCreateInput = {
@@ -371,10 +375,11 @@ export type PaymentUncheckedCreateInput = {
   paystackResponse?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   receiptNumber: string
   receiptUrl?: string | null
-  bookingId: string
-  recordedById: string
+  bookingId?: string | null
+  recordedById?: string | null
   paymentDate?: Date | string
   createdAt?: Date | string
+  productAccess?: Prisma.ProductAccessUncheckedCreateNestedOneWithoutPaymentInput
 }
 
 export type PaymentUpdateInput = {
@@ -388,8 +393,9 @@ export type PaymentUpdateInput = {
   receiptUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  booking?: Prisma.BookingUpdateOneRequiredWithoutPaymentsNestedInput
-  recordedBy?: Prisma.UserUpdateOneRequiredWithoutPaymentsNestedInput
+  booking?: Prisma.BookingUpdateOneWithoutPaymentsNestedInput
+  productAccess?: Prisma.ProductAccessUpdateOneWithoutPaymentNestedInput
+  recordedBy?: Prisma.UserUpdateOneWithoutPaymentsNestedInput
 }
 
 export type PaymentUncheckedUpdateInput = {
@@ -401,10 +407,11 @@ export type PaymentUncheckedUpdateInput = {
   paystackResponse?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   receiptNumber?: Prisma.StringFieldUpdateOperationsInput | string
   receiptUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  bookingId?: Prisma.StringFieldUpdateOperationsInput | string
-  recordedById?: Prisma.StringFieldUpdateOperationsInput | string
+  bookingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  recordedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  productAccess?: Prisma.ProductAccessUncheckedUpdateOneWithoutPaymentNestedInput
 }
 
 export type PaymentCreateManyInput = {
@@ -416,8 +423,8 @@ export type PaymentCreateManyInput = {
   paystackResponse?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   receiptNumber: string
   receiptUrl?: string | null
-  bookingId: string
-  recordedById: string
+  bookingId?: string | null
+  recordedById?: string | null
   paymentDate?: Date | string
   createdAt?: Date | string
 }
@@ -444,8 +451,8 @@ export type PaymentUncheckedUpdateManyInput = {
   paystackResponse?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   receiptNumber?: Prisma.StringFieldUpdateOperationsInput | string
   receiptUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  bookingId?: Prisma.StringFieldUpdateOperationsInput | string
-  recordedById?: Prisma.StringFieldUpdateOperationsInput | string
+  bookingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  recordedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -509,6 +516,11 @@ export type PaymentMinOrderByAggregateInput = {
 
 export type PaymentSumOrderByAggregateInput = {
   amount?: Prisma.SortOrder
+}
+
+export type PaymentNullableScalarRelationFilter = {
+  is?: Prisma.PaymentWhereInput | null
+  isNot?: Prisma.PaymentWhereInput | null
 }
 
 export type PaymentCreateNestedManyWithoutRecordedByInput = {
@@ -607,6 +619,22 @@ export type EnumPaymentMethodFieldUpdateOperationsInput = {
   set?: $Enums.PaymentMethod
 }
 
+export type PaymentCreateNestedOneWithoutProductAccessInput = {
+  create?: Prisma.XOR<Prisma.PaymentCreateWithoutProductAccessInput, Prisma.PaymentUncheckedCreateWithoutProductAccessInput>
+  connectOrCreate?: Prisma.PaymentCreateOrConnectWithoutProductAccessInput
+  connect?: Prisma.PaymentWhereUniqueInput
+}
+
+export type PaymentUpdateOneWithoutProductAccessNestedInput = {
+  create?: Prisma.XOR<Prisma.PaymentCreateWithoutProductAccessInput, Prisma.PaymentUncheckedCreateWithoutProductAccessInput>
+  connectOrCreate?: Prisma.PaymentCreateOrConnectWithoutProductAccessInput
+  upsert?: Prisma.PaymentUpsertWithoutProductAccessInput
+  disconnect?: Prisma.PaymentWhereInput | boolean
+  delete?: Prisma.PaymentWhereInput | boolean
+  connect?: Prisma.PaymentWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.PaymentUpdateToOneWithWhereWithoutProductAccessInput, Prisma.PaymentUpdateWithoutProductAccessInput>, Prisma.PaymentUncheckedUpdateWithoutProductAccessInput>
+}
+
 export type PaymentCreateWithoutRecordedByInput = {
   id?: string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -618,7 +646,8 @@ export type PaymentCreateWithoutRecordedByInput = {
   receiptUrl?: string | null
   paymentDate?: Date | string
   createdAt?: Date | string
-  booking: Prisma.BookingCreateNestedOneWithoutPaymentsInput
+  booking?: Prisma.BookingCreateNestedOneWithoutPaymentsInput
+  productAccess?: Prisma.ProductAccessCreateNestedOneWithoutPaymentInput
 }
 
 export type PaymentUncheckedCreateWithoutRecordedByInput = {
@@ -630,9 +659,10 @@ export type PaymentUncheckedCreateWithoutRecordedByInput = {
   paystackResponse?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   receiptNumber: string
   receiptUrl?: string | null
-  bookingId: string
+  bookingId?: string | null
   paymentDate?: Date | string
   createdAt?: Date | string
+  productAccess?: Prisma.ProductAccessUncheckedCreateNestedOneWithoutPaymentInput
 }
 
 export type PaymentCreateOrConnectWithoutRecordedByInput = {
@@ -673,8 +703,8 @@ export type PaymentScalarWhereInput = {
   paystackResponse?: Prisma.JsonNullableFilter<"Payment">
   receiptNumber?: Prisma.StringFilter<"Payment"> | string
   receiptUrl?: Prisma.StringNullableFilter<"Payment"> | string | null
-  bookingId?: Prisma.StringFilter<"Payment"> | string
-  recordedById?: Prisma.StringFilter<"Payment"> | string
+  bookingId?: Prisma.StringNullableFilter<"Payment"> | string | null
+  recordedById?: Prisma.StringNullableFilter<"Payment"> | string | null
   paymentDate?: Prisma.DateTimeFilter<"Payment"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"Payment"> | Date | string
 }
@@ -690,7 +720,8 @@ export type PaymentCreateWithoutBookingInput = {
   receiptUrl?: string | null
   paymentDate?: Date | string
   createdAt?: Date | string
-  recordedBy: Prisma.UserCreateNestedOneWithoutPaymentsInput
+  productAccess?: Prisma.ProductAccessCreateNestedOneWithoutPaymentInput
+  recordedBy?: Prisma.UserCreateNestedOneWithoutPaymentsInput
 }
 
 export type PaymentUncheckedCreateWithoutBookingInput = {
@@ -702,9 +733,10 @@ export type PaymentUncheckedCreateWithoutBookingInput = {
   paystackResponse?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   receiptNumber: string
   receiptUrl?: string | null
-  recordedById: string
+  recordedById?: string | null
   paymentDate?: Date | string
   createdAt?: Date | string
+  productAccess?: Prisma.ProductAccessUncheckedCreateNestedOneWithoutPaymentInput
 }
 
 export type PaymentCreateOrConnectWithoutBookingInput = {
@@ -733,6 +765,82 @@ export type PaymentUpdateManyWithWhereWithoutBookingInput = {
   data: Prisma.XOR<Prisma.PaymentUpdateManyMutationInput, Prisma.PaymentUncheckedUpdateManyWithoutBookingInput>
 }
 
+export type PaymentCreateWithoutProductAccessInput = {
+  id?: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  method?: $Enums.PaymentMethod
+  status?: $Enums.PaymentStatus
+  paystackReference?: string | null
+  paystackResponse?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  receiptNumber: string
+  receiptUrl?: string | null
+  paymentDate?: Date | string
+  createdAt?: Date | string
+  booking?: Prisma.BookingCreateNestedOneWithoutPaymentsInput
+  recordedBy?: Prisma.UserCreateNestedOneWithoutPaymentsInput
+}
+
+export type PaymentUncheckedCreateWithoutProductAccessInput = {
+  id?: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  method?: $Enums.PaymentMethod
+  status?: $Enums.PaymentStatus
+  paystackReference?: string | null
+  paystackResponse?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  receiptNumber: string
+  receiptUrl?: string | null
+  bookingId?: string | null
+  recordedById?: string | null
+  paymentDate?: Date | string
+  createdAt?: Date | string
+}
+
+export type PaymentCreateOrConnectWithoutProductAccessInput = {
+  where: Prisma.PaymentWhereUniqueInput
+  create: Prisma.XOR<Prisma.PaymentCreateWithoutProductAccessInput, Prisma.PaymentUncheckedCreateWithoutProductAccessInput>
+}
+
+export type PaymentUpsertWithoutProductAccessInput = {
+  update: Prisma.XOR<Prisma.PaymentUpdateWithoutProductAccessInput, Prisma.PaymentUncheckedUpdateWithoutProductAccessInput>
+  create: Prisma.XOR<Prisma.PaymentCreateWithoutProductAccessInput, Prisma.PaymentUncheckedCreateWithoutProductAccessInput>
+  where?: Prisma.PaymentWhereInput
+}
+
+export type PaymentUpdateToOneWithWhereWithoutProductAccessInput = {
+  where?: Prisma.PaymentWhereInput
+  data: Prisma.XOR<Prisma.PaymentUpdateWithoutProductAccessInput, Prisma.PaymentUncheckedUpdateWithoutProductAccessInput>
+}
+
+export type PaymentUpdateWithoutProductAccessInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  method?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
+  status?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
+  paystackReference?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  paystackResponse?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  receiptNumber?: Prisma.StringFieldUpdateOperationsInput | string
+  receiptUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  paymentDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  booking?: Prisma.BookingUpdateOneWithoutPaymentsNestedInput
+  recordedBy?: Prisma.UserUpdateOneWithoutPaymentsNestedInput
+}
+
+export type PaymentUncheckedUpdateWithoutProductAccessInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  method?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
+  status?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
+  paystackReference?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  paystackResponse?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  receiptNumber?: Prisma.StringFieldUpdateOperationsInput | string
+  receiptUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bookingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  recordedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  paymentDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
 export type PaymentCreateManyRecordedByInput = {
   id?: string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -742,7 +850,7 @@ export type PaymentCreateManyRecordedByInput = {
   paystackResponse?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   receiptNumber: string
   receiptUrl?: string | null
-  bookingId: string
+  bookingId?: string | null
   paymentDate?: Date | string
   createdAt?: Date | string
 }
@@ -758,7 +866,8 @@ export type PaymentUpdateWithoutRecordedByInput = {
   receiptUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  booking?: Prisma.BookingUpdateOneRequiredWithoutPaymentsNestedInput
+  booking?: Prisma.BookingUpdateOneWithoutPaymentsNestedInput
+  productAccess?: Prisma.ProductAccessUpdateOneWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateWithoutRecordedByInput = {
@@ -770,9 +879,10 @@ export type PaymentUncheckedUpdateWithoutRecordedByInput = {
   paystackResponse?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   receiptNumber?: Prisma.StringFieldUpdateOperationsInput | string
   receiptUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  bookingId?: Prisma.StringFieldUpdateOperationsInput | string
+  bookingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  productAccess?: Prisma.ProductAccessUncheckedUpdateOneWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateManyWithoutRecordedByInput = {
@@ -784,7 +894,7 @@ export type PaymentUncheckedUpdateManyWithoutRecordedByInput = {
   paystackResponse?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   receiptNumber?: Prisma.StringFieldUpdateOperationsInput | string
   receiptUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  bookingId?: Prisma.StringFieldUpdateOperationsInput | string
+  bookingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -798,7 +908,7 @@ export type PaymentCreateManyBookingInput = {
   paystackResponse?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   receiptNumber: string
   receiptUrl?: string | null
-  recordedById: string
+  recordedById?: string | null
   paymentDate?: Date | string
   createdAt?: Date | string
 }
@@ -814,7 +924,8 @@ export type PaymentUpdateWithoutBookingInput = {
   receiptUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  recordedBy?: Prisma.UserUpdateOneRequiredWithoutPaymentsNestedInput
+  productAccess?: Prisma.ProductAccessUpdateOneWithoutPaymentNestedInput
+  recordedBy?: Prisma.UserUpdateOneWithoutPaymentsNestedInput
 }
 
 export type PaymentUncheckedUpdateWithoutBookingInput = {
@@ -826,9 +937,10 @@ export type PaymentUncheckedUpdateWithoutBookingInput = {
   paystackResponse?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   receiptNumber?: Prisma.StringFieldUpdateOperationsInput | string
   receiptUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  recordedById?: Prisma.StringFieldUpdateOperationsInput | string
+  recordedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  productAccess?: Prisma.ProductAccessUncheckedUpdateOneWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateManyWithoutBookingInput = {
@@ -840,7 +952,7 @@ export type PaymentUncheckedUpdateManyWithoutBookingInput = {
   paystackResponse?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   receiptNumber?: Prisma.StringFieldUpdateOperationsInput | string
   receiptUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  recordedById?: Prisma.StringFieldUpdateOperationsInput | string
+  recordedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -860,8 +972,9 @@ export type PaymentSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   recordedById?: boolean
   paymentDate?: boolean
   createdAt?: boolean
-  booking?: boolean | Prisma.BookingDefaultArgs<ExtArgs>
-  recordedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  booking?: boolean | Prisma.Payment$bookingArgs<ExtArgs>
+  productAccess?: boolean | Prisma.Payment$productAccessArgs<ExtArgs>
+  recordedBy?: boolean | Prisma.Payment$recordedByArgs<ExtArgs>
 }, ExtArgs["result"]["payment"]>
 
 export type PaymentSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -877,8 +990,8 @@ export type PaymentSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   recordedById?: boolean
   paymentDate?: boolean
   createdAt?: boolean
-  booking?: boolean | Prisma.BookingDefaultArgs<ExtArgs>
-  recordedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  booking?: boolean | Prisma.Payment$bookingArgs<ExtArgs>
+  recordedBy?: boolean | Prisma.Payment$recordedByArgs<ExtArgs>
 }, ExtArgs["result"]["payment"]>
 
 export type PaymentSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -894,8 +1007,8 @@ export type PaymentSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   recordedById?: boolean
   paymentDate?: boolean
   createdAt?: boolean
-  booking?: boolean | Prisma.BookingDefaultArgs<ExtArgs>
-  recordedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  booking?: boolean | Prisma.Payment$bookingArgs<ExtArgs>
+  recordedBy?: boolean | Prisma.Payment$recordedByArgs<ExtArgs>
 }, ExtArgs["result"]["payment"]>
 
 export type PaymentSelectScalar = {
@@ -915,23 +1028,25 @@ export type PaymentSelectScalar = {
 
 export type PaymentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "amount" | "method" | "status" | "paystackReference" | "paystackResponse" | "receiptNumber" | "receiptUrl" | "bookingId" | "recordedById" | "paymentDate" | "createdAt", ExtArgs["result"]["payment"]>
 export type PaymentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  booking?: boolean | Prisma.BookingDefaultArgs<ExtArgs>
-  recordedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  booking?: boolean | Prisma.Payment$bookingArgs<ExtArgs>
+  productAccess?: boolean | Prisma.Payment$productAccessArgs<ExtArgs>
+  recordedBy?: boolean | Prisma.Payment$recordedByArgs<ExtArgs>
 }
 export type PaymentIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  booking?: boolean | Prisma.BookingDefaultArgs<ExtArgs>
-  recordedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  booking?: boolean | Prisma.Payment$bookingArgs<ExtArgs>
+  recordedBy?: boolean | Prisma.Payment$recordedByArgs<ExtArgs>
 }
 export type PaymentIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  booking?: boolean | Prisma.BookingDefaultArgs<ExtArgs>
-  recordedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  booking?: boolean | Prisma.Payment$bookingArgs<ExtArgs>
+  recordedBy?: boolean | Prisma.Payment$recordedByArgs<ExtArgs>
 }
 
 export type $PaymentPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Payment"
   objects: {
-    booking: Prisma.$BookingPayload<ExtArgs>
-    recordedBy: Prisma.$UserPayload<ExtArgs>
+    booking: Prisma.$BookingPayload<ExtArgs> | null
+    productAccess: Prisma.$ProductAccessPayload<ExtArgs> | null
+    recordedBy: Prisma.$UserPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -942,8 +1057,8 @@ export type $PaymentPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     paystackResponse: runtime.JsonValue | null
     receiptNumber: string
     receiptUrl: string | null
-    bookingId: string
-    recordedById: string
+    bookingId: string | null
+    recordedById: string | null
     paymentDate: Date
     createdAt: Date
   }, ExtArgs["result"]["payment"]>
@@ -1340,8 +1455,9 @@ readonly fields: PaymentFieldRefs;
  */
 export interface Prisma__PaymentClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  booking<T extends Prisma.BookingDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BookingDefaultArgs<ExtArgs>>): Prisma.Prisma__BookingClient<runtime.Types.Result.GetResult<Prisma.$BookingPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  recordedBy<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  booking<T extends Prisma.Payment$bookingArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Payment$bookingArgs<ExtArgs>>): Prisma.Prisma__BookingClient<runtime.Types.Result.GetResult<Prisma.$BookingPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  productAccess<T extends Prisma.Payment$productAccessArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Payment$productAccessArgs<ExtArgs>>): Prisma.Prisma__ProductAccessClient<runtime.Types.Result.GetResult<Prisma.$ProductAccessPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  recordedBy<T extends Prisma.Payment$recordedByArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Payment$recordedByArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1781,6 +1897,63 @@ export type PaymentDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Inter
    * Limit how many Payments to delete.
    */
   limit?: number
+}
+
+/**
+ * Payment.booking
+ */
+export type Payment$bookingArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Booking
+   */
+  select?: Prisma.BookingSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Booking
+   */
+  omit?: Prisma.BookingOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BookingInclude<ExtArgs> | null
+  where?: Prisma.BookingWhereInput
+}
+
+/**
+ * Payment.productAccess
+ */
+export type Payment$productAccessArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ProductAccess
+   */
+  select?: Prisma.ProductAccessSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ProductAccess
+   */
+  omit?: Prisma.ProductAccessOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ProductAccessInclude<ExtArgs> | null
+  where?: Prisma.ProductAccessWhereInput
+}
+
+/**
+ * Payment.recordedBy
+ */
+export type Payment$recordedByArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the User
+   */
+  select?: Prisma.UserSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the User
+   */
+  omit?: Prisma.UserOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserInclude<ExtArgs> | null
+  where?: Prisma.UserWhereInput
 }
 
 /**

@@ -1,9 +1,4 @@
 import { z } from "zod";
-import { ServiceSchema } from "./service.schema";
-import { MemberSchema, StudioSchema } from "./studio.schema";
-import { ClientSchema } from "./client.schema";
-import { PaymentSchema } from "./payment.schema";
-import { PhotoSchema } from "./photo.schema";
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
  
@@ -51,6 +46,10 @@ export const CreateBookingSchema = BookingSchema.omit({
   bookingStatus: BookingStatusEnum.default("PENDING").optional(),
   paymentStatus: PaymentStatusEnum.default("PENDING").optional(),
   deliveryStatus: DeliveryStatusEnum.default("PENDING").optional(),
+
+  // Optional for public bookings — resolved server-side to the studio owner/default member
+  createdBy: z.string().optional(),
+  memberId: z.string().optional(),
 });
  
 export const UpdateBookingSchema = CreateBookingSchema.partial();
@@ -81,26 +80,63 @@ export const BookingPerDaySchema = z.object({
 
 // Public Booking Schema
 
+export const PublicBookingOutputSchema = z.object({
+    bookingId: z.string(),
+    paymentUrl: z.string().nullable(),
+    reference: z.string(),
+    amount: z.number(),
+    warning: z.string().optional(),
+});
+export type PublicBookingOutput = z.infer<typeof PublicBookingOutputSchema>;
+
 export const PublicBookingSchema = BookingSchema.omit({
     id: true,
     createdAt: true,
     updatedAt: true,
+    clientId: true,
+    createdBy: true,
+    memberId: true,
+    serviceId: true,
+    addonIds: true,
+    bookingStatus: true,
+    paymentStatus: true,
+    deliveryStatus: true,
+    sessionCount: true,
+    bookingDate: true,
 }).extend({
     clientName: z.string().min(2, "Name must be at least 2 characters"),
-    clientPhone: z.string().optional(),
     clientEmail: z.email("Invalid email address").optional(),
     useExisting: z.boolean(),
     existingClientId: z.string().optional(),
-    
+    clientPhone: z.string().optional(),
+
     selectedServiceId: z.string().min(1, "Please select a service"),
     selectedAddonIds: z.array(z.string()),
     sessionCount: z.number().min(1, "Must be at least 1"),
-    
+
     bookingDate: z.string().min(1, "Please select a date"),
-    bookingTime: z.string().min(1, "Please select a time"),
     notes: z.string().optional(),
+}).superRefine((val, ctx) => {
+    if (!val.useExisting && !val.clientPhone) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Phone number is required for new clients",
+            path: ["clientPhone"],
+        });
+    }
+    if (val.useExisting && !val.existingClientId) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Existing client ID is required",
+            path: ["existingClientId"],
+        });
+    }
 });
-export type PublicBookingInput = z.infer<typeof PublicBookingSchema>;
+export const CheckClientSchema = z.object({
+    studioId: z.string().min(1),
+    name: z.string().min(1),
+    email: z.email("Invalid email address").optional(),
+});
 
 export type Booking         = z.infer<typeof BookingSchema>;
 export type PendingMove     = z.infer<typeof PendingMoveSchema>;
@@ -116,25 +152,16 @@ export type ReassignBookingInput = z.infer<typeof ReassignBookingSchema>;
 // Reschedule booking schema
 export const RescheduleBookingSchema = z.object({
     bookingId: z.string().min(1, "Booking ID is required"),
-    newDate:   z.date().min(1, "New date is required"),
+    newDate:   z.date().min(new Date()),
 });
 export type RescheduleBookingInput = z.infer<typeof RescheduleBookingSchema>;
 
 // Updating booking status schema
 export const UpdateBookingStatusSchema = z.object({
     bookingId:      z.string().min(1, "Booking ID is required"),
-    clientId:       z.string().min(1, "Client ID is required"),
-    serviceId:      z.string().min(1, "Service ID is required"),
-    memberId:       z.string().min(1, "Member ID is required"),
-    bookingDate:    z.date().min(1, "Booking date is required"),
-    sessionCount:   z.number().min(1, "At least 1 session must be booked"),
-    notes:          z.string().optional(),
-    
-    bookingStatus:  BookingStatusEnum,
-    paymentStatus:  PaymentStatusEnum,
-    deliveryStatus: DeliveryStatusEnum,
-
-    studioId:       z.string().min(1, "Studio ID is required"),
+    bookingStatus:  BookingStatusEnum.optional(),
+    paymentStatus:  PaymentStatusEnum.optional(),
+    deliveryStatus: DeliveryStatusEnum.optional(),
 });
 export type UpdateBookingStatusInput = z.infer<typeof UpdateBookingStatusSchema>;
 
@@ -143,3 +170,8 @@ export const DeleteBookingSchema = z.object({
     bookingId: z.string().min(1, "Booking ID is required"),
 });
 export type DeleteBookingInput = z.infer<typeof DeleteBookingSchema>;
+
+export const GetBookingSchema = z.object({
+    bookingId: z.string().min(1, "Booking ID is required"),
+});
+export type GetBookingInput = z.infer<typeof GetBookingSchema>;

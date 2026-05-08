@@ -9,9 +9,16 @@ export const ProductOutputSchema = z.object({
   description: z.string(),
   price: z.number(),
   salePrice: z.number().nullable(),
+  categoryId: z.string().nullable(),
+  category: z.object({
+    id: z.string(),
+    name: z.string(),
+    slug: z.string(),
+  }).nullable(),
   fileName: z.string().nullable(),
   fileSize: z.number().int().nullable(),
   mimeType: z.string().nullable(),
+  isPublished: z.boolean(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
   
@@ -21,9 +28,8 @@ export const ProductOutputSchema = z.object({
 });
 
 export const ProductListOutputSchema = PaginatedOutput(
-  ProductOutputSchema.omit({ signedUrl: true, thumbnailSignedUrl: true })
+    ProductOutputSchema.omit({ signedUrl: true })
 );
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type ProductOutput = z.infer<typeof ProductOutputSchema>;

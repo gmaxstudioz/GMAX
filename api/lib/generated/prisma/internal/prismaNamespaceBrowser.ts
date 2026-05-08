@@ -66,7 +66,12 @@ export const ModelName = {
   Booking: 'Booking',
   Payment: 'Payment',
   Photo: 'Photo',
-  Notification: 'Notification'
+  Notification: 'Notification',
+  ProductCategory: 'ProductCategory',
+  Product: 'Product',
+  Buyer: 'Buyer',
+  BuyerAccessToken: 'BuyerAccessToken',
+  ProductAccess: 'ProductAccess'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -332,6 +337,75 @@ export const NotificationScalarFieldEnum = {
 } as const
 
 export type NotificationScalarFieldEnum = (typeof NotificationScalarFieldEnum)[keyof typeof NotificationScalarFieldEnum]
+
+
+export const ProductCategoryScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  slug: 'slug',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProductCategoryScalarFieldEnum = (typeof ProductCategoryScalarFieldEnum)[keyof typeof ProductCategoryScalarFieldEnum]
+
+
+export const ProductScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  description: 'description',
+  price: 'price',
+  salePrice: 'salePrice',
+  categoryId: 'categoryId',
+  r2Key: 'r2Key',
+  fileName: 'fileName',
+  fileSize: 'fileSize',
+  mimeType: 'mimeType',
+  thumbnailKey: 'thumbnailKey',
+  isPublished: 'isPublished',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProductScalarFieldEnum = (typeof ProductScalarFieldEnum)[keyof typeof ProductScalarFieldEnum]
+
+
+export const BuyerScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  phone: 'phone',
+  email: 'email',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type BuyerScalarFieldEnum = (typeof BuyerScalarFieldEnum)[keyof typeof BuyerScalarFieldEnum]
+
+
+export const BuyerAccessTokenScalarFieldEnum = {
+  id: 'id',
+  buyerId: 'buyerId',
+  token: 'token',
+  expiresAt: 'expiresAt',
+  used: 'used',
+  createdAt: 'createdAt'
+} as const
+
+export type BuyerAccessTokenScalarFieldEnum = (typeof BuyerAccessTokenScalarFieldEnum)[keyof typeof BuyerAccessTokenScalarFieldEnum]
+
+
+export const ProductAccessScalarFieldEnum = {
+  id: 'id',
+  productId: 'productId',
+  buyerId: 'buyerId',
+  paymentId: 'paymentId',
+  downloadCount: 'downloadCount',
+  lastDownloadAt: 'lastDownloadAt',
+  expiresAt: 'expiresAt',
+  grantedAt: 'grantedAt'
+} as const
+
+export type ProductAccessScalarFieldEnum = (typeof ProductAccessScalarFieldEnum)[keyof typeof ProductAccessScalarFieldEnum]
 
 
 export const SortOrder = {

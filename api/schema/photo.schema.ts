@@ -100,6 +100,39 @@ export const DeletePhotoSchema = z.object({
   photoId: z.string().min(1, "Photo ID is required"),
 });
 
+export const ClientPhotoAccessSchema = z.object({
+    bookingId: z.string().min(1, "Booking reference is required"),
+    clientPhone: z.string().min(1, "Phone number is required"),
+});
+
+export const ClientPhotoAccessOutputSchema = z.object({
+    bookingId: z.string(),
+    clientName: z.string(),
+    serviceName: z.string(),
+    bookingDate: z.iso.datetime(),
+    photos: z.array(z.object({
+        id: z.string(),
+        fileName: z.string(),
+        thumbnailUrl: z.string(),
+        approvalStatus: z.string(),
+        uploadedAt: z.iso.datetime(),
+        downloadCount: z.number(),
+    })),
+    totalPhotos: z.number(),
+});
+
+export const ClientDownloadPhotoSchema = z.object({
+    photoId: z.string().min(1),
+    bookingId: z.string().min(1),
+    clientPhone: z.string().min(1),
+});
+
+export const ClientDownloadOutputSchema = z.object({
+    downloadUrl: z.string(),
+    fileName: z.string(),
+    expiresAt: z.iso.datetime(),
+});
+
 
 export type Photo = z.infer<typeof PhotoSchema>;
 export type CreatePhotoType = z.infer<typeof CreatePhotoSchema>;

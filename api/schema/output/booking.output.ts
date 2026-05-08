@@ -105,6 +105,17 @@ export const BookingSummaryOutputSchema = z.object({
 
 export const BookingListOutputSchema = PaginatedOutput(BookingSummaryOutputSchema);
 
+export const CheckClientOutputSchema = z.discriminatedUnion("exists", [
+    z.object({
+        exists: z.literal(true),
+        client: z.object({
+            id: z.string(),
+            name: z.string(),
+            maskedPhone: z.string().nullable(),
+        }),
+    }),
+    z.object({ exists: z.literal(false) }),
+]);
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type ClientOutput = z.infer<typeof ClientOutputSchema>;
