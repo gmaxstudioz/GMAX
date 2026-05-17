@@ -8,7 +8,7 @@ const os = implement(contract).$context<BaseContext>();
 export const getPublicPortfolio = os.portfolio.getPublic
     .use(optionalAuthMiddleware)
     .handler(async ({ input }) => {
-        const where: any = { isPublished: true };
+        const where: { isPublished: boolean; category?: string } = { isPublished: true };
 
         if (input.category) {
             where.category = input.category;

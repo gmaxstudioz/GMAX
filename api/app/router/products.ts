@@ -2,7 +2,6 @@ import { contract } from "@/app/contract";
 import { prisma } from "@/lib/prisma";
 import { implement } from "@orpc/server";
 import { authMiddleware, optionalAuthMiddleware, BaseContext } from "./middleware";
-import { paystackFetch } from "@/lib/paystack";
 import { v4 as uuidv4 } from "uuid";
 import crypto from "crypto";
 import { getPresignedUrl } from "@/lib/r2";
@@ -203,7 +202,7 @@ export const purchaseProduct = os.product.purchase
         const reference = `gmax-shop-${uuidv4().slice(0, 8)}`;
         const receiptNumber = generateReceiptNumber();
 
-        const payment = await prisma.payment.create({
+        await prisma.payment.create({
             data: {
                 amount,
                 method: "TRANSFER",
@@ -232,7 +231,7 @@ export const purchaseProduct = os.product.purchase
 
 export const requestAccessLink = os.product.requestAccessLink
     .use(optionalAuthMiddleware)
-    .handler(async ({ input, errors }) => {
+    .handler(async ({ input }) => {
         const buyer = await prisma.buyer.findUnique({
             where: { email: input.email },
         });

@@ -240,7 +240,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                         <HardDriveIcon className="mx-auto size-8 text-muted-foreground mb-4" />
                         <h3 className="font-semibold text-lg">No Service Categories Found</h3>
                         <p className="text-sm text-muted-foreground max-w-sm mx-auto mt-2">
-                            You must create a parent "Category" before you can add individual services.
+                            You must create a parent &quot;Category&quot; before you can add individual services.
                         </p>
                     </div>
                 ) : (
@@ -562,7 +562,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
 
                             {studioData.studioSessions.length === 0 && (
                                 <div className="rounded-md bg-destructive/10 text-destructive text-xs p-3 font-medium mt-2">
-                                    You must create at least one Studio Session via the 'Settings' tab first!
+                                    You must create at least one Studio Session via the &apos;Settings&apos; tab first!
                                 </div>
                             )}
                         </FieldGroup>

@@ -14,17 +14,27 @@ import { SearchIcon, Loader2, FilterIcon } from "lucide-react";
 import { bookingProps } from "@/components/web/booking-status-variants";
 import { isBookingOverdue } from "@/lib/formatters";
 
+export interface AssignedTask {
+    id: string;
+    bookingStatus: string;
+    bookingDate: string | Date;
+    deliveryStatus: string;
+    service?: { name?: string } | null;
+    client?: { name?: string | null } | null;
+    [key: string]: unknown;
+}
+
 
 export function AssignedTasksList({ 
     initialTasks, 
     memberId, 
     slug 
 }: { 
-    initialTasks: any[]; 
+    initialTasks: AssignedTask[]; 
     memberId: string; 
     slug: string;
 }) {
-    const [tasks, setTasks] = useState<any[]>(initialTasks);
+    const [tasks, setTasks] = useState<AssignedTask[]>(initialTasks);
     const [page, setPage] = useState(0);
     const [search, setSearch] = useState("");
     
@@ -206,12 +216,12 @@ export function AssignedTasksList({
                     ) : (
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-4">
                             {tasks.map((bookingItem) => {
-                                const isOverdue = bookingItem.deliveryStatus === 'PENDING' && isBookingOverdue(bookingItem.bookingDate);
+                                const isOverdue = bookingItem.deliveryStatus === 'PENDING' && isBookingOverdue(new Date(bookingItem.bookingDate));
                                 return (
                                     <Link 
                                         href={`/studios/${slug}/bookings/detail/${bookingItem.id}`} 
                                         key={bookingItem.id} 
-                                        className={bookingProps({ status: bookingItem.bookingStatus.toLowerCase() as any, overdue: isOverdue })}
+                                        className={bookingProps({ status: bookingItem.bookingStatus.toLowerCase() as "pending" | "completed" | "cancelled" | null | undefined, overdue: isOverdue })}
                                     >
                                         <div className="flex justify-between w-full items-center gap-2">
                                             <h1 className="font-semibold text-lg max-w-[65%] truncate">{bookingItem.service?.name || "Unknown"}</h1>

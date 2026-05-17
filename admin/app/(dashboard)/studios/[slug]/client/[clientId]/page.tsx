@@ -78,7 +78,7 @@ export default async function ClientPage({ params }: ClientPageProps) {
                         phone: clientData.phone,
                         address: clientData.address,
                         notes: clientData.notes,
-                        clientType: clientData.type as any
+                        clientType: clientData.type as "regular" | "vip"
                     }} 
                 />
             </div>

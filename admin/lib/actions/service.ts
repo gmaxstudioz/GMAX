@@ -32,9 +32,9 @@ export async function createCategory(data: CategoryPayload) {
 
         revalidatePath(`/studios/[slug]`, "page");
         return { status: "success", message: "Category created successfully", data: newCategory };
-    } catch (error: any) {
+    } catch (error) {
         console.error("Failed to create category:", error);
-        return { status: "error", message: error.message || "Failed to create category" };
+        return { status: "error", message: error instanceof Error ? error.message : "Failed to create category" };
     }
 }
 
@@ -66,7 +66,7 @@ export async function updateCategory(id: string, data: CategoryPayload) {
 
         revalidatePath(`/studios/[slug]`, "page");
         return { status: "success", message: "Category updated", data: updatedCategory };
-    } catch (error: any) {
+    } catch {
         return { status: "error", message: "Error updating category" };
     }
 }
@@ -106,9 +106,9 @@ export async function createService(data: ServicePayload) {
 
         revalidatePath(`/studios/[slug]`, "page");
         return { status: "success", message: "Service added successfully", data: newService };
-    } catch (error: any) {
+    } catch (error) {
         console.error("Failed to add service:", error);
-        return { status: "error", message: error.message || "Failed to add service" };
+        return { status: "error", message: error instanceof Error ? error.message : "Failed to add service" };
     }
 }
 
@@ -143,7 +143,7 @@ export async function updateService(id: string, data: ServicePayload) {
 
         revalidatePath(`/studios/[slug]`, "page");
         return { status: "success", message: "Service updated", data: updatedService };
-    } catch (error: any) {
+    } catch {
         return { status: "error", message: "Error updating service" };
     }
 }
@@ -165,7 +165,7 @@ export async function deleteCategory(id: string) {
 
         revalidatePath(`/studios/[slug]`, "page");
         return { status: "success", message: "Category deleted" };
-    } catch (error: any) {
+    } catch {
         return { status: "error", message: "Error deleting category" };
     }
 }
@@ -187,7 +187,7 @@ export async function deleteService(id: string) {
 
         revalidatePath(`/studios/[slug]`, "page");
         return { status: "success", message: "Service deleted" };
-    } catch (error: any) {
+    } catch {
         return { status: "error", message: "Error deleting service" };
     }
 }

@@ -76,7 +76,7 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
         if (hasOverlap) {
             // Find an alternative studio
             const currentStudio = await prisma.studio.findUnique({ where: { id: studioId } });
-            const myCity = (currentStudio?.metadata as any)?.city as string;
+            const myCity = (currentStudio?.metadata as { city?: string })?.city;
 
             let altMessage = `The selected time slot is fully booked or outside operating hours. Please choose another time or day.`;
 
@@ -93,7 +93,7 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
 
                 const alternative = allStudios.find(s => {
                     if (s.id === studioId) return false;
-                    const sCity = (s.metadata as any)?.city as string;
+                    const sCity = (s.metadata as { city?: string })?.city;
                     if (!sCity || sCity.toLowerCase() !== myCity.toLowerCase()) return false;
                     
                     const altOverlaps = s.bookings.some(b => {
@@ -275,7 +275,7 @@ export async function updateBookingInfo(
         });
         if (!member) return { status: "error", message: "Unauthorized" };
 
-        const updateData: any = {};
+        const updateData: Record<string, unknown> = {};
         if (data.notes !== undefined) updateData.notes = data.notes;
         if (data.sessionCount !== undefined) updateData.sessionCount = Math.max(1, data.sessionCount);
         if (data.bookingStatus) updateData.bookingStatus = data.bookingStatus;
@@ -554,7 +554,7 @@ export async function updateBookingFull(
         if (!member) return { status: "error", message: "Unauthorized" };
 
         // Build update data
-        const updateData: any = {};
+        const updateData: Record<string, unknown> = {};
 
         if (data.clientId) updateData.clientId = data.clientId;
         if (data.serviceId) updateData.serviceId = data.serviceId;

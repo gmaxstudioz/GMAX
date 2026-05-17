@@ -212,7 +212,8 @@ function Clients({studioData}: {studioData: StudioWithRelations}) {
     const ITEMS_PER_PAGE = 6;
 
     useEffect(() => {
-        setPage(1);
+        const t = setTimeout(() => setPage(1), 0);
+        return () => clearTimeout(t);
     }, [debouncedSearch, filterType]);
 
     const filteredClients = studioData.clients.filter((client) => {

@@ -9,6 +9,7 @@ import { Loader2, CheckCircle2, PartyPopperIcon, XCircleIcon } from "lucide-reac
 
 declare global {
     interface Window {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         PaystackPop: any;
     }
 }
@@ -21,14 +22,18 @@ interface PaymentCheckoutProps {
     publicKey: string;
 }
 
-export function PaymentCheckout({ reference, accessCode, email, amount, publicKey }: PaymentCheckoutProps) {
+export function PaymentCheckout({ reference, email, amount, publicKey }: PaymentCheckoutProps) {
     const [status, setStatus] = useState<"idle" | "processing" | "success" | "failed">("idle");
-    const [scriptLoaded, setScriptLoaded] = useState(false);
+    const [scriptLoaded, setScriptLoaded] = useState(() => {
+        if (typeof document !== "undefined") {
+            return !!document.getElementById("paystack-script");
+        }
+        return false;
+    });
 
     useEffect(() => {
         // Load Paystack inline script
         if (document.getElementById("paystack-script")) {
-            setScriptLoaded(true);
             return;
         }
         const script = document.createElement("script");

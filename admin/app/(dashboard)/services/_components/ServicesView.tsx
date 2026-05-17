@@ -127,9 +127,7 @@ export function ServicesView({ studioGroups }: { studioGroups: StudioGroup[] }) 
     }, [studioGroups, debouncedSearch, filterType]);
 
     // Reset page on search or filter change
-    useEffect(() => {
-        setPage(1);
-    }, [debouncedSearch, filterType]);
+    useEffect(() => { const t = setTimeout(() => setPage(1), 0); return () => clearTimeout(t); }, [debouncedSearch, filterType]);
 
     const totalFiltered = filteredGroups.reduce(
         (sum, g) => sum + g.categories.reduce((catSum, c) => catSum + c.services.length, 0),

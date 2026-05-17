@@ -24,7 +24,7 @@ const UpdateProfileSchema = z.object({
 
 type FormValues = z.infer<typeof UpdateProfileSchema>;
 
-export function ProfileForm({ user }: { user: any }) {
+export function ProfileForm({ user }: { user: { name?: string | null; image?: string | null; phoneNumber?: string | null } }) {
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
 

@@ -100,9 +100,7 @@ export function ClientsView({ studioGroups }: { studioGroups: StudioGroup[] }) {
             .filter(group => group.clients.length > 0);
     }, [studioGroups, debouncedSearch, filterType]);
 
-    useEffect(() => {
-        setPage(1);
-    }, [debouncedSearch, filterType]);
+    useEffect(() => { const t = setTimeout(() => setPage(1), 0); return () => clearTimeout(t); }, [debouncedSearch, filterType]);
 
     const totalFiltered = filteredGroups.reduce((sum, g) => sum + g.clients.length, 0);
     const totalGroups = filteredGroups.length;
@@ -249,7 +247,7 @@ export function ClientsView({ studioGroups }: { studioGroups: StudioGroup[] }) {
                                                                         phone: client.phone,
                                                                         address: client.address || undefined,
                                                                         notes: client.notes || undefined,
-                                                                        clientType: client.type as any
+                                                                        clientType: client.type as "vvip" | "vip" | "regular"
                                                                     }}
                                                                     triggerItem={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Edit</DropdownMenuItem>}
                                                                 />
@@ -276,7 +274,7 @@ export function ClientsView({ studioGroups }: { studioGroups: StudioGroup[] }) {
                                                     phone: client.phone,
                                                     address: client.address,
                                                     notes: client.notes,
-                                                    clientType: client.type as any
+                                                    clientType: client.type as "vvip" | "vip" | "regular"
                                                 }}
                                                 triggerItem={<ContextMenuItem onSelect={(e) => e.preventDefault()}>Edit</ContextMenuItem>}
                                             />

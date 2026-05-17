@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from "uuid";
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || "";
 const PAYSTACK_BASE = "https://api.paystack.co";
 
-async function paystackFetch<T = any>(path: string, options: RequestInit = {}): Promise<T> {
+async function paystackFetch<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
     const res = await fetch(`${PAYSTACK_BASE}${path}`, {
         ...options,
         headers: {
@@ -203,6 +203,7 @@ export async function verifyPayment(reference: string) {
                 where: { id: payment.id },
                 data: {
                     status: "PAID",
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     paystackResponse: paystackRes.data as any,
                 },
             });

@@ -278,7 +278,7 @@ export function EditProductForm({ product, categories: initialCategories }: { pr
                                                         step="0.01"
                                                         className="pl-7"
                                                         {...field}
-                                                        value={(field.value as any) ?? ""}
+                                                        value={(field.value as number | undefined) ?? ""}
                                                         onChange={(e) =>
                                                             field.onChange(e.target.value === "" ? undefined : e.target.value)
                                                         }

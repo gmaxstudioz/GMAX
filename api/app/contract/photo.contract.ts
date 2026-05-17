@@ -51,13 +51,13 @@ export const getAllPhotosContract = baseContract
 export const downloadPhotoContract = baseContract
     .route({
         method: "GET",
-        path: "/photos/{id}/download",
+        path: "/photos/{photoId}/download",
         successStatus: 200,
         summary: "Download a photo",
         description: "Download a photo",
         tags: ["Photos"], 
     })
-    .input(IdParamSchema)
+    .input(z.object({ photoId: z.string().min(1) }))
     .output(PhotoDownloadOutputSchema);
 
 export const ClientPhotoAccessContract = baseContract

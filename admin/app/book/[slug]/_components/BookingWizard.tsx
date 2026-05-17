@@ -51,7 +51,7 @@ interface BookingWizardProps {
     studioId: string;
     categories: Category[];
     addons: Addon[];
-    existingBookings: any[];
+    existingBookings: Record<string, unknown>[];
     paystackPublicKey: string;
 }
 

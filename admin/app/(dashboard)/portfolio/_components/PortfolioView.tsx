@@ -160,7 +160,7 @@ export function PortfolioView({
         });
     }, [items, debouncedSearch, filterType, filterCategory]);
 
-    useEffect(() => { setPage(1); }, [debouncedSearch, filterType, filterCategory]);
+    useEffect(() => { const t = setTimeout(() => setPage(1), 0); return () => clearTimeout(t); }, [debouncedSearch, filterType, filterCategory]);
 
     const totalFiltered = filteredItems.length;
     const totalPages = Math.ceil(totalFiltered / ITEMS_PER_PAGE);

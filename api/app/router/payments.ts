@@ -50,7 +50,7 @@ export const verifyPurchase = os.payment.verifyPurchase
 
         try {
             // Verify with Paystack
-            const response = await paystackFetch<any>(`/transaction/verify/${input.reference}`);
+            const response = await paystackFetch<{ data?: { status?: string } }>(`/transaction/verify/${input.reference}`);
             
             if (response.data?.status === "success") {
                 // Update payment status
@@ -60,7 +60,7 @@ export const verifyPurchase = os.payment.verifyPurchase
                 });
 
                 // ── Product purchase ──────────────────────────────────
-                const paystackRes = payment.paystackResponse as any;
+                const paystackRes = payment.paystackResponse as { pendingProduct?: { title: string }, pendingBuyer?: { name: string, email: string }, productId?: string, buyerId?: string } | null;
                 if (paystackRes?.pendingProduct && paystackRes?.pendingBuyer) {
                     const productId = paystackRes.productId;
                     const buyerId = paystackRes.buyerId;
@@ -216,7 +216,7 @@ export const getPublicPaymentDetails = os.payment.getPublicPaymentDetails
             })),
         } : null;
 
-        const paystackRes = payment.paystackResponse as any;
+        const paystackRes = payment.paystackResponse as { pendingProduct?: { title: string }, pendingBuyer?: { name: string, email: string } } | null;
         const productAccessData = payment.productAccess ? {
             product: { title: payment.productAccess.product.title },
             buyer: { name: payment.productAccess.buyer.name, email: payment.productAccess.buyer.email },

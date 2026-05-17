@@ -1,10 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { contract } from "@/app/contract";
 import { prisma } from "@/lib/prisma";
 import { implement } from "@orpc/server";
 import { optionalAuthMiddleware, authMiddleware, BaseContext } from "./middleware";
 import { calculateGrandTotal } from "@/lib/pricing";
 import { v4 as uuidv4 } from "uuid";
-import { paystackFetch } from "@/lib/paystack";
 
 const os = implement(contract).$context<BaseContext>();
 
@@ -193,7 +193,7 @@ export const createBookings = os.booking.create.use(optionalAuthMiddleware).hand
 );
 
 export const getBookingById = os.booking.getById.use(optionalAuthMiddleware).handler(
-    async ({ input, context, errors }) => {
+    async ({ input, errors }) => {
         const data = await prisma.booking.findUnique({
             where: { id: input.bookingId },
             include: {
@@ -212,7 +212,7 @@ export const getBookingById = os.booking.getById.use(optionalAuthMiddleware).han
 );
 
 export const updateBooking = os.booking.update.use(authMiddleware).handler(
-    async ({ input, context, errors }) => {
+    async ({ input, errors }) => {
         const { bookingId, addonIds, ...updateData } = input;
         
         const existing = await prisma.booking.findUnique({ where: { id: bookingId }});
@@ -241,7 +241,7 @@ export const updateBooking = os.booking.update.use(authMiddleware).handler(
 );
 
 export const deleteBooking = os.booking.delete.use(authMiddleware).handler(
-    async ({ input, context, errors }) => {
+    async ({ input, errors }) => {
         const existing = await prisma.booking.findUnique({ where: { id: input.bookingId }});
         if (!existing) throw errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: input.bookingId }});
 
@@ -251,7 +251,7 @@ export const deleteBooking = os.booking.delete.use(authMiddleware).handler(
 );
 
 export const getAllBookings = os.booking.getAll.use(authMiddleware).handler(
-    async ({ input, context, errors }) => {
+    async ({ input }) => {
         const { page, perPage, sortBy, sortOrder, studioId, search } = input;
         
         const whereClause: any = { studioId };
@@ -293,7 +293,7 @@ export const getAllBookings = os.booking.getAll.use(authMiddleware).handler(
 );
 
 export const reassignBooking = os.booking.reassign.use(authMiddleware).handler(
-    async ({ input, context, errors }) => {
+    async ({ input, errors }) => {
         const { bookingId, memberId } = input;
         const existing = await prisma.booking.findUnique({ where: { id: bookingId }});
         if (!existing) throw errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: bookingId }});
@@ -316,7 +316,7 @@ export const reassignBooking = os.booking.reassign.use(authMiddleware).handler(
 );
 
 export const rescheduleBooking = os.booking.reschedule.use(authMiddleware).handler(
-    async ({ input, context, errors }) => {
+    async ({ input, errors }) => {
         const { bookingId, newDate } = input;
         const existing = await prisma.booking.findUnique({ where: { id: bookingId }});
         if (!existing) throw errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: bookingId }});
@@ -339,7 +339,7 @@ export const rescheduleBooking = os.booking.reschedule.use(authMiddleware).handl
 );
 
 export const updateBookingStatus = os.booking.updateStatus.use(authMiddleware).handler(
-    async ({ input, context, errors }) => {
+    async ({ input, errors }) => {
         const { bookingId, bookingStatus, paymentStatus, deliveryStatus } = input;
         const existing = await prisma.booking.findUnique({ where: { id: bookingId }});
         if (!existing) throw errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: bookingId }});
