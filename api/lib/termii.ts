@@ -14,6 +14,8 @@ const TERMII_SMS_SENDER = process.env.TERMII_SMS_SENDER_ID ?? "GMAX Studio";
 const TERMII_EMAIL_CONFIG_ID = process.env.TERMII_EMAIL_CONFIG_ID ?? "";
 const TERMII_INVITE_TEMPLATE_ID = process.env.TERMII_INVITE_TEMPLATE_ID ?? "";
 const TERMII_RESET_TEMPLATE_ID = process.env.TERMII_RESET_TEMPLATE_ID ?? "";
+const TERMII_PURCHASE_TEMPLATE_ID = process.env.TERMII_PURCHASE_TEMPLATE_ID ?? "";
+const TERMII_BOOKING_TEMPLATE_ID = process.env.TERMII_BOOKING_TEMPLATE_ID ?? "";
 const TERMII_WHATSAPP_SENDER = process.env.TERMII_WHATSAPP_SENDER_ID ?? "";
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -40,11 +42,28 @@ async function termiiPost<T = unknown>(
 // ── SMS ─────────────────────────────────────────────────────────────
 
 /**
+ * Normalize a phone number to international format.
+ * Converts Nigerian local numbers (0801...) to +234801...
+ */
+function normalizePhone(phone: string): string {
+    let cleaned = phone.replace(/[\s\-()]/g, "");
+    // Nigerian local format → international
+    if (cleaned.startsWith("0") && cleaned.length === 11) {
+        cleaned = "234" + cleaned.slice(1);
+    }
+    // Ensure no leading +
+    if (cleaned.startsWith("+")) {
+        cleaned = cleaned.slice(1);
+    }
+    return cleaned;
+}
+
+/**
  * Send a transactional SMS (DND route — bypasses Do-Not-Disturb).
  */
 export async function sendSMS(to: string, message: string) {
     return termiiPost("/api/sms/send", {
-        to,
+        to: normalizePhone(to),
         from: TERMII_SMS_SENDER,
         sms: message,
         type: "plain",
@@ -59,7 +78,7 @@ export async function sendSMS(to: string, message: string) {
  */
 export async function sendWhatsApp(to: string, message: string) {
     return termiiPost("/api/sms/send", {
-        to,
+        to: normalizePhone(to),
         from: TERMII_WHATSAPP_SENDER || TERMII_SMS_SENDER,
         sms: message,
         type: "plain",
@@ -166,4 +185,80 @@ export async function sendInvitationWhatsApp(params: {
 }) {
     const message = `Hi! 👋\n\n*${params.inviterName}* has invited you to join *${params.studioName}* on GMAX Studioz.\n\nAccept the invitation: ${params.inviteLink}`;
     return sendWhatsApp(params.phone, message);
+}
+
+// ── Purchase Access Notifications ───────────────────────────────────
+
+/**
+ * Send a purchase access link email after successful payment.
+ */
+export async function sendPurchaseAccessEmail(params: {
+    email: string;
+    buyerName: string;
+    productTitle: string;
+    accessLink: string;
+    amount: string;
+}) {
+    if (!TERMII_PURCHASE_TEMPLATE_ID) {
+        console.warn(
+            "[Termii] TERMII_PURCHASE_TEMPLATE_ID not set — skipping purchase email.",
+            { to: params.email, link: params.accessLink },
+        );
+        return;
+    }
+
+    return sendTemplateEmail({
+        email: params.email,
+        subject: `Your purchase of "${params.productTitle}" — GMAX Studioz`,
+        templateId: TERMII_PURCHASE_TEMPLATE_ID,
+        variables: {
+            buyer_name: params.buyerName,
+            product_title: params.productTitle,
+            access_link: params.accessLink,
+            amount: params.amount,
+        },
+    });
+}
+
+/**
+ * Send a purchase access link via SMS after successful payment.
+ */
+export async function sendPurchaseAccessSMS(params: {
+    phone: string;
+    productTitle: string;
+    accessLink: string;
+}) {
+    const message = `GMAX Studioz: Payment confirmed for "${params.productTitle}"! Access your download here: ${params.accessLink}`;
+    return sendSMS(params.phone, message);
+}
+
+/**
+ * Send a booking payment confirmation email.
+ */
+export async function sendBookingPaymentEmail(params: {
+    email: string;
+    clientName: string;
+    serviceName: string;
+    amount: string;
+    reference: string;
+}) {
+    if (!TERMII_BOOKING_TEMPLATE_ID) {
+        console.warn(
+            "[Termii] TERMII_BOOKING_TEMPLATE_ID not set — skipping booking email.",
+            { to: params.email, reference: params.reference },
+        );
+        return;
+    }
+
+    return sendTemplateEmail({
+        email: params.email,
+        subject: `Booking Payment Confirmed — GMAX Studioz`,
+        templateId: TERMII_BOOKING_TEMPLATE_ID,
+        variables: {
+            client_name: params.clientName,
+            service_name: params.serviceName,
+            amount: params.amount,
+            reference: params.reference,
+        },
+    });
 }

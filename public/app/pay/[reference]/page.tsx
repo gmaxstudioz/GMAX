@@ -1,18 +1,19 @@
-import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { format } from "date-fns";
 import type { Metadata } from "next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { PaymentCheckout } from "./_components/PaymentCheckout";
+import { getPublicPaymentDetails } from "@/lib/api";
 import {
     CalendarIcon,
     PackageIcon,
     UserIcon,
     ShieldCheckIcon,
+    ShoppingBagIcon,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 export const metadata: Metadata = {
     title: "Pay — GMAX Studioz",
@@ -23,57 +24,77 @@ interface Props {
     params: Promise<{ reference: string }>;
 }
 
+function formatDate(dateString: string): string {
+    const d = new Date(dateString);
+    return d.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+    });
+}
+
 export default async function PaymentPage({ params }: Props) {
     const { reference } = await params;
 
-    const payment = await prisma.payment.findFirst({
-        where: { paystackReference: reference },
-        include: {
-            booking: {
-                include: {
-                    client: true,
-                    service: {
-                        include: { studioSession: true },
-                    },
-                    studio: true,
-                    addons: true,
-                },
-            },
-        },
-    });
+    let payment;
+    try {
+        payment = await getPublicPaymentDetails(reference);
+    } catch (error: any) {
+        return (
+            <div className="min-h-screen flex items-center justify-center p-4">
+                <Card className="max-w-md w-full bg-red-950/20 border-red-900">
+                    <CardContent className="pt-6">
+                        <h2 className="text-xl font-bold text-red-500 mb-2">Error Loading Payment</h2>
+                        <p className="text-sm text-red-200">{error.message || "Unknown error occurred while fetching payment details"}</p>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     if (!payment) return notFound();
 
     const booking = payment.booking;
-    if (!booking) return notFound();
+    const productAccess = payment.productAccess;
+    
+    if (!booking && !productAccess) return notFound();
  
-    const studio = booking.studio;
-    const isAlreadyPaid = payment.status === "PAID";
+    const studio = booking?.studio;
+    const isAlreadyPaid = payment.isAlreadyPaid;
     const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
     const paystackPublicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "";
-
-    const sessionDuration = booking.service?.studioSession?.duration || 45;
-    const totalDuration = sessionDuration * booking.sessionCount;
 
     const formatCurrency = (v: number) =>
         new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(v);
 
+    const buyerEmail = booking?.client?.email || productAccess?.buyer?.email || "";
+
+    // Determine the type of purchase for post-payment messaging
+    const purchaseType: "booking" | "product" = booking ? "booking" : "product";
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 flex items-center justify-center px-4 py-8 sm:py-12">
             <div className="w-full max-w-lg space-y-6">
-                {/* Studio Branding */}
+                {/* Header Branding */}
                 <div className="text-center space-y-3">
-                    {studio?.logo && (
+                    {studio?.logo ? (
                         <div className="mx-auto h-16 w-16 rounded-2xl overflow-hidden border shadow-sm">
                             <Image
                                 src={`${r2PublicUrl}/${studio.logo}`}
                                 alt={studio.name || "Studio"}
+                                width={64}
+                                height={64}
                                 className="h-full w-full object-cover"
                             />
                         </div>
+                    ) : (
+                        <div className="mx-auto h-16 w-16 rounded-2xl overflow-hidden bg-primary/10 flex items-center justify-center">
+                            <ShoppingBagIcon className="h-8 w-8 text-primary" />
+                        </div>
                     )}
                     <div>
-                        <h1 className="text-2xl sm:text-3xl font-bold">{studio?.name || "Studio"}</h1>
+                        <h1 className="text-2xl sm:text-3xl font-bold">{studio?.name || "GMAX Studioz Shop"}</h1>
                         <p className="text-muted-foreground text-sm mt-1">Complete your payment</p>
                     </div>
                 </div>
@@ -81,47 +102,74 @@ export default async function PaymentPage({ params }: Props) {
                 {/* Payment Card */}
                 <Card className="shadow-xl border-0 bg-card/80 backdrop-blur-sm">
                     <CardContent className="space-y-6 pt-6">
-                        {/* Booking Summary */}
+                        {/* Summary */}
                         <div className="space-y-3">
-                            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Booking Summary</h2>
+                            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                                {booking ? "Booking Summary" : "Order Summary"}
+                            </h2>
 
-                            <div className="flex items-center gap-3">
-                                <div className="rounded-lg bg-primary/10 p-2">
-                                    <PackageIcon className="h-4 w-4 text-primary" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium">{booking.service?.name}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {booking.sessionCount} session{booking.sessionCount > 1 ? "s" : ""} · {totalDuration} minutes
-                                    </p>
-                                </div>
-                            </div>
+                            {booking && (
+                                <>
+                                    <div className="flex items-center gap-3">
+                                        <div className="rounded-lg bg-primary/10 p-2">
+                                            <PackageIcon className="h-4 w-4 text-primary" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium">{booking.service?.name}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {booking.sessionCount} session{booking.sessionCount > 1 ? "s" : ""} · {
+                                                    (booking.service?.duration || 45) * booking.sessionCount
+                                                } minutes
+                                            </p>
+                                        </div>
+                                    </div>
 
-                            <div className="flex items-center gap-3">
-                                <div className="rounded-lg bg-primary/10 p-2">
-                                    <CalendarIcon className="h-4 w-4 text-primary" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium">{format(new Date(booking.bookingDate), "EEEE, MMMM do, yyyy")}</p>
-                                    <p className="text-xs text-muted-foreground">{format(new Date(booking.bookingDate), "h:mm a")}</p>
-                                </div>
-                            </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="rounded-lg bg-primary/10 p-2">
+                                            <CalendarIcon className="h-4 w-4 text-primary" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium">{formatDate(booking.bookingDate)}</p>
+                                        </div>
+                                    </div>
 
-                            <div className="flex items-center gap-3">
-                                <div className="rounded-lg bg-primary/10 p-2">
-                                    <UserIcon className="h-4 w-4 text-primary" />
-                                </div>
-                                <p className="text-sm font-medium">{booking.client?.name}</p>
-                            </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="rounded-lg bg-primary/10 p-2">
+                                            <UserIcon className="h-4 w-4 text-primary" />
+                                        </div>
+                                        <p className="text-sm font-medium">{booking.client?.name}</p>
+                                    </div>
 
-                            {booking.addons.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 mt-1">
-                                    {booking.addons.map(a => (
-                                        <Badge key={a.id} variant="outline" className="text-xs">
-                                            + {a.name}
-                                        </Badge>
-                                    ))}
-                                </div>
+                                    {booking.addons.length > 0 && (
+                                        <div className="flex flex-wrap gap-1.5 mt-1">
+                                            {booking.addons.map((a: any) => (
+                                                <Badge key={a.id} variant="outline" className="text-xs">
+                                                    + {a.name}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {productAccess && (
+                                <>
+                                    <div className="flex items-center gap-3">
+                                        <div className="rounded-lg bg-primary/10 p-2">
+                                            <ShoppingBagIcon className="h-4 w-4 text-primary" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium">{productAccess.product.title}</p>
+                                            <p className="text-xs text-muted-foreground">Digital Product</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="rounded-lg bg-primary/10 p-2">
+                                            <UserIcon className="h-4 w-4 text-primary" />
+                                        </div>
+                                        <p className="text-sm font-medium">{productAccess.buyer.name}</p>
+                                    </div>
+                                </>
                             )}
                         </div>
 
@@ -147,14 +195,23 @@ export default async function PaymentPage({ params }: Props) {
                                 <p className="text-sm text-muted-foreground text-center">
                                     This payment has already been confirmed. Thank you!
                                 </p>
+                                {purchaseType === "product" && (
+                                    <Link
+                                        href="/shop/access"
+                                        className="mt-2 inline-flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-full font-medium text-sm hover:bg-primary/90 transition-colors"
+                                    >
+                                        Access Your Downloads
+                                    </Link>
+                                )}
                             </div>
                         ) : (
                             <PaymentCheckout
                                 reference={reference}
                                 accessCode=""
-                                email={booking.client?.email || ""}
+                                email={buyerEmail}
                                 amount={Number(payment.amount)}
                                 publicKey={paystackPublicKey}
+                                purchaseType={purchaseType}
                             />
                         )}
 

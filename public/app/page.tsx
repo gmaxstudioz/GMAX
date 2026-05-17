@@ -10,6 +10,9 @@ import Magnetic from "@/components/ui/magnetic";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import ServicesSection from "@/components/web/ServicesSection";
+import { getPortfolio, type PortfolioItem } from "@/lib/api";
+
+const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
 
 const words = ["CREATIVE", "STUDIO"];
 
@@ -39,9 +42,14 @@ export default function Home() {
   const worksTextRef = useRef<HTMLParagraphElement>(null);
   const worksBtnRef = useRef<HTMLDivElement>(null);
   const [activeWorkIndex, setActiveWorkIndex] = useState<number | null>(null);
+  const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
 
   const footerText = "We masterfully blur the line between reality and art, crafting cinematic legacies and luxury imagery that command attention and stand the test of time.";
   const footerWords = footerText.split(" ");
+
+  useEffect(() => {
+    getPortfolio().then(data => setPortfolioItems(data.items.slice(0, 8))).catch(() => {});
+  }, []);
 
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
@@ -274,22 +282,29 @@ export default function Home() {
             <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-primary"></div>
           </div>
 
-          {/* Placeholder for work images */}
           <div ref={worksGridRef} className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {/* Replace with actual work images */}
-            {Array.from({ length: 8 }).map((_, index) => {
-              const categories = ["Wedding Photography", "Videography", "Events", "Commercial", "Portraits"];
-              const category = categories[index % categories.length];
+            {(portfolioItems.length > 0 ? portfolioItems : Array.from({ length: 8 }).map((_, i) => ({
+              id: String(i),
+              title: null,
+              category: ["Wedding Photography", "Videography", "Events", "Commercial", "Portraits"][i % 5],
+              r2Key: "",
+              thumbnailKey: null,
+              isPublished: true,
+              sortOrder: i,
+              _static: true,
+              _src: `/works/image-${i + 1}.jpg`,
+            } as any))).map((work: any, index: number) => {
               const isActive = activeWorkIndex === index;
+              const imgSrc = work._static ? work._src : `${R2_PUBLIC_URL}/${work.r2Key}`;
               return (
                 <div 
-                  key={index} 
+                  key={work.id} 
                   className="work-item group relative aspect-square rounded-xl overflow-hidden cursor-pointer"
                   onClick={() => setActiveWorkIndex(isActive ? null : index)}
                 >
                   <Image
-                    src={`/works/image-${index + 1}.jpg`}
-                    alt={`Work Image ${index + 1}`}
+                    src={imgSrc}
+                    alt={work.title || work.category}
                     fill
                     className={cn(
                       "object-cover rounded-xl transition-transform duration-700 md:group-hover:scale-105",
@@ -306,7 +321,7 @@ export default function Home() {
                       "md:translate-y-4 md:group-hover:translate-y-0",
                       isActive ? "translate-y-0" : "translate-y-4"
                     )}>
-                      {category}
+                      {work.title || work.category}
                     </span>
                   </div>
                 </div>
@@ -324,7 +339,7 @@ export default function Home() {
             <div ref={worksBtnRef}>
               <Magnetic>
                   <Link
-                      href="/contact"
+                      href="/works"
                       className={cn("inline-flex items-center gap-2")}
                   >
                       <span className={buttonVariants({ variant: "secondary", size: "lg" })}>View All</span>

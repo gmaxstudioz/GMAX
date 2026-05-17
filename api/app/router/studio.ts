@@ -34,8 +34,15 @@ export const getStudioBySlug = os.studio.getBySlug
             id: studio.id,
             name: studio.name,
             slug: studio.slug,
-            logo: studio.logo,
-            metadata: studio.metadata as Record<string, unknown> | null,
+            logo: (studio.logo && studio.logo.length > 0) ? studio.logo : null,
+            metadata: (() => {
+                const raw = studio.metadata;
+                if (raw == null) return null;
+                if (typeof raw === 'string') {
+                    try { return JSON.parse(raw); } catch { return null; }
+                }
+                return raw as Record<string, unknown>;
+            })(),
             createdAt: studio.createdAt.toISOString(),
             updatedAt: studio.updatedAt.toISOString(),
             categories: studio.categories.map((cat) => ({
@@ -66,5 +73,56 @@ export const getStudioBySlug = os.studio.getBySlug
                 price: a.price,
                 salePrice: a.salePrice,
             })),
+        };
+    });
+
+export const getAllStudios = os.studio.getAll
+    .use(optionalAuthMiddleware)
+    .handler(async ({ input }) => {
+        const page = input.page || 1;
+        const perPage = input.perPage || 20;
+        
+        const [studios, total] = await Promise.all([
+            prisma.studio.findMany({
+                skip: (page - 1) * perPage,
+                take: perPage,
+                orderBy: { createdAt: "desc" },
+                include: {
+                    _count: {
+                        select: { members: true, bookings: true }
+                    }
+                }
+            }),
+            prisma.studio.count()
+        ]);
+
+        const pageCount = Math.ceil(total / perPage);
+        
+        return {
+            items: studios.map(s => ({
+                id: s.id,
+                name: s.name,
+                slug: s.slug,
+                logo: (s.logo && s.logo.length > 0) ? s.logo : null,
+                metadata: (() => {
+                    const raw = s.metadata;
+                    if (raw == null) return null;
+                    if (typeof raw === 'string') {
+                        try { return JSON.parse(raw); } catch { return null; }
+                    }
+                    return raw as Record<string, unknown>;
+                })(),
+                createdAt: s.createdAt.toISOString(),
+                updatedAt: s.updatedAt.toISOString(),
+                _count: s._count,
+            })),
+            meta: {
+                total,
+                page,
+                perPage,
+                pageCount,
+                hasNextPage: page < pageCount,
+                hasPreviousPage: page > 1,
+            }
         };
     });

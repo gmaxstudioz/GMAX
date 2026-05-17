@@ -30,7 +30,7 @@ import { CalenderGrid } from "./calender/Calender";
 import { DateTimeSlotPicker } from "./DateTimeSlotPicker";
 import AddClient from "./AddClient";
 import { tryCatch } from "@/hooks/try-catch";
-import { DeleteClient, FetchClient } from "@/lib/actions/client";
+import { DeleteClient, FetchClients } from "@/lib/actions/client";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CreateBookingSchema, CreateBookingInput, Booking } from "@/lib/schemas/booking";
@@ -190,7 +190,7 @@ function Clients({studioData}: {studioData: StudioWithRelations}) {
 
     function handleRefresh() {
         startTransition(async () => {
-            const { data: result, error } = await tryCatch(FetchClient());
+            const { data: result, error } = await tryCatch(FetchClients(studioData.id));
 
             if (error) {
                 toast.error("An unexpected error occurred. Please try again.");

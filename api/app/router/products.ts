@@ -178,6 +178,17 @@ export const purchaseProduct = os.product.purchase
                     phone: input.buyerPhone,
                 },
             });
+        } else {
+            // Update returning buyer's info if they provide new details
+            const updates: Record<string, string> = {};
+            if (input.buyerName && input.buyerName !== buyer.name) updates.name = input.buyerName;
+            if (input.buyerPhone && input.buyerPhone !== buyer.phone) updates.phone = input.buyerPhone;
+            if (Object.keys(updates).length > 0) {
+                buyer = await prisma.buyer.update({
+                    where: { id: buyer.id },
+                    data: updates,
+                });
+            }
         }
 
         // Guard: already purchased and access hasn't expired
@@ -200,44 +211,21 @@ export const purchaseProduct = os.product.purchase
                 paystackReference: reference,
                 receiptNumber,
                 recordedById: null,
+                paystackResponse: {
+                    pendingProduct: { title: product.title },
+                    pendingBuyer: { name: buyer.name, email: buyer.email },
+                    productId: product.id,
+                    buyerId: buyer.id,
+                },
             },
         });
 
-        try {
-            const paystackRes = await paystackFetch<{
-                data: { authorization_url: string; reference: string };
-            }>("/transaction/initialize", {
-                method: "POST",
-                body: JSON.stringify({
-                    email: buyer.email,
-                    amount: Math.round(amount * 100),
-                    reference,
-                    currency: "NGN",
-                    callback_url: `${process.env.PORTAL_URL}/shop/${product.id}/success?ref=${reference}`,
-                    metadata: {
-                        product_id: product.id,
-                        payment_id: payment.id,
-                        buyer_id: buyer.id,
-                    },
-                }),
-            });
-
-            return {
-                paymentUrl: paystackRes.data.authorization_url,
-                reference: paystackRes.data.reference,
-                amount,
-                buyerId: buyer.id,
-            };
-        } catch (e) {
-            console.error("[Shop] Paystack init failed:", e);
-            return {
-                paymentUrl: null,
-                reference,
-                amount,
-                buyerId: buyer.id,
-                warning: "Payment link could not be generated. Please try again.",
-            };
-        }
+        return {
+            paymentUrl: null,
+            reference,
+            amount,
+            buyerId: buyer.id,
+        };
     });
 
 // ── Magic Link Flow ───────────────────────────────────────────────────────────

@@ -24,8 +24,13 @@ const handler = new OpenAPIHandler(router, {
      })
   ],
   interceptors: [
-    onError((error) => {
+    onError((_error) => {
+      const error = _error as Record<string, any>;
       console.error(error)
+      if (error.cause && 'issues' in (error.cause as any)) {
+        console.error('Zod issues:', JSON.stringify((error.cause as any).issues, null, 2));
+        console.error('Data sample:', JSON.stringify((error.cause as any).data?.items?.[0], null, 2));
+      }
     }),
   ],
 });

@@ -19,7 +19,7 @@ export const StudioOutputSchema = z.object({
   id: z.string(),
   name: z.string(),
   slug: z.string(),
-  logo: z.url().nullable(),
+  logo: z.string().nullable(),
   metadata: z.record(z.string(), z.unknown()).nullable(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),

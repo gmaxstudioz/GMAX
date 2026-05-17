@@ -71,7 +71,8 @@ export const ModelName = {
   Product: 'Product',
   Buyer: 'Buyer',
   BuyerAccessToken: 'BuyerAccessToken',
-  ProductAccess: 'ProductAccess'
+  ProductAccess: 'ProductAccess',
+  PortfolioItem: 'PortfolioItem'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -98,6 +99,7 @@ export const UserScalarFieldEnum = {
   image: 'image',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
+  role: 'role',
   phoneNumber: 'phoneNumber',
   phoneNumberVerified: 'phoneNumberVerified'
 } as const
@@ -406,6 +408,24 @@ export const ProductAccessScalarFieldEnum = {
 } as const
 
 export type ProductAccessScalarFieldEnum = (typeof ProductAccessScalarFieldEnum)[keyof typeof ProductAccessScalarFieldEnum]
+
+
+export const PortfolioItemScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  category: 'category',
+  r2Key: 'r2Key',
+  fileName: 'fileName',
+  fileSize: 'fileSize',
+  mimeType: 'mimeType',
+  thumbnailKey: 'thumbnailKey',
+  sortOrder: 'sortOrder',
+  isPublished: 'isPublished',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PortfolioItemScalarFieldEnum = (typeof PortfolioItemScalarFieldEnum)[keyof typeof PortfolioItemScalarFieldEnum]
 
 
 export const SortOrder = {

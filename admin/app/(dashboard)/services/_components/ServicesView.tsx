@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { tryCatch } from "@/hooks/try-catch";
-import { deleteService, FetchService } from "@/lib/actions/service";
+import { deleteService } from "@/lib/actions/service";
 import { Filter, Loading, MoreVerticalIcon, Refresh01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useMemo, useState, useTransition, useEffect } from "react";
@@ -91,18 +91,7 @@ export function ServicesView({ studioGroups }: { studioGroups: StudioGroup[] }) 
 
     function handleRefresh() {
         startTransition(async () => {
-            const { data: result, error } = await tryCatch(FetchService());
-
-            if (error) {
-                toast.error("An unexpected error occurred. Please try again.");
-                return;
-            }
-
-            if (result?.status === "success") {
-                toast.success("Refreshed Successfully");
-            } else if (result?.status === "error") {
-                toast.error(result?.message);
-            }
+            window.location.reload();
         });
     }
 

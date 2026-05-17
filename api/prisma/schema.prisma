@@ -28,6 +28,7 @@ model User {
   payments      Payment[]
   photos        Photo[]
 
+  role                String   @default("user") // "user" | "admin"
   phoneNumber         String?
   phoneNumberVerified Boolean?
 
@@ -485,4 +486,26 @@ model ProductAccess {
   @@index([buyerId])
   @@index([productId])
   @@map("product_access")
+}
+
+model PortfolioItem {
+  id       String @id @default(cuid())
+  title    String?
+  category String  @default("General")
+
+  r2Key        String
+  fileName     String
+  fileSize     Int
+  mimeType     String
+  thumbnailKey String?
+
+  sortOrder   Int      @default(0)
+  isPublished Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([sortOrder])
+  @@map("portfolio_item")
 }

@@ -6,7 +6,7 @@ import Image from "next/image";
 import gsap from "gsap";
 import { getProducts } from "@/lib/api";
 import type { ProductOutput } from "@/lib/types/product";
-import { ShoppingBag, Search, Loader2 } from "lucide-react";
+import { ShoppingBag, Search, Loader2, PackageOpen } from "lucide-react";
 import Magnetic from "@/components/ui/magnetic";
 
 
@@ -77,8 +77,15 @@ export default function ShopPage() {
         </p>
       </div>
 
-      {/* Search Input */}
-      <div className="max-w-7xl mx-auto px-4 md:px-6 mb-12 flex justify-end">
+      {/* Search + Access Link */}
+      <div className="max-w-7xl mx-auto px-4 md:px-6 mb-12 flex items-center justify-between gap-4">
+        <Link
+          href="/shop/access"
+          className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-primary transition-colors whitespace-nowrap"
+        >
+          <PackageOpen size={16} />
+          Access Purchases
+        </Link>
         <div className="relative w-full md:w-72">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search size={18} className="text-gray-500" />

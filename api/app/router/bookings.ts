@@ -406,16 +406,39 @@ export const createPublicBooking = os.booking.createPublic
                 .map((p) => p.trim())
                 .filter(Boolean);
 
-            const client = await prisma.client.create({
-                data: {
-                    name: input.clientName,
-                    phone: phones,
-                    email: input.clientEmail ?? null,
-                    type: "regular",
-                    studioId: input.studioId,
-                },
-            });
-            clientId = client.id;
+            // Try to find an existing client by email or phone in this studio
+            let existingClient = null;
+            if (input.clientEmail) {
+                existingClient = await prisma.client.findFirst({
+                    where: {
+                        studioId: input.studioId,
+                        email: input.clientEmail,
+                    },
+                });
+            }
+            if (!existingClient && phones.length > 0) {
+                existingClient = await prisma.client.findFirst({
+                    where: {
+                        studioId: input.studioId,
+                        phone: { hasSome: phones },
+                    },
+                });
+            }
+
+            if (existingClient) {
+                clientId = existingClient.id;
+            } else {
+                const client = await prisma.client.create({
+                    data: {
+                        name: input.clientName,
+                        phone: phones,
+                        email: input.clientEmail ?? null,
+                        type: "regular",
+                        studioId: input.studioId,
+                    },
+                });
+                clientId = client.id;
+            }
         }
 
         const defaultMember =
@@ -424,8 +447,21 @@ export const createPublicBooking = os.booking.createPublic
             message: "No available staff member",
         });
 
-        const [y, mo, d] = input.bookingDate.split("-").map(Number);
-        const bookingDateUTC = new Date(Date.UTC(y, mo - 1, d));
+        // Parse booking date robustly — handles ISO strings, YYYY-MM-DD, etc.
+        let bookingDateUTC: Date;
+        const dateStr = input.bookingDate;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            // Pure YYYY-MM-DD format
+            const [y, mo, d] = dateStr.split("-").map(Number);
+            bookingDateUTC = new Date(Date.UTC(y, mo - 1, d));
+        } else {
+            // ISO string or other parseable format
+            bookingDateUTC = new Date(dateStr);
+        }
+
+        if (isNaN(bookingDateUTC.getTime())) {
+            throw errors.BAD_REQUEST({ message: "Invalid booking date format." });
+        }
 
         const booking = await prisma.booking.create({
             data: {
@@ -483,40 +519,12 @@ export const createPublicBooking = os.booking.createPublic
             };
         }
 
-        try {
-            const paystackRes = await paystackFetch<{
-                data: { authorization_url: string; reference: string };
-            }>("/transaction/initialize", {
-                method: "POST",
-                body: JSON.stringify({
-                    email: clientEmail,
-                    amount: Math.round(grandTotal * 100),
-                    reference,
-                    currency: "NGN",
-                    callback_url: `${process.env.PORTAL_URL}/pay/${reference}?status=success`,
-                    metadata: {
-                        booking_id: booking.id,
-                        studio_name: studio.name,
-                    },
-                }),
-            });
-
-            return {
-                bookingId: booking.id,
-                paymentUrl: paystackRes.data.authorization_url,
-                reference: paystackRes.data.reference,
-                amount: grandTotal,
-            };
-        } catch (e) {
-            console.error("[PublicBooking] Paystack init failed:", e);
-            return {
-                bookingId: booking.id,
-                paymentUrl: null,
-                reference,
-                amount: grandTotal,
-                warning: "Payment link could not be generated. Please contact the studio.",
-            };
-        }
+        return {
+            bookingId: booking.id,
+            paymentUrl: null,
+            reference,
+            amount: grandTotal,
+        };
     });
 
 export const checkClient = os.booking.checkClient

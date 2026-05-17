@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Purchase Confirmation</title>
+    <!--[if mso]>
+    <style type="text/css">
+        table {border-collapse:collapse;}
+        .button-link {text-decoration:none !important;}
+    </style>
+    <![endif]-->
+</head>
+<body style="margin: 0; padding: 0; background-color: #111111; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+    
+    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #111111; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                
+                <!-- Logo Outside Container -->
+                <a href="https://gmaxstudioz.com" style="display: inline-block; margin-bottom: 24px;">
+                    <img src="https://pub-0f577ec0429b4890b78265bc3e7eab92.r2.dev/gmax-logo.png" alt="GMAX Studioz" width="60" style="display: block; border: 0; outline: none; text-decoration: none; max-width: 60px; height: auto;" onerror="this.style.display='none'">
+                </a>
+
+                <!-- Main Container -->
+                <table width="100%" max-width="600" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #1a1a1a; border-radius: 16px; border: 1px solid #333333; overflow: hidden;">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td align="center" style="padding: 40px 30px 20px 30px;">
+                            <h1 style="color: #ffffff; font-size: 28px; font-weight: bold; margin: 0; letter-spacing: -0.5px;">Payment Confirmed! 🎉</h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- Body Content -->
+                    <tr>
+                        <td align="left" style="padding: 20px 40px 30px 40px;">
+                            <p style="color: #e5e5e5; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">
+                                Hi <strong>{{buyer_name}}</strong>,
+                            </p>
+                            <p style="color: #a3a3a3; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+                                Thank you for your purchase of <strong style="color: #ffffff;">"{{product_title}}"</strong> for {{amount}}.
+                                Your payment has been successfully confirmed and your digital download is now ready.
+                            </p>
+                            
+                            <!-- CTA Button -->
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                <tr>
+                                    <td align="center" style="padding: 10px 0 30px 0;">
+                                        <a href="{{access_link}}" class="button-link" style="background-color: #D4A017; color: #000000; padding: 16px 36px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; text-align: center; box-shadow: 0 4px 14px 0 rgba(212, 160, 23, 0.39);">
+                                            Access Your Download
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Info Box -->
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #222222; border-radius: 12px; border: 1px solid #333333;">
+                                <tr>
+                                    <td align="center" style="padding: 16px;">
+                                        <p style="color: #a3a3a3; font-size: 14px; line-height: 1.5; margin: 0;">
+                                            This magic link is valid for <strong>24 hours</strong>. If it expires, you can simply request a new one from the shop.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td align="center" style="padding: 30px 40px 40px 40px; border-top: 1px solid #333333;">
+                            <p style="color: #666666; font-size: 12px; line-height: 1.5; margin: 0;">
+                                © 2026 GMAX Studioz. All rights reserved.<br>
+                                Elevate your craft with our premium curated digital assets.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+                
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

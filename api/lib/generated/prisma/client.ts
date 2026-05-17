@@ -146,3 +146,8 @@ export type BuyerAccessToken = Prisma.BuyerAccessTokenModel
  * 
  */
 export type ProductAccess = Prisma.ProductAccessModel
+/**
+ * Model PortfolioItem
+ * 
+ */
+export type PortfolioItem = Prisma.PortfolioItemModel

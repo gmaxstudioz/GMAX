@@ -96,6 +96,13 @@ const data = {
         <HugeiconsIcon icon={ShoppingCart01Icon} />
       ),
     },
+    {
+      title: "Portfolio",
+      url: "/portfolio",
+      icon: (
+        <FolderIcon />
+      ),
+    },
   ],
   navSecondary: [
     {
@@ -123,15 +130,24 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
   
   let isOnlyMinorRole = false;
   if (session?.user) {
-    const members = await prisma.member.findMany({
-      where: { userId: session.user.id },
+    const userData = await prisma.user.findUnique({
+      where: { id: session.user.id },
       select: { role: true }
     });
-    
-    // Check if user has NO administrative roles across all studios
-    const adminRoles = ["owner", "developer", "manager"];
-    const hasAdminRole = members.some(m => adminRoles.includes(m.role));
-    isOnlyMinorRole = members.length > 0 && !hasAdminRole;
+
+    const isAdmin = userData?.role === "admin";
+
+    if (!isAdmin) {
+      const members = await prisma.member.findMany({
+        where: { userId: session.user.id },
+        select: { role: true }
+      });
+      
+      // Check if user has NO administrative roles across all studios
+      const adminRoles = ["owner", "developer", "manager"];
+      const hasAdminRole = members.some(m => adminRoles.includes(m.role));
+      isOnlyMinorRole = members.length > 0 && !hasAdminRole;
+    }
   }
 
   // Create restricted nav for minor roles

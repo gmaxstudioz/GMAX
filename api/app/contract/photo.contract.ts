@@ -51,7 +51,7 @@ export const getAllPhotosContract = baseContract
 export const downloadPhotoContract = baseContract
     .route({
         method: "GET",
-        path: "/photos/{photoId}/download",
+        path: "/photos/{id}/download",
         successStatus: 200,
         summary: "Download a photo",
         description: "Download a photo",

@@ -87,6 +87,13 @@ function post<T>(path: string, body: unknown) {
 export const getStudioBySlug = (slug: string) =>
     post<PublicStudioOutput>(`/studio/get/${slug}`, { slug });
 
+/** GET /studio/getAll — contract: getAllStudiosContract */
+export const getStudios = (page = 1, perPage = 20) =>
+    get<{ items: { id: string; name: string; slug: string; logo: string | null }[]; meta: { total: number; page: number; perPage: number; totalPages: number } }>("/studio/getAll", {
+        page: String(page),
+        perPage: String(perPage),
+    });
+
 // ── Booking ───────────────────────────────────────────────────────────────────
 
 /** GET /bookings/check-client — contract: CheckClientContract */
@@ -132,6 +139,10 @@ export const requestDownload = (input: RequestDownloadInput) =>
 export const verifyPurchase = (reference: string) =>
     get<{ verified: boolean; buyerId?: string }>("/payments/verify-purchase", { reference });
 
+/** GET /payments/public-details/{reference} — contract: getPublicPaymentDetailsContract */
+export const getPublicPaymentDetails = (reference: string) =>
+    get<any>(`/payments/public-details/${reference}`);
+
 // ── Photos ────────────────────────────────────────────────────────────────────
 
 /** POST /photos/{bookingId}/client-access — contract: ClientPhotoAccessContract */
@@ -141,3 +152,24 @@ export const getClientPhotos = (input: ClientPhotoAccessInput) =>
 /** POST /photos/{bookingId}/client-download — contract: ClientDownloadPhotoContract */
 export const downloadPhoto = (input: ClientDownloadPhotoInput) =>
     post<ClientDownloadOutput>(`/photos/${input.bookingId}/client-download`, input);
+
+// ── Portfolio ─────────────────────────────────────────────────────────────────
+
+export type PortfolioItem = {
+    id: string;
+    title: string | null;
+    category: string;
+    r2Key: string;
+    thumbnailKey: string | null;
+    isPublished: boolean;
+    sortOrder: number;
+};
+
+export type PortfolioResponse = {
+    items: PortfolioItem[];
+    categories: string[];
+};
+
+/** GET /portfolio — contract: GetPublicPortfolioContract */
+export const getPortfolio = (category?: string) =>
+    get<PortfolioResponse>("/portfolio", category ? { category } : {});

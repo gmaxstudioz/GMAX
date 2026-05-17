@@ -8,6 +8,7 @@ import {
     PaymentOutputSchema,
     PaymentListOutputSchema,
     PaystackInitOutputSchema,
+    PublicPaymentDetailsOutputSchema,
 } from "@/schema/output/payment.output";
 import { DeleteOutputSchema } from "@/schema/output/common.output";
 import { IdParamSchema, StudioScopedQuerySchema } from "@/schema/common.schema";
@@ -105,3 +106,14 @@ export const verifyPurchaseContract = baseContract
         verified: z.boolean(),
         buyerId: z.string().optional(),
     }));
+
+export const getPublicPaymentDetailsContract = baseContract
+    .route({
+        method: "GET",
+        path: "/payments/public-details/{reference}",
+        successStatus: 200,
+        summary: "Get payment details for public checkout page",
+        tags: ["Payments"],
+    })
+    .input(z.object({ reference: z.string().min(1) }))
+    .output(PublicPaymentDetailsOutputSchema);

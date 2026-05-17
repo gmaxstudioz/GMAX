@@ -64,6 +64,7 @@ import {
     getAllPaymentsContract,
     initPaystackPaymentContract,
     verifyPurchaseContract,
+    getPublicPaymentDetailsContract,
 } from "./payment.contract";
 
 import {
@@ -79,6 +80,7 @@ import {
     ClientDownloadPhotoContract,
 } from "./photo.contract";
 import { CreateProductContract, DeleteProductContract, GetAllProductsContract, GetProductContract, PurchaseProductContract, RequestAccessLinkContract, RequestDownloadContract, UpdateProductContract, VerifyAccessTokenContract } from "./product.contract";
+import { GetPublicPortfolioContract } from "./portfolio.contract";
 
 
 // ─── Unified Contract Tree ────────────────────────────────────────────────────
@@ -171,6 +173,7 @@ export const contract = {
         getAll: getAllPaymentsContract,
         initPaystack: initPaystackPaymentContract,
         verifyPurchase: verifyPurchaseContract,
+        getPublicPaymentDetails: getPublicPaymentDetailsContract,
     },
 
     // ── Photo ─────────────────────────────────────────────────────────────────
@@ -197,6 +200,11 @@ export const contract = {
         requestDownload: RequestDownloadContract,
         requestAccessLink: RequestAccessLinkContract,
         verifyAccessToken: VerifyAccessTokenContract,
+    },
+
+    // ── Portfolio ─────────────────────────────────────────────────────────────
+    portfolio: {
+        getPublic: GetPublicPortfolioContract,
     },
 } as const;
 
