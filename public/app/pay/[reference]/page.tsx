@@ -40,13 +40,13 @@ export default async function PaymentPage({ params }: Props) {
     let payment;
     try {
         payment = await getPublicPaymentDetails(reference);
-    } catch (error: any) {
+    } catch (error: unknown) {
         return (
             <div className="min-h-screen flex items-center justify-center p-4">
                 <Card className="max-w-md w-full bg-red-950/20 border-red-900">
                     <CardContent className="pt-6">
                         <h2 className="text-xl font-bold text-red-500 mb-2">Error Loading Payment</h2>
-                        <p className="text-sm text-red-200">{error.message || "Unknown error occurred while fetching payment details"}</p>
+                        <p className="text-sm text-red-200">{error instanceof Error ? error.message : "Unknown error occurred while fetching payment details"}</p>
                     </CardContent>
                 </Card>
             </div>
@@ -142,7 +142,7 @@ export default async function PaymentPage({ params }: Props) {
 
                                     {booking.addons.length > 0 && (
                                         <div className="flex flex-wrap gap-1.5 mt-1">
-                                            {booking.addons.map((a: any) => (
+                                            {booking.addons.map((a: { id: string; name: string }) => (
                                                 <Badge key={a.id} variant="outline" className="text-xs">
                                                     + {a.name}
                                                 </Badge>

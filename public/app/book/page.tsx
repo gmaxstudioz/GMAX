@@ -72,7 +72,40 @@ export default function BookingPage() {
   const selectedService = services.find(s => s.id === selectedServiceId);
   const selectedAddonIds = watch("selectedAddonIds") || [];
 
-  // Update form's bookingDate when date or time changes
+  const generateTimeSlots = (durationInMinutes: number = 60) => {
+    const slots = [];
+    let currentMin = 9 * 60; // 09:00 am start
+    const endMin = 18 * 60; // 06:00 pm end
+    
+    while (currentMin + durationInMinutes <= endMin) {
+      const h = Math.floor(currentMin / 60).toString().padStart(2, '0');
+      const m = (currentMin % 60).toString().padStart(2, '0');
+      slots.push(`${h}:${m}`);
+      currentMin += durationInMinutes;
+    }
+    return slots;
+  };
+
+  // ✅ Updated to use sessionDurationMins from the first variant
+  const timeSlots = (selectedService && selectedService.variants.length > 0) 
+    ? generateTimeSlots(selectedService.variants[0].sessionDurationMins) 
+    : [];
+
+  const isTomorrow = selectedDate === new Date(Date.now() + 86400000).toISOString().split("T")[0];
+  
+  let maxAvailableSessions = 1;
+  if (selectedTime && timeSlots.length > 0) {
+      const startIndex = timeSlots.indexOf(selectedTime);
+      let continuousAvailable = 0;
+      for (let i = startIndex; i < timeSlots.length; i++) {
+          const time = timeSlots[i];
+          const isBooked = isTomorrow && timeSlots.indexOf(time) < 3;
+          if (isBooked) break;
+          continuousAvailable++;
+      }
+      maxAvailableSessions = continuousAvailable > 0 ? continuousAvailable : 1;
+  }
+
   useEffect(() => {
     if (selectedDate && selectedTime) {
       setValue("bookingDate", `${selectedDate}T${selectedTime}`, { shouldValidate: true });
@@ -82,7 +115,13 @@ export default function BookingPage() {
   }, [selectedDate, selectedTime, setValue]);
 
   useEffect(() => {
-    // Fetch all studios for Step 1
+    const currentSessions = watch("sessionCount");
+    if (currentSessions > maxAvailableSessions) {
+      setValue("sessionCount", maxAvailableSessions, { shouldValidate: true });
+    }
+  }, [maxAvailableSessions, watch, setValue]);
+
+  useEffect(() => {
     getStudios()
       .then((res) => {
         setStudiosList(res.items);
@@ -111,7 +150,6 @@ export default function BookingPage() {
       setStudio(data);
       const allServices = data.categories.flatMap(c => c.services);
       setServices(allServices);
-      // Reset selections when changing studio
       setValue("selectedServiceId", "");
       setValue("selectedAddonIds", []);
       setSelectedDate("");
@@ -133,7 +171,6 @@ export default function BookingPage() {
            await fetchStudioServices(selectedStudioSlug);
         }
       } else if (currentStep === 2) {
-        // Ensure date and time are both selected
         if (!selectedDate || !selectedTime) {
           toast.error("Please select both a date and a time.");
           return;
@@ -165,18 +202,20 @@ export default function BookingPage() {
   };
 
   const onSubmit = async (data: PublicBookingInput) => {
-    setIsSubmitting(true);
-    try {
-      const res = await createPublicBooking(data);
-      toast.success("Booking created! Redirecting to payment gateway...");
-      if (res.paymentUrl) {
-        router.push(res.paymentUrl);
+      setIsSubmitting(true);
+      try {
+          const result = await createPublicBooking(data);
+          if (result.paymentUrl) {
+              window.location.href = result.paymentUrl;
+          } else {
+            toast.warning(result.warning ?? "Booking created. Payment link will be sent manually.");
+            router.push(`/book/confirm?reference=${result.reference}`);
+          }
+      } catch (err) {
+          toast.error("Failed to create booking.");
+      } finally {
+          setIsSubmitting(false);
       }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to create booking.");
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   if (isLoadingStudios) {
@@ -254,7 +293,8 @@ export default function BookingPage() {
                               <SelectLabel className="text-primary font-bold text-xs uppercase tracking-wider pl-6 mt-2">{category.name}</SelectLabel>
                               {category.services.map(service => (
                                 <SelectItem key={service.id} value={service.id} className="pl-6 py-2.5 cursor-pointer">
-                                  {service.name} - ${service.price}
+                                  {/* ✅ Updated to use variants price */}
+                                  {service.name} - ₦{Number(service.variants[0]?.basePrice || 0).toLocaleString()}
                                 </SelectItem>
                               ))}
                             </SelectGroup>
@@ -266,7 +306,8 @@ export default function BookingPage() {
                         <div className="p-6 rounded-xl border border-border/50 bg-primary/5 animate-in fade-in slide-in-from-top-2">
                           <div className="flex justify-between items-start mb-4">
                             <h4 className="font-semibold text-xl">{selectedService.name}</h4>
-                            <span className="text-xl font-bold text-primary">${selectedService.price}</span>
+                            {/* ✅ Updated to use variants price */}
+                            <span className="text-xl font-bold text-primary">₦{Number(selectedService.variants[0]?.basePrice || 0).toLocaleString()}</span>
                           </div>
                           {selectedService.description && (
                             <p className="text-sm text-muted-foreground mb-6 leading-relaxed">{selectedService.description}</p>
@@ -317,7 +358,8 @@ export default function BookingPage() {
                               <div className="flex justify-between items-start mb-2">
                                 <div>
                                   <span className="font-medium block">{addon.name}</span>
-                                  <span className="text-sm font-semibold text-primary">+${addon.price}</span>
+                                  {/* ✅ Updated to use variants price */}
+                                  <span className="text-sm font-semibold text-primary">+₦{Number(addon.variants[0]?.basePrice || 0).toLocaleString()}</span>
                                 </div>
                                 {isSelected && <CheckCircle2 className="text-primary w-5 h-5 flex-shrink-0" />}
                               </div>
@@ -369,7 +411,7 @@ export default function BookingPage() {
                       value={selectedDate}
                       onChange={(e) => {
                         setSelectedDate(e.target.value);
-                        setSelectedTime(""); // Reset time when date changes
+                        setSelectedTime(""); 
                       }}
                       className="rounded-xl bg-card/50"
                     />
@@ -378,11 +420,9 @@ export default function BookingPage() {
                     <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Available Times</Label>
                     <div className="grid grid-cols-3 gap-2">
                       {selectedDate ? (
-                        ["09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"].map((time) => {
-                           // Mocking availability - usually this comes from the backend
-                           // Let's pretend times before noon are "booked" for tomorrow just as an example
+                        timeSlots.map((time) => {
                            const isTomorrow = selectedDate === new Date(Date.now() + 86400000).toISOString().split("T")[0];
-                           const isBooked = isTomorrow && ["09:00", "10:00", "11:00"].includes(time);
+                           const isBooked = isTomorrow && timeSlots.indexOf(time) < 3;
                            
                            return (
                             <button
@@ -406,6 +446,25 @@ export default function BookingPage() {
                       )}
                     </div>
                     {errors.bookingDate && <p className="text-destructive text-sm mt-2">{errors.bookingDate.message}</p>}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-border/50">
+                  <div className="space-y-2 flex flex-col max-w-xs">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Number of Sessions</Label>
+                      {selectedTime && <span className="text-xs text-primary font-medium">Max: {maxAvailableSessions}</span>}
+                    </div>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={maxAvailableSessions}
+                      disabled={!selectedTime}
+                      {...register("sessionCount", { valueAsNumber: true })}
+                      className="rounded-xl bg-card/50"
+                    />
+                    {!selectedTime && <p className="text-xs text-muted-foreground">Select a time first to choose sessions.</p>}
+                    {errors.sessionCount && <p className="text-destructive text-sm mt-2">{errors.sessionCount.message}</p>}
                   </div>
                 </div>
               </>
@@ -483,17 +542,22 @@ export default function BookingPage() {
                   <span className="text-muted-foreground">Studio</span>
                   <span className="font-medium text-right">{studio?.name || selectedStudioSlug}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Sessions</span>
+                  <span className="font-medium text-right">{watch("sessionCount") || 1}</span>
+                </div>
               </div>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center mt-6 pt-4 border-t border-border/50">
                   <span className="text-lg font-medium">Total Estimate</span>
+                  {/* ✅ Updated calculation using variants */}
                   <span className="text-2xl font-bold text-primary">
-                    ${(
-                       (selectedService?.price || 0) + 
+                    ₦{(
+                       ((Number(selectedService?.variants[0]?.basePrice || 0)) * (watch("sessionCount") || 1)) + 
                        (selectedAddonIds.length > 0 && studio?.addons ? selectedAddonIds.reduce((sum, id) => {
                          const addon = studio.addons.find(a => a.id === id);
-                         return sum + (addon?.price || 0);
+                         return sum + Number(addon?.variants[0]?.basePrice || 0);
                        }, 0) : 0)
-                     ).toFixed(2)}
+                     ).toLocaleString("en-NG")}
                   </span>
                 </div>
             </div>

@@ -65,7 +65,7 @@ export default function AccessPage() {
             <CheckCircle2 className="w-16 h-16 text-green-500" />
             <h2 className="text-2xl font-bold">Link Sent!</h2>
             <p className="text-gray-400">
-              We've sent an email with a secure access link. Please check your inbox (and spam folder).
+              We&apos;ve sent an email with a secure access link. Please check your inbox (and spam folder).
             </p>
             <Button
               variant="outline"

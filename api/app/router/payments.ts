@@ -95,15 +95,19 @@ export const verifyPurchase = os.payment.verifyPurchase
 
                             // Send email notification
                             if (buyerEmail) {
-                                await sendPurchaseAccessEmail({
+                                const emailResult = await sendPurchaseAccessEmail({
                                     email: buyerEmail,
                                     buyerName,
                                     productTitle,
                                     accessLink,
                                     amount: formatCurrency(Number(payment.amount)),
                                 }).catch(err => {
-                                    console.error("[verifyPurchase] Failed to send purchase email:", err);
+                                    console.error("[verifyPurchase] Purchase email failed:", err);
+                                    return null;
                                 });
+                                if (!emailResult) {
+                                    console.warn("[verifyPurchase] Email delivery failed — check Termii logs");
+                                }
                             }
 
                             // Also send SMS if we have the phone number
@@ -114,7 +118,7 @@ export const verifyPurchase = os.payment.verifyPurchase
                                     productTitle,
                                     accessLink,
                                 }).catch(err => {
-                                    console.error("[verifyPurchase] Failed to send purchase SMS:", err);
+                                    console.error("[verifyPurchase] SMS failed:", err);
                                 });
                             }
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { getProductById, getProducts, purchaseProduct } from "@/lib/api";
+import { getProductById, getProducts } from "@/lib/api";
 import type { ProductOutput } from "@/lib/types/product";
 import { ArrowLeft, ShoppingCart, ShoppingBag, Loader2, Tag } from "lucide-react";
 import Magnetic from "@/components/ui/magnetic";

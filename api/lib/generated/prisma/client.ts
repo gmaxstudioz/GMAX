@@ -87,20 +87,50 @@ export type Member = Prisma.MemberModel
  */
 export type Invitation = Prisma.InvitationModel
 /**
- * Model Service
- * 
- */
-export type Service = Prisma.ServiceModel
-/**
  * Model Category
  * 
  */
 export type Category = Prisma.CategoryModel
 /**
+ * Model Service
+ * 
+ */
+export type Service = Prisma.ServiceModel
+/**
+ * Model ServiceVariant
+ * 
+ */
+export type ServiceVariant = Prisma.ServiceVariantModel
+/**
+ * Model ServiceDeliverable
+ * 
+ */
+export type ServiceDeliverable = Prisma.ServiceDeliverableModel
+/**
+ * Model Course
+ * 
+ */
+export type Course = Prisma.CourseModel
+/**
+ * Model CourseModule
+ * 
+ */
+export type CourseModule = Prisma.CourseModuleModel
+/**
+ * Model Enrollment
+ * 
+ */
+export type Enrollment = Prisma.EnrollmentModel
+/**
  * Model Client
  * 
  */
 export type Client = Prisma.ClientModel
+/**
+ * Model BookingIntent
+ * 
+ */
+export type BookingIntent = Prisma.BookingIntentModel
 /**
  * Model Booking
  * 

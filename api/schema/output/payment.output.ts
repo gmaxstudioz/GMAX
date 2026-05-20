@@ -12,7 +12,7 @@ export const PaymentOutputSchema = z.object({
   paystackReference: z.string().nullable(),
   receiptNumber: z.string(),
   receiptUrl: z.url().nullable(),
-  bookingId: z.string(),
+  bookingId: z.string().nullable(),
   recordedById: z.string(),
   paymentDate: z.iso.datetime(),
   createdAt: z.iso.datetime(),

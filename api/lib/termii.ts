@@ -7,8 +7,7 @@
  * - Email:        POST https://v3.api.termii.com/api/templates/send-email
  */
 
-const TERMII_BASE = "https://v3.api.termii.com";
-
+const TERMII_BASE = process.env.TERMII_BASE_URL ?? "https://v3.api.termii.com";
 const TERMII_API_KEY = process.env.TERMII_API_KEY ?? "";
 const TERMII_SMS_SENDER = process.env.TERMII_SMS_SENDER_ID ?? "GMAX Studio";
 const TERMII_EMAIL_CONFIG_ID = process.env.TERMII_EMAIL_CONFIG_ID ?? "";
@@ -67,7 +66,7 @@ export async function sendSMS(to: string, message: string) {
         from: TERMII_SMS_SENDER,
         sms: message,
         type: "plain",
-        channel: "dnd",
+        channel: "generic",
     });
 }
 

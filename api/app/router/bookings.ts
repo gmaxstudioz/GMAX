@@ -5,6 +5,7 @@ import { implement } from "@orpc/server";
 import { optionalAuthMiddleware, authMiddleware, BaseContext } from "./middleware";
 import { calculateGrandTotal } from "@/lib/pricing";
 import { v4 as uuidv4 } from "uuid";
+import { paystackFetch } from "@/lib/paystack";
 
 const os = implement(contract).$context<BaseContext>();
 
@@ -13,8 +14,10 @@ const mapBookingToOutput = (data: any) => {
         .filter((p: any) => p.status === "PAID")
         .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
 
-        const grandTotal = calculateGrandTotal(data.service, data.addons, data.sessionCount);
-        const balanceDue = grandTotal - totalPaid;
+    // Note: Assuming you fixed calculateGrandTotal previously to accept the new variant logic
+    // If not, you might need to adjust what gets passed in here.
+    const grandTotal = Number(data.totalAmount || 0); // Safest to use the saved totalAmount
+    const balanceDue = grandTotal - totalPaid;
 
     return {
         id: data.id,
@@ -42,9 +45,15 @@ const mapBookingToOutput = (data: any) => {
         service: {
             id: data.service.id,
             name: data.service.name,
-            type: data.service.type,
-            price: Number(data.service.price),
-            salePrice: data.service.salePrice ? Number(data.service.salePrice) : null,
+            isAddon: data.service.isAddon,
+            variants: data.service.variants ? data.service.variants.map((v: any) => ({
+                id: v.id,
+                locationType: v.locationType,
+                basePrice: v.basePrice.toString(),
+                maxPrice: v.maxPrice ? v.maxPrice.toString() : null,
+                sessionDurationMins: v.sessionDurationMins,
+                logisticsIncluded: v.logisticsIncluded,
+            })) : [],
         },
         member: {
             id: data.member.id,
@@ -67,9 +76,15 @@ const mapBookingToOutput = (data: any) => {
         addons: data.addons.map((a: any) => ({
             id: a.id,
             name: a.name,
-            type: a.type,
-            price: Number(a.price),
-            salePrice: a.salePrice ? Number(a.salePrice) : null,
+            isAddon: a.isAddon,
+            variants: a.variants ? a.variants.map((v: any) => ({
+                id: v.id,
+                locationType: v.locationType,
+                basePrice: v.basePrice.toString(),
+                maxPrice: v.maxPrice ? v.maxPrice.toString() : null,
+                sessionDurationMins: v.sessionDurationMins,
+                logisticsIncluded: v.logisticsIncluded,
+            })) : [],
         })),
         payments: data.payments.map((p: any) => ({
             id: p.id,
@@ -99,7 +114,7 @@ const mapBookingSummaryToOutput = (data: any) => {
         .filter((p: any) => p.status === "PAID")
         .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
     
-    const grandTotal = calculateGrandTotal(data.service, data.addons, data.sessionCount);
+    const grandTotal = Number(data.totalAmount || 0);
     const balanceDue = grandTotal - totalPaid;
 
     return {
@@ -120,9 +135,15 @@ const mapBookingSummaryToOutput = (data: any) => {
         service: {
             id: data.service.id,
             name: data.service.name,
-            type: data.service.type,
-            price: Number(data.service.price),
-            salePrice: data.service.salePrice ? Number(data.service.salePrice) : null,
+            isAddon: data.service.isAddon,
+            variants: data.service.variants ? data.service.variants.map((v: any) => ({
+                id: v.id,
+                locationType: v.locationType,
+                basePrice: v.basePrice.toString(),
+                maxPrice: v.maxPrice ? v.maxPrice.toString() : null,
+                sessionDurationMins: v.sessionDurationMins,
+                logisticsIncluded: v.logisticsIncluded,
+            })) : [],
         },
         totalPaid: totalPaid.toString(),
         balanceDue: balanceDue.toString(),
@@ -144,6 +165,38 @@ export const createBookings = os.booking.create.use(optionalAuthMiddleware).hand
             });
         }
 
+        // 1. Fetch Service & Add-ons to calculate the total amount securely
+        const service = await prisma.service.findUnique({
+            where: { id: bookingData.serviceId },
+            include: { variants: true }
+        });
+        
+        if (!service) throw errors.NOT_FOUND({
+            data: { resourceType: "Service", resourceId: bookingData.serviceId }
+        });
+
+        let fetchedAddons: any[] = [];
+        if (addonIds && addonIds.length > 0) {
+            fetchedAddons = await prisma.service.findMany({
+                where: { id: { in: addonIds } },
+                include: { variants: true }
+            });
+        }
+
+        // 2. Build pricing objects for the calculator 
+        const servicePricingObj = {
+            price: service.variants[0]?.basePrice ? Number(service.variants[0].basePrice) : 0,
+            salePrice: null
+        };
+        const addonPricingObjs = fetchedAddons.map(a => ({
+            price: a.variants[0]?.basePrice ? Number(a.variants[0].basePrice) : 0,
+            salePrice: null
+        }));
+
+        // 3. Calculate the grand total
+        const grandTotal = calculateGrandTotal(servicePricingObj, addonPricingObjs, bookingData.sessionCount);
+
+        // -- Resolve Staff Member identity --
         let resolvedCreatedBy: string;
         let resolvedMemberId: string;
 
@@ -167,9 +220,11 @@ export const createBookings = os.booking.create.use(optionalAuthMiddleware).hand
             resolvedMemberId = defaultMember.id;
         }
 
+        // 4. Pass totalAmount to Prisma
         const data = await prisma.booking.create({
             data: {
                 ...bookingData,
+                totalAmount: grandTotal,
                 createdBy: resolvedCreatedBy,
                 memberId: resolvedMemberId,
                 ...(addonIds && addonIds.length > 0 && {
@@ -180,9 +235,9 @@ export const createBookings = os.booking.create.use(optionalAuthMiddleware).hand
             },
             include: {
                 client: true,
-                service: true,
+                service: { include: { variants: true } },
                 member: { include: { user: true } },
-                addons: true,
+                addons: { include: { variants: true } },
                 payments: true,
                 photos: true,
             }
@@ -198,9 +253,9 @@ export const getBookingById = os.booking.getById.use(optionalAuthMiddleware).han
             where: { id: input.bookingId },
             include: {
                 client: true,
-                service: true,
+                service: { include: { variants: true } },
                 member: { include: { user: true } },
-                addons: true,
+                addons: { include: { variants: true } },
                 payments: true,
                 photos: true,
             }
@@ -228,9 +283,9 @@ export const updateBooking = os.booking.update.use(authMiddleware).handler(
             },
             include: {
                 client: true,
-                service: true,
+                service: { include: { variants: true } },
                 member: { include: { user: true } },
-                addons: true,
+                addons: { include: { variants: true } },
                 payments: true,
                 photos: true,
             }
@@ -271,9 +326,11 @@ export const getAllBookings = os.booking.getAll.use(authMiddleware).handler(
             orderBy: { [sortBy || 'createdAt']: sortOrder },
             include: {
                 client: true,
-                service: true,
-                addons: true,
+                service: { include: { variants: true } },
+                member: { include: { user: true } },
+                addons: { include: { variants: true } },
                 payments: true,
+                photos: true,
             }
         });
 
@@ -303,9 +360,9 @@ export const reassignBooking = os.booking.reassign.use(authMiddleware).handler(
             data: { memberId },
             include: {
                 client: true,
-                service: true,
+                service: { include: { variants: true } },
                 member: { include: { user: true } },
-                addons: true,
+                addons: { include: { variants: true } },
                 payments: true,
                 photos: true,
             }
@@ -326,9 +383,9 @@ export const rescheduleBooking = os.booking.reschedule.use(authMiddleware).handl
             data: { bookingDate: newDate },
             include: {
                 client: true,
-                service: true,
+                service: { include: { variants: true } },
                 member: { include: { user: true } },
-                addons: true,
+                addons: { include: { variants: true } },
                 payments: true,
                 photos: true,
             }
@@ -354,9 +411,9 @@ export const updateBookingStatus = os.booking.updateStatus.use(authMiddleware).h
             data: updateData,
             include: {
                 client: true,
-                service: true,
+                service: { include: { variants: true } },
                 member: { include: { user: true } },
-                addons: true,
+                addons: { include: { variants: true } },
                 payments: true,
                 photos: true,
             }
@@ -366,9 +423,7 @@ export const updateBookingStatus = os.booking.updateStatus.use(authMiddleware).h
     }
 );
 
-function generateReceiptNumber(): string {
-    return `RCP-${Date.now()}-${uuidv4().slice(0, 8).toUpperCase()}`;
-}
+const PORTAL_URL = process.env.PORTAL_URL!;
 
 export const createPublicBooking = os.booking.createPublic
     .use(optionalAuthMiddleware)
@@ -381,149 +436,82 @@ export const createPublicBooking = os.booking.createPublic
             data: { resourceType: "Studio", resourceId: input.studioId },
         });
 
-        // Duplicate booking guard
-        if (input.existingClientId) {
-            const recentDuplicate = await prisma.booking.findFirst({
-                where: {
-                    studioId: input.studioId,
-                    clientId: input.existingClientId,
-                    serviceId: input.selectedServiceId,
-                    bookingStatus: "PENDING",
-                    createdAt: { gte: new Date(Date.now() - 5 * 60 * 1000) },
-                },
-            });
-            if (recentDuplicate) throw errors.BAD_REQUEST({
-                message: "A booking for this service was already submitted recently.",
-            });
-        }
-
-        // Resolve client
-        let clientId = input.existingClientId;
-
-        if (!clientId) {
-            const phones = input.clientPhone!
-                .split(",")
-                .map((p) => p.trim())
-                .filter(Boolean);
-
-            // Try to find an existing client by email or phone in this studio
-            let existingClient = null;
-            if (input.clientEmail) {
-                existingClient = await prisma.client.findFirst({
-                    where: {
-                        studioId: input.studioId,
-                        email: input.clientEmail,
-                    },
-                });
-            }
-            if (!existingClient && phones.length > 0) {
-                existingClient = await prisma.client.findFirst({
-                    where: {
-                        studioId: input.studioId,
-                        phone: { hasSome: phones },
-                    },
-                });
-            }
-
-            if (existingClient) {
-                clientId = existingClient.id;
-            } else {
-                const client = await prisma.client.create({
-                    data: {
-                        name: input.clientName,
-                        phone: phones,
-                        email: input.clientEmail ?? null,
-                        type: "regular",
-                        studioId: input.studioId,
-                    },
-                });
-                clientId = client.id;
-            }
-        }
-
-        const defaultMember =
-            studio.members.find((m) => m.role === "owner") ?? studio.members[0];
-        if (!defaultMember) throw errors.BAD_REQUEST({
-            message: "No available staff member",
+        const service = await prisma.service.findUnique({
+            where: { id: input.selectedServiceId },
+            include: { variants: true },
+        });
+        if (!service) throw errors.NOT_FOUND({
+            data: { resourceType: "Service", resourceId: input.selectedServiceId },
         });
 
-        // Parse booking date robustly — handles ISO strings, YYYY-MM-DD, etc.
-        let bookingDateUTC: Date;
-        const dateStr = input.bookingDate;
-        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-            // Pure YYYY-MM-DD format
-            const [y, mo, d] = dateStr.split("-").map(Number);
-            bookingDateUTC = new Date(Date.UTC(y, mo - 1, d));
-        } else {
-            // ISO string or other parseable format
-            bookingDateUTC = new Date(dateStr);
-        }
-
-        if (isNaN(bookingDateUTC.getTime())) {
-            throw errors.BAD_REQUEST({ message: "Invalid booking date format." });
-        }
-
-        const booking = await prisma.booking.create({
-            data: {
-                bookingDate: bookingDateUTC,
-                sessionCount: input.sessionCount,
-                notes: input.notes ?? null,
-                bookingStatus: "PENDING",
-                paymentStatus: "PENDING",
-                deliveryStatus: "PENDING",
-                serviceId: input.selectedServiceId,
-                studioId: input.studioId,
-                clientId,
-                memberId: defaultMember.id,
-                createdBy: defaultMember.userId,
-                addons: input.selectedAddonIds?.length
-                    ? { connect: input.selectedAddonIds.map((id) => ({ id })) }
-                    : undefined,
-            },
-            include: { service: true, addons: true, client: true },
-        });
+        // Construct a pricing object that satisfies calculateGrandTotal
+        const servicePricingObj = {
+            price: service.variants[0]?.basePrice ? Number(service.variants[0].basePrice) : 0,
+            salePrice: null
+        };
 
         const grandTotal = calculateGrandTotal(
-            booking.service,
-            booking.addons,
-            booking.sessionCount,
+            servicePricingObj,
+            [], // addons resolved separately
+            input.sessionCount,
         );
 
         const reference = `gmax-pub-${uuidv4().slice(0, 8)}`;
-        const receiptNumber = generateReceiptNumber();
 
-        await prisma.payment.create({
+        // Store intent — nothing else goes to DB yet
+        await prisma.bookingIntent.create({
             data: {
-                amount: grandTotal,
-                method: "TRANSFER",
-                status: "PENDING",
+                studioId:        input.studioId,
+                clientName:      input.clientName,
+                clientEmail:     input.clientEmail ?? null,
+                clientPhone:     input.clientPhone ?? null,
+                existingClientId: input.existingClientId ?? null,
+                serviceId:       input.selectedServiceId,
+                addonIds:        input.selectedAddonIds ?? [],
+                sessionCount:    input.sessionCount,
+                bookingDate:     new Date(input.bookingDate),
+                notes:           input.notes ?? null,
                 paystackReference: reference,
-                receiptNumber,
-                bookingId: booking.id,
-                recordedById: defaultMember.userId,
+                amount:          grandTotal,
+                expiresAt:       new Date(Date.now() + 60 * 60 * 1000), // 1 hour
             },
         });
 
-        const clientEmail = input.clientEmail ?? booking.client?.email;
+        const clientEmail = input.clientEmail;
 
         if (!clientEmail) {
-            console.warn(
-                `[PublicBooking] No email for booking ${booking.id} — Paystack init skipped.`,
-            );
             return {
-                bookingId: booking.id,
+                bookingId:  reference,
                 paymentUrl: null,
                 reference,
-                amount: grandTotal,
+                amount:     grandTotal,
                 warning: "No email provided — payment link must be sent manually.",
             };
         }
 
+        // Initialize Paystack
+        const paystack = await paystackFetch<{
+            data?: { authorization_url?: string }
+        }>("/transaction/initialize", {
+            method: "POST",
+            body: JSON.stringify({
+                email:    clientEmail,
+                amount:   Math.round(grandTotal * 100), // kobo
+                reference,
+                metadata: {
+                    type:     "booking",
+                    studioId: input.studioId,
+                    intentId: reference,
+                },
+                callback_url: `${PORTAL_URL}/booking/verify?reference=${reference}`,
+            }),
+        });
+
         return {
-            bookingId: booking.id,
-            paymentUrl: null,
+            bookingId:  reference,
+            paymentUrl: paystack.data?.authorization_url ?? null,
             reference,
-            amount: grandTotal,
+            amount:     grandTotal,
         };
     });
 
@@ -541,7 +529,7 @@ export const checkClient = os.booking.checkClient
 
         if (!existing) return { exists: false as const };
 
-        const firstPhone = existing.phone[0] ?? "";
+        const firstPhone = existing.phone ?? "";
         const digitsOnly = firstPhone.replace(/\D/g, "");
         const maskedPhone = digitsOnly.length >= 6
             ? digitsOnly.replace(/^(\d{3}).*(\d{3})$/, "$1****$2")

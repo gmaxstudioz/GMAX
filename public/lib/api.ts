@@ -135,14 +135,15 @@ export const requestDownload = (input: RequestDownloadInput) =>
 
 // ── Payments ──────────────────────────────────────────────────────────────────
 
+import type { PublicPaymentDetailsOutput } from "@/lib/types/payment";
+
 /** GET /payments/verify-purchase — contract: verifyPurchaseContract */
 export const verifyPurchase = (reference: string) =>
     get<{ verified: boolean; buyerId?: string }>("/payments/verify-purchase", { reference });
 
 /** GET /payments/public-details/{reference} — contract: getPublicPaymentDetailsContract */
 export const getPublicPaymentDetails = (reference: string) =>
-    get<any>(`/payments/public-details/${reference}`);
-
+    get<PublicPaymentDetailsOutput>(`/payments/public-details/${reference}`);
 // ── Photos ────────────────────────────────────────────────────────────────────
 
 /** POST /photos/{bookingId}/client-access — contract: ClientPhotoAccessContract */
@@ -163,6 +164,9 @@ export type PortfolioItem = {
     thumbnailKey: string | null;
     isPublished: boolean;
     sortOrder: number;
+
+    _static?: boolean;
+    _src?: string;
 };
 
 export type PortfolioResponse = {

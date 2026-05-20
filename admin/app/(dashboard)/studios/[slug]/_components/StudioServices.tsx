@@ -18,25 +18,23 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { CategorySchema, CategoryPayload, ServiceSchema, ServicePayload } from "@/lib/schemas/service";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 
+// ✅ Ensure variants are included in the expected type
 type StudioWithRelations = Prisma.StudioGetPayload<{
     include: {
-        categories: { include: { services: true } },
+        categories: { include: { services: { include: { variants: true } } } },
         studioSessions: true,
     }
 }>;
 
 export default function StudioServices({ studioData }: { studioData: StudioWithRelations }) {
-    const router = useRouter();
     const [isPending, startTransition] = useTransition();
 
-    // Dialog & Edit Mode Overlays
     const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
     const [editModeCategory, setEditModeCategory] = useState<string | null>(null);
 
     const [serviceDialogOpenForCategory, setServiceDialogOpenForCategory] = useState<string | null>(null);
     const [editModeService, setEditModeService] = useState<string | null>(null);
 
-    // React Hook Forms
     const categoryForm = useForm<CategoryPayload>({
         resolver: zodResolver(CategorySchema),
         defaultValues: { name: "", type: "standard" }
@@ -47,11 +45,17 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
         defaultValues: {
             name: "",
             description: "",
-            price: 0,
-            salePrice: undefined,
-            type: "standard",
+            isAddon: false,
+            isActive: true,
             studioSessionId: "",
             features: [""],
+            variants: [{
+                locationType: "STUDIO",
+                basePrice: 0,
+                maxPrice: undefined,
+                sessionDurationMins: 45,
+                logisticsIncluded: true
+            }],
         }
     });
 
@@ -61,11 +65,24 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
     };
 
     const resetServiceState = () => {
-        serviceForm.reset();
+        serviceForm.reset({
+            name: "",
+            description: "",
+            isAddon: false,
+            isActive: true,
+            studioSessionId: "",
+            features: [""],
+            variants: [{
+                locationType: "STUDIO",
+                basePrice: 0,
+                maxPrice: undefined,
+                sessionDurationMins: 45,
+                logisticsIncluded: true
+            }]
+        });
         setEditModeService(null);
     };
 
-    // Features Field Array Handlers mimicking AddClient
     const addFeatureField = () => {
         const currentFeatures = serviceForm.getValues("features") || [];
         serviceForm.setValue("features", [...currentFeatures, ""], { shouldDirty: true });
@@ -83,7 +100,6 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
         serviceForm.setValue("features", newFeatures, { shouldDirty: true });
     };
 
-    // Form Submissions
     const handleCategorySubmit = (data: CategoryPayload) => {
         startTransition(async () => {
             if (editModeCategory) {
@@ -107,11 +123,8 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
     const handleDeleteCategory = (categoryId: string) => {
         startTransition(async () => {
             const result = await deleteCategory(categoryId);
-            if (result.status === "success") {
-                toast.success("Category deleted!");
-            } else {
-                toast.error(result.message);
-            }
+            if (result.status === "success") toast.success("Category deleted!");
+            else toast.error(result.message);
         });
     };
 
@@ -193,11 +206,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                     render={({ field }) => (
                                         <Field>
                                             <FieldLabel>Category Name</FieldLabel>
-                                            <Input
-                                                {...field}
-                                                placeholder="e.g. Pre-Wedding Shoot"
-                                                disabled={isPending}
-                                            />
+                                            <Input {...field} placeholder="e.g. Pre-Wedding Shoot" disabled={isPending} />
                                         </Field>
                                     )}
                                 />
@@ -213,7 +222,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="standard">Standard</SelectItem>
-                                                    <SelectItem value="addon">Add-on</SelectItem>
+                                                    <SelectItem value="addon">Add-on Container</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </Field>
@@ -275,7 +284,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                 e.stopPropagation();
                                                 e.preventDefault();
                                                 resetServiceState();
-                                                serviceForm.setValue("type", category.type as "standard");
+                                                serviceForm.setValue("isAddon", category.type === "addon");
                                                 setServiceDialogOpenForCategory(category.id);
                                             }}
                                         >
@@ -317,13 +326,15 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                             {category.services.map((svc) => {
                                                 const sessionBinding = studioData.studioSessions.find(s => s.id === svc.studioSessionId);
+                                                // ✅ Safely extract base price from variants
+                                                const basePrice = svc.variants?.[0]?.basePrice ? Number(svc.variants[0].basePrice) : 0;
                                                 return (
                                                     <div key={svc.id} className="flex flex-col border rounded-md p-3 bg-muted/20 relative group/svc">
                                                         <h5 className="font-medium text-sm flex gap-2">
                                                             {svc.name}
                                                         </h5>
                                                         <span className="text-xs font-bold text-primary mt-1">
-                                                            ₦{svc.price.toLocaleString()}
+                                                            ₦{basePrice.toLocaleString()}
                                                         </span>
                                                         <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                                                             {svc.description}
@@ -353,12 +364,22 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                     setEditModeService(svc.id);
                                                                     serviceForm.setValue("name", svc.name);
                                                                     serviceForm.setValue("description", svc.description);
-                                                                    serviceForm.setValue("price", svc.price);
-                                                                    serviceForm.setValue("salePrice", svc.salePrice || undefined);
-                                                                    serviceForm.setValue("type", category.type as "standard");
+                                                                    serviceForm.setValue("isAddon", svc.isAddon);
+                                                                    serviceForm.setValue("isActive", svc.isActive);
                                                                     serviceForm.setValue("studioSessionId", svc.studioSessionId);
                                                                     const svcFeatures = (svc.features && svc.features.length > 0) ? svc.features : [""];
                                                                     serviceForm.setValue("features", svcFeatures);
+                                                                    
+                                                                    // Map existing variants to form
+                                                                    if (svc.variants && svc.variants.length > 0) {
+                                                                        serviceForm.setValue("variants", svc.variants.map(v => ({
+                                                                            locationType: v.locationType as "STUDIO" | "OUTDOOR" | "BOTH" | "MULTIPLE",
+                                                                            basePrice: Number(v.basePrice),
+                                                                            maxPrice: v.maxPrice ? Number(v.maxPrice) : undefined,
+                                                                            sessionDurationMins: v.sessionDurationMins,
+                                                                            logisticsIncluded: v.logisticsIncluded
+                                                                        })));
+                                                                    }
                                                                     
                                                                     setServiceDialogOpenForCategory(category.id);
                                                                 }}
@@ -412,11 +433,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                 render={({ field }) => (
                                     <Field>
                                         <FieldLabel>Service Title</FieldLabel>
-                                        <Input
-                                            {...field}
-                                            placeholder="e.g. 5 Concept Lighting Setup"
-                                            disabled={isPending}
-                                        />
+                                        <Input {...field} placeholder="e.g. 5 Concept Lighting Setup" disabled={isPending} />
                                     </Field>
                                 )}
                             />
@@ -427,12 +444,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                 render={({ field }) => (
                                     <Field>
                                         <FieldLabel>Public Description</FieldLabel>
-                                        <Textarea
-                                            {...field}
-                                            placeholder="Provide specific details clients see..."
-                                            disabled={isPending}
-                                            className="min-h-20"
-                                        />
+                                        <Textarea {...field} placeholder="Provide specific details clients see..." disabled={isPending} className="min-h-20" />
                                     </Field>
                                 )}
                             />
@@ -459,13 +471,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                             </Button>
                                         </div>
                                     ))}
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={addFeatureField}
-                                        className="w-full text-xs"
-                                        disabled={isPending}
-                                    >
+                                    <Button type="button" variant="outline" onClick={addFeatureField} className="w-full text-xs" disabled={isPending}>
                                         <PlusIcon className="mr-2 h-4 w-4" />
                                         Add Another Feature
                                     </Button>
@@ -473,8 +479,9 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                             </Field>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                {/* ✅ Updated to bind to variants.0.basePrice */}
                                 <Controller
-                                    name="price"
+                                    name="variants.0.basePrice"
                                     control={serviceForm.control}
                                     render={({ field: { value, onChange, ...field } }) => (
                                         <Field>
@@ -494,12 +501,13 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                         </Field>
                                     )}
                                 />
+                                {/* ✅ Updated to bind to variants.0.maxPrice */}
                                 <Controller
-                                    name="salePrice"
+                                    name="variants.0.maxPrice"
                                     control={serviceForm.control}
                                     render={({ field: { value, onChange, ...field } }) => (
                                         <Field>
-                                            <FieldLabel>Sale Price</FieldLabel>
+                                            <FieldLabel>Sale / Max Price</FieldLabel>
                                             <div className="relative">
                                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
                                                 <Input
@@ -523,7 +531,18 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                     render={({ field }) => (
                                         <Field>
                                             <FieldLabel>Studio Session Bound</FieldLabel>
-                                            <Select value={field.value} onValueChange={field.onChange} disabled={isPending}>
+                                            <Select 
+                                              value={field.value} 
+                                              onValueChange={(val) => {
+                                                  field.onChange(val);
+                                                  // Auto-update the variant duration to match the session
+                                                  const session = studioData.studioSessions.find(s => s.id === val);
+                                                  if (session) {
+                                                      serviceForm.setValue("variants.0.sessionDurationMins", session.duration);
+                                                  }
+                                              }} 
+                                              disabled={isPending}
+                                            >
                                                 <SelectTrigger>
                                                     <SelectValue placeholder="Linked Temporal Session" />
                                                 </SelectTrigger>
@@ -538,27 +557,26 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                         </Field>
                                     )}
                                 />
+                                {/* ✅ Replaced 'type' with 'isAddon' boolean select */}
                                 <Controller
-                                    name="type"
+                                    name="isAddon"
                                     control={serviceForm.control}
                                     render={({ field }) => (
                                         <Field>
                                             <FieldLabel>Service Type</FieldLabel>
-                                            <Select value={field.value} onValueChange={field.onChange} disabled={isPending}>
+                                            <Select value={field.value ? "true" : "false"} onValueChange={(val) => field.onChange(val === "true")} disabled={isPending}>
                                                 <SelectTrigger>
                                                     <SelectValue placeholder="Select type..." />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="standard">Standard</SelectItem>
-                                                    <SelectItem value="vvip">VVIP</SelectItem>
-                                                    <SelectItem value="premium">Premium</SelectItem>
+                                                    <SelectItem value="false">Standard Service</SelectItem>
+                                                    <SelectItem value="true">Optional Add-on</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </Field>
                                     )}
                                 />
                             </div>
-
 
                             {studioData.studioSessions.length === 0 && (
                                 <div className="rounded-md bg-destructive/10 text-destructive text-xs p-3 font-medium mt-2">
@@ -583,8 +601,4 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
             </Dialog>
         </Card>
     );
-}
-
-function cn(...classes: (string | undefined | false | null)[]) {
-    return classes.filter(Boolean).join(" ");
 }

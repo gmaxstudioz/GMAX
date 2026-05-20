@@ -58,7 +58,7 @@ export default function Home() {
 
     const tl = gsap.timeline({ repeat: -1, delay: 1 });
 
-    words.forEach((_, i) => {
+    words.forEach(() => {
       tl.to(el, {
         opacity: 0,
         y: -20,
@@ -128,7 +128,7 @@ export default function Home() {
       });
     };
 
-    heroEl.addEventListener("mousemove", handleMouseMove as any);
+    heroEl.addEventListener("mousemove", handleMouseMove as EventListener);
 
     // Works Grid Animation
     if (worksGridRef.current) {
@@ -176,7 +176,7 @@ export default function Home() {
 
     return () => {
       tl.kill();
-      heroEl.removeEventListener("mousemove", handleMouseMove as any);
+      heroEl.removeEventListener("mousemove", handleMouseMove as EventListener);
       ScrollTrigger.getAll().forEach(t => t.kill());
     };
   }, []);
@@ -293,9 +293,10 @@ export default function Home() {
               sortOrder: i,
               _static: true,
               _src: `/works/image-${i + 1}.jpg`,
-            } as any))).map((work: any, index: number) => {
+            } as unknown as PortfolioItem & { _static?: boolean; _src?: string })))
+            .map((work, index: number) => {
               const isActive = activeWorkIndex === index;
-              const imgSrc = work._static ? work._src : `${R2_PUBLIC_URL}/${work.r2Key}`;
+              const imgSrc = work._static ? (work._src || "") : `${R2_PUBLIC_URL}/${work.r2Key}`;
               return (
                 <div 
                   key={work.id} 

@@ -25,9 +25,9 @@ export default function TokenAccessPage() {
         const res = await verifyAccessToken(token);
         setData(res);
         setSessionToken(res.sessionToken);
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Distinguish between server errors and actual invalid tokens
-        const message = err?.message || "";
+        const message = err instanceof Error ? err.message : String(err);
         if (message.includes("500") || message.includes("fetch") || message.includes("network") || message.includes("EAI_AGAIN")) {
           setError("Could not reach the server. Please check your connection and try again.");
         } else {

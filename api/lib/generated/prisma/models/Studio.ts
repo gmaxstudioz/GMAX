@@ -201,6 +201,9 @@ export type StudioWhereInput = {
   clients?: Prisma.ClientListRelationFilter
   bookings?: Prisma.BookingListRelationFilter
   roles?: Prisma.RoleListRelationFilter
+  courses?: Prisma.CourseListRelationFilter
+  enrollments?: Prisma.EnrollmentListRelationFilter
+  bookingIntents?: Prisma.BookingIntentListRelationFilter
 }
 
 export type StudioOrderByWithRelationInput = {
@@ -218,6 +221,9 @@ export type StudioOrderByWithRelationInput = {
   clients?: Prisma.ClientOrderByRelationAggregateInput
   bookings?: Prisma.BookingOrderByRelationAggregateInput
   roles?: Prisma.RoleOrderByRelationAggregateInput
+  courses?: Prisma.CourseOrderByRelationAggregateInput
+  enrollments?: Prisma.EnrollmentOrderByRelationAggregateInput
+  bookingIntents?: Prisma.BookingIntentOrderByRelationAggregateInput
 }
 
 export type StudioWhereUniqueInput = Prisma.AtLeast<{
@@ -238,6 +244,9 @@ export type StudioWhereUniqueInput = Prisma.AtLeast<{
   clients?: Prisma.ClientListRelationFilter
   bookings?: Prisma.BookingListRelationFilter
   roles?: Prisma.RoleListRelationFilter
+  courses?: Prisma.CourseListRelationFilter
+  enrollments?: Prisma.EnrollmentListRelationFilter
+  bookingIntents?: Prisma.BookingIntentListRelationFilter
 }, "id" | "slug">
 
 export type StudioOrderByWithAggregationInput = {
@@ -281,6 +290,9 @@ export type StudioCreateInput = {
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
   roles?: Prisma.RoleCreateNestedManyWithoutStudioInput
+  courses?: Prisma.CourseCreateNestedManyWithoutStudioInput
+  enrollments?: Prisma.EnrollmentCreateNestedManyWithoutStudioInput
+  bookingIntents?: Prisma.BookingIntentCreateNestedManyWithoutStudioInput
 }
 
 export type StudioUncheckedCreateInput = {
@@ -298,6 +310,9 @@ export type StudioUncheckedCreateInput = {
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
   roles?: Prisma.RoleUncheckedCreateNestedManyWithoutStudioInput
+  courses?: Prisma.CourseUncheckedCreateNestedManyWithoutStudioInput
+  enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutStudioInput
+  bookingIntents?: Prisma.BookingIntentUncheckedCreateNestedManyWithoutStudioInput
 }
 
 export type StudioUpdateInput = {
@@ -315,6 +330,9 @@ export type StudioUpdateInput = {
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
   roles?: Prisma.RoleUpdateManyWithoutStudioNestedInput
+  courses?: Prisma.CourseUpdateManyWithoutStudioNestedInput
+  enrollments?: Prisma.EnrollmentUpdateManyWithoutStudioNestedInput
+  bookingIntents?: Prisma.BookingIntentUpdateManyWithoutStudioNestedInput
 }
 
 export type StudioUncheckedUpdateInput = {
@@ -332,6 +350,9 @@ export type StudioUncheckedUpdateInput = {
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
   roles?: Prisma.RoleUncheckedUpdateManyWithoutStudioNestedInput
+  courses?: Prisma.CourseUncheckedUpdateManyWithoutStudioNestedInput
+  enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutStudioNestedInput
+  bookingIntents?: Prisma.BookingIntentUncheckedUpdateManyWithoutStudioNestedInput
 }
 
 export type StudioCreateManyInput = {
@@ -467,6 +488,34 @@ export type StudioUpdateOneRequiredWithoutCategoriesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.StudioUpdateToOneWithWhereWithoutCategoriesInput, Prisma.StudioUpdateWithoutCategoriesInput>, Prisma.StudioUncheckedUpdateWithoutCategoriesInput>
 }
 
+export type StudioCreateNestedOneWithoutCoursesInput = {
+  create?: Prisma.XOR<Prisma.StudioCreateWithoutCoursesInput, Prisma.StudioUncheckedCreateWithoutCoursesInput>
+  connectOrCreate?: Prisma.StudioCreateOrConnectWithoutCoursesInput
+  connect?: Prisma.StudioWhereUniqueInput
+}
+
+export type StudioUpdateOneRequiredWithoutCoursesNestedInput = {
+  create?: Prisma.XOR<Prisma.StudioCreateWithoutCoursesInput, Prisma.StudioUncheckedCreateWithoutCoursesInput>
+  connectOrCreate?: Prisma.StudioCreateOrConnectWithoutCoursesInput
+  upsert?: Prisma.StudioUpsertWithoutCoursesInput
+  connect?: Prisma.StudioWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.StudioUpdateToOneWithWhereWithoutCoursesInput, Prisma.StudioUpdateWithoutCoursesInput>, Prisma.StudioUncheckedUpdateWithoutCoursesInput>
+}
+
+export type StudioCreateNestedOneWithoutEnrollmentsInput = {
+  create?: Prisma.XOR<Prisma.StudioCreateWithoutEnrollmentsInput, Prisma.StudioUncheckedCreateWithoutEnrollmentsInput>
+  connectOrCreate?: Prisma.StudioCreateOrConnectWithoutEnrollmentsInput
+  connect?: Prisma.StudioWhereUniqueInput
+}
+
+export type StudioUpdateOneRequiredWithoutEnrollmentsNestedInput = {
+  create?: Prisma.XOR<Prisma.StudioCreateWithoutEnrollmentsInput, Prisma.StudioUncheckedCreateWithoutEnrollmentsInput>
+  connectOrCreate?: Prisma.StudioCreateOrConnectWithoutEnrollmentsInput
+  upsert?: Prisma.StudioUpsertWithoutEnrollmentsInput
+  connect?: Prisma.StudioWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.StudioUpdateToOneWithWhereWithoutEnrollmentsInput, Prisma.StudioUpdateWithoutEnrollmentsInput>, Prisma.StudioUncheckedUpdateWithoutEnrollmentsInput>
+}
+
 export type StudioCreateNestedOneWithoutClientsInput = {
   create?: Prisma.XOR<Prisma.StudioCreateWithoutClientsInput, Prisma.StudioUncheckedCreateWithoutClientsInput>
   connectOrCreate?: Prisma.StudioCreateOrConnectWithoutClientsInput
@@ -479,6 +528,20 @@ export type StudioUpdateOneRequiredWithoutClientsNestedInput = {
   upsert?: Prisma.StudioUpsertWithoutClientsInput
   connect?: Prisma.StudioWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.StudioUpdateToOneWithWhereWithoutClientsInput, Prisma.StudioUpdateWithoutClientsInput>, Prisma.StudioUncheckedUpdateWithoutClientsInput>
+}
+
+export type StudioCreateNestedOneWithoutBookingIntentsInput = {
+  create?: Prisma.XOR<Prisma.StudioCreateWithoutBookingIntentsInput, Prisma.StudioUncheckedCreateWithoutBookingIntentsInput>
+  connectOrCreate?: Prisma.StudioCreateOrConnectWithoutBookingIntentsInput
+  connect?: Prisma.StudioWhereUniqueInput
+}
+
+export type StudioUpdateOneRequiredWithoutBookingIntentsNestedInput = {
+  create?: Prisma.XOR<Prisma.StudioCreateWithoutBookingIntentsInput, Prisma.StudioUncheckedCreateWithoutBookingIntentsInput>
+  connectOrCreate?: Prisma.StudioCreateOrConnectWithoutBookingIntentsInput
+  upsert?: Prisma.StudioUpsertWithoutBookingIntentsInput
+  connect?: Prisma.StudioWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.StudioUpdateToOneWithWhereWithoutBookingIntentsInput, Prisma.StudioUpdateWithoutBookingIntentsInput>, Prisma.StudioUncheckedUpdateWithoutBookingIntentsInput>
 }
 
 export type StudioCreateNestedOneWithoutBookingsInput = {
@@ -509,6 +572,9 @@ export type StudioCreateWithoutRolesInput = {
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
+  courses?: Prisma.CourseCreateNestedManyWithoutStudioInput
+  enrollments?: Prisma.EnrollmentCreateNestedManyWithoutStudioInput
+  bookingIntents?: Prisma.BookingIntentCreateNestedManyWithoutStudioInput
 }
 
 export type StudioUncheckedCreateWithoutRolesInput = {
@@ -525,6 +591,9 @@ export type StudioUncheckedCreateWithoutRolesInput = {
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
+  courses?: Prisma.CourseUncheckedCreateNestedManyWithoutStudioInput
+  enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutStudioInput
+  bookingIntents?: Prisma.BookingIntentUncheckedCreateNestedManyWithoutStudioInput
 }
 
 export type StudioCreateOrConnectWithoutRolesInput = {
@@ -557,6 +626,9 @@ export type StudioUpdateWithoutRolesInput = {
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
+  courses?: Prisma.CourseUpdateManyWithoutStudioNestedInput
+  enrollments?: Prisma.EnrollmentUpdateManyWithoutStudioNestedInput
+  bookingIntents?: Prisma.BookingIntentUpdateManyWithoutStudioNestedInput
 }
 
 export type StudioUncheckedUpdateWithoutRolesInput = {
@@ -573,6 +645,9 @@ export type StudioUncheckedUpdateWithoutRolesInput = {
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
+  courses?: Prisma.CourseUncheckedUpdateManyWithoutStudioNestedInput
+  enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutStudioNestedInput
+  bookingIntents?: Prisma.BookingIntentUncheckedUpdateManyWithoutStudioNestedInput
 }
 
 export type StudioCreateWithoutStudioSessionsInput = {
@@ -589,6 +664,9 @@ export type StudioCreateWithoutStudioSessionsInput = {
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
   roles?: Prisma.RoleCreateNestedManyWithoutStudioInput
+  courses?: Prisma.CourseCreateNestedManyWithoutStudioInput
+  enrollments?: Prisma.EnrollmentCreateNestedManyWithoutStudioInput
+  bookingIntents?: Prisma.BookingIntentCreateNestedManyWithoutStudioInput
 }
 
 export type StudioUncheckedCreateWithoutStudioSessionsInput = {
@@ -605,6 +683,9 @@ export type StudioUncheckedCreateWithoutStudioSessionsInput = {
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
   roles?: Prisma.RoleUncheckedCreateNestedManyWithoutStudioInput
+  courses?: Prisma.CourseUncheckedCreateNestedManyWithoutStudioInput
+  enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutStudioInput
+  bookingIntents?: Prisma.BookingIntentUncheckedCreateNestedManyWithoutStudioInput
 }
 
 export type StudioCreateOrConnectWithoutStudioSessionsInput = {
@@ -637,6 +718,9 @@ export type StudioUpdateWithoutStudioSessionsInput = {
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
   roles?: Prisma.RoleUpdateManyWithoutStudioNestedInput
+  courses?: Prisma.CourseUpdateManyWithoutStudioNestedInput
+  enrollments?: Prisma.EnrollmentUpdateManyWithoutStudioNestedInput
+  bookingIntents?: Prisma.BookingIntentUpdateManyWithoutStudioNestedInput
 }
 
 export type StudioUncheckedUpdateWithoutStudioSessionsInput = {
@@ -653,6 +737,9 @@ export type StudioUncheckedUpdateWithoutStudioSessionsInput = {
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
   roles?: Prisma.RoleUncheckedUpdateManyWithoutStudioNestedInput
+  courses?: Prisma.CourseUncheckedUpdateManyWithoutStudioNestedInput
+  enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutStudioNestedInput
+  bookingIntents?: Prisma.BookingIntentUncheckedUpdateManyWithoutStudioNestedInput
 }
 
 export type StudioCreateWithoutMembersInput = {
@@ -669,6 +756,9 @@ export type StudioCreateWithoutMembersInput = {
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
   roles?: Prisma.RoleCreateNestedManyWithoutStudioInput
+  courses?: Prisma.CourseCreateNestedManyWithoutStudioInput
+  enrollments?: Prisma.EnrollmentCreateNestedManyWithoutStudioInput
+  bookingIntents?: Prisma.BookingIntentCreateNestedManyWithoutStudioInput
 }
 
 export type StudioUncheckedCreateWithoutMembersInput = {
@@ -685,6 +775,9 @@ export type StudioUncheckedCreateWithoutMembersInput = {
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
   roles?: Prisma.RoleUncheckedCreateNestedManyWithoutStudioInput
+  courses?: Prisma.CourseUncheckedCreateNestedManyWithoutStudioInput
+  enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutStudioInput
+  bookingIntents?: Prisma.BookingIntentUncheckedCreateNestedManyWithoutStudioInput
 }
 
 export type StudioCreateOrConnectWithoutMembersInput = {
@@ -717,6 +810,9 @@ export type StudioUpdateWithoutMembersInput = {
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
   roles?: Prisma.RoleUpdateManyWithoutStudioNestedInput
+  courses?: Prisma.CourseUpdateManyWithoutStudioNestedInput
+  enrollments?: Prisma.EnrollmentUpdateManyWithoutStudioNestedInput
+  bookingIntents?: Prisma.BookingIntentUpdateManyWithoutStudioNestedInput
 }
 
 export type StudioUncheckedUpdateWithoutMembersInput = {
@@ -733,6 +829,9 @@ export type StudioUncheckedUpdateWithoutMembersInput = {
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
   roles?: Prisma.RoleUncheckedUpdateManyWithoutStudioNestedInput
+  courses?: Prisma.CourseUncheckedUpdateManyWithoutStudioNestedInput
+  enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutStudioNestedInput
+  bookingIntents?: Prisma.BookingIntentUncheckedUpdateManyWithoutStudioNestedInput
 }
 
 export type StudioCreateWithoutInvitationsInput = {
@@ -749,6 +848,9 @@ export type StudioCreateWithoutInvitationsInput = {
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
   roles?: Prisma.RoleCreateNestedManyWithoutStudioInput
+  courses?: Prisma.CourseCreateNestedManyWithoutStudioInput
+  enrollments?: Prisma.EnrollmentCreateNestedManyWithoutStudioInput
+  bookingIntents?: Prisma.BookingIntentCreateNestedManyWithoutStudioInput
 }
 
 export type StudioUncheckedCreateWithoutInvitationsInput = {
@@ -765,6 +867,9 @@ export type StudioUncheckedCreateWithoutInvitationsInput = {
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
   roles?: Prisma.RoleUncheckedCreateNestedManyWithoutStudioInput
+  courses?: Prisma.CourseUncheckedCreateNestedManyWithoutStudioInput
+  enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutStudioInput
+  bookingIntents?: Prisma.BookingIntentUncheckedCreateNestedManyWithoutStudioInput
 }
 
 export type StudioCreateOrConnectWithoutInvitationsInput = {
@@ -797,6 +902,9 @@ export type StudioUpdateWithoutInvitationsInput = {
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
   roles?: Prisma.RoleUpdateManyWithoutStudioNestedInput
+  courses?: Prisma.CourseUpdateManyWithoutStudioNestedInput
+  enrollments?: Prisma.EnrollmentUpdateManyWithoutStudioNestedInput
+  bookingIntents?: Prisma.BookingIntentUpdateManyWithoutStudioNestedInput
 }
 
 export type StudioUncheckedUpdateWithoutInvitationsInput = {
@@ -813,6 +921,9 @@ export type StudioUncheckedUpdateWithoutInvitationsInput = {
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
   roles?: Prisma.RoleUncheckedUpdateManyWithoutStudioNestedInput
+  courses?: Prisma.CourseUncheckedUpdateManyWithoutStudioNestedInput
+  enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutStudioNestedInput
+  bookingIntents?: Prisma.BookingIntentUncheckedUpdateManyWithoutStudioNestedInput
 }
 
 export type StudioCreateWithoutCategoriesInput = {
@@ -829,6 +940,9 @@ export type StudioCreateWithoutCategoriesInput = {
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
   roles?: Prisma.RoleCreateNestedManyWithoutStudioInput
+  courses?: Prisma.CourseCreateNestedManyWithoutStudioInput
+  enrollments?: Prisma.EnrollmentCreateNestedManyWithoutStudioInput
+  bookingIntents?: Prisma.BookingIntentCreateNestedManyWithoutStudioInput
 }
 
 export type StudioUncheckedCreateWithoutCategoriesInput = {
@@ -845,6 +959,9 @@ export type StudioUncheckedCreateWithoutCategoriesInput = {
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
   roles?: Prisma.RoleUncheckedCreateNestedManyWithoutStudioInput
+  courses?: Prisma.CourseUncheckedCreateNestedManyWithoutStudioInput
+  enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutStudioInput
+  bookingIntents?: Prisma.BookingIntentUncheckedCreateNestedManyWithoutStudioInput
 }
 
 export type StudioCreateOrConnectWithoutCategoriesInput = {
@@ -877,6 +994,9 @@ export type StudioUpdateWithoutCategoriesInput = {
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
   roles?: Prisma.RoleUpdateManyWithoutStudioNestedInput
+  courses?: Prisma.CourseUpdateManyWithoutStudioNestedInput
+  enrollments?: Prisma.EnrollmentUpdateManyWithoutStudioNestedInput
+  bookingIntents?: Prisma.BookingIntentUpdateManyWithoutStudioNestedInput
 }
 
 export type StudioUncheckedUpdateWithoutCategoriesInput = {
@@ -893,6 +1013,193 @@ export type StudioUncheckedUpdateWithoutCategoriesInput = {
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
   roles?: Prisma.RoleUncheckedUpdateManyWithoutStudioNestedInput
+  courses?: Prisma.CourseUncheckedUpdateManyWithoutStudioNestedInput
+  enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutStudioNestedInput
+  bookingIntents?: Prisma.BookingIntentUncheckedUpdateManyWithoutStudioNestedInput
+}
+
+export type StudioCreateWithoutCoursesInput = {
+  id?: string
+  name: string
+  slug: string
+  logo?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.MemberCreateNestedManyWithoutStudioInput
+  invitations?: Prisma.InvitationCreateNestedManyWithoutStudioInput
+  categories?: Prisma.CategoryCreateNestedManyWithoutStudioInput
+  studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
+  clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
+  bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleCreateNestedManyWithoutStudioInput
+  enrollments?: Prisma.EnrollmentCreateNestedManyWithoutStudioInput
+  bookingIntents?: Prisma.BookingIntentCreateNestedManyWithoutStudioInput
+}
+
+export type StudioUncheckedCreateWithoutCoursesInput = {
+  id?: string
+  name: string
+  slug: string
+  logo?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.MemberUncheckedCreateNestedManyWithoutStudioInput
+  invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutStudioInput
+  categories?: Prisma.CategoryUncheckedCreateNestedManyWithoutStudioInput
+  studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
+  clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
+  bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutStudioInput
+  enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutStudioInput
+  bookingIntents?: Prisma.BookingIntentUncheckedCreateNestedManyWithoutStudioInput
+}
+
+export type StudioCreateOrConnectWithoutCoursesInput = {
+  where: Prisma.StudioWhereUniqueInput
+  create: Prisma.XOR<Prisma.StudioCreateWithoutCoursesInput, Prisma.StudioUncheckedCreateWithoutCoursesInput>
+}
+
+export type StudioUpsertWithoutCoursesInput = {
+  update: Prisma.XOR<Prisma.StudioUpdateWithoutCoursesInput, Prisma.StudioUncheckedUpdateWithoutCoursesInput>
+  create: Prisma.XOR<Prisma.StudioCreateWithoutCoursesInput, Prisma.StudioUncheckedCreateWithoutCoursesInput>
+  where?: Prisma.StudioWhereInput
+}
+
+export type StudioUpdateToOneWithWhereWithoutCoursesInput = {
+  where?: Prisma.StudioWhereInput
+  data: Prisma.XOR<Prisma.StudioUpdateWithoutCoursesInput, Prisma.StudioUncheckedUpdateWithoutCoursesInput>
+}
+
+export type StudioUpdateWithoutCoursesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.MemberUpdateManyWithoutStudioNestedInput
+  invitations?: Prisma.InvitationUpdateManyWithoutStudioNestedInput
+  categories?: Prisma.CategoryUpdateManyWithoutStudioNestedInput
+  studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
+  clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
+  bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutStudioNestedInput
+  enrollments?: Prisma.EnrollmentUpdateManyWithoutStudioNestedInput
+  bookingIntents?: Prisma.BookingIntentUpdateManyWithoutStudioNestedInput
+}
+
+export type StudioUncheckedUpdateWithoutCoursesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.MemberUncheckedUpdateManyWithoutStudioNestedInput
+  invitations?: Prisma.InvitationUncheckedUpdateManyWithoutStudioNestedInput
+  categories?: Prisma.CategoryUncheckedUpdateManyWithoutStudioNestedInput
+  studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
+  clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
+  bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutStudioNestedInput
+  enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutStudioNestedInput
+  bookingIntents?: Prisma.BookingIntentUncheckedUpdateManyWithoutStudioNestedInput
+}
+
+export type StudioCreateWithoutEnrollmentsInput = {
+  id?: string
+  name: string
+  slug: string
+  logo?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.MemberCreateNestedManyWithoutStudioInput
+  invitations?: Prisma.InvitationCreateNestedManyWithoutStudioInput
+  categories?: Prisma.CategoryCreateNestedManyWithoutStudioInput
+  studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
+  clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
+  bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleCreateNestedManyWithoutStudioInput
+  courses?: Prisma.CourseCreateNestedManyWithoutStudioInput
+  bookingIntents?: Prisma.BookingIntentCreateNestedManyWithoutStudioInput
+}
+
+export type StudioUncheckedCreateWithoutEnrollmentsInput = {
+  id?: string
+  name: string
+  slug: string
+  logo?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.MemberUncheckedCreateNestedManyWithoutStudioInput
+  invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutStudioInput
+  categories?: Prisma.CategoryUncheckedCreateNestedManyWithoutStudioInput
+  studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
+  clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
+  bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutStudioInput
+  courses?: Prisma.CourseUncheckedCreateNestedManyWithoutStudioInput
+  bookingIntents?: Prisma.BookingIntentUncheckedCreateNestedManyWithoutStudioInput
+}
+
+export type StudioCreateOrConnectWithoutEnrollmentsInput = {
+  where: Prisma.StudioWhereUniqueInput
+  create: Prisma.XOR<Prisma.StudioCreateWithoutEnrollmentsInput, Prisma.StudioUncheckedCreateWithoutEnrollmentsInput>
+}
+
+export type StudioUpsertWithoutEnrollmentsInput = {
+  update: Prisma.XOR<Prisma.StudioUpdateWithoutEnrollmentsInput, Prisma.StudioUncheckedUpdateWithoutEnrollmentsInput>
+  create: Prisma.XOR<Prisma.StudioCreateWithoutEnrollmentsInput, Prisma.StudioUncheckedCreateWithoutEnrollmentsInput>
+  where?: Prisma.StudioWhereInput
+}
+
+export type StudioUpdateToOneWithWhereWithoutEnrollmentsInput = {
+  where?: Prisma.StudioWhereInput
+  data: Prisma.XOR<Prisma.StudioUpdateWithoutEnrollmentsInput, Prisma.StudioUncheckedUpdateWithoutEnrollmentsInput>
+}
+
+export type StudioUpdateWithoutEnrollmentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.MemberUpdateManyWithoutStudioNestedInput
+  invitations?: Prisma.InvitationUpdateManyWithoutStudioNestedInput
+  categories?: Prisma.CategoryUpdateManyWithoutStudioNestedInput
+  studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
+  clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
+  bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutStudioNestedInput
+  courses?: Prisma.CourseUpdateManyWithoutStudioNestedInput
+  bookingIntents?: Prisma.BookingIntentUpdateManyWithoutStudioNestedInput
+}
+
+export type StudioUncheckedUpdateWithoutEnrollmentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.MemberUncheckedUpdateManyWithoutStudioNestedInput
+  invitations?: Prisma.InvitationUncheckedUpdateManyWithoutStudioNestedInput
+  categories?: Prisma.CategoryUncheckedUpdateManyWithoutStudioNestedInput
+  studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
+  clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
+  bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutStudioNestedInput
+  courses?: Prisma.CourseUncheckedUpdateManyWithoutStudioNestedInput
+  bookingIntents?: Prisma.BookingIntentUncheckedUpdateManyWithoutStudioNestedInput
 }
 
 export type StudioCreateWithoutClientsInput = {
@@ -909,6 +1216,9 @@ export type StudioCreateWithoutClientsInput = {
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
   roles?: Prisma.RoleCreateNestedManyWithoutStudioInput
+  courses?: Prisma.CourseCreateNestedManyWithoutStudioInput
+  enrollments?: Prisma.EnrollmentCreateNestedManyWithoutStudioInput
+  bookingIntents?: Prisma.BookingIntentCreateNestedManyWithoutStudioInput
 }
 
 export type StudioUncheckedCreateWithoutClientsInput = {
@@ -925,6 +1235,9 @@ export type StudioUncheckedCreateWithoutClientsInput = {
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
   roles?: Prisma.RoleUncheckedCreateNestedManyWithoutStudioInput
+  courses?: Prisma.CourseUncheckedCreateNestedManyWithoutStudioInput
+  enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutStudioInput
+  bookingIntents?: Prisma.BookingIntentUncheckedCreateNestedManyWithoutStudioInput
 }
 
 export type StudioCreateOrConnectWithoutClientsInput = {
@@ -957,6 +1270,9 @@ export type StudioUpdateWithoutClientsInput = {
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
   roles?: Prisma.RoleUpdateManyWithoutStudioNestedInput
+  courses?: Prisma.CourseUpdateManyWithoutStudioNestedInput
+  enrollments?: Prisma.EnrollmentUpdateManyWithoutStudioNestedInput
+  bookingIntents?: Prisma.BookingIntentUpdateManyWithoutStudioNestedInput
 }
 
 export type StudioUncheckedUpdateWithoutClientsInput = {
@@ -973,6 +1289,101 @@ export type StudioUncheckedUpdateWithoutClientsInput = {
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
   roles?: Prisma.RoleUncheckedUpdateManyWithoutStudioNestedInput
+  courses?: Prisma.CourseUncheckedUpdateManyWithoutStudioNestedInput
+  enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutStudioNestedInput
+  bookingIntents?: Prisma.BookingIntentUncheckedUpdateManyWithoutStudioNestedInput
+}
+
+export type StudioCreateWithoutBookingIntentsInput = {
+  id?: string
+  name: string
+  slug: string
+  logo?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.MemberCreateNestedManyWithoutStudioInput
+  invitations?: Prisma.InvitationCreateNestedManyWithoutStudioInput
+  categories?: Prisma.CategoryCreateNestedManyWithoutStudioInput
+  studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
+  clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
+  bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleCreateNestedManyWithoutStudioInput
+  courses?: Prisma.CourseCreateNestedManyWithoutStudioInput
+  enrollments?: Prisma.EnrollmentCreateNestedManyWithoutStudioInput
+}
+
+export type StudioUncheckedCreateWithoutBookingIntentsInput = {
+  id?: string
+  name: string
+  slug: string
+  logo?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.MemberUncheckedCreateNestedManyWithoutStudioInput
+  invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutStudioInput
+  categories?: Prisma.CategoryUncheckedCreateNestedManyWithoutStudioInput
+  studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
+  clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
+  bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutStudioInput
+  courses?: Prisma.CourseUncheckedCreateNestedManyWithoutStudioInput
+  enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutStudioInput
+}
+
+export type StudioCreateOrConnectWithoutBookingIntentsInput = {
+  where: Prisma.StudioWhereUniqueInput
+  create: Prisma.XOR<Prisma.StudioCreateWithoutBookingIntentsInput, Prisma.StudioUncheckedCreateWithoutBookingIntentsInput>
+}
+
+export type StudioUpsertWithoutBookingIntentsInput = {
+  update: Prisma.XOR<Prisma.StudioUpdateWithoutBookingIntentsInput, Prisma.StudioUncheckedUpdateWithoutBookingIntentsInput>
+  create: Prisma.XOR<Prisma.StudioCreateWithoutBookingIntentsInput, Prisma.StudioUncheckedCreateWithoutBookingIntentsInput>
+  where?: Prisma.StudioWhereInput
+}
+
+export type StudioUpdateToOneWithWhereWithoutBookingIntentsInput = {
+  where?: Prisma.StudioWhereInput
+  data: Prisma.XOR<Prisma.StudioUpdateWithoutBookingIntentsInput, Prisma.StudioUncheckedUpdateWithoutBookingIntentsInput>
+}
+
+export type StudioUpdateWithoutBookingIntentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.MemberUpdateManyWithoutStudioNestedInput
+  invitations?: Prisma.InvitationUpdateManyWithoutStudioNestedInput
+  categories?: Prisma.CategoryUpdateManyWithoutStudioNestedInput
+  studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
+  clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
+  bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutStudioNestedInput
+  courses?: Prisma.CourseUpdateManyWithoutStudioNestedInput
+  enrollments?: Prisma.EnrollmentUpdateManyWithoutStudioNestedInput
+}
+
+export type StudioUncheckedUpdateWithoutBookingIntentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.MemberUncheckedUpdateManyWithoutStudioNestedInput
+  invitations?: Prisma.InvitationUncheckedUpdateManyWithoutStudioNestedInput
+  categories?: Prisma.CategoryUncheckedUpdateManyWithoutStudioNestedInput
+  studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
+  clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
+  bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutStudioNestedInput
+  courses?: Prisma.CourseUncheckedUpdateManyWithoutStudioNestedInput
+  enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutStudioNestedInput
 }
 
 export type StudioCreateWithoutBookingsInput = {
@@ -989,6 +1400,9 @@ export type StudioCreateWithoutBookingsInput = {
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   roles?: Prisma.RoleCreateNestedManyWithoutStudioInput
+  courses?: Prisma.CourseCreateNestedManyWithoutStudioInput
+  enrollments?: Prisma.EnrollmentCreateNestedManyWithoutStudioInput
+  bookingIntents?: Prisma.BookingIntentCreateNestedManyWithoutStudioInput
 }
 
 export type StudioUncheckedCreateWithoutBookingsInput = {
@@ -1005,6 +1419,9 @@ export type StudioUncheckedCreateWithoutBookingsInput = {
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   roles?: Prisma.RoleUncheckedCreateNestedManyWithoutStudioInput
+  courses?: Prisma.CourseUncheckedCreateNestedManyWithoutStudioInput
+  enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutStudioInput
+  bookingIntents?: Prisma.BookingIntentUncheckedCreateNestedManyWithoutStudioInput
 }
 
 export type StudioCreateOrConnectWithoutBookingsInput = {
@@ -1037,6 +1454,9 @@ export type StudioUpdateWithoutBookingsInput = {
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   roles?: Prisma.RoleUpdateManyWithoutStudioNestedInput
+  courses?: Prisma.CourseUpdateManyWithoutStudioNestedInput
+  enrollments?: Prisma.EnrollmentUpdateManyWithoutStudioNestedInput
+  bookingIntents?: Prisma.BookingIntentUpdateManyWithoutStudioNestedInput
 }
 
 export type StudioUncheckedUpdateWithoutBookingsInput = {
@@ -1053,6 +1473,9 @@ export type StudioUncheckedUpdateWithoutBookingsInput = {
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   roles?: Prisma.RoleUncheckedUpdateManyWithoutStudioNestedInput
+  courses?: Prisma.CourseUncheckedUpdateManyWithoutStudioNestedInput
+  enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutStudioNestedInput
+  bookingIntents?: Prisma.BookingIntentUncheckedUpdateManyWithoutStudioNestedInput
 }
 
 
@@ -1068,6 +1491,9 @@ export type StudioCountOutputType = {
   clients: number
   bookings: number
   roles: number
+  courses: number
+  enrollments: number
+  bookingIntents: number
 }
 
 export type StudioCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1078,6 +1504,9 @@ export type StudioCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions
   clients?: boolean | StudioCountOutputTypeCountClientsArgs
   bookings?: boolean | StudioCountOutputTypeCountBookingsArgs
   roles?: boolean | StudioCountOutputTypeCountRolesArgs
+  courses?: boolean | StudioCountOutputTypeCountCoursesArgs
+  enrollments?: boolean | StudioCountOutputTypeCountEnrollmentsArgs
+  bookingIntents?: boolean | StudioCountOutputTypeCountBookingIntentsArgs
 }
 
 /**
@@ -1139,6 +1568,27 @@ export type StudioCountOutputTypeCountRolesArgs<ExtArgs extends runtime.Types.Ex
   where?: Prisma.RoleWhereInput
 }
 
+/**
+ * StudioCountOutputType without action
+ */
+export type StudioCountOutputTypeCountCoursesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.CourseWhereInput
+}
+
+/**
+ * StudioCountOutputType without action
+ */
+export type StudioCountOutputTypeCountEnrollmentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.EnrollmentWhereInput
+}
+
+/**
+ * StudioCountOutputType without action
+ */
+export type StudioCountOutputTypeCountBookingIntentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.BookingIntentWhereInput
+}
+
 
 export type StudioSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1155,6 +1605,9 @@ export type StudioSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   clients?: boolean | Prisma.Studio$clientsArgs<ExtArgs>
   bookings?: boolean | Prisma.Studio$bookingsArgs<ExtArgs>
   roles?: boolean | Prisma.Studio$rolesArgs<ExtArgs>
+  courses?: boolean | Prisma.Studio$coursesArgs<ExtArgs>
+  enrollments?: boolean | Prisma.Studio$enrollmentsArgs<ExtArgs>
+  bookingIntents?: boolean | Prisma.Studio$bookingIntentsArgs<ExtArgs>
   _count?: boolean | Prisma.StudioCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["studio"]>
 
@@ -1197,6 +1650,9 @@ export type StudioInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   clients?: boolean | Prisma.Studio$clientsArgs<ExtArgs>
   bookings?: boolean | Prisma.Studio$bookingsArgs<ExtArgs>
   roles?: boolean | Prisma.Studio$rolesArgs<ExtArgs>
+  courses?: boolean | Prisma.Studio$coursesArgs<ExtArgs>
+  enrollments?: boolean | Prisma.Studio$enrollmentsArgs<ExtArgs>
+  bookingIntents?: boolean | Prisma.Studio$bookingIntentsArgs<ExtArgs>
   _count?: boolean | Prisma.StudioCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type StudioIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -1212,6 +1668,9 @@ export type $StudioPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     clients: Prisma.$ClientPayload<ExtArgs>[]
     bookings: Prisma.$BookingPayload<ExtArgs>[]
     roles: Prisma.$RolePayload<ExtArgs>[]
+    courses: Prisma.$CoursePayload<ExtArgs>[]
+    enrollments: Prisma.$EnrollmentPayload<ExtArgs>[]
+    bookingIntents: Prisma.$BookingIntentPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1622,6 +2081,9 @@ export interface Prisma__StudioClient<T, Null = never, ExtArgs extends runtime.T
   clients<T extends Prisma.Studio$clientsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Studio$clientsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ClientPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   bookings<T extends Prisma.Studio$bookingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Studio$bookingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BookingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   roles<T extends Prisma.Studio$rolesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Studio$rolesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RolePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  courses<T extends Prisma.Studio$coursesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Studio$coursesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CoursePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  enrollments<T extends Prisma.Studio$enrollmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Studio$enrollmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EnrollmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  bookingIntents<T extends Prisma.Studio$bookingIntentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Studio$bookingIntentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BookingIntentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2216,6 +2678,78 @@ export type Studio$rolesArgs<ExtArgs extends runtime.Types.Extensions.InternalAr
   take?: number
   skip?: number
   distinct?: Prisma.RoleScalarFieldEnum | Prisma.RoleScalarFieldEnum[]
+}
+
+/**
+ * Studio.courses
+ */
+export type Studio$coursesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Course
+   */
+  select?: Prisma.CourseSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Course
+   */
+  omit?: Prisma.CourseOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.CourseInclude<ExtArgs> | null
+  where?: Prisma.CourseWhereInput
+  orderBy?: Prisma.CourseOrderByWithRelationInput | Prisma.CourseOrderByWithRelationInput[]
+  cursor?: Prisma.CourseWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.CourseScalarFieldEnum | Prisma.CourseScalarFieldEnum[]
+}
+
+/**
+ * Studio.enrollments
+ */
+export type Studio$enrollmentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Enrollment
+   */
+  select?: Prisma.EnrollmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Enrollment
+   */
+  omit?: Prisma.EnrollmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EnrollmentInclude<ExtArgs> | null
+  where?: Prisma.EnrollmentWhereInput
+  orderBy?: Prisma.EnrollmentOrderByWithRelationInput | Prisma.EnrollmentOrderByWithRelationInput[]
+  cursor?: Prisma.EnrollmentWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.EnrollmentScalarFieldEnum | Prisma.EnrollmentScalarFieldEnum[]
+}
+
+/**
+ * Studio.bookingIntents
+ */
+export type Studio$bookingIntentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the BookingIntent
+   */
+  select?: Prisma.BookingIntentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the BookingIntent
+   */
+  omit?: Prisma.BookingIntentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BookingIntentInclude<ExtArgs> | null
+  where?: Prisma.BookingIntentWhereInput
+  orderBy?: Prisma.BookingIntentOrderByWithRelationInput | Prisma.BookingIntentOrderByWithRelationInput[]
+  cursor?: Prisma.BookingIntentWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.BookingIntentScalarFieldEnum | Prisma.BookingIntentScalarFieldEnum[]
 }
 
 /**

@@ -9,6 +9,55 @@
 * 🟢 You can import this file directly.
 */
 
+export const LocationType = {
+  STUDIO: 'STUDIO',
+  OUTDOOR: 'OUTDOOR',
+  BOTH: 'BOTH',
+  MULTIPLE: 'MULTIPLE'
+} as const
+
+export type LocationType = (typeof LocationType)[keyof typeof LocationType]
+
+
+export const CourseLevel = {
+  FOUNDATION: 'FOUNDATION',
+  INTERMEDIATE: 'INTERMEDIATE',
+  ADVANCED: 'ADVANCED',
+  MASTER_CLASS: 'MASTER_CLASS'
+} as const
+
+export type CourseLevel = (typeof CourseLevel)[keyof typeof CourseLevel]
+
+
+export const EnrollmentStatus = {
+  PENDING: 'PENDING',
+  ACTIVE: 'ACTIVE',
+  COMPLETED: 'COMPLETED',
+  DROPPED: 'DROPPED'
+} as const
+
+export type EnrollmentStatus = (typeof EnrollmentStatus)[keyof typeof EnrollmentStatus]
+
+
+export const PaymentPlan = {
+  QUARTER: 'QUARTER',
+  HALF: 'HALF',
+  FULL: 'FULL'
+} as const
+
+export type PaymentPlan = (typeof PaymentPlan)[keyof typeof PaymentPlan]
+
+
+export const BookingIntentStatus = {
+  PENDING: 'PENDING',
+  COMPLETED: 'COMPLETED',
+  EXPIRED: 'EXPIRED',
+  FAILED: 'FAILED'
+} as const
+
+export type BookingIntentStatus = (typeof BookingIntentStatus)[keyof typeof BookingIntentStatus]
+
+
 export const BookingStatus = {
   PENDING: 'PENDING',
   CONFIRMED: 'CONFIRMED',
@@ -36,6 +85,16 @@ export const DeliveryStatus = {
 } as const
 
 export type DeliveryStatus = (typeof DeliveryStatus)[keyof typeof DeliveryStatus]
+
+
+export const PaymentInstallmentType = {
+  DEPOSIT: 'DEPOSIT',
+  INSTALLMENT: 'INSTALLMENT',
+  BALANCE: 'BALANCE',
+  FULL: 'FULL'
+} as const
+
+export type PaymentInstallmentType = (typeof PaymentInstallmentType)[keyof typeof PaymentInstallmentType]
 
 
 export const PaymentMethod = {

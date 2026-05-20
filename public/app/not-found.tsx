@@ -48,7 +48,7 @@ export default function NotFound() {
             Lost in the Lens
           </h2>
           <p className="not-found-text text-gray-400 text-lg md:text-xl max-w-md mx-auto pointer-events-auto px-4">
-            We couldn't find the page you're looking for. It might have been moved or deleted.
+            We couldn&apos;t find the page you&apos;re looking for. It might have been moved or deleted.
           </p>
         </div>
       </div>

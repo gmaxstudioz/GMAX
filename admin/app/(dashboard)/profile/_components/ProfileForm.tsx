@@ -84,7 +84,7 @@ export function ProfileForm({ user }: { user: { name?: string | null; image?: st
                                     onDelete={() => {
                                         field.onChange("");
                                     }}
-                                    initialPreview={field.value}
+                                    initialPreview={field.value ? (field.value.startsWith("http") ? field.value : `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${field.value}`) : ""}
                                     directory="studio/member/profile"
                                 />
                                 {fieldState.error && (

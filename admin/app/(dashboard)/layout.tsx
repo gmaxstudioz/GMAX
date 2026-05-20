@@ -19,7 +19,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
     const user = await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { role: true }
+        select: { role: true, email: true }
     });
 
     const isAdmin = user?.role === "admin";
@@ -28,6 +28,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         const membership = await prisma.member.findFirst({
             where: { userId: session.user.id }
         });
+
+        console.log("CURRENT USER FROM DB:", user);
 
         if (!membership) {
             redirect("/auth/waiting");

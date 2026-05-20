@@ -11,7 +11,11 @@ import { Loader2, CheckCircle2, PartyPopperIcon, XCircleIcon, Download, ArrowRig
 
 declare global {
     interface Window {
-        PaystackPop: any;
+        PaystackPop: {
+            new (): {
+                newTransaction(options: Record<string, unknown>): void;
+            };
+        };
     }
 }
 
@@ -24,7 +28,7 @@ interface PaymentCheckoutProps {
     purchaseType?: "booking" | "product";
 }
 
-export function PaymentCheckout({ reference, accessCode, email, amount, publicKey, purchaseType = "booking" }: PaymentCheckoutProps) {
+export function PaymentCheckout({ reference, email, amount, publicKey, purchaseType = "booking" }: PaymentCheckoutProps) {
     const router = useRouter();
     const [status, setStatus] = useState<"idle" | "processing" | "success" | "failed">("idle");
     const [scriptLoaded, setScriptLoaded] = useState(false);
@@ -33,7 +37,7 @@ export function PaymentCheckout({ reference, accessCode, email, amount, publicKe
     useEffect(() => {
         // Load Paystack inline script
         if (document.getElementById("paystack-script")) {
-            setScriptLoaded(true);
+            setTimeout(() => setScriptLoaded(true), 0);
             return;
         }
         const script = document.createElement("script");
@@ -100,7 +104,7 @@ export function PaymentCheckout({ reference, accessCode, email, amount, publicKe
                     toast.info("Payment was cancelled");
                 },
             });
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("[PaymentCheckout] Paystack error:", err);
             toast.error("Failed to open payment window. Please try again.");
         }

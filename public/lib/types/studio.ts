@@ -1,13 +1,20 @@
 // portal/lib/types/studio.ts
 
+export interface ServiceVariantOutput {
+    id: string;
+    locationType: "STUDIO" | "OUTDOOR" | "BOTH" | "MULTIPLE";
+    basePrice: string; // Comes from backend as a string
+    maxPrice: string | null;
+    sessionDurationMins: number;
+}
+
 export interface PublicServiceOutput {
     id: string;
     name: string;
-    type: string;
+    isAddon: boolean;
     description: string;
     features: string[];
-    price: number;
-    salePrice: number | null;
+    variants: ServiceVariantOutput[];
 }
 
 export interface PublicCategoryOutput {

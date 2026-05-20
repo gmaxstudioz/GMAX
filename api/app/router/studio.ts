@@ -14,7 +14,8 @@ export const getStudioBySlug = os.studio.getBySlug
                 categories: {
                     include: {
                         services: {
-                            where: { type: { not: "addon" } },
+                            where: { isAddon: false }, // Updated query
+                            include: { studioSession: true, variants: true }, // Include variants
                         },
                     },
                 },
@@ -27,7 +28,8 @@ export const getStudioBySlug = os.studio.getBySlug
         });
 
         const addons = await prisma.service.findMany({
-            where: { type: "addon", category: { studioId: studio.id } },
+            where: { isAddon: true, category: { studioId: studio.id } }, // Updated query
+            include: { studioSession: true, variants: true }, // Include variants
         });
 
         return {
@@ -52,11 +54,16 @@ export const getStudioBySlug = os.studio.getBySlug
                 services: cat.services.map((s) => ({
                     id: s.id,
                     name: s.name,
-                    type: s.type,
+                    isAddon: s.isAddon, // Updated mapping
                     description: s.description,
                     features: s.features,
-                    price: s.price,
-                    salePrice: s.salePrice,
+                    variants: s.variants.map((v) => ({
+                        id: v.id,
+                        locationType: v.locationType,
+                        basePrice: v.basePrice.toString(), // Convert Prisma Decimal to string
+                        maxPrice: v.maxPrice ? v.maxPrice.toString() : null,
+                        sessionDurationMins: v.sessionDurationMins,
+                    }))
                 })),
             })),
             studioSessions: studio.studioSessions.map((ss) => ({
@@ -67,11 +74,16 @@ export const getStudioBySlug = os.studio.getBySlug
             addons: addons.map((a) => ({
                 id: a.id,
                 name: a.name,
-                type: a.type,
+                isAddon: a.isAddon, // Updated mapping
                 description: a.description,
                 features: a.features,
-                price: a.price,
-                salePrice: a.salePrice,
+                variants: a.variants.map((v) => ({
+                    id: v.id,
+                    locationType: v.locationType,
+                    basePrice: v.basePrice.toString(), // Convert Prisma Decimal to string
+                    maxPrice: v.maxPrice ? v.maxPrice.toString() : null,
+                    sessionDurationMins: v.sessionDurationMins,
+                }))
             })),
         };
     });

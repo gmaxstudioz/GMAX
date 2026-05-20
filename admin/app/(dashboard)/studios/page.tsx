@@ -7,63 +7,49 @@ import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Studios",
-  description:
-    "Browse and manage all your studios. View members, bookings, and session details.",
+  description: "Browse and manage all your studios.",
 };
 
-export default async function StudiosPage() {    
+export default async function StudiosPage() {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) redirect("/auth/login");
 
-    const members = await prisma.member.findMany({
-        where: { userId: session.user.id },
-        select: { role: true }
-    });
-    
-    const adminRoles = ["owner", "developer", "manager"];
-    const hasAdminRole = members.some(m => adminRoles.includes(m.role));
+    // 1. Fetch User and Memberships
+    const [user, members] = await Promise.all([
+        prisma.user.findUnique({ where: { id: session.user.id } }),
+        prisma.member.findMany({ where: { userId: session.user.id } })
+    ]);
 
+    const isPlatformAdmin = user?.role === "admin";
+    const hasAdminRole = isPlatformAdmin || members.some(m => ["owner", "manager"].includes(m.role));
+
+    // 2. Optimized Studio Query
+    // Note: We use 'creator' as defined in your Booking model relation
     const studioData = await prisma.studio.findMany({
-        where: {
-            members: {
-                some: {
-                    userId: session.user.id
-                }
-            }
+        where: isPlatformAdmin ? {} : {
+            members: { some: { userId: session.user.id } }
         },
-        orderBy: {
-            createdAt: "desc",
-        },
+        orderBy: { createdAt: "desc" },
         include: {
             members: true,
-            invitations: true,
-            categories: true,
+            categories: { include: { services: { include: { variants: true } } } },
             studioSessions: true,
-            clients: true,
-            bookings: {
-                include: { service: true }
-            },
+            bookings: { include: { creator: true } } // Explicitly include the 'creator' relation
         },
     });
 
-    const isSuperAdmin = members.some(m => ["owner", "developer"].includes(m.role));
-    if (!isSuperAdmin && studioData.length > 0) {
+    // 3. Logic: Redirect non-admins to their specific studio dashboard
+    if (!hasAdminRole && studioData.length > 0) {
         redirect(`/studios/${studioData[0].slug}`);
     }
 
-    function RenderContent() {
-        if (studioData.length === 0) {
-            return <RenderEmptyState hasAdminRole={hasAdminRole} />
-        } else {
-            return (
-                <RenderStudios studioData={studioData} hasAdminRole={hasAdminRole} />
-            )
-        }
-    }
-
     return (
-        <div className="flex flex-col gap-4 py-4 px-4 md:gap-6 md:py-6 md:px-6">
-            {RenderContent()}
+        <div className="flex flex-col gap-4 py-4 px-4">
+            {studioData.length === 0 ? (
+                <RenderEmptyState hasAdminRole={hasAdminRole} />
+            ) : (
+                <RenderStudios studioData={studioData} hasAdminRole={hasAdminRole} />
+            )}
         </div>
-    )
+    );
 }

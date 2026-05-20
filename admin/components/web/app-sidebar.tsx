@@ -1,6 +1,5 @@
 import * as React from "react"
 import { NavMain } from "@/components/web/nav-main"
-import { NavSecondary } from "@/components/web/nav-secondary"
 import { NavUser } from "@/components/web/nav-user"
 import Logo from "@/public/Logo.png"
 import {
@@ -12,7 +11,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { LayoutDashboardIcon, ChartBarIcon, FolderIcon, Settings2Icon, SearchIcon } from "lucide-react"
+import { LayoutDashboardIcon, ChartBarIcon, FolderIcon } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { auth } from "@/lib/auth"
@@ -104,23 +103,6 @@ const data = {
       ),
     },
   ],
-  navSecondary: [
-    {
-      title: "Settings",
-      url: "#",
-      icon: (
-        <Settings2Icon />
-      ),
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: (
-        <SearchIcon
-        />
-      ),
-    },
-  ],
 }
 
 export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -189,7 +171,6 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
       <SidebarContent>
         <NavMain items={isOnlyMinorRole ? minorNavMain : data.navMain} />
         {!isOnlyMinorRole && <NavManagement items={data.navManagement} />}
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={session?.user} />
