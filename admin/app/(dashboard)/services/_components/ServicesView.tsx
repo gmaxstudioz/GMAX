@@ -28,7 +28,7 @@ type ServiceWithRelations = {
     studioSessionId: string;
     createdAt: Date;
     updatedAt: Date;
-    variants: { id: string; basePrice: any; maxPrice: any; locationType: string; deliverables: any[] }[];
+    variants: { id: string; basePrice: string | number; maxPrice: string | number | null; locationType: string; deliverables: unknown[] }[];
     studioSession: {
         id: string;
         name: string;
@@ -94,7 +94,7 @@ export function ServicesView({ studioGroups }: { studioGroups: StudioGroup[] }) 
     }
 
     // Compute all services flat for totals and type filter options
-    const allServices = studioGroups.flatMap(g => g.categories.flatMap(c => c.services));
+    // const allServices = studioGroups.flatMap(g => g.categories.flatMap(c => c.services));
     const allTypes = ['ALL', 'service', 'addon'] as const;
 
     const [page, setPage] = useState(1);

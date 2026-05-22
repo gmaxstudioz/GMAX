@@ -361,7 +361,7 @@ export default function BookingPage() {
                             <div className="space-y-3">
                               <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Included Deliverables</h5>
                               <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-muted-foreground/90">
-                                {selectedVariant.deliverables.map((del: { quantity?: number; label?: string; detail?: string; isFree?: boolean }, idx: number) => (
+                                {selectedVariant.deliverables.map((del: { quantity?: number | null; label?: string; detail?: string | null; isFree?: boolean }, idx: number) => (
                                   <li key={idx} className="flex items-start gap-2.5">
                                     <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                                     <span>{del.quantity ? `${del.quantity} ` : ""}{del.label} {del.detail ? `(${del.detail})` : ""} {del.isFree ? "(Free)" : ""}</span>
@@ -382,7 +382,7 @@ export default function BookingPage() {
                     <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Enhance Your Session (Optional)</Label>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {studio.addons.flatMap(addon => 
-                        addon.variants.map((variant: { id: string; locationType: string; basePrice?: string | number | null; deliverables?: { quantity?: number; label?: string; detail?: string; isFree?: boolean }[] }) => {
+                        addon.variants.map((variant: { id: string; locationType: string; basePrice?: string | number | null; deliverables?: { quantity?: number | null; label?: string; detail?: string | null; isFree?: boolean }[] }) => {
                           const compositeId = `${addon.id}:${variant.id}`;
                           const isSelected = selectedAddonIds.includes(compositeId);
                           const isExpanded = expandedItems[compositeId];
@@ -444,7 +444,7 @@ export default function BookingPage() {
                                       <div className="space-y-2 border-t border-border/30 pt-3">
                                         <h6 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Deliverables</h6>
                                         <ul className="text-xs space-y-2 text-muted-foreground/90">
-                                          {variant.deliverables.map((del: { quantity?: number; label?: string; detail?: string; isFree?: boolean }, idx: number) => (
+                                          {variant.deliverables.map((del: { quantity?: number | null; label?: string; detail?: string | null; isFree?: boolean }, idx: number) => (
                                             <li key={idx} className="flex items-start gap-1.5">
                                               <div className="w-1.5 h-1.5 rounded-full bg-primary/50 mt-1 shrink-0" />
                                               <span>{del.quantity ? `${del.quantity} ` : ""}{del.label} {del.detail ? `(${del.detail})` : ""} {del.isFree ? "(Free)" : ""}</span>

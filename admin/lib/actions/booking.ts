@@ -3,7 +3,7 @@
 import { prisma } from "../prisma";
 import { auth } from "../auth";
 import { headers } from "next/headers";
-import { CreateBookingInput } from "../schemas/booking";
+import { CreateBookingInput, PaymentPlan } from "../schemas/booking";
 import { revalidatePath } from "next/cache";
 
 import { startOfDay, endOfDay } from "date-fns";
@@ -535,7 +535,7 @@ export async function updateBookingFull(
         deliveryStatus?: string;
         addonIds?: string[];
         totalAmount?: number;
-        paymentPlan?: any;
+        paymentPlan?: PaymentPlan;
     }
 ) {
     try {

@@ -419,7 +419,7 @@ function Staffs({studioData}: {studioData: StudioWithRelations}) {
     });
     async function handleAddStaff(values: InviteMemberInput) {
         startTransition(async () => {
-            const { data, error } = await authClient.organization.inviteMember({
+            const { error } = await authClient.organization.inviteMember({
                 email: values.email,
                 role: values.role,
                 organizationId: studioData.id,
@@ -433,12 +433,9 @@ function Staffs({studioData}: {studioData: StudioWithRelations}) {
             }
         });
     }
-    function getStaffBookings(memberId: string) {
-        return studioData.bookings.filter((booking) => booking.memberId === memberId)
-    }
     function handleDelete(memberId: string) {
         startTransition(async () => {
-            const { data, error } = await authClient.organization.removeMember({
+            const { error } = await authClient.organization.removeMember({
                 memberIdOrEmail:memberId,
                 organizationId: studioData.id,
             });
@@ -664,7 +661,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
     // Flatten addons into variants
     const flattenedAddons = useMemo(() => {
         return addonServices.flatMap(addon => 
-            (addon.variants || []).map((variant: any) => ({
+            (addon.variants || []).map((variant) => ({
                 compositeId: `${addon.id}:${variant.id}`,
                 addon,
                 variant
@@ -694,7 +691,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
     const watchedTotalAmount = form.watch("totalAmount") || 0;
 
     const selectedService = useMemo(() => allServices.find(s => s.id === watchedServiceId), [allServices, watchedServiceId]);
-    const selectedVariant = useMemo(() => selectedService?.variants?.find((v: any) => v.id === watchedServiceVariantId), [selectedService, watchedServiceVariantId]);
+    const selectedVariant = useMemo(() => selectedService?.variants?.find((v) => v.id === watchedServiceVariantId), [selectedService, watchedServiceVariantId]);
     const selectedClient = useMemo(() => studioData.clients.find(c => c.id === watchedClientId), [studioData.clients, watchedClientId]);
     const selectedAddonVariants = useMemo(() => flattenedAddons.filter(a => selectedAddonIds.includes(a.compositeId)), [flattenedAddons, selectedAddonIds]);
 
@@ -908,7 +905,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                                                     <SelectValue placeholder="Choose location type..." />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {selectedService.variants.map((v: any) => (
+                                                    {selectedService.variants.map((v) => (
                                                         <SelectItem key={v.id} value={v.id}>
                                                             {v.locationType} - ₦{Number(v.basePrice).toLocaleString()}
                                                             {v.maxPrice && ` to ₦${Number(v.maxPrice).toLocaleString()}`}
@@ -934,7 +931,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                                 <div className="rounded-lg border bg-muted/20 p-3">
                                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Included Deliverables</p>
                                     <ul className="text-sm space-y-1">
-                                        {selectedVariant.deliverables.map((d: any) => (
+                                        {selectedVariant.deliverables.map((d) => (
                                             <li key={d.id} className="flex gap-2 text-foreground/80">
                                                 <span className="text-primary">•</span>
                                                 <span>
@@ -968,7 +965,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                                                         <span>{item.addon.name} <span className="text-muted-foreground text-xs font-medium ml-1">({item.variant.locationType})</span></span>
                                                         {item.variant.deliverables && item.variant.deliverables.length > 0 && (
                                                             <div className="text-xs text-muted-foreground mt-1">
-                                                                {item.variant.deliverables.map((d: any) => `${d.quantity ? d.quantity + ' ' : ''}${d.label}`).join(" • ")}
+                                                                {item.variant.deliverables.map((d) => `${d.quantity ? d.quantity + ' ' : ''}${d.label}`).join(" • ")}
                                                             </div>
                                                         )}
                                                     </div>
@@ -1218,14 +1215,14 @@ function BookingIntents({ data }: { data: StudioWithRelations }) {
                                     <td className="py-3 px-2">
                                         <div>
                                             <p className="font-medium">₦{Number(intent.amount).toLocaleString()}</p>
-                                            {Number((intent as any).totalAmount) !== Number(intent.amount) && (
-                                                <p className="text-xs text-muted-foreground">of ₦{Number((intent as any).totalAmount).toLocaleString()}</p>
+                                            {Number((intent as { totalAmount?: number | string }).totalAmount) !== Number(intent.amount) && (
+                                                <p className="text-xs text-muted-foreground">of ₦{Number((intent as { totalAmount?: number | string }).totalAmount).toLocaleString()}</p>
                                             )}
                                         </div>
                                     </td>
                                     <td className="py-3 px-2">
                                         <Badge variant="outline" className="text-xs">
-                                            {planLabels[(intent as any).paymentPlan as keyof typeof planLabels] || (intent as any).paymentPlan}
+                                            {planLabels[(intent as { paymentPlan?: string }).paymentPlan as keyof typeof planLabels] || (intent as { paymentPlan?: string }).paymentPlan}
                                         </Badge>
                                     </td>
                                     <td className="py-3 px-2">

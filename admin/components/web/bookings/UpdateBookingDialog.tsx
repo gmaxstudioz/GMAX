@@ -18,7 +18,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { PencilEdit02Icon } from "@hugeicons/core-free-icons";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { UpdateBookingSchema, UpdateBookingInput, BookingStatus, PaymentStatus, DeliveryStatus } from "@/lib/schemas/booking";
+import { UpdateBookingSchema, UpdateBookingInput, BookingStatus, PaymentStatus, DeliveryStatus, PaymentPlan } from "@/lib/schemas/booking";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { ClientOutput } from "@/lib/schemas/client";
 import { ServiceOutput } from "@/lib/schemas/service";
@@ -65,7 +65,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
     // Flatten addons into variants
     const flattenedAddons = useMemo(() => {
         return addonServices.flatMap(addon => 
-            (addon.variants || []).map((variant: any) => ({
+            (addon.variants || []).map((variant: NonNullable<ServiceOutput["variants"]>[number]) => ({
                 compositeId: `${addon.id}:${variant.id}`,
                 addon,
                 variant
@@ -100,7 +100,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
             bookingDate: currentData.bookingDate ? new Date(currentData.bookingDate) : undefined,
             addonIds: currentData.addonIds || [],
             totalAmount: currentData.totalAmount ?? 0,
-            paymentPlan: (currentData.paymentPlan as any) ?? "FULL",
+            paymentPlan: (currentData.paymentPlan as PaymentPlan) ?? "FULL",
         }
     });
 
@@ -150,7 +150,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                 bookingDate: data.bookingDate ? data.bookingDate.toISOString() : undefined,
                 addonIds: data.addonIds,
                 totalAmount: data.totalAmount,
-                paymentPlan: data.paymentPlan as any,
+                paymentPlan: data.paymentPlan as PaymentPlan,
             }));
             
             if (error) {
@@ -182,7 +182,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                 bookingDate: currentData.bookingDate ? new Date(currentData.bookingDate) : undefined,
                 addonIds: currentData.addonIds || [],
                 totalAmount: currentData.totalAmount ?? 0,
-                paymentPlan: (currentData.paymentPlan as any) ?? "FULL",
+                paymentPlan: (currentData.paymentPlan as PaymentPlan) ?? "FULL",
             });
             setClientSearch("");
             setServiceSearch("");
@@ -323,7 +323,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                                             <SelectValue placeholder="Select a variant..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {selectedService.variants?.map((v: any) => (
+                                            {selectedService.variants?.map((v: NonNullable<ServiceOutput["variants"]>[number]) => (
                                                 <SelectItem key={v.id} value={v.id}>
                                                     {v.locationType} — ₦{Number(v.basePrice).toLocaleString()}
                                                     {v.maxPrice && ` to ₦${Number(v.maxPrice).toLocaleString()}`}
@@ -343,8 +343,8 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                                                 <div>
                                                     <p className="font-semibold text-xs text-muted-foreground mb-1">Deliverables:</p>
                                                     <ul className="list-disc list-inside text-xs space-y-0.5 ml-1">
-                                                        {selectedVariant.deliverables.map((d: any) => (
-                                                            <li key={d.id}>
+                                                        {selectedVariant.deliverables.map((d: NonNullable<NonNullable<ServiceOutput["variants"]>[number]["deliverables"]>[number]) => (
+                                                            <li key={d.label}>
                                                                 {d.quantity ? `${d.quantity} ` : ""}{d.label}
                                                                 {d.detail && <span className="text-muted-foreground ml-1">({d.detail})</span>}
                                                             </li>
@@ -379,7 +379,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                                                 <span>{item.addon.name} <span className="text-muted-foreground text-xs font-medium ml-1">({item.variant.locationType})</span></span>
                                                 {item.variant.deliverables && item.variant.deliverables.length > 0 && (
                                                     <div className="text-xs text-muted-foreground mt-1">
-                                                        {item.variant.deliverables.map((d: any) => `${d.quantity ? d.quantity + ' ' : ''}${d.label}`).join(" • ")}
+                                                        {item.variant.deliverables.map((d: NonNullable<NonNullable<ServiceOutput["variants"]>[number]["deliverables"]>[number]) => `${d.quantity ? d.quantity + ' ' : ''}${d.label}`).join(" • ")}
                                                     </div>
                                                 )}
                                             </div>

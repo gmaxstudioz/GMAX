@@ -12,8 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { createCategory, deleteCategory, createService, deleteService, updateCategory, updateService } from "@/lib/actions/service";
-import { useRouter } from "next/navigation";
-import { Controller, useForm, useFieldArray } from "react-hook-form";
+import { Controller, useForm, useFieldArray, Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CategorySchema, CategoryPayload, ServiceSchema, ServicePayload } from "@/lib/schemas/service";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -21,12 +20,12 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 // ✅ Ensure variants are included in the expected type
 type StudioWithRelations = Prisma.StudioGetPayload<{
     include: {
-        categories: { include: { services: { include: { variants: true } } } },
+        categories: { include: { services: { include: { variants: { include: { deliverables: true } } } } } },
         studioSessions: true,
     }
 }>;
 
-function VariantDeliverables({ control, variantIndex, isPending }: { control: any, variantIndex: number, isPending: boolean }) {
+function VariantDeliverables({ control, variantIndex, isPending }: { control: Control<ServicePayload>, variantIndex: number, isPending: boolean }) {
     const { fields, append, remove } = useFieldArray({
         control,
         name: `variants.${variantIndex}.deliverables` as const
@@ -458,13 +457,13 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                     const svcFeatures = (svc.features && svc.features.length > 0) ? svc.features : [""];
                                                                     
                                                                     const mappedVariants = (svc.variants && svc.variants.length > 0) 
-                                                                        ? svc.variants.map((v: any) => ({
+                                                                        ? svc.variants.map((v) => ({
                                                                             locationType: v.locationType as "STUDIO" | "OUTDOOR" | "BOTH" | "MULTIPLE",
                                                                             basePrice: Number(v.basePrice),
                                                                             maxPrice: v.maxPrice ? Number(v.maxPrice) : undefined,
                                                                             sessionDurationMins: v.sessionDurationMins,
                                                                             logisticsIncluded: v.logisticsIncluded,
-                                                                            deliverables: v.deliverables?.map((d: any) => ({
+                                                                            deliverables: v.deliverables?.map((d) => ({
                                                                                 label: d.label,
                                                                                 quantity: d.quantity ?? undefined,
                                                                                 detail: d.detail ?? undefined,
@@ -640,7 +639,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                         <SelectItem 
                                                                             key={loc} 
                                                                             value={loc} 
-                                                                            disabled={usedLocationTypes.includes(loc as any) && loc !== field.value}
+                                                                            disabled={usedLocationTypes.includes(loc as "STUDIO" | "OUTDOOR" | "BOTH" | "MULTIPLE") && loc !== field.value}
                                                                         >
                                                                             {loc}
                                                                         </SelectItem>

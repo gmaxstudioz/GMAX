@@ -193,8 +193,8 @@ export default async function BookingDetailPage({ params }: Props) {
             deliverables: v.deliverables.map(d => ({
                 id: d.id,
                 label: d.label,
-                quantity: d.quantity,
-                detail: d.detail,
+                quantity: d.quantity ?? undefined,
+                detail: d.detail ?? undefined,
                 isFree: d.isFree,
             }))
         }))
@@ -247,7 +247,7 @@ export default async function BookingDetailPage({ params }: Props) {
                             serviceVariantId: serializedBooking.serviceVariantId ?? undefined,
                             memberId: serializedBooking.memberId || "",
                             bookingDate: serializedBooking.bookingDate,
-                            addonIds: serializedBooking.addons.map((addon: any) => addon.id),
+                            addonIds: serializedBooking.addons.map((addon: { id: string }) => addon.id),
                             totalAmount: Number(serializedBooking.totalAmount),
                             paymentPlan: serializedBooking.paymentPlan,
                         }}
@@ -306,7 +306,7 @@ export default async function BookingDetailPage({ params }: Props) {
                             {serializedBooking.addons.length > 0 && (
                                 <InfoRow icon={PackageIcon} label="Add-ons">
                                     <div className="flex flex-col gap-1">
-                                        {serializedBooking.addons.map((addon: any) => (
+                                        {serializedBooking.addons.map((addon: { id: string; name: string }) => (
                                             <span key={addon.id}>{addon.name}</span>
                                         ))}
                                     </div>

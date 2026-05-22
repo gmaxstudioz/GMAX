@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     ContextMenu,
@@ -520,9 +520,9 @@ function UploadDialog({
                     onSuccess(result.data as PortfolioItemType);
                     uploaded++;
                 }
-            } catch (err: any) {
+            } catch (err) {
                 console.error("Upload error details:", err);
-                toast.error(`Failed to upload ${file.name}: ${err?.message || "Unknown error"}`);
+                toast.error(`Failed to upload ${file.name}: ${err instanceof Error ? err.message : "Unknown error"}`);
             }
 
             setProgress(Math.round(((files.indexOf(file) + 1) / files.length) * 100));

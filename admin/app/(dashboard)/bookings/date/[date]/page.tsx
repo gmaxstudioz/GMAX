@@ -121,11 +121,11 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
                         maxPrice: v.maxPrice ? Number(v.maxPrice) : undefined,
                         sessionDurationMins: v.sessionDurationMins,
                         logisticsIncluded: v.logisticsIncluded,
-                        deliverables: (v as any).deliverables?.map((d: any) => ({
+                        deliverables: v.deliverables?.map(d => ({
                             id: d.id,
                             label: d.label,
-                            quantity: d.quantity,
-                            detail: d.detail,
+                            quantity: d.quantity ?? undefined,
+                            detail: d.detail ?? undefined,
                             isFree: d.isFree,
                         })) ?? [],
                     })) ?? [],
