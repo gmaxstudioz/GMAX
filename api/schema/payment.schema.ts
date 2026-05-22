@@ -7,6 +7,12 @@ export const PaymentMethodEnum = z.enum(["CASH", "TRANSFER", "POS"]);
 
 export type PaymentMethod = z.infer<typeof PaymentMethodEnum>;
 
+export const PaymentInstallmentTypeEnum = z.enum([
+    "DEPOSIT", "INSTALLMENT", "BALANCE", "FULL"
+]);
+
+export type PaymentInstallmentType = z.infer<typeof PaymentInstallmentTypeEnum>;
+
 // ─── Payment ──────────────────────────────────────────────────────────────────
 
 export const PaymentSchema = z.object({
@@ -26,8 +32,12 @@ export const PaymentSchema = z.object({
   receiptNumber: z.string().min(1),
   receiptUrl: z.string().url().nullable().optional(),
 
-  bookingId: z.string(),
+  bookingId: z.string().nullable(),
   recordedById: z.string(),
+
+  installmentType: PaymentInstallmentTypeEnum,
+  sequence:        z.number().int().positive(),
+  expectedAmount:  z.string().regex(/^\d+(\.\d{1,2})?$/),
 
   paymentDate: z.coerce.date().default(() => new Date()),
   createdAt: z.coerce.date(),

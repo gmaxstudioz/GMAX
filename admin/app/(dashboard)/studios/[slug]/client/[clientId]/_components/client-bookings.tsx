@@ -14,17 +14,27 @@ import { SearchIcon, Loader2, FilterIcon } from "lucide-react";
 import { bookingProps } from "@/components/web/booking-status-variants";
 import { isBookingOverdue, formatPrice } from "@/lib/formatters";
 
+export interface BookingTask {
+    id: string;
+    bookingStatus: string;
+    bookingDate: string | Date;
+    deliveryStatus: string;
+    service?: { name?: string; price?: number | string | unknown } | null;
+    member?: { user?: { name?: string | null } | null } | null;
+    [key: string]: unknown;
+}
+
 
 export function ClientBookingsList({ 
     initialTasks, 
     clientId, 
     slug 
 }: { 
-    initialTasks: any[]; 
+    initialTasks: BookingTask[]; 
     clientId: string; 
     slug: string;
 }) {
-    const [tasks, setTasks] = useState<any[]>(initialTasks);
+    const [tasks, setTasks] = useState<BookingTask[]>(initialTasks);
     const [page, setPage] = useState(0);
     const [search, setSearch] = useState("");
     
@@ -47,9 +57,12 @@ export function ClientBookingsList({
     const loadingRef = useRef(loading);
     const hasMoreRef = useRef(hasMore);
     const pageRef = useRef(page);
-    loadingRef.current = loading;
-    hasMoreRef.current = hasMore;
-    pageRef.current = page;
+
+    useEffect(() => {
+        loadingRef.current = loading;
+        hasMoreRef.current = hasMore;
+        pageRef.current = page;
+    }, [loading, hasMore, page]);
 
     // Debounced fetch for search/filter changes — skip on initial mount
     useEffect(() => {
@@ -219,12 +232,12 @@ export function ClientBookingsList({
                     ) : (
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-4">
                             {tasks.map((bookingItem) => {
-                                const isOverdue = bookingItem.deliveryStatus === 'PENDING' && isBookingOverdue(bookingItem.bookingDate);
+                                const isOverdue = bookingItem.deliveryStatus === 'PENDING' && isBookingOverdue(new Date(bookingItem.bookingDate));
                                 return (
                                     <Link 
                                         href={`/studios/${slug}/bookings/detail/${bookingItem.id}`} 
                                         key={bookingItem.id} 
-                                        className={bookingProps({ status: bookingItem.bookingStatus.toLowerCase() as any, overdue: isOverdue })}
+                                        className={bookingProps({ status: bookingItem.bookingStatus.toLowerCase() as "pending" | "completed" | "cancelled" | null | undefined, overdue: isOverdue })}
                                     >
                                         <div className="flex justify-between w-full items-center gap-2">
                                             <h1 className="font-semibold text-lg max-w-[65%] truncate">{bookingItem.service?.name || "Unknown"}</h1>
@@ -234,7 +247,7 @@ export function ClientBookingsList({
                                             <div className="flex gap-1 items-center max-w-[50%]">
                                                 <p className="text-xs opacity-80 truncate">{bookingItem.member?.user?.name || "Unassigned"}</p>
                                             </div>
-                                            <p className="text-sm font-semibold truncate items-end">{formatPrice(bookingItem.service?.price || 0)}</p>
+                                            <p className="text-sm font-semibold truncate items-end">{formatPrice(Number(bookingItem.service?.price || 0))}</p>
                                         </div>
                                     </Link>
                                 );

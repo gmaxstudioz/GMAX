@@ -1,6 +1,5 @@
 import * as React from "react"
 import { NavMain } from "@/components/web/nav-main"
-import { NavSecondary } from "@/components/web/nav-secondary"
 import { NavUser } from "@/components/web/nav-user"
 import Logo from "@/public/Logo.png"
 import {
@@ -12,7 +11,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { LayoutDashboardIcon, ChartBarIcon, FolderIcon, Settings2Icon, SearchIcon } from "lucide-react"
+import { LayoutDashboardIcon, ChartBarIcon, FolderIcon } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { auth } from "@/lib/auth"
@@ -96,21 +95,11 @@ const data = {
         <HugeiconsIcon icon={ShoppingCart01Icon} />
       ),
     },
-  ],
-  navSecondary: [
     {
-      title: "Settings",
-      url: "#",
+      title: "Portfolio",
+      url: "/portfolio",
       icon: (
-        <Settings2Icon />
-      ),
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: (
-        <SearchIcon
-        />
+        <FolderIcon />
       ),
     },
   ],
@@ -123,15 +112,24 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
   
   let isOnlyMinorRole = false;
   if (session?.user) {
-    const members = await prisma.member.findMany({
-      where: { userId: session.user.id },
+    const userData = await prisma.user.findUnique({
+      where: { id: session.user.id },
       select: { role: true }
     });
-    
-    // Check if user has NO administrative roles across all studios
-    const adminRoles = ["owner", "developer", "manager"];
-    const hasAdminRole = members.some(m => adminRoles.includes(m.role));
-    isOnlyMinorRole = members.length > 0 && !hasAdminRole;
+
+    const isAdmin = userData?.role === "admin";
+
+    if (!isAdmin) {
+      const members = await prisma.member.findMany({
+        where: { userId: session.user.id },
+        select: { role: true }
+      });
+      
+      // Check if user has NO administrative roles across all studios
+      const adminRoles = ["owner", "developer", "manager"];
+      const hasAdminRole = members.some(m => adminRoles.includes(m.role));
+      isOnlyMinorRole = members.length > 0 && !hasAdminRole;
+    }
   }
 
   // Create restricted nav for minor roles
@@ -173,7 +171,6 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
       <SidebarContent>
         <NavMain items={isOnlyMinorRole ? minorNavMain : data.navMain} />
         {!isOnlyMinorRole && <NavManagement items={data.navManagement} />}
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={session?.user} />

@@ -3,7 +3,7 @@
 import { auth } from "../auth";
 import { headers } from "next/headers";
 import { prisma } from "../prisma";
-import type { ApiResponse } from "../type";
+
 
 // ── Raw session fetch ────────────────────────────────────────────────────────
 // Use this when you need the session object itself (e.g. to get session.user.id)

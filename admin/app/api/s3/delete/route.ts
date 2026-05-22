@@ -26,7 +26,7 @@ export async function DELETE(req: Request) {
             { message: "File deleted successfully" },
             { status: 200 }
         )
-    } catch (error) {
+    } catch {
         return NextResponse.json(
             { error: "Failed to delete file, missing or invalid object key" },
             { status: 500 }

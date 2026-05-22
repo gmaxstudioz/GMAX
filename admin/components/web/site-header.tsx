@@ -12,6 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { GlobalSearch } from "./global-search"
 
 export async function SiteHeader() {
   const session = await auth.api.getSession({
@@ -45,9 +46,14 @@ export async function SiteHeader() {
         <SidebarTrigger className="-ml-1" />
         <Separator
           orientation="vertical"
-          className="mx-2 data-[orientation=vertical]:h-full"
+          className="mx-2 data-[orientation=vertical]:h-full hidden md:block"
         />
-        <h1 className="text-base font-medium">Dashboard</h1>
+        <div className="hidden md:block">
+          <h1 className="text-base font-medium">Dashboard</h1>
+        </div>
+        <div className="ml-auto flex-1 md:ml-4 lg:ml-8 max-w-sm">
+          <GlobalSearch />
+        </div>
       </div>
       
       <div className="px-4 lg:px-6 flex items-center gap-2">

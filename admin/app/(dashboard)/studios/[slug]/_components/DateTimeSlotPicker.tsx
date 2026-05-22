@@ -18,7 +18,7 @@ export function DateTimeSlotPicker({
     selectedDate: Date | null;
     onDateChange: (date: Date | null) => void;
     proposedDuration: number;
-    bookings: any[];
+    bookings: { bookingDate: Date | string; sessionCount: number; service?: { studioSession?: { duration?: number } } }[];
 }) {
     // We separate the actual Date (Y-M-D) selected in the calendar from the exact Time selected
     // so we can display time slots for the chosen day.
@@ -29,7 +29,8 @@ export function DateTimeSlotPicker({
     // If external value is cleared
     useEffect(() => {
         if (!selectedDate) {
-            setCalendarDate(undefined);
+            const t = setTimeout(() => setCalendarDate(undefined), 0);
+            return () => clearTimeout(t);
         }
     }, [selectedDate]);
 
@@ -131,7 +132,6 @@ export function DateTimeSlotPicker({
                     mode="single"
                     selected={calendarDate}
                     onSelect={handleDateSelect}
-                    initialFocus
                     disabled={(date) => isBefore(endOfDay(date), new Date())} // disable past days
                 />
 

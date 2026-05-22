@@ -47,5 +47,6 @@ export default function Magnetic({
   }, []);
 
   // @ts-expect-error cloneElement ref passing
+  // eslint-disable-next-line react-hooks/refs
   return React.cloneElement(children, { ref: magnetic });
 }

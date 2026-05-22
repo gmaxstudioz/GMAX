@@ -9,8 +9,9 @@ import {
 } from "./bookings";
 import { createProduct, deleteProduct, getAllProducts, getProductById, purchaseProduct, requestAccessLink, requestDownload, updateProduct, verifyAccessToken } from "./products";
 import { clientDownloadPhoto, clientPhotoAccess } from "./photos";
-import { verifyPurchase } from "./payments";
-import { getStudioBySlug } from "./studio";
+import { verifyPurchase, getPublicPaymentDetails } from "./payments";
+import { getStudioBySlug, getAllStudios } from "./studio";
+import { getPublicPortfolio } from "./portfolio";
 
 const os = implement(contract).$context<BaseContext>();
 
@@ -73,7 +74,7 @@ export const router = os.router({
         delete: os.studio.delete.handler(notImplemented),
         getBySlug: getStudioBySlug,
         getById: os.studio.getById.handler(notImplemented),
-        getAll: os.studio.getAll.handler(notImplemented),
+        getAll: getAllStudios,
     },
 
     member: {
@@ -109,6 +110,7 @@ export const router = os.router({
         getAll: os.payment.getAll.handler(notImplemented),
         initPaystack: os.payment.initPaystack.handler(notImplemented),
         verifyPurchase: verifyPurchase,
+        getPublicPaymentDetails: getPublicPaymentDetails,
     },
 
     photo: {
@@ -122,5 +124,9 @@ export const router = os.router({
         bulkApprove: os.photo.bulkApprove.handler(notImplemented),
         clientAccess: clientPhotoAccess,
         clientDownload: clientDownloadPhoto,
+    },
+
+    portfolio: {
+        getPublic: getPublicPortfolio,
     },
 });

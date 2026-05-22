@@ -184,7 +184,7 @@ export default function NavBar() {
                     ))}
                     <Magnetic>
                         <Link
-                            href="/contact"
+                            href="/book"
                             className={cn("mobile-nav-link inline-flex items-center gap-2 mt-2")}
                             onClick={handleLinkClick}
                         >

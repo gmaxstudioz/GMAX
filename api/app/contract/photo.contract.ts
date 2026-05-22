@@ -57,7 +57,7 @@ export const downloadPhotoContract = baseContract
         description: "Download a photo",
         tags: ["Photos"], 
     })
-    .input(IdParamSchema)
+    .input(z.object({ photoId: z.string().min(1) }))
     .output(PhotoDownloadOutputSchema);
 
 export const ClientPhotoAccessContract = baseContract

@@ -14,7 +14,8 @@ export const getStudioBySlug = os.studio.getBySlug
                 categories: {
                     include: {
                         services: {
-                            where: { type: { not: "addon" } },
+                            where: { isAddon: false }, // Updated query
+                            include: { studioSession: true, variants: true }, // Include variants
                         },
                     },
                 },
@@ -27,15 +28,23 @@ export const getStudioBySlug = os.studio.getBySlug
         });
 
         const addons = await prisma.service.findMany({
-            where: { type: "addon", category: { studioId: studio.id } },
+            where: { isAddon: true, category: { studioId: studio.id } }, // Updated query
+            include: { studioSession: true, variants: true }, // Include variants
         });
 
         return {
             id: studio.id,
             name: studio.name,
             slug: studio.slug,
-            logo: studio.logo,
-            metadata: studio.metadata as Record<string, unknown> | null,
+            logo: (studio.logo && studio.logo.length > 0) ? studio.logo : null,
+            metadata: (() => {
+                const raw = studio.metadata;
+                if (raw == null) return null;
+                if (typeof raw === 'string') {
+                    try { return JSON.parse(raw); } catch { return null; }
+                }
+                return raw as Record<string, unknown>;
+            })(),
             createdAt: studio.createdAt.toISOString(),
             updatedAt: studio.updatedAt.toISOString(),
             categories: studio.categories.map((cat) => ({
@@ -45,11 +54,16 @@ export const getStudioBySlug = os.studio.getBySlug
                 services: cat.services.map((s) => ({
                     id: s.id,
                     name: s.name,
-                    type: s.type,
+                    isAddon: s.isAddon, // Updated mapping
                     description: s.description,
                     features: s.features,
-                    price: s.price,
-                    salePrice: s.salePrice,
+                    variants: s.variants.map((v) => ({
+                        id: v.id,
+                        locationType: v.locationType,
+                        basePrice: v.basePrice.toString(), // Convert Prisma Decimal to string
+                        maxPrice: v.maxPrice ? v.maxPrice.toString() : null,
+                        sessionDurationMins: v.sessionDurationMins,
+                    }))
                 })),
             })),
             studioSessions: studio.studioSessions.map((ss) => ({
@@ -60,11 +74,67 @@ export const getStudioBySlug = os.studio.getBySlug
             addons: addons.map((a) => ({
                 id: a.id,
                 name: a.name,
-                type: a.type,
+                isAddon: a.isAddon, // Updated mapping
                 description: a.description,
                 features: a.features,
-                price: a.price,
-                salePrice: a.salePrice,
+                variants: a.variants.map((v) => ({
+                    id: v.id,
+                    locationType: v.locationType,
+                    basePrice: v.basePrice.toString(), // Convert Prisma Decimal to string
+                    maxPrice: v.maxPrice ? v.maxPrice.toString() : null,
+                    sessionDurationMins: v.sessionDurationMins,
+                }))
             })),
+        };
+    });
+
+export const getAllStudios = os.studio.getAll
+    .use(optionalAuthMiddleware)
+    .handler(async ({ input }) => {
+        const page = input.page || 1;
+        const perPage = input.perPage || 20;
+        
+        const [studios, total] = await Promise.all([
+            prisma.studio.findMany({
+                skip: (page - 1) * perPage,
+                take: perPage,
+                orderBy: { createdAt: "desc" },
+                include: {
+                    _count: {
+                        select: { members: true, bookings: true }
+                    }
+                }
+            }),
+            prisma.studio.count()
+        ]);
+
+        const pageCount = Math.ceil(total / perPage);
+        
+        return {
+            items: studios.map(s => ({
+                id: s.id,
+                name: s.name,
+                slug: s.slug,
+                logo: (s.logo && s.logo.length > 0) ? s.logo : null,
+                metadata: (() => {
+                    const raw = s.metadata;
+                    if (raw == null) return null;
+                    if (typeof raw === 'string') {
+                        try { return JSON.parse(raw); } catch { return null; }
+                    }
+                    return raw as Record<string, unknown>;
+                })(),
+                createdAt: s.createdAt.toISOString(),
+                updatedAt: s.updatedAt.toISOString(),
+                _count: s._count,
+            })),
+            meta: {
+                total,
+                page,
+                perPage,
+                pageCount,
+                hasNextPage: page < pageCount,
+                hasPreviousPage: page > 1,
+            }
         };
     });

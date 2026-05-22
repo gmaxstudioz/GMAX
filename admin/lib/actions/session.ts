@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import z from "zod";
 import { v4 as uuidv4 } from "uuid";
-import { tryCatch } from "@/hooks/try-catch";
+
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -43,9 +43,9 @@ export async function createStudioSession(data: { name: string; duration: number
     revalidatePath(`/studios/[slug]`, "page");
 
     return { status: "success", message: "Studio session created successfully", data: newSession };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to create studio session:", error);
-    return { status: "error", message: error.message || "Something went wrong" };
+    return { status: "error", message: error instanceof Error ? error.message : "Something went wrong" };
   }
 }
 
@@ -68,7 +68,7 @@ export async function deleteStudioSession(sessionId: string) {
 
     revalidatePath(`/studios/[slug]`, "page");
     return { status: "success", message: "Studio session deleted successfully" };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to delete studio session:", error);
     return { status: "error", message: "Could not delete session, it might be heavily used." };
   }

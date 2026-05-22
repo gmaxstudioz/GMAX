@@ -24,7 +24,7 @@ export function AcceptInvitationCard({
   const [isPending, startTransition] = useTransition();
   const [invitationState, setInvitationState] = useState<{
     isLoading: boolean;
-    data: any | null;
+    data: Record<string, unknown> | null;
     error: string | null;
   }>({
     isLoading: true,
@@ -47,8 +47,8 @@ export function AcceptInvitationCard({
         } else {
             setInvitationState({ isLoading: false, data: response.data, error: null });
         }
-      } catch (e: any) {
-        setInvitationState({ isLoading: false, data: null, error: e.message || "An error occurred" });
+      } catch (e) {
+        setInvitationState({ isLoading: false, data: null, error: e instanceof Error ? e.message : "An error occurred" });
       }
     }
     loadInvitation();
@@ -139,15 +139,15 @@ export function AcceptInvitationCard({
         <CardContent className="space-y-4">
             <div className="rounded-lg bg-muted p-4 text-center">
                 <p className="text-sm text-muted-foreground mb-1">Invited to join</p>
-                <p className="font-semibold text-lg">{data?.organizationName}</p>
-                {data?.inviterEmail && (
+                <p className="font-semibold text-lg">{data?.organizationName as string}</p>
+                {Boolean(data?.inviterEmail) && (
                    <p className="text-sm text-muted-foreground mt-2">
-                       by <span className="font-medium text-foreground">{data.inviterEmail}</span>
+                       by <span className="font-medium text-foreground">{data?.inviterEmail as string}</span>
                    </p>
                 )}
-                {data?.role && (
+                {Boolean(data?.role) && (
                    <p className="text-sm mt-2">
-                       Role: <span className="capitalize font-medium">{data.role}</span>
+                       Role: <span className="capitalize font-medium">{data?.role as string}</span>
                    </p>
                 )}
             </div>

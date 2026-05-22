@@ -60,9 +60,15 @@ export const ModelName = {
   StudioSession: 'StudioSession',
   Member: 'Member',
   Invitation: 'Invitation',
-  Service: 'Service',
   Category: 'Category',
+  Service: 'Service',
+  ServiceVariant: 'ServiceVariant',
+  ServiceDeliverable: 'ServiceDeliverable',
+  Course: 'Course',
+  CourseModule: 'CourseModule',
+  Enrollment: 'Enrollment',
   Client: 'Client',
+  BookingIntent: 'BookingIntent',
   Booking: 'Booking',
   Payment: 'Payment',
   Photo: 'Photo',
@@ -71,7 +77,8 @@ export const ModelName = {
   Product: 'Product',
   Buyer: 'Buyer',
   BuyerAccessToken: 'BuyerAccessToken',
-  ProductAccess: 'ProductAccess'
+  ProductAccess: 'ProductAccess',
+  PortfolioItem: 'PortfolioItem'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -98,6 +105,7 @@ export const UserScalarFieldEnum = {
   image: 'image',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
+  role: 'role',
   phoneNumber: 'phoneNumber',
   phoneNumberVerified: 'phoneNumberVerified'
 } as const
@@ -167,8 +175,8 @@ export type StudioScalarFieldEnum = (typeof StudioScalarFieldEnum)[keyof typeof 
 export const RoleScalarFieldEnum = {
   id: 'id',
   studioId: 'studioId',
-  role: 'role',
-  permission: 'permission',
+  name: 'name',
+  permissions: 'permissions',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -213,23 +221,6 @@ export const InvitationScalarFieldEnum = {
 export type InvitationScalarFieldEnum = (typeof InvitationScalarFieldEnum)[keyof typeof InvitationScalarFieldEnum]
 
 
-export const ServiceScalarFieldEnum = {
-  id: 'id',
-  name: 'name',
-  type: 'type',
-  description: 'description',
-  features: 'features',
-  price: 'price',
-  salePrice: 'salePrice',
-  categoryId: 'categoryId',
-  studioSessionId: 'studioSessionId',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-} as const
-
-export type ServiceScalarFieldEnum = (typeof ServiceScalarFieldEnum)[keyof typeof ServiceScalarFieldEnum]
-
-
 export const CategoryScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -242,10 +233,96 @@ export const CategoryScalarFieldEnum = {
 export type CategoryScalarFieldEnum = (typeof CategoryScalarFieldEnum)[keyof typeof CategoryScalarFieldEnum]
 
 
+export const ServiceScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  description: 'description',
+  features: 'features',
+  isAddon: 'isAddon',
+  isActive: 'isActive',
+  categoryId: 'categoryId',
+  studioSessionId: 'studioSessionId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ServiceScalarFieldEnum = (typeof ServiceScalarFieldEnum)[keyof typeof ServiceScalarFieldEnum]
+
+
+export const ServiceVariantScalarFieldEnum = {
+  id: 'id',
+  serviceId: 'serviceId',
+  locationType: 'locationType',
+  basePrice: 'basePrice',
+  maxPrice: 'maxPrice',
+  sessionDurationMins: 'sessionDurationMins',
+  logisticsIncluded: 'logisticsIncluded',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ServiceVariantScalarFieldEnum = (typeof ServiceVariantScalarFieldEnum)[keyof typeof ServiceVariantScalarFieldEnum]
+
+
+export const ServiceDeliverableScalarFieldEnum = {
+  id: 'id',
+  variantId: 'variantId',
+  label: 'label',
+  quantity: 'quantity',
+  detail: 'detail',
+  isFree: 'isFree'
+} as const
+
+export type ServiceDeliverableScalarFieldEnum = (typeof ServiceDeliverableScalarFieldEnum)[keyof typeof ServiceDeliverableScalarFieldEnum]
+
+
+export const CourseScalarFieldEnum = {
+  id: 'id',
+  studioId: 'studioId',
+  name: 'name',
+  level: 'level',
+  price: 'price',
+  durationWeeks: 'durationWeeks',
+  isNegotiable: 'isNegotiable',
+  hasCertificate: 'hasCertificate',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CourseScalarFieldEnum = (typeof CourseScalarFieldEnum)[keyof typeof CourseScalarFieldEnum]
+
+
+export const CourseModuleScalarFieldEnum = {
+  id: 'id',
+  courseId: 'courseId',
+  title: 'title',
+  order: 'order'
+} as const
+
+export type CourseModuleScalarFieldEnum = (typeof CourseModuleScalarFieldEnum)[keyof typeof CourseModuleScalarFieldEnum]
+
+
+export const EnrollmentScalarFieldEnum = {
+  id: 'id',
+  studioId: 'studioId',
+  courseId: 'courseId',
+  clientId: 'clientId',
+  startDate: 'startDate',
+  endDate: 'endDate',
+  status: 'status',
+  paymentStatus: 'paymentStatus',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type EnrollmentScalarFieldEnum = (typeof EnrollmentScalarFieldEnum)[keyof typeof EnrollmentScalarFieldEnum]
+
+
 export const ClientScalarFieldEnum = {
   id: 'id',
   name: 'name',
   phone: 'phone',
+  altPhone: 'altPhone',
   email: 'email',
   address: 'address',
   image: 'image',
@@ -259,11 +336,36 @@ export const ClientScalarFieldEnum = {
 export type ClientScalarFieldEnum = (typeof ClientScalarFieldEnum)[keyof typeof ClientScalarFieldEnum]
 
 
+export const BookingIntentScalarFieldEnum = {
+  id: 'id',
+  studioId: 'studioId',
+  clientName: 'clientName',
+  clientEmail: 'clientEmail',
+  clientPhone: 'clientPhone',
+  existingClientId: 'existingClientId',
+  serviceId: 'serviceId',
+  addonIds: 'addonIds',
+  sessionCount: 'sessionCount',
+  bookingDate: 'bookingDate',
+  notes: 'notes',
+  paystackReference: 'paystackReference',
+  amount: 'amount',
+  status: 'status',
+  expiresAt: 'expiresAt',
+  resolvedBookingId: 'resolvedBookingId',
+  createdAt: 'createdAt'
+} as const
+
+export type BookingIntentScalarFieldEnum = (typeof BookingIntentScalarFieldEnum)[keyof typeof BookingIntentScalarFieldEnum]
+
+
 export const BookingScalarFieldEnum = {
   id: 'id',
   bookingDate: 'bookingDate',
   sessionCount: 'sessionCount',
   notes: 'notes',
+  totalAmount: 'totalAmount',
+  paymentPlan: 'paymentPlan',
   bookingStatus: 'bookingStatus',
   paymentStatus: 'paymentStatus',
   deliveryStatus: 'deliveryStatus',
@@ -273,7 +375,8 @@ export const BookingScalarFieldEnum = {
   createdBy: 'createdBy',
   memberId: 'memberId',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  serviceVariantId: 'serviceVariantId'
 } as const
 
 export type BookingScalarFieldEnum = (typeof BookingScalarFieldEnum)[keyof typeof BookingScalarFieldEnum]
@@ -281,6 +384,10 @@ export type BookingScalarFieldEnum = (typeof BookingScalarFieldEnum)[keyof typeo
 
 export const PaymentScalarFieldEnum = {
   id: 'id',
+  bookingId: 'bookingId',
+  installmentType: 'installmentType',
+  sequence: 'sequence',
+  expectedAmount: 'expectedAmount',
   amount: 'amount',
   method: 'method',
   status: 'status',
@@ -288,7 +395,6 @@ export const PaymentScalarFieldEnum = {
   paystackResponse: 'paystackResponse',
   receiptNumber: 'receiptNumber',
   receiptUrl: 'receiptUrl',
-  bookingId: 'bookingId',
   recordedById: 'recordedById',
   paymentDate: 'paymentDate',
   createdAt: 'createdAt'
@@ -406,6 +512,24 @@ export const ProductAccessScalarFieldEnum = {
 } as const
 
 export type ProductAccessScalarFieldEnum = (typeof ProductAccessScalarFieldEnum)[keyof typeof ProductAccessScalarFieldEnum]
+
+
+export const PortfolioItemScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  category: 'category',
+  r2Key: 'r2Key',
+  fileName: 'fileName',
+  fileSize: 'fileSize',
+  mimeType: 'mimeType',
+  thumbnailKey: 'thumbnailKey',
+  sortOrder: 'sortOrder',
+  isPublished: 'isPublished',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PortfolioItemScalarFieldEnum = (typeof PortfolioItemScalarFieldEnum)[keyof typeof PortfolioItemScalarFieldEnum]
 
 
 export const SortOrder = {

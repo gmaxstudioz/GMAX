@@ -53,6 +53,14 @@ export const getStudioByIdContract = baseContract
     .output(StudioSummaryOutputSchema);
 
 export const getAllStudiosContract = baseContract
+    .route({
+        method: "GET",
+        path: "/studio/getAll",
+        successStatus: 200,
+        summary: "Get all studios",
+        description: "Get a paginated list of all studios",
+        tags: ["Studio"],
+    })
     .input(PaginationQuerySchema)
     .output(StudioListOutputSchema);
 

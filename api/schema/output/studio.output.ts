@@ -19,7 +19,7 @@ export const StudioOutputSchema = z.object({
   id: z.string(),
   name: z.string(),
   slug: z.string(),
-  logo: z.url().nullable(),
+  logo: z.string().nullable(),
   metadata: z.record(z.string(), z.unknown()).nullable(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
@@ -38,11 +38,16 @@ export const StudioListOutputSchema = PaginatedOutput(StudioSummaryOutputSchema)
 export const PublicServiceOutputSchema = z.object({
     id: z.string(),
     name: z.string(),
-    type: z.string(),
+    isAddon: z.boolean(),
     description: z.string(),
     features: z.array(z.string()),
-    price: z.number(),
-    salePrice: z.number().nullable(),
+    variants: z.array(z.object({
+        id: z.string(),
+        locationType: z.enum(["STUDIO", "OUTDOOR", "BOTH", "MULTIPLE"]),
+        basePrice: z.string(),
+        maxPrice: z.string().nullable(),
+        sessionDurationMins: z.number().int(),
+    })),
 });
 
 export const PublicCategoryOutputSchema = z.object({

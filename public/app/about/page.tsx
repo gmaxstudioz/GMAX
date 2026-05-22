@@ -94,7 +94,7 @@ export default function AboutPage() {
           
           <div className="mission-text grid grid-cols-1 md:grid-cols-2 gap-10 text-base md:text-lg text-gray-400 leading-relaxed opacity-0 transform translate-y-10">
             <p>
-              Founded with a passion for excellence, GMAX Studioz has evolved into a premier destination for luxury videography and photography. We don't just point and shoot; we craft cinematic legacies. Whether it's an intimate portrait or a grand wedding, our lens finds the magic that others naturally miss.
+              Founded with a passion for excellence, GMAX Studioz has evolved into a premier destination for luxury videography and photography. We don&apos;t just point and shoot; we craft cinematic legacies. Whether it&apos;s an intimate portrait or a grand wedding, our lens finds the magic that others naturally miss.
             </p>
             <p>
               Our aesthetic is dark, premium, and inherently cinematic. We believe that true art lies in the shadows just as much as the light. By meticulously controlling every frame, we elevate standard moments into unforgettable masterpieces.
@@ -114,7 +114,7 @@ export default function AboutPage() {
           <div className="flex flex-col gap-4 group">
             <h3 className="text-4xl md:text-6xl font-heading font-bold text-gray-800 transition-colors duration-500 group-hover:text-primary">02.</h3>
             <h4 className="text-2xl font-medium text-white mt-2">Uncompromising Quality</h4>
-            <p className="text-gray-400">We obsess over the details. From pre-production to the final edit, excellence is not just a goal, it's our absolute standard.</p>
+            <p className="text-gray-400">We obsess over the details. From pre-production to the final edit, excellence is not just a goal, it&apos;s our absolute standard.</p>
           </div>
           <div className="flex flex-col gap-4 group">
             <h3 className="text-4xl md:text-6xl font-heading font-bold text-gray-800 transition-colors duration-500 group-hover:text-white">03.</h3>

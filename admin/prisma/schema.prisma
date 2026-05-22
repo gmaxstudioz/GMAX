@@ -24,10 +24,12 @@ model User {
   accounts      Account[]
   members       Member[]
   invitations   Invitation[]
-  bookings      Booking[]
+  bookings      Booking[]    @relation("BookingCreator")
   payments      Payment[]
   photos        Photo[]
+  approvedPhotos Photo[] @relation("PhotoApprovals")
 
+  role                String   @default("user") // "user" | "admin"
   phoneNumber         String?
   phoneNumberVerified Boolean?
 
@@ -85,6 +87,8 @@ model Verification {
   @@map("verification")
 }
 
+// Studio Section
+
 model Studio {
   id             String          @id @default(uuid())
   name           String
@@ -100,25 +104,30 @@ model Studio {
   clients        Client[]
   bookings       Booking[]
   roles          Role[]
+  courses        Course[]
+  enrollments    Enrollment[]
+  bookingIntents BookingIntent[]
 
   @@unique([slug])
   @@map("studio")
 }
 
 model Role {
-  id         String   @id
-  studio     Studio   @relation(fields: [studioId], references: [id])
-  studioId   String
-  role       String
-  permission String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Studio   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           String
+  permission     String  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  @@map("role")
+  @@unique([organizationId, role])
+  @@index([organizationId])
+  @@map("organizationRole")
 }
 
 model StudioSession {
-  id        String    @id
+  id        String    @id @default(cuid())
   name      String
   duration  Int       @default(45)
   studioId  String    @map("studioId")
@@ -132,13 +141,15 @@ model StudioSession {
 }
 
 model Member {
-  id        String    @id
-  studioId  String    @map("studioId")
-  studio    Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      String    @default("member")
-  createdAt DateTime
+  id       String @id
+  studioId String @map("studioId")
+  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role    String
+
+  createdAt DateTime  @default(now())
   bookings  Booking[]
 
   @@index([studioId])
@@ -163,25 +174,27 @@ model Invitation {
   @@map("invitation")
 }
 
-model Service {
-  id              String        @id
-  name            String
-  type            String
-  description     String
-  features        String[]
-  price           Float
-  salePrice       Float?
-  bookings        Booking[]
-  addonBookings   Booking[]     @relation("BookingAddons")
-  categoryId      String
-  category        Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  studioSessionId String        @map("studioSessionId")
-  studioSession   StudioSession @relation(fields: [studioSessionId], references: [id], onDelete: Cascade)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+// ==================== SERVICE DOMAIN ====================
 
-  @@index([categoryId])
-  @@map("service")
+enum LocationType {
+  STUDIO
+  OUTDOOR
+  BOTH // e.g. All-in-One (studio + 1 outdoor)
+  MULTIPLE // e.g. wedding packages
+}
+
+enum CourseLevel {
+  FOUNDATION // 9–10 weeks
+  INTERMEDIATE // 24 weeks
+  ADVANCED // 30–32 weeks
+  MASTER_CLASS // 3–4 weeks
+}
+
+enum EnrollmentStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  DROPPED
 }
 
 model Category {
@@ -198,24 +211,195 @@ model Category {
   @@map("category")
 }
 
+model Service {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  features    String[]
+  isAddon     Boolean  @default(false)
+  isActive    Boolean  @default(true)
+
+  categoryId      String
+  category        Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  studioSessionId String
+  studioSession   StudioSession @relation(fields: [studioSessionId], references: [id], onDelete: Cascade)
+
+  variants      ServiceVariant[]
+  bookings      Booking[]
+  addonBookings Booking[]        @relation("BookingAddons")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+  @@map("service")
+}
+
+model ServiceVariant {
+  id        String  @id @default(cuid())
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  locationType        LocationType
+  basePrice           Decimal      @db.Decimal(12, 2)
+  maxPrice            Decimal?     @db.Decimal(12, 2) // for range-priced services
+  sessionDurationMins Int
+  logisticsIncluded   Boolean      @default(true)
+
+  deliverables ServiceDeliverable[]
+  bookings     Booking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([serviceId, locationType]) // one variant per location type per service
+  @@index([serviceId])
+  @@map("service_variant")
+}
+
+model ServiceDeliverable {
+  id        String         @id @default(cuid())
+  variantId String
+  variant   ServiceVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  label    String // "Edited photos", "Highlight video", "Canvas frame"
+  quantity Int? // 5, 10, 100
+  detail   String? // "professionally retouched", "2–3 min cinematic"
+  isFree   Boolean @default(false) // e.g. "5 unedited (free)"
+
+  @@index([variantId])
+  @@map("service_deliverable")
+}
+
+// ─── TRAINING DOMAIN ───────────────────────────────
+
+model Course {
+  id       String @id @default(cuid())
+  studioId String
+  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  name           String
+  level          CourseLevel
+  price          Decimal     @db.Decimal(12, 2)
+  durationWeeks  Int
+  isNegotiable   Boolean     @default(false)
+  hasCertificate Boolean     @default(false)
+
+  modules     CourseModule[]
+  enrollments Enrollment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studioId])
+  @@map("course")
+}
+
+model CourseModule {
+  id       String @id @default(cuid())
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  title String
+  order Int
+
+  @@index([courseId])
+  @@map("course_module")
+}
+
+model Enrollment {
+  id       String @id @default(cuid())
+  studioId String
+  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  startDate     DateTime
+  endDate       DateTime?
+  status        EnrollmentStatus @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studioId])
+  @@index([courseId])
+  @@index([clientId])
+  @@map("enrollment")
+}
+
 model Client {
   id       String    @id @default(uuid())
   name     String
-  phone    String[]  @unique
-  email    String?   @unique
+  phone    String
+  altPhone String?
+  email    String?
   address  String?
   image    String?
   notes    String?   @db.Text
   type     String
   bookings Booking[]
 
-  studioId  String   @map("studioId")
-  studio    Studio   @relation(fields: [studioId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  studioId    String       @map("studioId")
+  studio      Studio       @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  enrollments Enrollment[]
 
+  @@unique([studioId, phone])
+  @@unique([studioId, email])
   @@index([studioId])
   @@map("client")
+}
+
+enum PaymentPlan {
+  QUARTER // 25%
+  HALF // 50%
+  FULL // 100%
+}
+
+enum BookingIntentStatus {
+  PENDING
+  COMPLETED
+  EXPIRED
+  FAILED
+}
+
+model BookingIntent {
+  id       String @id @default(cuid())
+  studioId String
+  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  // Client info — held temporarily, not yet in DB
+  clientName       String
+  clientEmail      String?
+  clientPhone      String?
+  existingClientId String? // if returning client
+
+  // Service info
+  serviceId    String
+  addonIds     String[]
+  sessionCount Int
+  bookingDate  DateTime
+  notes        String?
+
+  // Payment
+  paystackReference String  @unique
+  amount            Decimal @db.Decimal(12, 2)
+
+  status    BookingIntentStatus @default(PENDING)
+  expiresAt DateTime // e.g. 1 hour from creation
+
+  // Set after webhook confirms
+  resolvedBookingId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([paystackReference])
+  @@index([status])
+  @@map("booking_intent")
 }
 
 model Booking {
@@ -225,6 +409,9 @@ model Booking {
   sessionCount Int      @default(1)
   notes        String?  @db.Text
 
+  totalAmount Decimal     @db.Decimal(12, 2)
+  paymentPlan PaymentPlan @default(FULL)
+
   bookingStatus  BookingStatus  @default(PENDING)
   paymentStatus  PaymentStatus  @default(PENDING)
   deliveryStatus DeliveryStatus @default(PENDING)
@@ -233,19 +420,23 @@ model Booking {
   photos   Photo[]
   addons   Service[] @relation("BookingAddons")
 
-  serviceId String  @map("serviceId")
+  serviceId String
   service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  studioId  String  @map("studioId")
+  studioId  String
   studio    Studio  @relation(fields: [studioId], references: [id], onDelete: Cascade)
-  clientId  String  @map("clientId")
+  clientId  String
   client    Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  createdBy String  @map("userId")
-  creator   User    @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  createdBy String
+  creator   User    @relation("BookingCreator", fields: [createdBy], references: [id], onDelete: Cascade)
   memberId  String?
-  member    Member?  @relation(fields: [memberId], references: [id])
+  member    Member? @relation(fields: [memberId], references: [id])
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  serviceVariant   ServiceVariant? @relation(fields: [serviceVariantId], references: [id])
+  serviceVariantId String?
+
+  notifications Notification[]
 
   @@index([studioId])
   @@index([clientId])
@@ -272,23 +463,33 @@ enum DeliveryStatus {
   CANCELLED
 }
 
+enum PaymentInstallmentType {
+  DEPOSIT // 25% upfront — secures the booking
+  INSTALLMENT // mid-sequence partial payment
+  BALANCE // final clearing payment
+  FULL // paid everything in one transaction
+}
+
 model Payment {
   id String @id @default(uuid())
-
-  amount Decimal       @db.Decimal(10, 2)
-  method PaymentMethod @default(CASH)
-  status PaymentStatus @default(PENDING)
-
-  paystackReference String? @unique
-  paystackResponse  Json?
-
-  receiptNumber String  @unique
-  receiptUrl    String?
 
   bookingId String?
   booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
-  productAccess   ProductAccess? @relation("ProductAccessPayment")
+  // ✅ Make Installment/Booking data optional
+  installmentType PaymentInstallmentType?
+  sequence        Int?
+  expectedAmount  Decimal?                @db.Decimal(12, 2)
+  amount          Decimal                 @db.Decimal(12, 2)
+  method          PaymentMethod           @default(CASH)
+  status          PaymentStatus           @default(PENDING)
+
+  paystackReference String? @unique
+  paystackResponse  Json?
+  receiptNumber     String  @unique
+  receiptUrl        String?
+
+  productAccess ProductAccess? @relation("ProductAccessPayment")
 
   recordedById String?
   recordedBy   User?   @relation(fields: [recordedById], references: [id])
@@ -296,6 +497,7 @@ model Payment {
   paymentDate DateTime @default(now())
   createdAt   DateTime @default(now())
 
+  @@unique([bookingId, sequence])
   @@index([bookingId])
   @@index([status])
   @@index([paymentDate])
@@ -337,7 +539,8 @@ model Photo {
   approvalStatus  PhotoApprovalStatus @default(PENDING_REVIEW)
   rejectionReason String?
   approvedAt      DateTime?
-  approvedById    String?
+  approvedById String?
+  approvedBy   User?   @relation("PhotoApprovals", fields: [approvedById], references: [id])
 
   uploadedById String
   uploadedBy   User   @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
@@ -351,7 +554,7 @@ model Notification {
   id String @id @default(cuid())
 
   clientPhone String
-  clientEmail String
+  clientEmail String?
   clientName  String
 
   type    NotificationType
@@ -364,6 +567,7 @@ model Notification {
   errorMessage String?            @db.Text
 
   bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
 
@@ -406,11 +610,11 @@ model ProductCategory {
 }
 
 model Product {
-  id          String @id @default(cuid())
+  id          String   @id @default(cuid())
   title       String
-  description String @db.Text
-  price       Float
-  salePrice   Float?
+  description String   @db.Text
+  price       Decimal  @db.Decimal(12, 2)
+  salePrice   Decimal? @db.Decimal(12, 2)
 
   categoryId String?
   category   ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
@@ -472,7 +676,7 @@ model ProductAccess {
   buyerId String
   buyer   Buyer  @relation(fields: [buyerId], references: [id], onDelete: Cascade)
 
-  paymentId String? @unique
+  paymentId String?  @unique
   payment   Payment? @relation("ProductAccessPayment", fields: [paymentId], references: [id])
 
   downloadCount  Int       @default(0)
@@ -485,4 +689,26 @@ model ProductAccess {
   @@index([buyerId])
   @@index([productId])
   @@map("product_access")
+}
+
+model PortfolioItem {
+  id       String  @id @default(cuid())
+  title    String?
+  category String  @default("General")
+
+  r2Key        String
+  fileName     String
+  fileSize     Int
+  mimeType     String
+  thumbnailKey String?
+
+  sortOrder   Int     @default(0)
+  isPublished Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([sortOrder])
+  @@map("portfolio_item")
 }

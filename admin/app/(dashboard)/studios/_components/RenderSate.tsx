@@ -2,7 +2,6 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { GenericEmptyState } from "@/components/web/generic-empty-state";
 import { useConstructUrl } from "@/hooks/use-construct-url";
-import { Studio } from "@/lib/generated/prisma/client";
 import { Building02Icon, Folder, Location09Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CirclePlusIcon } from "lucide-react";
@@ -32,18 +31,28 @@ export function RenderEmptyState({ hasAdminRole }: { hasAdminRole: boolean }) {
     )
 }
 
-function parseMetadata(metadata: any): Record<string, any> {
+function parseMetadata(metadata: unknown): Record<string, unknown> {
     if (!metadata) return {};
     if (typeof metadata === "string") {
         try {
             return JSON.parse(metadata);
-        } catch (e) {
+        } catch {
             return {};
         }
     }
-    return metadata as Record<string, any>;
+    return metadata as Record<string, unknown>;
 }
 
+export interface StudioData {
+    id: string;
+    name: string;
+    slug: string;
+    logo?: string | null;
+    metadata?: unknown;
+    [key: string]: unknown;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function RenderStudios({ studioData, hasAdminRole }: { studioData: any[], hasAdminRole: boolean }) {
     const logoUrl = useConstructUrl;
 
@@ -81,11 +90,11 @@ export async function RenderStudios({ studioData, hasAdminRole }: { studioData: 
                                 </CardHeader>
                                 <CardContent className="flex flex-col items-center justify-center text-center">
                                     <CardTitle className="text-2xl font-bold">{studio.name}</CardTitle>
-                                    <p className="text-muted-foreground">{meta?.phone}</p>
+                                    <p className="text-muted-foreground">{meta?.phone as string}</p>
                                     <div className="text-muted-foreground text-xs flex gap-1 mt-4 mb-2">
-                                        <HugeiconsIcon icon={Location09Icon} className="size-4" /> {meta?.address}
+                                        <HugeiconsIcon icon={Location09Icon} className="size-4" /> {meta?.address as string}
                                     </div>
-                                    <p className="text-muted-foreground">{meta?.description}</p>
+                                    <p className="text-muted-foreground">{meta?.description as string}</p>
                                 </CardContent>
                                 <CardFooter>
                                     <Link className={buttonVariants({ className: "w-full", variant: "secondary" })} href={`/studios/${studio.slug}`}>

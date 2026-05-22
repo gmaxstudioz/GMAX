@@ -1,7 +1,7 @@
 // src/paystack.ts — extracted helper
 const PAYSTACK_BASE = "https://api.paystack.co";
 
-export async function paystackFetch<T = any>(
+export async function paystackFetch<T = unknown>(
     path: string,
     options: RequestInit = {},
 ): Promise<T> {

@@ -23,7 +23,7 @@ import {
 
 interface Payment {
     id: string;
-    amount: any;
+    amount: number | string;
     method: string;
     status: string;
     paymentDate: string | Date;

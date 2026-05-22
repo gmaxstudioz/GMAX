@@ -24,7 +24,7 @@ const UpdateProfileSchema = z.object({
 
 type FormValues = z.infer<typeof UpdateProfileSchema>;
 
-export function ProfileForm({ user }: { user: any }) {
+export function ProfileForm({ user }: { user: { name?: string | null; image?: string | null; phoneNumber?: string | null } }) {
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
 
@@ -84,7 +84,7 @@ export function ProfileForm({ user }: { user: any }) {
                                     onDelete={() => {
                                         field.onChange("");
                                     }}
-                                    initialPreview={field.value}
+                                    initialPreview={field.value ? (field.value.startsWith("http") ? field.value : `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${field.value}`) : ""}
                                     directory="studio/member/profile"
                                 />
                                 {fieldState.error && (

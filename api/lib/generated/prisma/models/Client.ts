@@ -27,6 +27,8 @@ export type AggregateClient = {
 export type ClientMinAggregateOutputType = {
   id: string | null
   name: string | null
+  phone: string | null
+  altPhone: string | null
   email: string | null
   address: string | null
   image: string | null
@@ -40,6 +42,8 @@ export type ClientMinAggregateOutputType = {
 export type ClientMaxAggregateOutputType = {
   id: string | null
   name: string | null
+  phone: string | null
+  altPhone: string | null
   email: string | null
   address: string | null
   image: string | null
@@ -54,6 +58,7 @@ export type ClientCountAggregateOutputType = {
   id: number
   name: number
   phone: number
+  altPhone: number
   email: number
   address: number
   image: number
@@ -69,6 +74,8 @@ export type ClientCountAggregateOutputType = {
 export type ClientMinAggregateInputType = {
   id?: true
   name?: true
+  phone?: true
+  altPhone?: true
   email?: true
   address?: true
   image?: true
@@ -82,6 +89,8 @@ export type ClientMinAggregateInputType = {
 export type ClientMaxAggregateInputType = {
   id?: true
   name?: true
+  phone?: true
+  altPhone?: true
   email?: true
   address?: true
   image?: true
@@ -96,6 +105,7 @@ export type ClientCountAggregateInputType = {
   id?: true
   name?: true
   phone?: true
+  altPhone?: true
   email?: true
   address?: true
   image?: true
@@ -182,7 +192,8 @@ export type ClientGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalA
 export type ClientGroupByOutputType = {
   id: string
   name: string
-  phone: string[]
+  phone: string
+  altPhone: string | null
   email: string | null
   address: string | null
   image: string | null
@@ -217,7 +228,8 @@ export type ClientWhereInput = {
   NOT?: Prisma.ClientWhereInput | Prisma.ClientWhereInput[]
   id?: Prisma.StringFilter<"Client"> | string
   name?: Prisma.StringFilter<"Client"> | string
-  phone?: Prisma.StringNullableListFilter<"Client">
+  phone?: Prisma.StringFilter<"Client"> | string
+  altPhone?: Prisma.StringNullableFilter<"Client"> | string | null
   email?: Prisma.StringNullableFilter<"Client"> | string | null
   address?: Prisma.StringNullableFilter<"Client"> | string | null
   image?: Prisma.StringNullableFilter<"Client"> | string | null
@@ -228,12 +240,14 @@ export type ClientWhereInput = {
   updatedAt?: Prisma.DateTimeFilter<"Client"> | Date | string
   bookings?: Prisma.BookingListRelationFilter
   studio?: Prisma.XOR<Prisma.StudioScalarRelationFilter, Prisma.StudioWhereInput>
+  enrollments?: Prisma.EnrollmentListRelationFilter
 }
 
 export type ClientOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   phone?: Prisma.SortOrder
+  altPhone?: Prisma.SortOrderInput | Prisma.SortOrder
   email?: Prisma.SortOrderInput | Prisma.SortOrder
   address?: Prisma.SortOrderInput | Prisma.SortOrder
   image?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -244,16 +258,20 @@ export type ClientOrderByWithRelationInput = {
   updatedAt?: Prisma.SortOrder
   bookings?: Prisma.BookingOrderByRelationAggregateInput
   studio?: Prisma.StudioOrderByWithRelationInput
+  enrollments?: Prisma.EnrollmentOrderByRelationAggregateInput
 }
 
 export type ClientWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  phone?: string[]
-  email?: string
+  studioId_phone?: Prisma.ClientStudioIdPhoneCompoundUniqueInput
+  studioId_email?: Prisma.ClientStudioIdEmailCompoundUniqueInput
   AND?: Prisma.ClientWhereInput | Prisma.ClientWhereInput[]
   OR?: Prisma.ClientWhereInput[]
   NOT?: Prisma.ClientWhereInput | Prisma.ClientWhereInput[]
   name?: Prisma.StringFilter<"Client"> | string
+  phone?: Prisma.StringFilter<"Client"> | string
+  altPhone?: Prisma.StringNullableFilter<"Client"> | string | null
+  email?: Prisma.StringNullableFilter<"Client"> | string | null
   address?: Prisma.StringNullableFilter<"Client"> | string | null
   image?: Prisma.StringNullableFilter<"Client"> | string | null
   notes?: Prisma.StringNullableFilter<"Client"> | string | null
@@ -263,12 +281,14 @@ export type ClientWhereUniqueInput = Prisma.AtLeast<{
   updatedAt?: Prisma.DateTimeFilter<"Client"> | Date | string
   bookings?: Prisma.BookingListRelationFilter
   studio?: Prisma.XOR<Prisma.StudioScalarRelationFilter, Prisma.StudioWhereInput>
-}, "id" | "phone" | "email">
+  enrollments?: Prisma.EnrollmentListRelationFilter
+}, "id" | "studioId_phone" | "studioId_email">
 
 export type ClientOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   phone?: Prisma.SortOrder
+  altPhone?: Prisma.SortOrderInput | Prisma.SortOrder
   email?: Prisma.SortOrderInput | Prisma.SortOrder
   address?: Prisma.SortOrderInput | Prisma.SortOrder
   image?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -288,7 +308,8 @@ export type ClientScalarWhereWithAggregatesInput = {
   NOT?: Prisma.ClientScalarWhereWithAggregatesInput | Prisma.ClientScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Client"> | string
   name?: Prisma.StringWithAggregatesFilter<"Client"> | string
-  phone?: Prisma.StringNullableListFilter<"Client">
+  phone?: Prisma.StringWithAggregatesFilter<"Client"> | string
+  altPhone?: Prisma.StringNullableWithAggregatesFilter<"Client"> | string | null
   email?: Prisma.StringNullableWithAggregatesFilter<"Client"> | string | null
   address?: Prisma.StringNullableWithAggregatesFilter<"Client"> | string | null
   image?: Prisma.StringNullableWithAggregatesFilter<"Client"> | string | null
@@ -302,7 +323,8 @@ export type ClientScalarWhereWithAggregatesInput = {
 export type ClientCreateInput = {
   id?: string
   name: string
-  phone?: Prisma.ClientCreatephoneInput | string[]
+  phone: string
+  altPhone?: string | null
   email?: string | null
   address?: string | null
   image?: string | null
@@ -312,12 +334,14 @@ export type ClientCreateInput = {
   updatedAt?: Date | string
   bookings?: Prisma.BookingCreateNestedManyWithoutClientInput
   studio: Prisma.StudioCreateNestedOneWithoutClientsInput
+  enrollments?: Prisma.EnrollmentCreateNestedManyWithoutClientInput
 }
 
 export type ClientUncheckedCreateInput = {
   id?: string
   name: string
-  phone?: Prisma.ClientCreatephoneInput | string[]
+  phone: string
+  altPhone?: string | null
   email?: string | null
   address?: string | null
   image?: string | null
@@ -327,12 +351,14 @@ export type ClientUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutClientInput
+  enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutClientInput
 }
 
 export type ClientUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  phone?: Prisma.ClientUpdatephoneInput | string[]
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  altPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -342,12 +368,14 @@ export type ClientUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   bookings?: Prisma.BookingUpdateManyWithoutClientNestedInput
   studio?: Prisma.StudioUpdateOneRequiredWithoutClientsNestedInput
+  enrollments?: Prisma.EnrollmentUpdateManyWithoutClientNestedInput
 }
 
 export type ClientUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  phone?: Prisma.ClientUpdatephoneInput | string[]
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  altPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -357,12 +385,14 @@ export type ClientUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutClientNestedInput
+  enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutClientNestedInput
 }
 
 export type ClientCreateManyInput = {
   id?: string
   name: string
-  phone?: Prisma.ClientCreatephoneInput | string[]
+  phone: string
+  altPhone?: string | null
   email?: string | null
   address?: string | null
   image?: string | null
@@ -376,7 +406,8 @@ export type ClientCreateManyInput = {
 export type ClientUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  phone?: Prisma.ClientUpdatephoneInput | string[]
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  altPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -389,7 +420,8 @@ export type ClientUpdateManyMutationInput = {
 export type ClientUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  phone?: Prisma.ClientUpdatephoneInput | string[]
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  altPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -410,10 +442,26 @@ export type ClientOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type ClientScalarRelationFilter = {
+  is?: Prisma.ClientWhereInput
+  isNot?: Prisma.ClientWhereInput
+}
+
+export type ClientStudioIdPhoneCompoundUniqueInput = {
+  studioId: string
+  phone: string
+}
+
+export type ClientStudioIdEmailCompoundUniqueInput = {
+  studioId: string
+  email: string
+}
+
 export type ClientCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   phone?: Prisma.SortOrder
+  altPhone?: Prisma.SortOrder
   email?: Prisma.SortOrder
   address?: Prisma.SortOrder
   image?: Prisma.SortOrder
@@ -427,6 +475,8 @@ export type ClientCountOrderByAggregateInput = {
 export type ClientMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  phone?: Prisma.SortOrder
+  altPhone?: Prisma.SortOrder
   email?: Prisma.SortOrder
   address?: Prisma.SortOrder
   image?: Prisma.SortOrder
@@ -440,6 +490,8 @@ export type ClientMaxOrderByAggregateInput = {
 export type ClientMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  phone?: Prisma.SortOrder
+  altPhone?: Prisma.SortOrder
   email?: Prisma.SortOrder
   address?: Prisma.SortOrder
   image?: Prisma.SortOrder
@@ -448,11 +500,6 @@ export type ClientMinOrderByAggregateInput = {
   studioId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
-}
-
-export type ClientScalarRelationFilter = {
-  is?: Prisma.ClientWhereInput
-  isNot?: Prisma.ClientWhereInput
 }
 
 export type ClientCreateNestedManyWithoutStudioInput = {
@@ -497,13 +544,18 @@ export type ClientUncheckedUpdateManyWithoutStudioNestedInput = {
   deleteMany?: Prisma.ClientScalarWhereInput | Prisma.ClientScalarWhereInput[]
 }
 
-export type ClientCreatephoneInput = {
-  set: string[]
+export type ClientCreateNestedOneWithoutEnrollmentsInput = {
+  create?: Prisma.XOR<Prisma.ClientCreateWithoutEnrollmentsInput, Prisma.ClientUncheckedCreateWithoutEnrollmentsInput>
+  connectOrCreate?: Prisma.ClientCreateOrConnectWithoutEnrollmentsInput
+  connect?: Prisma.ClientWhereUniqueInput
 }
 
-export type ClientUpdatephoneInput = {
-  set?: string[]
-  push?: string | string[]
+export type ClientUpdateOneRequiredWithoutEnrollmentsNestedInput = {
+  create?: Prisma.XOR<Prisma.ClientCreateWithoutEnrollmentsInput, Prisma.ClientUncheckedCreateWithoutEnrollmentsInput>
+  connectOrCreate?: Prisma.ClientCreateOrConnectWithoutEnrollmentsInput
+  upsert?: Prisma.ClientUpsertWithoutEnrollmentsInput
+  connect?: Prisma.ClientWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ClientUpdateToOneWithWhereWithoutEnrollmentsInput, Prisma.ClientUpdateWithoutEnrollmentsInput>, Prisma.ClientUncheckedUpdateWithoutEnrollmentsInput>
 }
 
 export type ClientCreateNestedOneWithoutBookingsInput = {
@@ -523,7 +575,8 @@ export type ClientUpdateOneRequiredWithoutBookingsNestedInput = {
 export type ClientCreateWithoutStudioInput = {
   id?: string
   name: string
-  phone?: Prisma.ClientCreatephoneInput | string[]
+  phone: string
+  altPhone?: string | null
   email?: string | null
   address?: string | null
   image?: string | null
@@ -532,12 +585,14 @@ export type ClientCreateWithoutStudioInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   bookings?: Prisma.BookingCreateNestedManyWithoutClientInput
+  enrollments?: Prisma.EnrollmentCreateNestedManyWithoutClientInput
 }
 
 export type ClientUncheckedCreateWithoutStudioInput = {
   id?: string
   name: string
-  phone?: Prisma.ClientCreatephoneInput | string[]
+  phone: string
+  altPhone?: string | null
   email?: string | null
   address?: string | null
   image?: string | null
@@ -546,6 +601,7 @@ export type ClientUncheckedCreateWithoutStudioInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutClientInput
+  enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutClientInput
 }
 
 export type ClientCreateOrConnectWithoutStudioInput = {
@@ -580,7 +636,8 @@ export type ClientScalarWhereInput = {
   NOT?: Prisma.ClientScalarWhereInput | Prisma.ClientScalarWhereInput[]
   id?: Prisma.StringFilter<"Client"> | string
   name?: Prisma.StringFilter<"Client"> | string
-  phone?: Prisma.StringNullableListFilter<"Client">
+  phone?: Prisma.StringFilter<"Client"> | string
+  altPhone?: Prisma.StringNullableFilter<"Client"> | string | null
   email?: Prisma.StringNullableFilter<"Client"> | string | null
   address?: Prisma.StringNullableFilter<"Client"> | string | null
   image?: Prisma.StringNullableFilter<"Client"> | string | null
@@ -591,10 +648,11 @@ export type ClientScalarWhereInput = {
   updatedAt?: Prisma.DateTimeFilter<"Client"> | Date | string
 }
 
-export type ClientCreateWithoutBookingsInput = {
+export type ClientCreateWithoutEnrollmentsInput = {
   id?: string
   name: string
-  phone?: Prisma.ClientCreatephoneInput | string[]
+  phone: string
+  altPhone?: string | null
   email?: string | null
   address?: string | null
   image?: string | null
@@ -602,13 +660,15 @@ export type ClientCreateWithoutBookingsInput = {
   type: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  bookings?: Prisma.BookingCreateNestedManyWithoutClientInput
   studio: Prisma.StudioCreateNestedOneWithoutClientsInput
 }
 
-export type ClientUncheckedCreateWithoutBookingsInput = {
+export type ClientUncheckedCreateWithoutEnrollmentsInput = {
   id?: string
   name: string
-  phone?: Prisma.ClientCreatephoneInput | string[]
+  phone: string
+  altPhone?: string | null
   email?: string | null
   address?: string | null
   image?: string | null
@@ -617,6 +677,87 @@ export type ClientUncheckedCreateWithoutBookingsInput = {
   studioId: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutClientInput
+}
+
+export type ClientCreateOrConnectWithoutEnrollmentsInput = {
+  where: Prisma.ClientWhereUniqueInput
+  create: Prisma.XOR<Prisma.ClientCreateWithoutEnrollmentsInput, Prisma.ClientUncheckedCreateWithoutEnrollmentsInput>
+}
+
+export type ClientUpsertWithoutEnrollmentsInput = {
+  update: Prisma.XOR<Prisma.ClientUpdateWithoutEnrollmentsInput, Prisma.ClientUncheckedUpdateWithoutEnrollmentsInput>
+  create: Prisma.XOR<Prisma.ClientCreateWithoutEnrollmentsInput, Prisma.ClientUncheckedCreateWithoutEnrollmentsInput>
+  where?: Prisma.ClientWhereInput
+}
+
+export type ClientUpdateToOneWithWhereWithoutEnrollmentsInput = {
+  where?: Prisma.ClientWhereInput
+  data: Prisma.XOR<Prisma.ClientUpdateWithoutEnrollmentsInput, Prisma.ClientUncheckedUpdateWithoutEnrollmentsInput>
+}
+
+export type ClientUpdateWithoutEnrollmentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  altPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  bookings?: Prisma.BookingUpdateManyWithoutClientNestedInput
+  studio?: Prisma.StudioUpdateOneRequiredWithoutClientsNestedInput
+}
+
+export type ClientUncheckedUpdateWithoutEnrollmentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  altPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  studioId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  bookings?: Prisma.BookingUncheckedUpdateManyWithoutClientNestedInput
+}
+
+export type ClientCreateWithoutBookingsInput = {
+  id?: string
+  name: string
+  phone: string
+  altPhone?: string | null
+  email?: string | null
+  address?: string | null
+  image?: string | null
+  notes?: string | null
+  type: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  studio: Prisma.StudioCreateNestedOneWithoutClientsInput
+  enrollments?: Prisma.EnrollmentCreateNestedManyWithoutClientInput
+}
+
+export type ClientUncheckedCreateWithoutBookingsInput = {
+  id?: string
+  name: string
+  phone: string
+  altPhone?: string | null
+  email?: string | null
+  address?: string | null
+  image?: string | null
+  notes?: string | null
+  type: string
+  studioId: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutClientInput
 }
 
 export type ClientCreateOrConnectWithoutBookingsInput = {
@@ -638,7 +779,8 @@ export type ClientUpdateToOneWithWhereWithoutBookingsInput = {
 export type ClientUpdateWithoutBookingsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  phone?: Prisma.ClientUpdatephoneInput | string[]
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  altPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -647,12 +789,14 @@ export type ClientUpdateWithoutBookingsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   studio?: Prisma.StudioUpdateOneRequiredWithoutClientsNestedInput
+  enrollments?: Prisma.EnrollmentUpdateManyWithoutClientNestedInput
 }
 
 export type ClientUncheckedUpdateWithoutBookingsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  phone?: Prisma.ClientUpdatephoneInput | string[]
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  altPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -661,12 +805,14 @@ export type ClientUncheckedUpdateWithoutBookingsInput = {
   studioId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutClientNestedInput
 }
 
 export type ClientCreateManyStudioInput = {
   id?: string
   name: string
-  phone?: Prisma.ClientCreatephoneInput | string[]
+  phone: string
+  altPhone?: string | null
   email?: string | null
   address?: string | null
   image?: string | null
@@ -679,7 +825,8 @@ export type ClientCreateManyStudioInput = {
 export type ClientUpdateWithoutStudioInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  phone?: Prisma.ClientUpdatephoneInput | string[]
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  altPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -688,12 +835,14 @@ export type ClientUpdateWithoutStudioInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   bookings?: Prisma.BookingUpdateManyWithoutClientNestedInput
+  enrollments?: Prisma.EnrollmentUpdateManyWithoutClientNestedInput
 }
 
 export type ClientUncheckedUpdateWithoutStudioInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  phone?: Prisma.ClientUpdatephoneInput | string[]
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  altPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -702,12 +851,14 @@ export type ClientUncheckedUpdateWithoutStudioInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutClientNestedInput
+  enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutClientNestedInput
 }
 
 export type ClientUncheckedUpdateManyWithoutStudioInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  phone?: Prisma.ClientUpdatephoneInput | string[]
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  altPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -724,10 +875,12 @@ export type ClientUncheckedUpdateManyWithoutStudioInput = {
 
 export type ClientCountOutputType = {
   bookings: number
+  enrollments: number
 }
 
 export type ClientCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   bookings?: boolean | ClientCountOutputTypeCountBookingsArgs
+  enrollments?: boolean | ClientCountOutputTypeCountEnrollmentsArgs
 }
 
 /**
@@ -747,11 +900,19 @@ export type ClientCountOutputTypeCountBookingsArgs<ExtArgs extends runtime.Types
   where?: Prisma.BookingWhereInput
 }
 
+/**
+ * ClientCountOutputType without action
+ */
+export type ClientCountOutputTypeCountEnrollmentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.EnrollmentWhereInput
+}
+
 
 export type ClientSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   name?: boolean
   phone?: boolean
+  altPhone?: boolean
   email?: boolean
   address?: boolean
   image?: boolean
@@ -762,6 +923,7 @@ export type ClientSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   updatedAt?: boolean
   bookings?: boolean | Prisma.Client$bookingsArgs<ExtArgs>
   studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
+  enrollments?: boolean | Prisma.Client$enrollmentsArgs<ExtArgs>
   _count?: boolean | Prisma.ClientCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["client"]>
 
@@ -769,6 +931,7 @@ export type ClientSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   id?: boolean
   name?: boolean
   phone?: boolean
+  altPhone?: boolean
   email?: boolean
   address?: boolean
   image?: boolean
@@ -784,6 +947,7 @@ export type ClientSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   id?: boolean
   name?: boolean
   phone?: boolean
+  altPhone?: boolean
   email?: boolean
   address?: boolean
   image?: boolean
@@ -799,6 +963,7 @@ export type ClientSelectScalar = {
   id?: boolean
   name?: boolean
   phone?: boolean
+  altPhone?: boolean
   email?: boolean
   address?: boolean
   image?: boolean
@@ -809,10 +974,11 @@ export type ClientSelectScalar = {
   updatedAt?: boolean
 }
 
-export type ClientOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "phone" | "email" | "address" | "image" | "notes" | "type" | "studioId" | "createdAt" | "updatedAt", ExtArgs["result"]["client"]>
+export type ClientOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "phone" | "altPhone" | "email" | "address" | "image" | "notes" | "type" | "studioId" | "createdAt" | "updatedAt", ExtArgs["result"]["client"]>
 export type ClientInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   bookings?: boolean | Prisma.Client$bookingsArgs<ExtArgs>
   studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
+  enrollments?: boolean | Prisma.Client$enrollmentsArgs<ExtArgs>
   _count?: boolean | Prisma.ClientCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ClientIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -827,11 +993,13 @@ export type $ClientPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
   objects: {
     bookings: Prisma.$BookingPayload<ExtArgs>[]
     studio: Prisma.$StudioPayload<ExtArgs>
+    enrollments: Prisma.$EnrollmentPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     name: string
-    phone: string[]
+    phone: string
+    altPhone: string | null
     email: string | null
     address: string | null
     image: string | null
@@ -1236,6 +1404,7 @@ export interface Prisma__ClientClient<T, Null = never, ExtArgs extends runtime.T
   readonly [Symbol.toStringTag]: "PrismaPromise"
   bookings<T extends Prisma.Client$bookingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Client$bookingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BookingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   studio<T extends Prisma.StudioDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudioDefaultArgs<ExtArgs>>): Prisma.Prisma__StudioClient<runtime.Types.Result.GetResult<Prisma.$StudioPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  enrollments<T extends Prisma.Client$enrollmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Client$enrollmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EnrollmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1267,7 +1436,8 @@ export interface Prisma__ClientClient<T, Null = never, ExtArgs extends runtime.T
 export interface ClientFieldRefs {
   readonly id: Prisma.FieldRef<"Client", 'String'>
   readonly name: Prisma.FieldRef<"Client", 'String'>
-  readonly phone: Prisma.FieldRef<"Client", 'String[]'>
+  readonly phone: Prisma.FieldRef<"Client", 'String'>
+  readonly altPhone: Prisma.FieldRef<"Client", 'String'>
   readonly email: Prisma.FieldRef<"Client", 'String'>
   readonly address: Prisma.FieldRef<"Client", 'String'>
   readonly image: Prisma.FieldRef<"Client", 'String'>
@@ -1698,6 +1868,30 @@ export type Client$bookingsArgs<ExtArgs extends runtime.Types.Extensions.Interna
   take?: number
   skip?: number
   distinct?: Prisma.BookingScalarFieldEnum | Prisma.BookingScalarFieldEnum[]
+}
+
+/**
+ * Client.enrollments
+ */
+export type Client$enrollmentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Enrollment
+   */
+  select?: Prisma.EnrollmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Enrollment
+   */
+  omit?: Prisma.EnrollmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EnrollmentInclude<ExtArgs> | null
+  where?: Prisma.EnrollmentWhereInput
+  orderBy?: Prisma.EnrollmentOrderByWithRelationInput | Prisma.EnrollmentOrderByWithRelationInput[]
+  cursor?: Prisma.EnrollmentWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.EnrollmentScalarFieldEnum | Prisma.EnrollmentScalarFieldEnum[]
 }
 
 /**

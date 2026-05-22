@@ -53,7 +53,9 @@ export function StudioStatsCards({ data }: { data: StudioWithRelations }) {
             .filter(b => b.paymentStatus === "PAID")
             .reduce((sum, b) => {
                 const sessionTotal = (b.service?.price || 0) * (b.sessionCount || 1);
-                const addonsTotal = (b as any).addons?.reduce((aSum: number, a: any) => aSum + (a.salePrice ?? a.price ?? 0), 0) || 0;
+                const addonsTotal = (b as Record<string, unknown>).addons
+                    ? ((b as Record<string, unknown>).addons as Record<string, unknown>[]).reduce((aSum: number, a: Record<string, unknown>) => aSum + ((a.salePrice as number | undefined) ?? (a.price as number | undefined) ?? 0), 0)
+                    : 0;
                 return sum + sessionTotal + addonsTotal;
             }, 0);
     }

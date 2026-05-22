@@ -9,7 +9,7 @@ const PAYSTACK_BASE = "https://api.paystack.co";
 
 // ── Paystack helper ──────────────────────────────────────────────────────────
 
-async function paystackFetch<T = any>(path: string, options: RequestInit = {}): Promise<T> {
+async function paystackFetch<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
     const res = await fetch(`${PAYSTACK_BASE}${path}`, {
         ...options,
         headers: {

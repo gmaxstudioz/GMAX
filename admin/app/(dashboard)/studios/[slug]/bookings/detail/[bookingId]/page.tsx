@@ -159,7 +159,7 @@ export default async function BookingDetailPage({ params }: Props) {
     // Serialize payments for client component
     const serializedPayments = booking.payments.map(p => ({
         id: p.id,
-        amount: p.amount,
+        amount: Number(p.amount),
         method: p.method,
         status: p.status,
         paymentDate: p.paymentDate.toISOString(),

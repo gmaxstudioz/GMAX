@@ -17,12 +17,23 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         redirect("/auth/login");
     }
 
-    const membership = await prisma.member.findFirst({
-        where: { userId: session.user.id }
+    const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { role: true, email: true }
     });
 
-    if (!membership) {
-        redirect("/auth/waiting");
+    const isAdmin = user?.role === "admin";
+
+    if (!isAdmin) {
+        const membership = await prisma.member.findFirst({
+            where: { userId: session.user.id }
+        });
+
+        console.log("CURRENT USER FROM DB:", user);
+
+        if (!membership) {
+            redirect("/auth/waiting");
+        }
     }
     return (
         <SidebarProvider

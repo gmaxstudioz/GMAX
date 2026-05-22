@@ -109,11 +109,6 @@ export function NavUser({
                     Account
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <BellIcon
-                  />
-                  Notifications
-                </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={SignOut} className="focus:bg-destructive/10 cursor-pointer text-destructive">

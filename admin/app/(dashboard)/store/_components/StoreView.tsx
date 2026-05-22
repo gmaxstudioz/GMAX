@@ -123,7 +123,7 @@ export function StoreView({ initialProducts }: { initialProducts: ProductWithCou
         });
     }, [products, debouncedSearch, filterType]);
 
-    useEffect(() => { setPage(1); }, [debouncedSearch, filterType]);
+    useEffect(() => { const t = setTimeout(() => setPage(1), 0); return () => clearTimeout(t); }, [debouncedSearch, filterType]);
 
     const totalFiltered = filteredProducts.length;
     const totalPages = Math.ceil(totalFiltered / ITEMS_PER_PAGE);

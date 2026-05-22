@@ -25,48 +25,45 @@ export type UpdateCategory = z.infer<typeof UpdateCategorySchema>;
 
 // ─── Service ──────────────────────────────────────────────────────────────────
 
-export const ServiceTypeEnum = z.enum(["standard", "premium", "addon"]);
+export const ServiceVariantInputSchema = z.object({
+  locationType: z.enum(["STUDIO", "OUTDOOR", "BOTH", "MULTIPLE"]),
+  basePrice: z.number().nonnegative(),
+  maxPrice: z.number().nonnegative().nullable().optional(),
+  sessionDurationMins: z.number().int().positive(),
+  logisticsIncluded: z.boolean().default(true),
+});
 
-// Base shape — no refinement, safe to derive from
 const ServiceBaseSchema = z.object({
   id: z.string(),
   name: z.string().min(1),
-  type: z.string().min(1),
+  isAddon: z.boolean().default(false),
   description: z.string().min(1),
   features: z.array(z.string()),
-  price: z.number().nonnegative(),
-  salePrice: z.number().nonnegative().nullable().optional(),
   categoryId: z.string(),
   studioSessionId: z.string(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
 
-// Refinement applied to the full schema for validation contexts
-export const ServiceSchema = ServiceBaseSchema.refine(
-  (data) => data.salePrice == null || data.salePrice <= data.price,
-  { message: "Sale price must be less than or equal to regular price", path: ["salePrice"] }
-);
+export const ServiceSchema = ServiceBaseSchema.extend({
+  variants: z.array(ServiceVariantInputSchema)
+});
 
-// Derived schemas omit from the base, then re-apply refinement
 export const CreateServiceSchema = ServiceBaseSchema.omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-}).refine(
-  (data) => data.salePrice == null || data.salePrice <= data.price,
-  { message: "Sale price must be less than or equal to regular price", path: ["salePrice"] }
-);
+}).extend({
+  variants: z.array(ServiceVariantInputSchema).min(1, "At least one variant is required"),
+});
 
-// Partial update — both fields may be absent, so guard both sides
 export const UpdateServiceSchema = ServiceBaseSchema.omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-}).partial().refine(
-  (data) => data.salePrice == null || data.price == null || data.salePrice <= data.price,
-  { message: "Sale price must be less than or equal to regular price", path: ["salePrice"] }
-);
+}).partial().extend({
+  variants: z.array(ServiceVariantInputSchema).optional(),
+});
  
 export type Service = z.infer<typeof ServiceSchema>;
 export type CreateService = z.infer<typeof CreateServiceSchema>;

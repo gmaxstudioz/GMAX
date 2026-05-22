@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { tryCatch } from "@/hooks/try-catch";
-import { DeleteClient, FetchClient } from "@/lib/actions/client";
+import { DeleteClient } from "@/lib/actions/client";
 import { Filter, Loading, MoreVerticalIcon, Refresh01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useMemo, useState, useTransition, useEffect } from "react";
@@ -71,19 +71,8 @@ export function ClientsView({ studioGroups }: { studioGroups: StudioGroup[] }) {
 
     function handleRefresh() {
         startTransition(async () => {
-            const { data: result, error } = await tryCatch(FetchClient());
-
-            if (error) {
-                toast.error("An unexpected error occurred. Please try again.");
-                return;
-            }
-
-            if (result?.status === "success") {
-                toast.success("Refreshed Successfully");
-                router.refresh();
-            } else if (result?.status === "error") {
-                toast.error(result?.message);
-            }
+            router.refresh();
+            toast.success("Refreshed Successfully");
         });
     }
 
@@ -111,9 +100,7 @@ export function ClientsView({ studioGroups }: { studioGroups: StudioGroup[] }) {
             .filter(group => group.clients.length > 0);
     }, [studioGroups, debouncedSearch, filterType]);
 
-    useEffect(() => {
-        setPage(1);
-    }, [debouncedSearch, filterType]);
+    useEffect(() => { const t = setTimeout(() => setPage(1), 0); return () => clearTimeout(t); }, [debouncedSearch, filterType]);
 
     const totalFiltered = filteredGroups.reduce((sum, g) => sum + g.clients.length, 0);
     const totalGroups = filteredGroups.length;
@@ -260,7 +247,7 @@ export function ClientsView({ studioGroups }: { studioGroups: StudioGroup[] }) {
                                                                         phone: client.phone,
                                                                         address: client.address || undefined,
                                                                         notes: client.notes || undefined,
-                                                                        clientType: client.type as any
+                                                                        clientType: client.type as "vvip" | "vip" | "regular"
                                                                     }}
                                                                     triggerItem={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Edit</DropdownMenuItem>}
                                                                 />
@@ -287,7 +274,7 @@ export function ClientsView({ studioGroups }: { studioGroups: StudioGroup[] }) {
                                                     phone: client.phone,
                                                     address: client.address,
                                                     notes: client.notes,
-                                                    clientType: client.clientType
+                                                    clientType: client.type as "vvip" | "vip" | "regular"
                                                 }}
                                                 triggerItem={<ContextMenuItem onSelect={(e) => e.preventDefault()}>Edit</ContextMenuItem>}
                                             />

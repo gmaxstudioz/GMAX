@@ -27,9 +27,11 @@ export const clientPhotoAccess = os.photo.clientAccess
         });
 
         // Verify client identity by phone
-        const phoneMatch = booking.client.phone.some(
-            (p) => p.replace(/\D/g, "") === input.clientPhone.replace(/\D/g, "")
-        );
+        const inputDigits = input.clientPhone.replace(/\D/g, "");
+        const phoneMatch =
+            booking.client.phone.replace(/\D/g, "") === inputDigits ||
+            (booking.client.altPhone && booking.client.altPhone.replace(/\D/g, "") === inputDigits);
+            
         if (!phoneMatch) throw errors.FORBIDDEN({
             message: "Phone number does not match this booking.",
         });
@@ -70,9 +72,11 @@ export const clientDownloadPhoto = os.photo.clientDownload
             data: { resourceType: "Booking", resourceId: input.bookingId },
         });
 
-        const phoneMatch = booking.client.phone.some(
-            (p) => p.replace(/\D/g, "") === input.clientPhone.replace(/\D/g, "")
-        );
+        const inputDigits = input.clientPhone.replace(/\D/g, "");
+        const phoneMatch = 
+            booking.client.phone.replace(/\D/g, "") === inputDigits ||
+            (booking.client.altPhone && booking.client.altPhone.replace(/\D/g, "") === inputDigits);
+            
         if (!phoneMatch) throw errors.FORBIDDEN({
             message: "Phone number does not match this booking.",
         });

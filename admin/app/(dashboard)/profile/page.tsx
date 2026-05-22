@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { ProfileForm } from "./_components/ProfileForm";
+import { ResetPasswordForm } from "./_components/ResetPasswordForm";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
@@ -26,8 +27,10 @@ export default async function ProfilePage() {
                 <h1 className="text-2xl font-bold">Profile Settings</h1>
                 <p className="text-muted-foreground">Manage your personal information, avatar, and account settings.</p>
             </div>
-            
-            <ProfileForm user={fullUser} />
+            <div className="flex flex-col gap-6 w-full">
+                <ProfileForm user={fullUser} />
+                <ResetPasswordForm />
+            </div>
         </div>
     );
 }
