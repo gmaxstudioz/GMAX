@@ -36,6 +36,9 @@ type StudioWithRelations = Prisma.StudioGetPayload<{
         client: true,
         service: {
           include: { variants: true }
+        },
+        addons: {
+          include: { variants: true }
         }
       }
     }
@@ -54,12 +57,18 @@ export function StudioStatsCards({ data }: { data: StudioWithRelations }) {
         return bookings
             .filter(b => b.paymentStatus === "PAID")
             .reduce((sum, b) => {
-                if (b.totalAmount != null) {
+                if (b.totalAmount != null && Number(b.totalAmount) > 0) {
                     return sum + Number(b.totalAmount);
                 }
-                const bookedVariant = b.service?.variants?.find(v => v.id === b.serviceVariantId);
+                
+                const bookedVariant = b.service?.variants?.find(v => v.id === b.serviceVariantId) || b.service?.variants?.[0];
                 const servicePrice = Number(bookedVariant?.basePrice ?? 0);
-                const sessionTotal = servicePrice * (b.sessionCount || 1);
+                
+                const addonsTotal = (b.addons || []).reduce((acc, addon) => {
+                    return acc + Number(addon.variants?.[0]?.basePrice ?? 0);
+                }, 0);
+                
+                const sessionTotal = (servicePrice + addonsTotal) * (b.sessionCount || 1);
                 return sum + sessionTotal;
             }, 0);
     }
