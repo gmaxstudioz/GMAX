@@ -261,7 +261,7 @@ export default async function BookingDetailPage({ params }: Props) {
                 <Card>
                     <CardContent>
                         <p className="text-muted-foreground font-bold text-lg mb-2">Booking</p>
-                        <StatusBadge status={serializedBooking.serializedBookingStatus} />
+                        <StatusBadge status={serializedBooking.bookingStatus} />
                     </CardContent>
                 </Card>
                 <Card>
