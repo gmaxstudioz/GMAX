@@ -288,11 +288,11 @@ export default async function BookingDetailPage({ params }: Props) {
                         </CardHeader>
                         <CardContent className="flex flex-col gap-1">
                             <InfoRow icon={CalendarIcon} label="Date">
-                                {format(new Date(serializedBooking.serializedBookingDate), "EEEE, MMMM do, yyyy")}
+                                {format(new Date(serializedBooking.bookingDate), "EEEE, MMMM do, yyyy")}
                             </InfoRow>
                             <InfoRow icon={ClockIcon} label="Time">
                                 <span className="break-words">
-                                    {format(new Date(serializedBooking.serializedBookingDate), "hh:mm a")} · {totalDuration}min ({serializedBooking.sessionCount} {serializedBooking.sessionCount > 1 ? "sessions" : "session"} × {sessionDuration}m)
+                                    {format(new Date(serializedBooking.bookingDate), "hh:mm a")} · {totalDuration}min ({serializedBooking.sessionCount} {serializedBooking.sessionCount > 1 ? "sessions" : "session"} × {sessionDuration}m)
                                 </span>
                             </InfoRow>
                             <InfoRow icon={PackageIcon} label="Service">
