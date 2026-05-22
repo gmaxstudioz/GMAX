@@ -15,7 +15,7 @@ import { tryCatch } from "@/hooks/try-catch";
 import { toast } from "sonner";
 import { Loader2, ChevronDown } from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { PencilEdit02Icon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon } from "@hugeicons/core-free-icons";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { UpdateBookingSchema, UpdateBookingInput, BookingStatus, PaymentStatus, DeliveryStatus, PaymentPlan } from "@/lib/schemas/booking";
@@ -335,7 +335,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                                         <div className="mt-2 text-sm bg-accent/50 p-3 rounded-md space-y-2">
                                             {!selectedVariant.logisticsIncluded && (
                                                 <div className="text-amber-600 font-medium text-xs flex items-center gap-1.5 bg-amber-500/10 p-2 rounded">
-                                                    <HugeiconsIcon icon={PencilEdit02Icon} size={14} /> {/* Placeholder icon for warning */}
+                                                    <HugeiconsIcon icon={AlertCircleIcon} size={14} aria-label="Logistics Warning" />
                                                     Client must cover logistics for this location.
                                                 </div>
                                             )}
