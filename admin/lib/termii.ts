@@ -177,12 +177,16 @@ export async function sendDeliveryEmail(params: {
     downloadLink: string;
     accessCode: string;
 }) {
-    // If you don't have a template ID, you can throw or skip
-    // We'll use a placeholder variable name for now, assuming the template is configured
+    const templateId = process.env.TERMII_BOOKING_DELIVERY_TEMPLATE_ID;
+    if (!templateId) {
+        console.info("[Termii] Skipping delivery email: TERMII_BOOKING_DELIVERY_TEMPLATE_ID is not set.");
+        return Promise.resolve();
+    }
+
     return sendTemplateEmail({
         email: params.email,
         subject: `Your Photos from ${params.studioName} are Ready!`,
-        templateId: process.env.TERMII_BOOKING_DELIVERY_TEMPLATE_ID ?? "",
+        templateId,
         variables: {
             client_name: params.clientName,
             studio_name: params.studioName,
