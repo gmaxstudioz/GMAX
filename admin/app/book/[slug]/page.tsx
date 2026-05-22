@@ -97,19 +97,23 @@ export default async function StudioBookPage({ params }: Props) {
                 categories={studio.categories.map(c => ({
                     id: c.id,
                     name: c.name,
-                    services: c.services.map(s => ({
-                        id: s.id,
-                        name: s.name,
-                        isAddon: s.isAddon,
-                        basePrice: Number(s.variants?.[0]?.basePrice ?? 0),
-                        studioSession: s.studioSession ? { duration: s.studioSession.duration } : null,
-                    })),
+                    services: c.services
+                        .filter(s => s.variants && s.variants.length > 0)
+                        .map(s => ({
+                            id: s.id,
+                            name: s.name,
+                            isAddon: s.isAddon,
+                            basePrice: Number(s.variants[0].basePrice),
+                            studioSession: s.studioSession ? { duration: s.studioSession.duration } : null,
+                        })),
                 }))}
-                addons={addons.map(a => ({
-                    id: a.id,
-                    name: a.name,
-                    basePrice: Number(a.variants?.[0]?.basePrice ?? 0),
-                }))}
+                addons={addons
+                    .filter(a => a.variants && a.variants.length > 0)
+                    .map(a => ({
+                        id: a.id,
+                        name: a.name,
+                        basePrice: Number(a.variants[0].basePrice),
+                    }))}
                 existingBookings={serializedBookings}
                 paystackPublicKey={paystackPublicKey}
             />
