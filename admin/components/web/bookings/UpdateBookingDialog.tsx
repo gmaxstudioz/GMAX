@@ -73,6 +73,14 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
         );
     }, [addonServices]);
 
+    const normalizeAddonIds = (rawIds: string[]) => {
+        return rawIds.map(id => {
+            if (id.includes(':')) return id;
+            const match = flattenedAddons.find(fa => fa.compositeId.startsWith(`${id}:`));
+            return match ? match.compositeId : id;
+        });
+    };
+
     const filteredClients = useMemo(() => {
         if (!clientSearch.trim()) return clients;
         const q = clientSearch.toLowerCase();
@@ -98,11 +106,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
             serviceVariantId: currentData.serviceVariantId,
             memberId: currentData.memberId,
             bookingDate: currentData.bookingDate ? new Date(currentData.bookingDate) : undefined,
-            addonIds: (currentData.addonIds || []).map(id => {
-                if (id.includes(':')) return id;
-                const match = flattenedAddons.find(fa => fa.compositeId.startsWith(`${id}:`));
-                return match ? match.compositeId : id;
-            }),
+            addonIds: normalizeAddonIds(currentData.addonIds || []),
             totalAmount: currentData.totalAmount ?? 0,
             paymentPlan: (currentData.paymentPlan as PaymentPlan) ?? "FULL",
         }
@@ -181,7 +185,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                 serviceVariantId: currentData.serviceVariantId,
                 memberId: currentData.memberId,
                 bookingDate: currentData.bookingDate ? new Date(currentData.bookingDate) : undefined,
-                addonIds: currentData.addonIds || [],
+                addonIds: normalizeAddonIds(currentData.addonIds || []),
                 totalAmount: currentData.totalAmount ?? 0,
                 paymentPlan: (currentData.paymentPlan as PaymentPlan) ?? "FULL",
             });
@@ -288,7 +292,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                                         {filteredMainServices.length > 0 ? filteredMainServices.map(s => (
                                             <div
                                                 key={s.id}
-                                                onClick={() => { form.setValue("serviceId", s.id, { shouldValidate: true }); form.setValue("serviceVariantId", ""); setServiceOpen(false); setServiceSearch(""); }}
+                                                onClick={() => { form.setValue("serviceId", s.id, { shouldValidate: true }); form.setValue("serviceVariantId", undefined, { shouldValidate: true }); setServiceOpen(false); setServiceSearch(""); }}
                                                 className={`flex items-center justify-between px-3 py-2 cursor-pointer text-sm rounded-md transition-colors hover:bg-accent ${watchedServiceId === s.id ? "bg-accent font-medium" : ""}`}
                                             >
                                                 <div className="flex items-center gap-2">

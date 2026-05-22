@@ -284,7 +284,9 @@ export function MediaGallery({ photos, isManager, r2PublicUrl }: MediaGalleryPro
                         {previewUrl.match(/\.(mp4|mov|webm|avi)/i) ? (
                             <video src={previewUrl} controls className="w-full max-h-[80vh] rounded-lg" />
                         ) : (
-                            <Image src={previewUrl} alt="Preview" className="w-full max-h-[80vh] object-contain rounded-lg" />
+                            <div className="relative w-full h-[80vh]">
+                                <Image src={previewUrl} alt="Preview" fill className="object-contain rounded-lg" />
+                            </div>
                         )}
                     </DialogContent>
                 </Dialog>

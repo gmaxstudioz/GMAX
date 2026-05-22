@@ -123,16 +123,28 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
             setExistingClient(null);
             return;
         }
+        let isCancelled = false;
         const timeout = setTimeout(async () => {
             setNameCheckLoading(true);
-            const result = await checkClientName(studioId, clientName.trim());
-            setExistingClient(result);
-            if (result.exists && result.client) {
-                setValue("existingClientId", result.client.id);
+            try {
+                const result = await checkClientName(studioId, clientName.trim());
+                if (isCancelled) return;
+                setExistingClient(result);
+                if (result.exists && result.client) {
+                    setValue("existingClientId", result.client.id);
+                }
+            } catch (error) {
+                console.error("Failed to check client name:", error);
+            } finally {
+                if (!isCancelled) {
+                    setNameCheckLoading(false);
+                }
             }
-            setNameCheckLoading(false);
         }, 600);
-        return () => clearTimeout(timeout);
+        return () => {
+            isCancelled = true;
+            clearTimeout(timeout);
+        };
     }, [clientName, studioId, setValue]);
 
     const handleNext = async () => {

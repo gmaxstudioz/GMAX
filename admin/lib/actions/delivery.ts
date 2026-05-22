@@ -37,6 +37,15 @@ export async function deliverBooking(bookingId: string) {
     }
 
     // Generate access code if one doesn't exist
+    if (booking.deliveryStatus === "DELIVERED") {
+        return;
+    }
+
+    const publicDomain = process.env.NEXT_PUBLIC_APP_URL;
+    if (!publicDomain) {
+        throw new Error("NEXT_PUBLIC_APP_URL environment variable is missing");
+    }
+
     let accessCode = booking.accessCode;
     const isNewAccessCode = !accessCode;
 
@@ -52,7 +61,7 @@ export async function deliverBooking(bookingId: string) {
         try {
             // Mark as delivered and set access code
             await prisma.booking.update({
-                where: { id: bookingId },
+                where: { id: bookingId, deliveryStatus: { not: "DELIVERED" } },
                 data: { 
                     deliveryStatus: "DELIVERED",
                     ...(isNewAccessCode && { accessCode })
@@ -60,6 +69,10 @@ export async function deliverBooking(bookingId: string) {
             });
             updated = true;
         } catch (error: any) {
+            if (error.code === 'P2025') {
+                 // Record to update not found. Could mean it was already delivered by a concurrent request.
+                 return;
+            }
             if (isNewAccessCode && error.code === 'P2002') {
                 attempts++;
                 if (attempts >= maxAttempts) {
@@ -71,9 +84,6 @@ export async function deliverBooking(bookingId: string) {
         }
     }
 
-    // Send notifications
-    // Assume public app runs on the same domain for now, or a known env variable
-    const publicDomain = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001";
     const downloadLink = `${publicDomain}/booking/${bookingId}/deliverables?code=${accessCode}`;
 
     const promises = [];

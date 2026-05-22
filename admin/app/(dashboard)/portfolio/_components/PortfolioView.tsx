@@ -525,6 +525,17 @@ function UploadDialog({
                 );
 
                 if (error || result?.status === "error") {
+                    if (finalKey) {
+                        try {
+                            await fetch("/api/s3/delete", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ key: finalKey }),
+                            });
+                        } catch (delErr) {
+                            console.error("Failed to clean up R2 object:", delErr);
+                        }
+                    }
                     toast.error(`Failed to save: ${file.name}`);
                 } else if (result?.status === "success") {
                     onSuccess(result.data as PortfolioItemType);
@@ -539,10 +550,10 @@ function UploadDialog({
         }
 
         setUploading(false);
-        setFiles([]);
-        if (inputRef.current) inputRef.current.value = "";
 
         if (uploaded > 0) {
+            setFiles([]);
+            if (inputRef.current) inputRef.current.value = "";
             toast.success(`${uploaded} ${uploaded === 1 ? "image" : "images"} uploaded!`);
             onComplete?.();
         }

@@ -203,7 +203,8 @@ export async function sendDeliverySMS(params: {
     downloadLink: string;
     accessCode: string | null;
 }) {
-    const message = `Hi ${params.clientName}, your photos from ${params.studioName} are ready! Download them here: ${params.downloadLink} (Access Code: ${params.accessCode})`;
+    const codeText = params.accessCode ? ` (Access Code: ${params.accessCode})` : "";
+    const message = `Hi ${params.clientName}, your photos from ${params.studioName} are ready! Download them here: ${params.downloadLink}${codeText}`;
     return sendSMS(params.phone, message).catch(e => console.error("Termii Delivery SMS failed", e));
 }
 
@@ -214,6 +215,7 @@ export async function sendDeliveryWhatsApp(params: {
     downloadLink: string;
     accessCode: string | null;
 }) {
-    const message = `Hi ${params.clientName}! 👋\n\nYour photos from *${params.studioName}* are ready for download.\n\nAccess your gallery here: ${params.downloadLink}\n*Access Code:* ${params.accessCode}\n\nThank you for choosing us!`;
+    const codeText = params.accessCode ? `\n*Access Code:* ${params.accessCode}` : "";
+    const message = `Hi ${params.clientName}! 👋\n\nYour photos from *${params.studioName}* are ready for download.\n\nAccess your gallery here: ${params.downloadLink}${codeText}\n\nThank you for choosing us!`;
     return sendWhatsApp(params.phone, message).catch(e => console.error("Termii Delivery WhatsApp failed", e));
 }

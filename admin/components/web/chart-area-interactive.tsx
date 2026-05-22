@@ -53,7 +53,11 @@ export function ChartAreaInteractive({ data }: { data: ChartDataPoint[] }) {
   }, [isMobile])
 
   // Get dynamic reference date (the most recent date in data, or today)
-  const referenceDate = data.length > 0 ? new Date(data[data.length - 1].date) : new Date();
+  const referenceDate = React.useMemo(() => {
+    if (data.length === 0) return new Date();
+    const maxTimestamp = Math.max(...data.map(item => Date.parse(item.date)));
+    return new Date(maxTimestamp);
+  }, [data]);
 
   const filteredData = data.filter((item) => {
     const date = new Date(item.date)
