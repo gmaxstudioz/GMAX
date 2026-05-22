@@ -33,7 +33,7 @@ export const ServiceVariantInputSchema = z.object({
   logisticsIncluded: z.boolean().default(true),
   deliverables: z.array(z.object({
       label: z.string().min(1, "Label is required"),
-      quantity: z.number().nullable().optional(),
+      quantity: z.number().int().positive().nullable().optional(),
       detail: z.string().nullable().optional(),
       isFree: z.boolean().default(false),
   })).default([]),
