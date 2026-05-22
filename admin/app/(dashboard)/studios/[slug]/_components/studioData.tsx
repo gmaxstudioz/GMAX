@@ -44,7 +44,48 @@ import { Textarea } from "@/components/ui/textarea";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { CalendarBooking } from "@/lib/schemas/calendar";
 import { ClientType } from "@/lib/schemas/client";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapPrismaBookingToBooking(b: any): Booking {
+    return {
+        bookingDate: b.bookingDate,
+        sessionCount: b.sessionCount,
+        notes: b.notes || undefined,
+        totalAmount: Number(b.totalAmount),
+        paymentPlan: b.paymentPlan,
+        bookingStatus: b.bookingStatus,
+        paymentStatus: b.paymentStatus,
+        deliveryStatus: b.deliveryStatus,
+        serviceId: b.serviceId,
+        serviceVariantId: b.serviceVariantId || undefined,
+        studioId: b.studioId,
+        clientId: b.clientId,
+        memberId: b.memberId || undefined,
+        createdBy: b.createdBy,
+    } as Booking;
+}
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapPrismaBookingToCalendarBooking(b: any): CalendarBooking {
+    return {
+        id: b.id,
+        bookingDate: b.bookingDate,
+        sessionCount: b.sessionCount,
+        notes: b.notes || undefined,
+        totalAmount: Number(b.totalAmount),
+        paymentPlan: b.paymentPlan,
+        bookingStatus: b.bookingStatus,
+        paymentStatus: b.paymentStatus,
+        deliveryStatus: b.deliveryStatus,
+        serviceId: b.serviceId,
+        serviceVariantId: b.serviceVariantId || undefined,
+        studioId: b.studioId,
+        clientId: b.clientId,
+        memberId: b.memberId || undefined,
+        createdBy: b.createdBy,
+        client: { name: b.client?.name || "Unknown" },
+        service: { name: b.service?.name || "Unknown" },
+    } as CalendarBooking;
+}
 
 type StudioWithRelations = Prisma.StudioGetPayload<{
   include: {
@@ -1011,7 +1052,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                                                 selectedDate={field.value}
                                                 onDateChange={field.onChange}
                                                 proposedDuration={(selectedService?.studioSession?.duration || 45) * (watchedSessionCount || 1)}
-                                                bookings={studioData.bookings as unknown as Booking[]}
+                                                bookings={studioData.bookings.map(mapPrismaBookingToBooking)}
                                             />
                                         </Field>
                                     )}
@@ -1119,7 +1160,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                 </Dialog>
             </CardHeader>
             <CardContent>
-                <CalenderGrid initialYear={new Date().getFullYear()} initialMonth={new Date().getMonth()} bookings={studioData.bookings as unknown as CalendarBooking[]} onMoveConfirm={async (bookingId, toDateKey) => {
+                <CalenderGrid initialYear={new Date().getFullYear()} initialMonth={new Date().getMonth()} bookings={studioData.bookings.map(mapPrismaBookingToCalendarBooking)} onMoveConfirm={async (bookingId, toDateKey) => {
                     const { error } = await tryCatch(moveBooking(bookingId, toDateKey));
                     if (error) {
                         toast.error("Failed to reschedule booking.");
