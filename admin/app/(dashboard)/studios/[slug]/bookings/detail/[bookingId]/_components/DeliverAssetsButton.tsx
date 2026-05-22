@@ -18,7 +18,8 @@ export function DeliverAssetsButton({ bookingId }: { bookingId: string }) {
             toast.success("Assets delivered successfully! Notifications have been sent.");
         } catch (error) {
             console.error(error);
-            toast.error("Failed to deliver assets. Please try again.");
+            const errMessage = error instanceof Error ? error.message : String(error);
+            toast.error(`Failed to deliver assets: ${errMessage}`);
         } finally {
             setIsPending(false);
         }
