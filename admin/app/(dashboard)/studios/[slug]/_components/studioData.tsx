@@ -908,7 +908,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                                                             {filteredMainServices.length > 0 ? filteredMainServices.map(s => (
                                                                 <div
                                                                     key={s.id}
-                                                                    onClick={() => { field.onChange(s.id); setServiceOpen(false); setServiceSearch(""); }}
+                                                                    onClick={() => { field.onChange(s.id); form.setValue("serviceVariantId", ""); setServiceOpen(false); setServiceSearch(""); }}
                                                                     className={`flex items-center justify-between px-3 py-2 cursor-pointer text-sm rounded-md transition-colors hover:bg-accent ${field.value === s.id ? "bg-accent font-medium" : ""}`}
                                                                 >
                                                                     <div className="flex items-center gap-2">
@@ -1105,6 +1105,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                                                 min={0}
                                                 value={value}
                                                 onChange={(e) => onChange(Number(e.target.value))}
+                                                readOnly
                                             />
                                         </Field>
                                     )}
@@ -1112,7 +1113,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                                 <div className="col-span-2 bg-muted p-3 rounded-md flex justify-between items-center text-sm">
                                     <span className="font-medium">Amount Due Now ({watchedPaymentPlan}):</span>
                                     <span className="font-bold text-lg">
-                                        ₦{(watchedTotalAmount * (watchedPaymentPlan === "FULL" ? 1 : watchedPaymentPlan === "HALF" ? 0.5 : 0.25)).toLocaleString()}
+                                        ₦{(grandTotal * (watchedPaymentPlan === "FULL" ? 1 : watchedPaymentPlan === "HALF" ? 0.5 : 0.25)).toLocaleString()}
                                     </span>
                                 </div>
                             </div>
