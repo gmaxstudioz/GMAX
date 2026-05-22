@@ -102,7 +102,7 @@ export const DeletePhotoSchema = z.object({
 
 export const ClientPhotoAccessSchema = z.object({
     bookingId: z.string().min(1, "Booking reference is required"),
-    accessCode: z.string().min(1, "Access code is required"),
+    accessCode: z.string().trim().min(1, "Access code is required"),
 });
 
 export const ClientPhotoAccessOutputSchema = z.object({
@@ -124,7 +124,7 @@ export const ClientPhotoAccessOutputSchema = z.object({
 export const ClientDownloadPhotoSchema = z.object({
     photoId: z.string().min(1),
     bookingId: z.string().min(1),
-    accessCode: z.string().min(1),
+    accessCode: z.string().trim().min(1),
 });
 
 export const ClientDownloadOutputSchema = z.object({
