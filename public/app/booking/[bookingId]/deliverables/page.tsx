@@ -59,8 +59,9 @@ export default function DeliverablesPage() {
     }
 
     async function handleDownload(photoId: string) {
+        let toastId: string | number | undefined;
         try {
-            const toastId = toast.loading("Preparing download...");
+            toastId = toast.loading("Preparing download...");
             const res = await downloadPhoto({ bookingId, photoId, accessCode });
             
             // Create a temporary link to download the file
@@ -74,7 +75,7 @@ export default function DeliverablesPage() {
             toast.success("Download started!", { id: toastId });
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Failed to download photo.";
-            toast.error(errorMessage);
+            toast.error(errorMessage, { id: toastId });
         }
     }
 
