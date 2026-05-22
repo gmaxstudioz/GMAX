@@ -314,8 +314,12 @@ export const requestAccessLink = os.product.requestAccessLink
         }
 
         if (!deliveryMethod && buyer.phone) {
-            await sendSMS(buyer.phone, `Your GMAX access link: ${accessLink}`);
-            deliveryMethod = "SMS";
+            try {
+                await sendSMS(buyer.phone, `Your GMAX access link: ${accessLink}`);
+                deliveryMethod = "SMS";
+            } catch (error) {
+                console.error("[Shop] Access link SMS failed:", error);
+            }
         }
 
         if (!deliveryMethod) {
