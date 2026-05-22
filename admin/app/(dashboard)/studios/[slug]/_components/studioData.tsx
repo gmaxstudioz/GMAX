@@ -1214,16 +1214,33 @@ function BookingIntents({ data }: { data: StudioWithRelations }) {
                                     </td>
                                     <td className="py-3 px-2">
                                         <div>
-                                            <p className="font-medium">₦{Number(intent.amount).toLocaleString()}</p>
-                                            {Number((intent as { totalAmount?: number | string }).totalAmount) !== Number(intent.amount) && (
-                                                <p className="text-xs text-muted-foreground">of ₦{Number((intent as { totalAmount?: number | string }).totalAmount).toLocaleString()}</p>
-                                            )}
+                                            <p className="font-medium">
+                                                {intent.amount != null ? `₦${Number(intent.amount).toLocaleString()}` : "—"}
+                                            </p>
+                                            {(() => {
+                                                const totalAmount = (intent as { totalAmount?: number | string }).totalAmount;
+                                                if (totalAmount != null && intent.amount != null && Number(totalAmount) !== Number(intent.amount)) {
+                                                    return (
+                                                        <p className="text-xs text-muted-foreground">
+                                                            of ₦{Number(totalAmount).toLocaleString()}
+                                                        </p>
+                                                    );
+                                                }
+                                                return null;
+                                            })()}
                                         </div>
                                     </td>
                                     <td className="py-3 px-2">
-                                        <Badge variant="outline" className="text-xs">
-                                            {planLabels[(intent as { paymentPlan?: string }).paymentPlan as keyof typeof planLabels] || (intent as { paymentPlan?: string }).paymentPlan}
-                                        </Badge>
+                                        {(() => {
+                                            const paymentPlan = (intent as { paymentPlan?: string }).paymentPlan;
+                                            if (!paymentPlan) return null;
+                                            const label = planLabels[paymentPlan as keyof typeof planLabels];
+                                            return (
+                                                <Badge variant="outline" className="text-xs">
+                                                    {label || paymentPlan}
+                                                </Badge>
+                                            );
+                                        })()}
                                     </td>
                                     <td className="py-3 px-2">
                                         <Badge variant="outline" className={`text-xs ${statusStyles[intent.status] || ""}`}>
