@@ -167,3 +167,49 @@ export async function sendInvitationWhatsApp(params: {
     const message = `Hi! 👋\n\n*${params.inviterName}* has invited you to join *${params.studioName}* on GMAX Studioz.\n\nAccept the invitation: ${params.inviteLink}`;
     return sendWhatsApp(params.phone, message);
 }
+
+// ── Booking Delivery Notifications ──────────────────────────────────
+
+export async function sendDeliveryEmail(params: {
+    email: string;
+    clientName: string;
+    studioName: string;
+    downloadLink: string;
+    accessCode: string;
+}) {
+    // If you don't have a template ID, you can throw or skip
+    // We'll use a placeholder variable name for now, assuming the template is configured
+    return sendTemplateEmail({
+        email: params.email,
+        subject: `Your Photos from ${params.studioName} are Ready!`,
+        templateId: process.env.TERMII_BOOKING_DELIVERY_TEMPLATE_ID ?? "",
+        variables: {
+            client_name: params.clientName,
+            studio_name: params.studioName,
+            download_link: params.downloadLink,
+            access_code: params.accessCode,
+        },
+    }).catch(e => console.error("Termii Delivery Email failed", e));
+}
+
+export async function sendDeliverySMS(params: {
+    phone: string;
+    clientName: string;
+    studioName: string;
+    downloadLink: string;
+    accessCode: string;
+}) {
+    const message = `Hi ${params.clientName}, your photos from ${params.studioName} are ready! Download them here: ${params.downloadLink} (Access Code: ${params.accessCode})`;
+    return sendSMS(params.phone, message).catch(e => console.error("Termii Delivery SMS failed", e));
+}
+
+export async function sendDeliveryWhatsApp(params: {
+    phone: string;
+    clientName: string;
+    studioName: string;
+    downloadLink: string;
+    accessCode: string;
+}) {
+    const message = `Hi ${params.clientName}! 👋\n\nYour photos from *${params.studioName}* are ready for download.\n\nAccess your gallery here: ${params.downloadLink}\n*Access Code:* ${params.accessCode}\n\nThank you for choosing us!`;
+    return sendWhatsApp(params.phone, message).catch(e => console.error("Termii Delivery WhatsApp failed", e));
+}

@@ -242,7 +242,7 @@ model ServiceVariant {
 
   locationType        LocationType
   basePrice           Decimal      @db.Decimal(12, 2)
-  maxPrice            Decimal?     @db.Decimal(12, 2) // for range-priced services
+  maxPrice            Decimal?     @db.Decimal(12, 2)
   sessionDurationMins Int
   logisticsIncluded   Boolean      @default(true)
 
@@ -252,7 +252,7 @@ model ServiceVariant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([serviceId, locationType]) // one variant per location type per service
+  @@unique([serviceId, locationType])
   @@index([serviceId])
   @@map("service_variant")
 }
@@ -436,10 +436,13 @@ model Booking {
   serviceVariant   ServiceVariant? @relation(fields: [serviceVariantId], references: [id])
   serviceVariantId String?
 
+  accessCode       String?         @unique
+
   notifications Notification[]
 
   @@index([studioId])
   @@index([clientId])
+  @@index([accessCode])
   @@map("booking")
 }
 

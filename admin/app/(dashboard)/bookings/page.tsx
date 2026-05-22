@@ -44,9 +44,16 @@ export default async function GlobalBookingsPage() {
         }
     });
 
+    // Serialize Prisma Decimal objects to plain numbers for Client Components
+    const serializedBookings = JSON.parse(JSON.stringify(allBookings, (_key, value) =>
+        value !== null && typeof value === "object" && typeof value.toNumber === "function"
+            ? value.toNumber()
+            : value
+    ));
+
     return (
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">
-            <GlobalBookingsClient bookings={allBookings as CalendarBooking[]} />
+            <GlobalBookingsClient bookings={serializedBookings as CalendarBooking[]} />
         </div>
     );
 }

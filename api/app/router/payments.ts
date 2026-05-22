@@ -5,6 +5,7 @@ import { contract } from "@/app/contract";
 import { BaseContext, optionalAuthMiddleware } from "./middleware";
 import { paystackFetch } from "@/lib/paystack";
 import { sendPurchaseAccessEmail, sendPurchaseAccessSMS, sendBookingPaymentEmail } from "@/lib/termii";
+import { Prisma } from "@/lib/generated/prisma/client";
 import crypto from "crypto";
 
 const os = implement(contract).$context<BaseContext>();
@@ -53,84 +54,102 @@ export const verifyPurchase = os.payment.verifyPurchase
             const response = await paystackFetch<{ data?: { status?: string } }>(`/transaction/verify/${input.reference}`);
             
             if (response.data?.status === "success") {
-                // Update payment status
-                await prisma.payment.update({
-                    where: { id: payment.id },
-                    data: { status: "PAID" }
-                });
-
-                // ── Product purchase ──────────────────────────────────
                 const paystackRes = payment.paystackResponse as { pendingProduct?: { title: string }, pendingBuyer?: { name: string, email: string }, productId?: string, buyerId?: string } | null;
-                if (paystackRes?.pendingProduct && paystackRes?.pendingBuyer) {
-                    const productId = paystackRes.productId;
-                    const buyerId = paystackRes.buyerId;
-                    
-                    if (productId && buyerId && !payment.productAccess) {
-                        await prisma.productAccess.create({
-                            data: {
-                                productId,
-                                buyerId,
-                                paymentId: payment.id,
-                            }
+                const isProductPurchase = Boolean(paystackRes?.pendingProduct && paystackRes?.pendingBuyer);
+                const productId = paystackRes?.productId;
+                const buyerId = paystackRes?.buyerId;
+
+                try {
+                    await prisma.$transaction(async (tx) => {
+                        await tx.payment.update({
+                            where: { id: payment.id, status: "PENDING" },
+                            data: { status: "PAID" },
                         });
-                    }
 
-                    // Generate a magic link token and send it to the buyer
-                    if (buyerId) {
-                        try {
-                            const token = generateToken();
-                            await prisma.buyerAccessToken.create({
-                                data: {
-                                    buyerId,
-                                    token,
-                                    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-                                    used: false,
-                                },
-                            });
-
-                            const accessLink = `${PORTAL_URL}/shop/access/${token}`;
-                            const buyerEmail = paystackRes.pendingBuyer?.email;
-                            const buyerName = paystackRes.pendingBuyer?.name || "Customer";
-                            const productTitle = paystackRes.pendingProduct?.title || "Digital Product";
-
-                            // Send email notification
-                            if (buyerEmail) {
-                                const emailResult = await sendPurchaseAccessEmail({
-                                    email: buyerEmail,
-                                    buyerName,
-                                    productTitle,
-                                    accessLink,
-                                    amount: formatCurrency(Number(payment.amount)),
-                                }).catch(err => {
-                                    console.error("[verifyPurchase] Purchase email failed:", err);
-                                    return null;
+                        if (isProductPurchase && productId && buyerId && !payment.productAccess) {
+                            try {
+                                await tx.productAccess.create({
+                                    data: {
+                                        productId,
+                                        buyerId,
+                                        paymentId: payment.id,
+                                    },
                                 });
-                                if (!emailResult) {
-                                    console.warn("[verifyPurchase] Email delivery failed — check Termii logs");
+                            } catch (error) {
+                                const prismaError = error as Prisma.PrismaClientKnownRequestError;
+                                if (prismaError.code !== "P2002") {
+                                    throw error;
                                 }
+                                // Duplicate access already exists, treat as already processed.
                             }
-
-                            // Also send SMS if we have the phone number
-                            const buyer = await prisma.buyer.findUnique({ where: { id: buyerId } });
-                            if (buyer?.phone) {
-                                await sendPurchaseAccessSMS({
-                                    phone: buyer.phone,
-                                    productTitle,
-                                    accessLink,
-                                }).catch(err => {
-                                    console.error("[verifyPurchase] SMS failed:", err);
-                                });
-                            }
-
-                            console.log(`[verifyPurchase] Access link sent to ${buyerEmail}: ${accessLink}`);
-                        } catch (notifErr) {
-                            // Don't fail the verification if notifications fail
-                            console.error("[verifyPurchase] Notification error:", notifErr);
                         }
+                    });
+                } catch (error) {
+                    const prismaError = error as Prisma.PrismaClientKnownRequestError;
+                    if (prismaError.code === "P2025") {
+                        return {
+                            verified: true,
+                            buyerId: payment.productAccess?.buyerId,
+                        };
                     }
-                    
+                    throw error;
+                }
+
+                if (isProductPurchase && buyerId) {
+                    try {
+                        const token = generateToken();
+                        await prisma.buyerAccessToken.create({
+                            data: {
+                                buyerId,
+                                token,
+                                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+                                used: false,
+                            },
+                        });
+
+                        const accessLink = `${PORTAL_URL}/shop/access/${token}`;
+                        const buyerEmail = paystackRes.pendingBuyer?.email;
+                        const buyerName = paystackRes.pendingBuyer?.name || "Customer";
+                        const productTitle = paystackRes.pendingProduct?.title || "Digital Product";
+
+                        // Send email notification
+                        if (buyerEmail) {
+                            const emailResult = await sendPurchaseAccessEmail({
+                                email: buyerEmail,
+                                buyerName,
+                                productTitle,
+                                accessLink,
+                                amount: formatCurrency(Number(payment.amount)),
+                            }).catch(err => {
+                                console.error("[verifyPurchase] Purchase email failed:", err);
+                                return null;
+                            });
+                            if (!emailResult) {
+                                console.warn("[verifyPurchase] Email delivery failed — check Termii logs");
+                            }
+                        }
+
+                        // Also send SMS if we have the phone number
+                        const buyer = await prisma.buyer.findUnique({ where: { id: buyerId } });
+                        if (buyer?.phone) {
+                            await sendPurchaseAccessSMS({
+                                phone: buyer.phone,
+                                productTitle,
+                                accessLink,
+                            }).catch(err => {
+                                console.error("[verifyPurchase] SMS failed:", err);
+                            });
+                        }
+
+                        console.log(`[verifyPurchase] Access link sent for buyer ${buyerId}`);
+                    } catch (notifErr) {
+                        // Don't fail the verification if notifications fail
+                        console.error("[verifyPurchase] Notification error:", notifErr);
+                    }
+
                     return { verified: true, buyerId };
                 }
+
 
                 // ── Booking payment ──────────────────────────────────
                 if (payment.bookingId && payment.booking) {

@@ -6,14 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Edit2Icon, Loader2, PlusIcon, MinusIcon } from "lucide-react";
+import { Edit2Icon, Loader2 } from "lucide-react";
 import { UpdateClient } from "@/lib/actions/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { tryCatch } from "@/hooks/try-catch";
-import { Client, ClientSchema, ClientType, ClientTypeEnum } from "@/lib/schemas/client";
+import { Client, ClientSchema, ClientTypeEnum } from "@/lib/schemas/client";
 import { Field, FieldLabel } from "@/components/ui/field";
 
 interface EditClientDialogProps {
@@ -32,38 +32,18 @@ export function EditClientDialog({ clientId, initialData, triggerItem }: EditCli
         defaultValues: {
             name: initialData.name,
             email: initialData.email,
-            phone: initialData.phone.length > 0 ? initialData.phone : [""],
+            phone: initialData.phone || "",
             address: initialData.address,
             notes: initialData.notes,
-            clientType: initialData.clientType,
+            type: initialData.type,
         }
     });
 
-    const handlePhoneChange = (index: number, value: string) => {
-        const currentPhones = [...form.getValues("phone")];
-        currentPhones[index] = value;
-        form.setValue("phone", currentPhones);
-    };
-
-    const addPhoneField = () => {
-        const currentPhones = [...form.getValues("phone")];
-        form.setValue("phone", [...currentPhones, ""]);
-    };
-
-    const removePhoneField = (index: number) => {
-        const currentPhones = [...form.getValues("phone")];
-        if (currentPhones.length > 1) {
-            currentPhones.splice(index, 1);
-            form.setValue("phone", currentPhones);
-        }
-    };
-
     const handleSubmit = (data: Client) => {
         startTransition(async () => {
-            // Filter out empty phone fields before submission
             const cleanedData = {
                 ...data,
-                phone: data.phone.filter(p => p.trim() !== ""),
+                phone: data.phone.trim(),
             };
 
             const parsedData = ClientSchema.safeParse(cleanedData);
@@ -116,7 +96,7 @@ export function EditClientDialog({ clientId, initialData, triggerItem }: EditCli
                     />
                     
                     <Controller
-                        name="clientType"
+                        name="type"
                         control={form.control}
                         render={({ field }) => (
                             <Field>
@@ -150,38 +130,16 @@ export function EditClientDialog({ clientId, initialData, triggerItem }: EditCli
                         )}
                     />
                     
-                    <Field>
-                        <FieldLabel>Phone Numbers</FieldLabel>
-                        <div className="space-y-2">
-                            {form.watch("phone").map((phone, index) => (
-                                <div key={index} className="flex gap-2">
-                                    <Input
-                                        value={phone}
-                                        onChange={(e) => handlePhoneChange(index, e.target.value)}
-                                        placeholder="Phone number"
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="icon"
-                                        onClick={() => removePhoneField(index)}
-                                        disabled={form.watch("phone").length <= 1}
-                                    >
-                                        <MinusIcon className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            ))}
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={addPhoneField}
-                                className="w-full text-xs"
-                            >
-                                <PlusIcon className="mr-2 h-4 w-4" />
-                                Add Another Phone
-                            </Button>
-                        </div>
-                    </Field>
+                    <Controller
+                        name="phone"
+                        control={form.control}
+                        render={({ field }) => (
+                            <Field>
+                                <FieldLabel>Phone Number</FieldLabel>
+                                <Input {...field} placeholder="Phone number" required />
+                            </Field>
+                        )}
+                    />
 
                     <Controller
                         name="address"

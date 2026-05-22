@@ -32,7 +32,7 @@ export const BookingSchema = z.object({
     sessionCount:       z.number().min(1, "At least 1 session must be booked"),
     notes:              z.string().optional(),
 
-    totalAmount:        z.coerce.number().positive("Total amount must be greater than 0"),
+    totalAmount:        z.number().positive("Total amount must be greater than 0"),
     paymentPlan:        PaymentPlanEnum,
 
     bookingStatus:      BookingStatusEnum,
@@ -82,13 +82,14 @@ export const PublicBookingSchema = z.object({
     existingClientId:         z.string().optional(),
 
     selectedServiceId:        z.string().min(1, "Please select a service"),
-    selectedServiceVariantId: z.string().optional(),
+    selectedVariantId:        z.string().min(1, "Please select a service option"),
     selectedAddonIds:         z.array(z.string()),
     sessionCount:             z.number().min(1, "Must be at least 1"),
 
     bookingDate:              z.string().min(1, "Please select a date"),
     bookingTime:              z.string().min(1, "Please select a time"),
     notes:                    z.string().optional(),
+    paymentPlan:              PaymentPlanEnum,
 });
 export type PublicBookingInput = z.infer<typeof PublicBookingSchema>;
 

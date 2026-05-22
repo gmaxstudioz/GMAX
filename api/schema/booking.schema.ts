@@ -5,10 +5,12 @@ import { z } from "zod";
 export const BookingStatusEnum = z.enum(["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"]);
 export const PaymentStatusEnum = z.enum(["PENDING", "PAID", "PARTIALLY_PAID", "CANCELLED"]);
 export const DeliveryStatusEnum = z.enum(["PENDING", "DELIVERED", "CANCELLED"]);
+export const PaymentPlanEnum = z.enum(["QUARTER", "HALF", "FULL"]);
  
 export type BookingStatus = z.infer<typeof BookingStatusEnum>;
 export type PaymentStatus = z.infer<typeof PaymentStatusEnum>;
 export type DeliveryStatus = z.infer<typeof DeliveryStatusEnum>;
+export type PaymentPlan = z.infer<typeof PaymentPlanEnum>;
 
 
 
@@ -111,11 +113,13 @@ export const PublicBookingSchema = BookingSchema.omit({
     clientPhone: z.string().optional(),
 
     selectedServiceId: z.string().min(1, "Please select a service"),
+    selectedVariantId: z.string().min(1, "Please select a service option"),
     selectedAddonIds: z.array(z.string()),
     sessionCount: z.number().min(1, "Must be at least 1"),
 
     bookingDate: z.string().min(1, "Please select a date"),
     notes: z.string().optional(),
+    paymentPlan: PaymentPlanEnum.default("FULL"),
 }).superRefine((val, ctx) => {
     if (!val.useExisting && !val.clientPhone) {
         ctx.addIssue({
@@ -175,3 +179,20 @@ export const GetBookingSchema = z.object({
     bookingId: z.string().min(1, "Booking ID is required"),
 });
 export type GetBookingInput = z.infer<typeof GetBookingSchema>;
+
+// Verify booking payment schema (public)
+export const VerifyBookingSchema = z.object({
+    reference: z.string().min(1, "Reference is required"),
+});
+
+export const VerifyBookingOutputSchema = z.object({
+    status: z.enum(["PENDING", "COMPLETED", "EXPIRED", "FAILED"]),
+    clientName: z.string(),
+    serviceName: z.string(),
+    bookingDate: z.string(),
+    totalAmount: z.number(),
+    amountPaid: z.number(),
+    paymentPlan: PaymentPlanEnum,
+    reference: z.string(),
+    bookingId: z.string().nullable(),
+});

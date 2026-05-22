@@ -248,8 +248,8 @@ export function PortfolioView({
                                 categories={allCategories}
                                 onSuccess={(item) => {
                                     setItems((prev) => [...prev, item]);
-                                    setUploadDialogOpen(false);
                                 }}
+                                onComplete={() => setUploadDialogOpen(false)}
                             />
                         </Dialog>
                     </div>
@@ -393,9 +393,11 @@ function PortfolioCard({
 function UploadDialog({
     categories,
     onSuccess,
+    onComplete,
 }: {
     categories: string[];
     onSuccess: (item: PortfolioItemType) => void;
+    onComplete?: () => void;
 }) {
     const [files, setFiles] = useState<File[]>([]);
     const [category, setCategory] = useState("General");
@@ -421,37 +423,91 @@ function UploadDialog({
 
         for (const file of files) {
             try {
-                // 1. Get presigned URL
-                const presignRes = await fetch("/api/s3/upload", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        fileName: file.name,
-                        fileType: file.type,
-                        fileSize: file.size,
-                        isImage: true,
-                        directory: "portfolio",
-                    }),
-                });
+                let finalKey = "";
 
-                if (!presignRes.ok) throw new Error("Failed to get upload URL");
-                const { presignedUrl, key } = await presignRes.json();
+                if (file.size <= 50 * 1024 * 1024) {
+                    // Standard Upload
+                    const presignRes = await fetch("/api/s3/upload", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            fileName: file.name,
+                            fileType: file.type || "application/octet-stream",
+                            fileSize: file.size,
+                            isImage: true,
+                            directory: "portfolio",
+                        }),
+                    });
 
-                // 2. Upload to R2
-                const uploadRes = await fetch(presignedUrl, {
-                    method: "PUT",
-                    body: file,
-                    headers: { "Content-Type": file.type },
-                });
+                    if (!presignRes.ok) throw new Error("Failed to get upload URL");
+                    const { presignedUrl, key } = await presignRes.json();
+                    finalKey = key;
 
-                if (!uploadRes.ok) throw new Error("Upload failed");
+                    await new Promise<void>((resolve, reject) => {
+                        const xhr = new XMLHttpRequest();
+                        xhr.upload.addEventListener("progress", (e) => {
+                            if (e.lengthComputable) {
+                                // Progress is handled at the file level in the loop for now
+                            }
+                        });
+                        xhr.addEventListener("load", () => {
+                            if (xhr.status === 200 || xhr.status === 204) resolve();
+                            else reject(new Error(`Server returned ${xhr.status} ${xhr.statusText}`));
+                        });
+                        xhr.addEventListener("error", () => reject(new Error("Network error (Possible CORS or ad-blocker issue)")));
+                        xhr.open("PUT", presignedUrl);
+                        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+                        xhr.send(file);
+                    });
+                } else {
+                    // Multipart Upload
+                    const CHUNK_SIZE = 10 * 1024 * 1024;
+                    const initiateRes = await fetch("/api/s3/multipart/initiate", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ fileName: file.name, fileType: file.type, directory: "portfolio" }),
+                    });
+                    if (!initiateRes.ok) throw new Error("Failed to initiate multipart upload");
+                    const { uploadId, key } = await initiateRes.json();
+                    finalKey = key;
+
+                    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+                    const parts: { ETag: string; PartNumber: number }[] = [];
+
+                    for (let i = 0; i < totalChunks; i++) {
+                        const partNumber = i + 1;
+                        const chunk = file.slice(i * CHUNK_SIZE, Math.min((i + 1) * CHUNK_SIZE, file.size));
+
+                        const partRes = await fetch("/api/s3/multipart/presign-part", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ key, uploadId, partNumber }),
+                        });
+                        if (!partRes.ok) throw new Error(`Failed to get presigned URL for part ${partNumber}`);
+                        const { presignedUrl } = await partRes.json();
+
+                        const putRes = await fetch(presignedUrl, { method: "PUT", body: chunk, headers: { "Content-Type": file.type } });
+                        if (!putRes.ok) throw new Error(`Part ${partNumber} upload failed`);
+
+                        const etag = putRes.headers.get("ETag");
+                        if (!etag) throw new Error(`ETag missing for part ${partNumber} — check R2 CORS ExposeHeaders config`);
+                        parts.push({ ETag: etag, PartNumber: partNumber });
+                    }
+
+                    const completeRes = await fetch("/api/s3/multipart/complete", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ key, uploadId, parts }),
+                    });
+                    if (!completeRes.ok) throw new Error("Failed to complete multipart upload");
+                }
 
                 // 3. Create DB record
                 const { data: result, error } = await tryCatch(
                     createPortfolioItem({
                         title: file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " "),
                         category: effectiveCategory,
-                        r2Key: key,
+                        r2Key: finalKey,
                         fileName: file.name,
                         fileSize: file.size,
                         mimeType: file.type,
@@ -464,8 +520,9 @@ function UploadDialog({
                     onSuccess(result.data as PortfolioItemType);
                     uploaded++;
                 }
-            } catch (err) {
-                toast.error(`Upload failed: ${file.name}`);
+            } catch (err: any) {
+                console.error("Upload error details:", err);
+                toast.error(`Failed to upload ${file.name}: ${err?.message || "Unknown error"}`);
             }
 
             setProgress(Math.round(((files.indexOf(file) + 1) / files.length) * 100));
@@ -478,6 +535,8 @@ function UploadDialog({
         if (uploaded > 0) {
             toast.success(`${uploaded} ${uploaded === 1 ? "image" : "images"} uploaded!`);
         }
+
+        onComplete?.();
     };
 
     return (

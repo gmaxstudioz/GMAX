@@ -10,6 +10,8 @@ import {
     PublicBookingSchema,
     PublicBookingOutputSchema,
     CheckClientSchema,
+    VerifyBookingSchema,
+    VerifyBookingOutputSchema,
 } from "@/schema/booking.schema";
 import {
     BookingOutputSchema,
@@ -139,3 +141,15 @@ export const CheckClientContract = baseContract
     })
     .input(CheckClientSchema)
     .output(CheckClientOutputSchema);
+
+export const VerifyBookingContract = baseContract
+    .route({
+        method: "GET",
+        path: "/bookings/verify",
+        successStatus: 200,
+        summary: "Verify a public booking payment",
+        description: "Check the status of a booking payment by reference",
+        tags: ["Bookings"],
+    })
+    .input(VerifyBookingSchema)
+    .output(VerifyBookingOutputSchema);

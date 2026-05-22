@@ -280,7 +280,7 @@ export type StudioSessionScalarWhereWithAggregatesInput = {
 }
 
 export type StudioSessionCreateInput = {
-  id: string
+  id?: string
   name: string
   duration?: number
   createdAt?: Date | string
@@ -290,7 +290,7 @@ export type StudioSessionCreateInput = {
 }
 
 export type StudioSessionUncheckedCreateInput = {
-  id: string
+  id?: string
   name: string
   duration?: number
   studioId: string
@@ -320,7 +320,7 @@ export type StudioSessionUncheckedUpdateInput = {
 }
 
 export type StudioSessionCreateManyInput = {
-  id: string
+  id?: string
   name: string
   duration?: number
   studioId: string
@@ -460,7 +460,7 @@ export type StudioSessionUpdateOneRequiredWithoutServicesNestedInput = {
 }
 
 export type StudioSessionCreateWithoutStudioInput = {
-  id: string
+  id?: string
   name: string
   duration?: number
   createdAt?: Date | string
@@ -469,7 +469,7 @@ export type StudioSessionCreateWithoutStudioInput = {
 }
 
 export type StudioSessionUncheckedCreateWithoutStudioInput = {
-  id: string
+  id?: string
   name: string
   duration?: number
   createdAt?: Date | string
@@ -516,7 +516,7 @@ export type StudioSessionScalarWhereInput = {
 }
 
 export type StudioSessionCreateWithoutServicesInput = {
-  id: string
+  id?: string
   name: string
   duration?: number
   createdAt?: Date | string
@@ -525,7 +525,7 @@ export type StudioSessionCreateWithoutServicesInput = {
 }
 
 export type StudioSessionUncheckedCreateWithoutServicesInput = {
-  id: string
+  id?: string
   name: string
   duration?: number
   studioId: string
@@ -568,7 +568,7 @@ export type StudioSessionUncheckedUpdateWithoutServicesInput = {
 }
 
 export type StudioSessionCreateManyStudioInput = {
-  id: string
+  id?: string
   name: string
   duration?: number
   createdAt?: Date | string

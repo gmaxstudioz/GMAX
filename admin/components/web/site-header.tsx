@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { CirclePlusIcon, UsersIcon, WrenchIcon, Building2Icon, CalendarPlusIcon } from "lucide-react"
@@ -94,11 +94,9 @@ export async function SiteHeader() {
         <div className="md:hidden">
           {(canCreateBooking || canCreateClient || canCreateService || canCreateStudio) && (
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm">
+              <DropdownMenuTrigger className={buttonVariants({ size: "sm" })}>
                   <CirclePlusIcon className="h-4 w-4" />
                   <span className="sr-only">Create New</span>
-                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 {canCreateBooking && (

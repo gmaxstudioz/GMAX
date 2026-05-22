@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   CalendarIcon,
   CircleUserIcon,
@@ -50,7 +51,12 @@ export function GlobalSearch() {
 
   React.useEffect(() => {
     if (open && !data) {
-      getGlobalSearchData().then(setData);
+      getGlobalSearchData()
+        .then(setData)
+        .catch((error) => {
+          console.error("Failed to load global search data:", error);
+          toast.error("Failed to load search data. Please try again.");
+        });
     }
   }, [open, data]);
 

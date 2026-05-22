@@ -20,7 +20,7 @@ export async function CreateClient(values: Client, studioId: string): Promise<Ap
                 phone: values.phone,
                 address: values.address,
                 notes: values.notes,
-                type: values.clientType,
+                type: values.type,
                 studio: {
                     connect: { id: studioId },
                 },
@@ -86,7 +86,7 @@ export async function UpdateClient(values: Client, clientId: string): Promise<Ap
                 phone: values.phone,
                 address: values.address,
                 notes: values.notes,
-                type: values.clientType,
+                type: values.type,
             },
         });
 

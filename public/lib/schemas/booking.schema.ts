@@ -9,10 +9,12 @@ export const publicBookingSchema = z.object({
     existingClientId: z.string().optional(),
     clientPhone: z.string().optional(),
     selectedServiceId: z.string().min(1, "Please select a service"),
+    selectedVariantId: z.string().min(1, "Please select a service option"),
     selectedAddonIds: z.array(z.string()),
     sessionCount: z.number().min(1, "Must be at least 1"),
     bookingDate: z.string().min(1, "Please select a date"),
     notes: z.string().optional(),
+    paymentPlan: z.enum(["QUARTER", "HALF", "FULL"]).default("FULL"),
 }).superRefine((val, ctx) => {
     if (!val.useExisting && !val.clientPhone) {
         ctx.addIssue({
@@ -30,4 +32,4 @@ export const publicBookingSchema = z.object({
     }
 });
 
-export type PublicBookingInput = z.infer<typeof publicBookingSchema>;
+export type PublicBookingInput = z.input<typeof publicBookingSchema>;

@@ -47,7 +47,7 @@ export async function checkClientName(studioId: string, name: string) {
         });
 
         if (existing) {
-            const firstPhone = existing.phone[0] ?? "";
+            const firstPhone = existing.phone ?? "";
 
             // Strip non-digits before masking so +2348012345678 works correctly.
             const digitsOnly = firstPhone.replace(/\D/g, "");
@@ -118,15 +118,10 @@ export async function createPublicBooking(data: {
         let clientId = data.existingClientId;
 
         if (!clientId) {
-            const phones = data.clientPhone
-                .split(",")
-                .map((p) => p.trim())
-                .filter(Boolean);
-
             const client = await prisma.client.create({
                 data: {
                     name: data.clientName,
-                    phone: phones,
+                    phone: data.clientPhone.trim(),
                     email: data.clientEmail || null,
                     type: "regular",
                     studioId: data.studioId,
@@ -143,11 +138,22 @@ export async function createPublicBooking(data: {
         const [y, m, d] = data.bookingDate.split("-").map(Number);
         const bookingDateUTC = new Date(Date.UTC(y, m - 1, d));
 
+        const service = await prisma.service.findUnique({ where: { id: data.serviceId }, include: { variants: true } });
+        // Clean addon composite IDs to UUIDs for DB lookup
+        const cleanAddonIds = data.addonIds?.map(id => id.split(":")[0]) || [];
+        const addonsList = cleanAddonIds.length ? await prisma.service.findMany({ where: { id: { in: cleanAddonIds } }, include: { variants: true } }) : [];
+
+        const servicePrice = Number(service?.variants?.[0]?.basePrice ?? 0);
+        const sessionTotal = servicePrice * data.sessionCount;
+        const addonsTotal = addonsList.reduce((sum, a) => sum + Number(a.variants?.[0]?.basePrice ?? 0), 0);
+        const grandTotal = sessionTotal + addonsTotal;
+
         const booking = await prisma.booking.create({
             data: {
                 bookingDate: bookingDateUTC,
                 sessionCount: data.sessionCount,
                 notes: data.notes || null,
+                totalAmount: grandTotal,
                 bookingStatus: "PENDING",
                 paymentStatus: "PENDING",
                 deliveryStatus: "PENDING",
@@ -156,18 +162,12 @@ export async function createPublicBooking(data: {
                 clientId,
                 memberId: defaultMember.id,
                 createdBy: defaultMember.userId,
-                addons: data.addonIds?.length
-                    ? { connect: data.addonIds.map((id) => ({ id })) }
+                addons: cleanAddonIds.length
+                    ? { connect: cleanAddonIds.map((id) => ({ id })) }
                     : undefined,
             },
-            include: { service: true, addons: true, client: true },
+            include: { client: true },
         });
-
-        // Calculate total
-        const servicePrice = booking.service?.salePrice ?? booking.service?.price ?? 0;
-        const sessionTotal = servicePrice * booking.sessionCount;
-        const addonsTotal = booking.addons.reduce((sum, a) => sum + (a.salePrice ?? a.price), 0);
-        const grandTotal = sessionTotal + addonsTotal;
 
         const reference = `gmax-pub-${uuidv4().slice(0, 8)}`;
         const receiptNumber = generateReceiptNumber();

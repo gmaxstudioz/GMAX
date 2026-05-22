@@ -1,7 +1,6 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { v4 as uuidv4 } from "uuid";
 import { revalidatePath } from "next/cache";
 import { CategorySchema, CategoryPayload, ServiceSchema, ServicePayload } from "@/lib/schemas/service";
 import { auth } from "@/lib/auth";
@@ -80,6 +79,35 @@ export async function createService(data: ServicePayload) {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
+        let studioId: string | null = null;
+
+        if (parsed.data.categoryId) {
+            const category = await prisma.category.findUnique({
+                where: { id: parsed.data.categoryId },
+                select: { studioId: true }
+            });
+            if (!category) return { status: "error", message: "Category not found" };
+            studioId = category.studioId;
+        }
+
+        if (!studioId && parsed.data.studioSessionId) {
+            const studioSession = await prisma.studioSession.findUnique({
+                where: { id: parsed.data.studioSessionId },
+                select: { studioId: true }
+            });
+            if (!studioSession) return { status: "error", message: "Studio session not found" };
+            studioId = studioSession.studioId;
+        }
+
+        if (!studioId) {
+            return { status: "error", message: "Unable to determine owning studio" };
+        }
+
+        const member = await prisma.member.findFirst({
+            where: { userId: session.user.id, studioId }
+        });
+        if (!member) return { status: "error", message: "Unauthorized access to studio" };
+
         // 2. Transactional creation
         const newService = await prisma.service.create({
             data: {
@@ -96,7 +124,17 @@ export async function createService(data: ServicePayload) {
                         basePrice: v.basePrice,
                         maxPrice: v.maxPrice,
                         sessionDurationMins: v.sessionDurationMins,
-                        logisticsIncluded: v.logisticsIncluded
+                        logisticsIncluded: v.logisticsIncluded,
+                        ...(v.deliverables ? {
+                            deliverables: {
+                                create: v.deliverables.map(d => ({
+                                    label: d.label,
+                                    quantity: d.quantity,
+                                    detail: d.detail,
+                                    isFree: d.isFree,
+                                })),
+                            },
+                        } : {}),
                     }))
                 }
             },
@@ -104,7 +142,7 @@ export async function createService(data: ServicePayload) {
 
         revalidatePath(`/studios/[slug]`, "page");
         return { status: "success", message: "Service created with pricing variants", data: newService };
-    } catch (error) {
+    } catch {
         return { status: "error", message: "Failed to create service" };
     }
 }
@@ -120,27 +158,88 @@ export async function updateService(id: string, data: ServicePayload) {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        // We delete old variants and create new ones to ensure clean sync
-        const updatedService = await prisma.service.update({
-            where: { id },
-            data: {
-                name: parsed.data.name,
-                isAddon: parsed.data.isAddon,
-                isActive: parsed.data.isActive,
-                description: parsed.data.description,
-                features: parsed.data.features,
-                studioSessionId: parsed.data.studioSessionId,
-                variants: {
-                    deleteMany: {},
-                    create: parsed.data.variants.map(v => ({
-                        locationType: v.locationType,
-                        basePrice: v.basePrice,
-                        maxPrice: v.maxPrice,
-                        sessionDurationMins: v.sessionDurationMins,
-                        logisticsIncluded: v.logisticsIncluded
-                    }))
+        const existingVariants = await prisma.serviceVariant.findMany({
+            where: { serviceId: id },
+            include: { _count: { select: { bookings: true } } },
+        });
+
+        const inputLocationTypes = parsed.data.variants.map(v => v.locationType);
+        const variantsToRemove = existingVariants.filter(variant => !inputLocationTypes.includes(variant.locationType));
+        const variantIdsToRemove = variantsToRemove.map(variant => variant.id);
+
+        if (variantIdsToRemove.length > 0) {
+            const referencedBookingCount = await prisma.booking.count({
+                where: { serviceVariantId: { in: variantIdsToRemove } },
+            });
+
+            if (referencedBookingCount > 0) {
+                return {
+                    status: "error",
+                    message: "Unable to remove pricing variants that are referenced by existing bookings.",
+                };
+            }
+        }
+
+        const existingVariantByLocation = new Map(existingVariants.map(variant => [variant.locationType, variant]));
+
+        const updatedService = await prisma.$transaction(async tx => {
+            const serviceUpdate = tx.service.update({
+                where: { id },
+                data: {
+                    name: parsed.data.name,
+                    isAddon: parsed.data.isAddon,
+                    isActive: parsed.data.isActive,
+                    description: parsed.data.description,
+                    features: parsed.data.features,
+                    studioSessionId: parsed.data.studioSessionId,
+                },
+            });
+
+            const variantPromises = parsed.data.variants.map(variant => {
+                const data = {
+                    locationType: variant.locationType,
+                    basePrice: variant.basePrice,
+                    maxPrice: variant.maxPrice,
+                    sessionDurationMins: variant.sessionDurationMins,
+                    logisticsIncluded: variant.logisticsIncluded,
+                    ...(variant.deliverables ? {
+                        deliverables: {
+                            deleteMany: {},
+                            create: variant.deliverables.map(d => ({
+                                label: d.label,
+                                quantity: d.quantity,
+                                detail: d.detail,
+                                isFree: d.isFree,
+                            })),
+                        },
+                    } : {}),
+                };
+
+                const existingVariant = existingVariantByLocation.get(variant.locationType);
+                if (existingVariant) {
+                    return tx.serviceVariant.update({
+                        where: { id: existingVariant.id },
+                        data,
+                    });
                 }
-            },
+
+                return tx.serviceVariant.create({
+                    data: {
+                        serviceId: id,
+                        ...data,
+                    },
+                });
+            });
+
+            const [updated] = await Promise.all([serviceUpdate, ...variantPromises]);
+
+            if (variantIdsToRemove.length > 0) {
+                await tx.serviceVariant.deleteMany({
+                    where: { id: { in: variantIdsToRemove } },
+                });
+            }
+
+            return updated;
         });
 
         revalidatePath(`/studios/[slug]`, "page");
@@ -152,6 +251,20 @@ export async function updateService(id: string, data: ServicePayload) {
 
 export async function deleteCategory(id: string) {
     try {
+        const existing = await prisma.category.findUnique({
+            where: { id },
+            select: { studioId: true }
+        });
+        if (!existing) return { status: "error", message: "Category not found" };
+
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (!session?.user) return { status: "error", message: "Unauthorized" };
+
+        const member = await prisma.member.findFirst({
+            where: { userId: session.user.id, studioId: existing.studioId }
+        });
+        if (!member) return { status: "error", message: "Unauthorized access to studio" };
+
         await prisma.category.delete({ where: { id } });
         revalidatePath(`/studios/[slug]`, "page");
         return { status: "success", message: "Category deleted" };
@@ -162,6 +275,43 @@ export async function deleteCategory(id: string) {
 
 export async function deleteService(id: string) {
     try {
+        const existing = await prisma.service.findUnique({
+            where: { id },
+            select: { categoryId: true, studioSessionId: true }
+        });
+        if (!existing) return { status: "error", message: "Service not found" };
+
+        let studioId: string | null = null;
+        if (existing.categoryId) {
+            const category = await prisma.category.findUnique({
+                where: { id: existing.categoryId },
+                select: { studioId: true }
+            });
+            if (!category) return { status: "error", message: "Category not found" };
+            studioId = category.studioId;
+        }
+
+        if (!studioId && existing.studioSessionId) {
+            const studioSession = await prisma.studioSession.findUnique({
+                where: { id: existing.studioSessionId },
+                select: { studioId: true }
+            });
+            if (!studioSession) return { status: "error", message: "Studio session not found" };
+            studioId = studioSession.studioId;
+        }
+
+        if (!studioId) {
+            return { status: "error", message: "Unable to determine owning studio" };
+        }
+
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (!session?.user) return { status: "error", message: "Unauthorized" };
+
+        const member = await prisma.member.findFirst({
+            where: { userId: session.user.id, studioId }
+        });
+        if (!member) return { status: "error", message: "Unauthorized access to studio" };
+
         await prisma.service.delete({ where: { id } });
         revalidatePath(`/studios/[slug]`, "page");
         return { status: "success", message: "Service deleted" };

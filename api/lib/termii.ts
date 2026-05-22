@@ -11,6 +11,7 @@ const TERMII_BASE = process.env.TERMII_BASE_URL ?? "https://v3.api.termii.com";
 const TERMII_API_KEY = process.env.TERMII_API_KEY ?? "";
 const TERMII_SMS_SENDER = process.env.TERMII_SMS_SENDER_ID ?? "GMAX Studio";
 const TERMII_EMAIL_CONFIG_ID = process.env.TERMII_EMAIL_CONFIG_ID ?? "";
+const TERMII_ACCESS_LINK_TEMPLATE_ID = process.env.TERMII_ACCESS_LINK_TEMPLATE_ID ?? "";
 const TERMII_INVITE_TEMPLATE_ID = process.env.TERMII_INVITE_TEMPLATE_ID ?? "";
 const TERMII_RESET_TEMPLATE_ID = process.env.TERMII_RESET_TEMPLATE_ID ?? "";
 const TERMII_PURCHASE_TEMPLATE_ID = process.env.TERMII_PURCHASE_TEMPLATE_ID ?? "";
@@ -191,6 +192,30 @@ export async function sendInvitationWhatsApp(params: {
 /**
  * Send a purchase access link email after successful payment.
  */
+export async function sendAccessLinkEmail(params: {
+    email: string;
+    buyerName: string;
+    accessLink: string;
+}) {
+    if (!TERMII_ACCESS_LINK_TEMPLATE_ID) {
+        console.warn(
+            "[Termii] TERMII_ACCESS_LINK_TEMPLATE_ID not set — skipping access link email.",
+            { to: params.email, buyerName: params.buyerName },
+        );
+        return;
+    }
+
+    return sendTemplateEmail({
+        email: params.email,
+        subject: "Your GMAX Shop Access Link",
+        templateId: TERMII_ACCESS_LINK_TEMPLATE_ID,
+        variables: {
+            buyer_name: params.buyerName,
+            access_link: params.accessLink,
+        },
+    });
+}
+
 export async function sendPurchaseAccessEmail(params: {
     email: string;
     buyerName: string;

@@ -15,7 +15,7 @@ export const getStudioBySlug = os.studio.getBySlug
                     include: {
                         services: {
                             where: { isAddon: false }, // Updated query
-                            include: { studioSession: true, variants: true }, // Include variants
+                            include: { studioSession: true, variants: { include: { deliverables: true } } }, // Include variants & deliverables
                         },
                     },
                 },
@@ -29,7 +29,7 @@ export const getStudioBySlug = os.studio.getBySlug
 
         const addons = await prisma.service.findMany({
             where: { isAddon: true, category: { studioId: studio.id } }, // Updated query
-            include: { studioSession: true, variants: true }, // Include variants
+            include: { studioSession: true, variants: { include: { deliverables: true } } }, // Include variants & deliverables
         });
 
         return {
@@ -63,6 +63,14 @@ export const getStudioBySlug = os.studio.getBySlug
                         basePrice: v.basePrice.toString(), // Convert Prisma Decimal to string
                         maxPrice: v.maxPrice ? v.maxPrice.toString() : null,
                         sessionDurationMins: v.sessionDurationMins,
+                        logisticsIncluded: v.logisticsIncluded,
+                        deliverables: v.deliverables.map((d) => ({
+                            id: d.id,
+                            label: d.label,
+                            quantity: d.quantity,
+                            detail: d.detail,
+                            isFree: d.isFree
+                        }))
                     }))
                 })),
             })),
@@ -83,6 +91,14 @@ export const getStudioBySlug = os.studio.getBySlug
                     basePrice: v.basePrice.toString(), // Convert Prisma Decimal to string
                     maxPrice: v.maxPrice ? v.maxPrice.toString() : null,
                     sessionDurationMins: v.sessionDurationMins,
+                    logisticsIncluded: v.logisticsIncluded,
+                    deliverables: v.deliverables.map((d) => ({
+                        id: d.id,
+                        label: d.label,
+                        quantity: d.quantity,
+                        detail: d.detail,
+                        isFree: d.isFree
+                    }))
                 }))
             })),
         };

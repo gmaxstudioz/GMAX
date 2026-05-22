@@ -32,8 +32,8 @@ export default async function StudioBookPage({ params }: Props) {
             categories: {
                 include: {
                     services: {
-                        include: { studioSession: true },
-                        where: { type: { not: "addon" } },
+                        include: { studioSession: true, variants: true },
+                        where: { isAddon: false },
                     },
                 },
             },
@@ -54,7 +54,8 @@ export default async function StudioBookPage({ params }: Props) {
 
     // Get addons separately
     const addons = await prisma.service.findMany({
-        where: { category: { studioId: studio.id }, type: "addon" },
+        where: { category: { studioId: studio.id }, isAddon: true },
+        include: { variants: true },
     });
 
     const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
@@ -99,17 +100,15 @@ export default async function StudioBookPage({ params }: Props) {
                     services: c.services.map(s => ({
                         id: s.id,
                         name: s.name,
-                        type: s.type,
-                        price: s.price,
-                        salePrice: s.salePrice,
+                        isAddon: s.isAddon,
+                        basePrice: Number(s.variants?.[0]?.basePrice ?? 0),
                         studioSession: s.studioSession ? { duration: s.studioSession.duration } : null,
                     })),
                 }))}
                 addons={addons.map(a => ({
                     id: a.id,
                     name: a.name,
-                    price: a.price,
-                    salePrice: a.salePrice,
+                    basePrice: Number(a.variants?.[0]?.basePrice ?? 0),
                 }))}
                 existingBookings={serializedBookings}
                 paystackPublicKey={paystackPublicKey}

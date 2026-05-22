@@ -19,6 +19,7 @@ import { MediaUploader } from "./_components/MediaUploader";
 import { MediaGallery } from "./_components/MediaGallery";
 import { PaymentLinkCard } from "./_components/PaymentLinkCard";
 import { DeleteBookingButton } from "./_components/DeleteBookingButton";
+import { DeliverAssetsButton } from "./_components/DeliverAssetsButton";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -110,6 +111,7 @@ export default async function BookingDetailPage({ params }: Props) {
                 include: {
                     studioSession: true,
                     category: true,
+                    variants: true,
                 },
             },
             member: {
@@ -122,7 +124,9 @@ export default async function BookingDetailPage({ params }: Props) {
             photos: {
                 orderBy: { uploadedAt: "desc" },
             },
-            addons: true,
+            addons: {
+                include: { variants: true },
+            },
         },
     });
 
@@ -135,11 +139,9 @@ export default async function BookingDetailPage({ params }: Props) {
         .filter((p) => p.status === "PAID")
         .reduce((sum, p) => sum + Number(p.amount), 0);
 
-    const servicePrice = booking.service?.price || 0;
-    const salePrice = booking.service?.salePrice;
-    const effectivePrice = salePrice ?? servicePrice;
-    const addonsTotal = booking.addons.reduce((sum, a) => sum + (a.salePrice ?? a.price), 0);
-    const grandTotal = effectivePrice + addonsTotal;
+    const servicePrice = Number(booking.service?.variants?.[0]?.basePrice ?? 0);
+    const addonsTotal = booking.addons.reduce((sum, a) => sum + Number(a.variants?.[0]?.basePrice ?? 0), 0);
+    const grandTotal = servicePrice + addonsTotal;
     const balanceDue = Math.max(0, grandTotal - totalPaid);
 
     const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
@@ -159,7 +161,7 @@ export default async function BookingDetailPage({ params }: Props) {
     // Serialize payments for client component
     const serializedPayments = booking.payments.map(p => ({
         id: p.id,
-        amount: Number(p.amount),
+        amount: p.amount.toString(),
         method: p.method,
         status: p.status,
         paymentDate: p.paymentDate.toISOString(),
@@ -171,10 +173,32 @@ export default async function BookingDetailPage({ params }: Props) {
         select: { id: true, name: true, phone: true, email: true, image: true, type: true }
     });
 
-    const studioServices = await prisma.service.findMany({
+    const studioServicesRaw = await prisma.service.findMany({
         where: { category: { studioId: studio.id } },
-        select: { id: true, name: true, type: true, price: true, salePrice: true }
+        include: { variants: { include: { deliverables: true } } }
     });
+
+    const studioServices = studioServicesRaw.map(s => ({
+        id: s.id,
+        name: s.name,
+        isAddon: s.isAddon,
+        variants: s.variants.map(v => ({
+            id: v.id,
+            basePrice: v.basePrice.toString(),
+            maxPrice: v.maxPrice?.toString() ?? null,
+            locationType: v.locationType,
+            serviceId: v.serviceId,
+            sessionDurationMins: v.sessionDurationMins,
+            logisticsIncluded: v.logisticsIncluded,
+            deliverables: v.deliverables.map(d => ({
+                id: d.id,
+                label: d.label,
+                quantity: d.quantity,
+                detail: d.detail,
+                isFree: d.isFree,
+            }))
+        }))
+    }));
 
     const studioMembers = await prisma.member.findMany({
         where: { studioId: studio.id },
@@ -187,6 +211,13 @@ export default async function BookingDetailPage({ params }: Props) {
         role: m.role
     }));
 
+    // Serialize Prisma Decimal objects to plain numbers for Client Components
+    const serializedBooking = JSON.parse(JSON.stringify(booking, (_key, value) =>
+        value !== null && typeof value === "object" && typeof value.toNumber === "function"
+            ? value.toNumber()
+            : value
+    ));
+
     return (
         <div className="flex flex-col gap-6 py-4 px-4 md:py-6 md:px-6 max-w-5xl mx-auto w-full">
             {/* Header */}
@@ -197,25 +228,31 @@ export default async function BookingDetailPage({ params }: Props) {
                     <p className="text-muted-foreground text-sm">{studio.name}</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    {serializedBooking.photos.length > 0 && serializedBooking.deliveryStatus !== "DELIVERED" && (
+                        <DeliverAssetsButton bookingId={serializedBooking.id} />
+                    )}
                     <UpdateBookingDialog
-                        bookingId={booking.id}
+                        bookingId={serializedBooking.id}
                         clients={studioClients}
                         services={studioServices}
                         members={mappedMembers}
                         currentData={{
-                            notes: booking.notes,
-                            sessionCount: booking.sessionCount,
-                            bookingStatus: booking.bookingStatus,
-                            paymentStatus: booking.paymentStatus,
-                            deliveryStatus: booking.deliveryStatus,
-                            clientId: booking.clientId,
-                            serviceId: booking.serviceId,
-                            memberId: booking.memberId || "",
-                            bookingDate: booking.bookingDate.toISOString(),
-                            addonIds: booking.addons.map(addon => addon.id)
+                            notes: serializedBooking.notes,
+                            sessionCount: serializedBooking.sessionCount,
+                            bookingStatus: serializedBooking.bookingStatus,
+                            paymentStatus: serializedBooking.paymentStatus,
+                            deliveryStatus: serializedBooking.deliveryStatus,
+                            clientId: serializedBooking.clientId,
+                            serviceId: serializedBooking.serviceId,
+                            serviceVariantId: serializedBooking.serviceVariantId ?? undefined,
+                            memberId: serializedBooking.memberId || "",
+                            bookingDate: serializedBooking.bookingDate,
+                            addonIds: serializedBooking.addons.map((addon: any) => addon.id),
+                            totalAmount: Number(serializedBooking.totalAmount),
+                            paymentPlan: serializedBooking.paymentPlan,
                         }}
                     />
-                    {isManager && <DeleteBookingButton bookingId={booking.id} slug={studio.slug} />}
+                    {isManager && <DeleteBookingButton bookingId={serializedBooking.id} slug={studio.slug} />}
                 </div>
             </div>
 
@@ -224,19 +261,19 @@ export default async function BookingDetailPage({ params }: Props) {
                 <Card>
                     <CardContent>
                         <p className="text-muted-foreground font-bold text-lg mb-2">Booking</p>
-                        <StatusBadge status={booking.bookingStatus} />
+                        <StatusBadge status={serializedBooking.serializedBookingStatus} />
                     </CardContent>
                 </Card>
                 <Card>
                     <CardContent>
                         <p className="text-muted-foreground font-bold text-lg mb-2">Payment</p>
-                        <StatusBadge status={booking.paymentStatus} />
+                        <StatusBadge status={serializedBooking.paymentStatus} />
                     </CardContent>
                 </Card>
                 <Card>
                     <CardContent>
                         <p className="text-muted-foreground font-bold text-lg mb-2">Delivery</p>
-                        <StatusBadge status={booking.deliveryStatus} />
+                        <StatusBadge status={serializedBooking.deliveryStatus} />
                     </CardContent>
                 </Card>
             </div>
@@ -251,25 +288,25 @@ export default async function BookingDetailPage({ params }: Props) {
                         </CardHeader>
                         <CardContent className="flex flex-col gap-1">
                             <InfoRow icon={CalendarIcon} label="Date">
-                                {format(new Date(booking.bookingDate), "EEEE, MMMM do, yyyy")}
+                                {format(new Date(serializedBooking.serializedBookingDate), "EEEE, MMMM do, yyyy")}
                             </InfoRow>
                             <InfoRow icon={ClockIcon} label="Time">
                                 <span className="break-words">
-                                    {format(new Date(booking.bookingDate), "hh:mm a")} · {totalDuration}min ({booking.sessionCount} {booking.sessionCount > 1 ? "sessions" : "session"} × {sessionDuration}m)
+                                    {format(new Date(serializedBooking.serializedBookingDate), "hh:mm a")} · {totalDuration}min ({serializedBooking.sessionCount} {serializedBooking.sessionCount > 1 ? "sessions" : "session"} × {sessionDuration}m)
                                 </span>
                             </InfoRow>
                             <InfoRow icon={PackageIcon} label="Service">
                                 <div className="flex flex-col gap-1">
-                                    <span>{booking.service?.name}</span>
-                                    {booking.service?.category && (
-                                        <span className="text-xs text-muted-foreground">{booking.service.category.name}</span>
+                                    <span>{serializedBooking.service?.name}</span>
+                                    {serializedBooking.service?.category && (
+                                        <span className="text-xs text-muted-foreground">{serializedBooking.service.category.name}</span>
                                     )}
                                 </div>
                             </InfoRow>
-                            {booking.addons.length > 0 && (
+                            {serializedBooking.addons.length > 0 && (
                                 <InfoRow icon={PackageIcon} label="Add-ons">
                                     <div className="flex flex-col gap-1">
-                                        {booking.addons.map((addon) => (
+                                        {serializedBooking.addons.map((addon: any) => (
                                             <span key={addon.id}>{addon.name}</span>
                                         ))}
                                     </div>
@@ -277,18 +314,18 @@ export default async function BookingDetailPage({ params }: Props) {
                             )}
                             <InfoRow icon={UserIcon} label="Client">
                                 <div className="flex flex-col gap-1">
-                                    <span>{booking.client?.name}</span>
-                                    {booking.client?.phone?.length > 0 && (
-                                        <span className="text-xs text-muted-foreground">{booking.client.phone.join(", ")}</span>
+                                    <span>{serializedBooking.client?.name}</span>
+                                    {serializedBooking.client?.phone && (
+                                        <span className="text-xs text-muted-foreground">{serializedBooking.client.phone}</span>
                                     )}
                                 </div>
                             </InfoRow>
                             <InfoRow icon={UserIcon} label="Assigned To">
-                                {booking.member?.user?.name || "Unassigned"}
+                                {serializedBooking.member?.user?.name || "Unassigned"}
                             </InfoRow>
-                            {booking.notes && (
+                            {serializedBooking.notes && (
                                 <InfoRow icon={FileTextIcon} label="Notes">
-                                    <p className="whitespace-pre-wrap text-muted-foreground">{booking.notes}</p>
+                                    <p className="whitespace-pre-wrap text-muted-foreground">{serializedBooking.notes}</p>
                                 </InfoRow>
                             )}
                         </CardContent>
@@ -304,11 +341,11 @@ export default async function BookingDetailPage({ params }: Props) {
                                         Photos & Media
                                     </CardTitle>
                                     <CardDescription>
-                                        {booking.photos.length} file{booking.photos.length !== 1 ? "s" : ""} uploaded
+                                        {serializedBooking.photos.length} file{serializedBooking.photos.length !== 1 ? "s" : ""} uploaded
                                     </CardDescription>
                                 </div>
                                 <div>
-                                    {booking.photos.length > 0 && (
+                                    {serializedBooking.photos.length > 0 && (
                                         <div className="flex flex-row gap-1">
                                             <Dialog>
                                                 <DialogTrigger asChild>
@@ -321,7 +358,7 @@ export default async function BookingDetailPage({ params }: Props) {
                                                     <DialogHeader>
                                                         <DialogTitle className="font-heading">Upload Photos & Media</DialogTitle>
                                                     </DialogHeader>
-                                                    <MediaUploader bookingId={booking.id} />
+                                                    <MediaUploader bookingId={serializedBooking.id} />
                                                 </DialogContent>
                                             </Dialog>
                                             <Button>
@@ -334,10 +371,10 @@ export default async function BookingDetailPage({ params }: Props) {
                             </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            {booking.photos.length === 0 && (
-                                <MediaUploader bookingId={booking.id} />
+                            {serializedBooking.photos.length === 0 && (
+                                <MediaUploader bookingId={serializedBooking.id} />
                             )}
-                            {booking.photos.length > 0 && (
+                            {serializedBooking.photos.length > 0 && (
                                 <MediaGallery
                                     photos={serializedPhotos}
                                     isManager={isManager}
@@ -352,16 +389,16 @@ export default async function BookingDetailPage({ params }: Props) {
                 <div className="flex flex-col gap-6">
                     {/* Combined Payment Card */}
                     <PaymentLinkCard
-                        bookingId={booking.id}
+                        bookingId={serializedBooking.id}
                         balanceDue={balanceDue}
                         grandTotal={grandTotal}
                         totalPaid={totalPaid}
-                        paymentStatus={booking.paymentStatus}
+                        paymentStatus={serializedBooking.paymentStatus}
                         payments={serializedPayments}
                         addonsTotal={addonsTotal}
                         servicePrice={servicePrice}
-                        salePrice={salePrice ?? null}
-                        addonsCount={booking.addons.length}
+                        salePrice={null}
+                        addonsCount={serializedBooking.addons.length}
                     />
 
                     {/* Meta / Timestamps */}
@@ -372,15 +409,15 @@ export default async function BookingDetailPage({ params }: Props) {
                         <CardContent className="space-y-3 text-sm">
                             <div className="flex justify-between gap-2">
                                 <span className="text-muted-foreground shrink-0">Created</span>
-                                <span className="text-right">{format(new Date(booking.createdAt), "MMM d, yyyy · h:mm a")}</span>
+                                <span className="text-right">{format(new Date(serializedBooking.createdAt), "MMM d, yyyy · h:mm a")}</span>
                             </div>
                             <div className="flex justify-between gap-2">
                                 <span className="text-muted-foreground shrink-0">Last Updated</span>
-                                <span className="text-right">{format(new Date(booking.updatedAt), "MMM d, yyyy · h:mm a")}</span>
+                                <span className="text-right">{format(new Date(serializedBooking.updatedAt), "MMM d, yyyy · h:mm a")}</span>
                             </div>
                             <div className="flex justify-between gap-2">
                                 <span className="text-muted-foreground shrink-0">Created By</span>
-                                <span className="text-right">{booking.creator?.name || "Unknown"}</span>
+                                <span className="text-right">{serializedBooking.creator?.name || "Unknown"}</span>
                             </div>
                             <div className="flex justify-between gap-2">
                                 <span className="text-muted-foreground shrink-0">Booking ID</span>

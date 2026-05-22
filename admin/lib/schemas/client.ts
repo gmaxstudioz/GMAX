@@ -12,7 +12,7 @@ export const ClientSchema = z.object({
     name:       z.string(),
     email:      z.email().nullable().optional(),    // String? @unique
     phone:      z.string(),                          // String  @unique — NOT an array
-    altPhone:   z.string().optional(),               // String? (was missing)
+    altPhone:   z.string().nullable().optional(),    // String? (was missing)
     address:    z.string().nullable().optional(),
     notes:      z.string().nullable().optional(),
     type:       ClientTypeEnum,                      // "type" matches Prisma field name
@@ -24,7 +24,7 @@ export const ClientSchemaOutput = z.object({
     name:       z.string(),
     email:      z.email().nullable().optional(),
     phone:      z.string(),                          // single string, not array
-    altPhone:   z.string().optional(),
+    altPhone:   z.string().nullable().optional(),
     type:       ClientTypeEnum,
 });
 

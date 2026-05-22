@@ -33,9 +33,8 @@ interface Category {
     services: {
         id: string;
         name: string;
-        type: string;
-        price: number;
-        salePrice: number | null;
+        isAddon: boolean;
+        basePrice: number;
         studioSession: { duration: number } | null;
     }[];
 }
@@ -43,8 +42,7 @@ interface Category {
 interface Addon {
     id: string;
     name: string;
-    price: number;
-    salePrice: number | null;
+    basePrice: number;
 }
 
 interface BookingWizardProps {
@@ -79,6 +77,7 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
             sessionCount: 1,
             bookingDate: "",
             bookingTime: "",
+            paymentPlan: "FULL",
             notes: "",
         },
         mode: "onBlur"
@@ -117,9 +116,9 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
     const selectedService = useMemo(() => allServices.find(s => s.id === selectedServiceId), [allServices, selectedServiceId]);
     const selectedAddons = useMemo(() => addons.filter(a => selectedAddonIds.includes(a.id)), [addons, selectedAddonIds]);
 
-    const servicePrice = selectedService?.salePrice ?? selectedService?.price ?? 0;
+    const servicePrice = selectedService?.basePrice ?? 0;
     const sessionTotal = servicePrice * sessionCount;
-    const addonsTotal = selectedAddons.reduce((sum, a) => sum + (a.salePrice ?? a.price), 0);
+    const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.basePrice, 0);
     const grandTotal = sessionTotal + addonsTotal;
 
     // Name check with debounce
@@ -408,21 +407,13 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                                                         <div>
                                                             <p className="font-medium text-sm">{service.name}</p>
                                                             <div className="flex items-center gap-2 mt-1">
-                                                                <Badge variant="outline" className="text-[10px] capitalize">{service.type}</Badge>
                                                                 {service.studioSession && (
                                                                     <span className="text-[10px] text-muted-foreground">{service.studioSession.duration}min</span>
                                                                 )}
                                                             </div>
                                                         </div>
                                                         <div className="text-right shrink-0">
-                                                            {service.salePrice ? (
-                                                                <div>
-                                                                    <p className="text-xs text-muted-foreground line-through">₦{service.price.toLocaleString()}</p>
-                                                                    <p className="font-bold text-sm text-green-600">₦{service.salePrice.toLocaleString()}</p>
-                                                                </div>
-                                                            ) : (
-                                                                <p className="font-bold text-sm">₦{service.price.toLocaleString()}</p>
-                                                            )}
+                                                            <p className="font-bold text-sm">₦{service.basePrice.toLocaleString()}</p>
                                                         </div>
                                                     </div>
                                                     {isSelected && (
@@ -446,7 +437,7 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                                     <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Add-ons (Optional)</h3>
                                     <div className="space-y-2">
                                         {addons.map(addon => {
-                                            const price = addon.salePrice ?? addon.price;
+                                            const price = addon.basePrice;
                                             return (
                                                 <label key={addon.id} className="flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-muted/30 transition-colors">
                                                     <div className="flex items-center gap-3">
@@ -586,7 +577,7 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                                 {selectedAddons.map(a => (
                                     <div key={a.id} className="flex justify-between text-sm text-muted-foreground">
                                         <span>+ {a.name}</span>
-                                        <span>{formatCurrency(a.salePrice ?? a.price)}</span>
+                                        <span>{formatCurrency(a.basePrice)}</span>
                                     </div>
                                 ))}
                                 <Separator />

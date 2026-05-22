@@ -299,7 +299,7 @@ export type EnrollmentCreateInput = {
   startDate: Date | string
   endDate?: Date | string | null
   status?: $Enums.EnrollmentStatus
-  paymentStatus: $Enums.PaymentStatus
+  paymentStatus?: $Enums.PaymentStatus
   createdAt?: Date | string
   updatedAt?: Date | string
   studio: Prisma.StudioCreateNestedOneWithoutEnrollmentsInput
@@ -315,7 +315,7 @@ export type EnrollmentUncheckedCreateInput = {
   startDate: Date | string
   endDate?: Date | string | null
   status?: $Enums.EnrollmentStatus
-  paymentStatus: $Enums.PaymentStatus
+  paymentStatus?: $Enums.PaymentStatus
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -354,7 +354,7 @@ export type EnrollmentCreateManyInput = {
   startDate: Date | string
   endDate?: Date | string | null
   status?: $Enums.EnrollmentStatus
-  paymentStatus: $Enums.PaymentStatus
+  paymentStatus?: $Enums.PaymentStatus
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -570,7 +570,7 @@ export type EnrollmentCreateWithoutStudioInput = {
   startDate: Date | string
   endDate?: Date | string | null
   status?: $Enums.EnrollmentStatus
-  paymentStatus: $Enums.PaymentStatus
+  paymentStatus?: $Enums.PaymentStatus
   createdAt?: Date | string
   updatedAt?: Date | string
   course: Prisma.CourseCreateNestedOneWithoutEnrollmentsInput
@@ -584,7 +584,7 @@ export type EnrollmentUncheckedCreateWithoutStudioInput = {
   startDate: Date | string
   endDate?: Date | string | null
   status?: $Enums.EnrollmentStatus
-  paymentStatus: $Enums.PaymentStatus
+  paymentStatus?: $Enums.PaymentStatus
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -636,7 +636,7 @@ export type EnrollmentCreateWithoutCourseInput = {
   startDate: Date | string
   endDate?: Date | string | null
   status?: $Enums.EnrollmentStatus
-  paymentStatus: $Enums.PaymentStatus
+  paymentStatus?: $Enums.PaymentStatus
   createdAt?: Date | string
   updatedAt?: Date | string
   studio: Prisma.StudioCreateNestedOneWithoutEnrollmentsInput
@@ -650,7 +650,7 @@ export type EnrollmentUncheckedCreateWithoutCourseInput = {
   startDate: Date | string
   endDate?: Date | string | null
   status?: $Enums.EnrollmentStatus
-  paymentStatus: $Enums.PaymentStatus
+  paymentStatus?: $Enums.PaymentStatus
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -686,7 +686,7 @@ export type EnrollmentCreateWithoutClientInput = {
   startDate: Date | string
   endDate?: Date | string | null
   status?: $Enums.EnrollmentStatus
-  paymentStatus: $Enums.PaymentStatus
+  paymentStatus?: $Enums.PaymentStatus
   createdAt?: Date | string
   updatedAt?: Date | string
   studio: Prisma.StudioCreateNestedOneWithoutEnrollmentsInput
@@ -700,7 +700,7 @@ export type EnrollmentUncheckedCreateWithoutClientInput = {
   startDate: Date | string
   endDate?: Date | string | null
   status?: $Enums.EnrollmentStatus
-  paymentStatus: $Enums.PaymentStatus
+  paymentStatus?: $Enums.PaymentStatus
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -738,7 +738,7 @@ export type EnrollmentCreateManyStudioInput = {
   startDate: Date | string
   endDate?: Date | string | null
   status?: $Enums.EnrollmentStatus
-  paymentStatus: $Enums.PaymentStatus
+  paymentStatus?: $Enums.PaymentStatus
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -786,7 +786,7 @@ export type EnrollmentCreateManyCourseInput = {
   startDate: Date | string
   endDate?: Date | string | null
   status?: $Enums.EnrollmentStatus
-  paymentStatus: $Enums.PaymentStatus
+  paymentStatus?: $Enums.PaymentStatus
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -834,7 +834,7 @@ export type EnrollmentCreateManyClientInput = {
   startDate: Date | string
   endDate?: Date | string | null
   status?: $Enums.EnrollmentStatus
-  paymentStatus: $Enums.PaymentStatus
+  paymentStatus?: $Enums.PaymentStatus
   createdAt?: Date | string
   updatedAt?: Date | string
 }

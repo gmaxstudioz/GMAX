@@ -184,7 +184,6 @@ export type MemberWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"Member"> | Date | string
   studio?: Prisma.XOR<Prisma.StudioScalarRelationFilter, Prisma.StudioWhereInput>
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
-  roleRef?: Prisma.XOR<Prisma.RoleNullableScalarRelationFilter, Prisma.RoleWhereInput> | null
   bookings?: Prisma.BookingListRelationFilter
 }
 
@@ -196,7 +195,6 @@ export type MemberOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   studio?: Prisma.StudioOrderByWithRelationInput
   user?: Prisma.UserOrderByWithRelationInput
-  roleRef?: Prisma.RoleOrderByWithRelationInput
   bookings?: Prisma.BookingOrderByRelationAggregateInput
 }
 
@@ -211,7 +209,6 @@ export type MemberWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"Member"> | Date | string
   studio?: Prisma.XOR<Prisma.StudioScalarRelationFilter, Prisma.StudioWhereInput>
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
-  roleRef?: Prisma.XOR<Prisma.RoleNullableScalarRelationFilter, Prisma.RoleWhereInput> | null
   bookings?: Prisma.BookingListRelationFilter
 }, "id">
 
@@ -239,10 +236,10 @@ export type MemberScalarWhereWithAggregatesInput = {
 
 export type MemberCreateInput = {
   id: string
+  role: string
   createdAt?: Date | string
   studio: Prisma.StudioCreateNestedOneWithoutMembersInput
   user: Prisma.UserCreateNestedOneWithoutMembersInput
-  roleRef?: Prisma.RoleCreateNestedOneWithoutMembersInput
   bookings?: Prisma.BookingCreateNestedManyWithoutMemberInput
 }
 
@@ -250,17 +247,17 @@ export type MemberUncheckedCreateInput = {
   id: string
   studioId: string
   userId: string
-  role?: string
+  role: string
   createdAt?: Date | string
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   studio?: Prisma.StudioUpdateOneRequiredWithoutMembersNestedInput
   user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
-  roleRef?: Prisma.RoleUpdateOneWithoutMembersNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutMemberNestedInput
 }
 
@@ -277,12 +274,13 @@ export type MemberCreateManyInput = {
   id: string
   studioId: string
   userId: string
-  role?: string
+  role: string
   createdAt?: Date | string
 }
 
 export type MemberUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -417,48 +415,6 @@ export type MemberUncheckedUpdateManyWithoutStudioNestedInput = {
   deleteMany?: Prisma.MemberScalarWhereInput | Prisma.MemberScalarWhereInput[]
 }
 
-export type MemberCreateNestedManyWithoutRoleRefInput = {
-  create?: Prisma.XOR<Prisma.MemberCreateWithoutRoleRefInput, Prisma.MemberUncheckedCreateWithoutRoleRefInput> | Prisma.MemberCreateWithoutRoleRefInput[] | Prisma.MemberUncheckedCreateWithoutRoleRefInput[]
-  connectOrCreate?: Prisma.MemberCreateOrConnectWithoutRoleRefInput | Prisma.MemberCreateOrConnectWithoutRoleRefInput[]
-  createMany?: Prisma.MemberCreateManyRoleRefInputEnvelope
-  connect?: Prisma.MemberWhereUniqueInput | Prisma.MemberWhereUniqueInput[]
-}
-
-export type MemberUncheckedCreateNestedManyWithoutRoleRefInput = {
-  create?: Prisma.XOR<Prisma.MemberCreateWithoutRoleRefInput, Prisma.MemberUncheckedCreateWithoutRoleRefInput> | Prisma.MemberCreateWithoutRoleRefInput[] | Prisma.MemberUncheckedCreateWithoutRoleRefInput[]
-  connectOrCreate?: Prisma.MemberCreateOrConnectWithoutRoleRefInput | Prisma.MemberCreateOrConnectWithoutRoleRefInput[]
-  createMany?: Prisma.MemberCreateManyRoleRefInputEnvelope
-  connect?: Prisma.MemberWhereUniqueInput | Prisma.MemberWhereUniqueInput[]
-}
-
-export type MemberUpdateManyWithoutRoleRefNestedInput = {
-  create?: Prisma.XOR<Prisma.MemberCreateWithoutRoleRefInput, Prisma.MemberUncheckedCreateWithoutRoleRefInput> | Prisma.MemberCreateWithoutRoleRefInput[] | Prisma.MemberUncheckedCreateWithoutRoleRefInput[]
-  connectOrCreate?: Prisma.MemberCreateOrConnectWithoutRoleRefInput | Prisma.MemberCreateOrConnectWithoutRoleRefInput[]
-  upsert?: Prisma.MemberUpsertWithWhereUniqueWithoutRoleRefInput | Prisma.MemberUpsertWithWhereUniqueWithoutRoleRefInput[]
-  createMany?: Prisma.MemberCreateManyRoleRefInputEnvelope
-  set?: Prisma.MemberWhereUniqueInput | Prisma.MemberWhereUniqueInput[]
-  disconnect?: Prisma.MemberWhereUniqueInput | Prisma.MemberWhereUniqueInput[]
-  delete?: Prisma.MemberWhereUniqueInput | Prisma.MemberWhereUniqueInput[]
-  connect?: Prisma.MemberWhereUniqueInput | Prisma.MemberWhereUniqueInput[]
-  update?: Prisma.MemberUpdateWithWhereUniqueWithoutRoleRefInput | Prisma.MemberUpdateWithWhereUniqueWithoutRoleRefInput[]
-  updateMany?: Prisma.MemberUpdateManyWithWhereWithoutRoleRefInput | Prisma.MemberUpdateManyWithWhereWithoutRoleRefInput[]
-  deleteMany?: Prisma.MemberScalarWhereInput | Prisma.MemberScalarWhereInput[]
-}
-
-export type MemberUncheckedUpdateManyWithoutRoleRefNestedInput = {
-  create?: Prisma.XOR<Prisma.MemberCreateWithoutRoleRefInput, Prisma.MemberUncheckedCreateWithoutRoleRefInput> | Prisma.MemberCreateWithoutRoleRefInput[] | Prisma.MemberUncheckedCreateWithoutRoleRefInput[]
-  connectOrCreate?: Prisma.MemberCreateOrConnectWithoutRoleRefInput | Prisma.MemberCreateOrConnectWithoutRoleRefInput[]
-  upsert?: Prisma.MemberUpsertWithWhereUniqueWithoutRoleRefInput | Prisma.MemberUpsertWithWhereUniqueWithoutRoleRefInput[]
-  createMany?: Prisma.MemberCreateManyRoleRefInputEnvelope
-  set?: Prisma.MemberWhereUniqueInput | Prisma.MemberWhereUniqueInput[]
-  disconnect?: Prisma.MemberWhereUniqueInput | Prisma.MemberWhereUniqueInput[]
-  delete?: Prisma.MemberWhereUniqueInput | Prisma.MemberWhereUniqueInput[]
-  connect?: Prisma.MemberWhereUniqueInput | Prisma.MemberWhereUniqueInput[]
-  update?: Prisma.MemberUpdateWithWhereUniqueWithoutRoleRefInput | Prisma.MemberUpdateWithWhereUniqueWithoutRoleRefInput[]
-  updateMany?: Prisma.MemberUpdateManyWithWhereWithoutRoleRefInput | Prisma.MemberUpdateManyWithWhereWithoutRoleRefInput[]
-  deleteMany?: Prisma.MemberScalarWhereInput | Prisma.MemberScalarWhereInput[]
-}
-
 export type MemberCreateNestedOneWithoutBookingsInput = {
   create?: Prisma.XOR<Prisma.MemberCreateWithoutBookingsInput, Prisma.MemberUncheckedCreateWithoutBookingsInput>
   connectOrCreate?: Prisma.MemberCreateOrConnectWithoutBookingsInput
@@ -477,16 +433,16 @@ export type MemberUpdateOneWithoutBookingsNestedInput = {
 
 export type MemberCreateWithoutUserInput = {
   id: string
+  role: string
   createdAt?: Date | string
   studio: Prisma.StudioCreateNestedOneWithoutMembersInput
-  roleRef?: Prisma.RoleCreateNestedOneWithoutMembersInput
   bookings?: Prisma.BookingCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutUserInput = {
   id: string
   studioId: string
-  role?: string
+  role: string
   createdAt?: Date | string
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutMemberInput
 }
@@ -530,16 +486,16 @@ export type MemberScalarWhereInput = {
 
 export type MemberCreateWithoutStudioInput = {
   id: string
+  role: string
   createdAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutMembersInput
-  roleRef?: Prisma.RoleCreateNestedOneWithoutMembersInput
   bookings?: Prisma.BookingCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutStudioInput = {
   id: string
   userId: string
-  role?: string
+  role: string
   createdAt?: Date | string
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutMemberInput
 }
@@ -570,60 +526,19 @@ export type MemberUpdateManyWithWhereWithoutStudioInput = {
   data: Prisma.XOR<Prisma.MemberUpdateManyMutationInput, Prisma.MemberUncheckedUpdateManyWithoutStudioInput>
 }
 
-export type MemberCreateWithoutRoleRefInput = {
-  id: string
-  createdAt?: Date | string
-  studio: Prisma.StudioCreateNestedOneWithoutMembersInput
-  user: Prisma.UserCreateNestedOneWithoutMembersInput
-  bookings?: Prisma.BookingCreateNestedManyWithoutMemberInput
-}
-
-export type MemberUncheckedCreateWithoutRoleRefInput = {
-  id: string
-  userId: string
-  createdAt?: Date | string
-  bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutMemberInput
-}
-
-export type MemberCreateOrConnectWithoutRoleRefInput = {
-  where: Prisma.MemberWhereUniqueInput
-  create: Prisma.XOR<Prisma.MemberCreateWithoutRoleRefInput, Prisma.MemberUncheckedCreateWithoutRoleRefInput>
-}
-
-export type MemberCreateManyRoleRefInputEnvelope = {
-  data: Prisma.MemberCreateManyRoleRefInput | Prisma.MemberCreateManyRoleRefInput[]
-  skipDuplicates?: boolean
-}
-
-export type MemberUpsertWithWhereUniqueWithoutRoleRefInput = {
-  where: Prisma.MemberWhereUniqueInput
-  update: Prisma.XOR<Prisma.MemberUpdateWithoutRoleRefInput, Prisma.MemberUncheckedUpdateWithoutRoleRefInput>
-  create: Prisma.XOR<Prisma.MemberCreateWithoutRoleRefInput, Prisma.MemberUncheckedCreateWithoutRoleRefInput>
-}
-
-export type MemberUpdateWithWhereUniqueWithoutRoleRefInput = {
-  where: Prisma.MemberWhereUniqueInput
-  data: Prisma.XOR<Prisma.MemberUpdateWithoutRoleRefInput, Prisma.MemberUncheckedUpdateWithoutRoleRefInput>
-}
-
-export type MemberUpdateManyWithWhereWithoutRoleRefInput = {
-  where: Prisma.MemberScalarWhereInput
-  data: Prisma.XOR<Prisma.MemberUpdateManyMutationInput, Prisma.MemberUncheckedUpdateManyWithoutRoleRefInput>
-}
-
 export type MemberCreateWithoutBookingsInput = {
   id: string
+  role: string
   createdAt?: Date | string
   studio: Prisma.StudioCreateNestedOneWithoutMembersInput
   user: Prisma.UserCreateNestedOneWithoutMembersInput
-  roleRef?: Prisma.RoleCreateNestedOneWithoutMembersInput
 }
 
 export type MemberUncheckedCreateWithoutBookingsInput = {
   id: string
   studioId: string
   userId: string
-  role?: string
+  role: string
   createdAt?: Date | string
 }
 
@@ -645,10 +560,10 @@ export type MemberUpdateToOneWithWhereWithoutBookingsInput = {
 
 export type MemberUpdateWithoutBookingsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   studio?: Prisma.StudioUpdateOneRequiredWithoutMembersNestedInput
   user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
-  roleRef?: Prisma.RoleUpdateOneWithoutMembersNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutBookingsInput = {
@@ -662,15 +577,15 @@ export type MemberUncheckedUpdateWithoutBookingsInput = {
 export type MemberCreateManyUserInput = {
   id: string
   studioId: string
-  role?: string
+  role: string
   createdAt?: Date | string
 }
 
 export type MemberUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   studio?: Prisma.StudioUpdateOneRequiredWithoutMembersNestedInput
-  roleRef?: Prisma.RoleUpdateOneWithoutMembersNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutMemberNestedInput
 }
 
@@ -692,15 +607,15 @@ export type MemberUncheckedUpdateManyWithoutUserInput = {
 export type MemberCreateManyStudioInput = {
   id: string
   userId: string
-  role?: string
+  role: string
   createdAt?: Date | string
 }
 
 export type MemberUpdateWithoutStudioInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
-  roleRef?: Prisma.RoleUpdateOneWithoutMembersNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutMemberNestedInput
 }
 
@@ -716,33 +631,6 @@ export type MemberUncheckedUpdateManyWithoutStudioInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-}
-
-export type MemberCreateManyRoleRefInput = {
-  id: string
-  userId: string
-  createdAt?: Date | string
-}
-
-export type MemberUpdateWithoutRoleRefInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  studio?: Prisma.StudioUpdateOneRequiredWithoutMembersNestedInput
-  user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
-  bookings?: Prisma.BookingUpdateManyWithoutMemberNestedInput
-}
-
-export type MemberUncheckedUpdateWithoutRoleRefInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  userId?: Prisma.StringFieldUpdateOperationsInput | string
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  bookings?: Prisma.BookingUncheckedUpdateManyWithoutMemberNestedInput
-}
-
-export type MemberUncheckedUpdateManyWithoutRoleRefInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  userId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -785,7 +673,6 @@ export type MemberSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   createdAt?: boolean
   studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  roleRef?: boolean | Prisma.Member$roleRefArgs<ExtArgs>
   bookings?: boolean | Prisma.Member$bookingsArgs<ExtArgs>
   _count?: boolean | Prisma.MemberCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["member"]>
@@ -798,7 +685,6 @@ export type MemberSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   createdAt?: boolean
   studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  roleRef?: boolean | Prisma.Member$roleRefArgs<ExtArgs>
 }, ExtArgs["result"]["member"]>
 
 export type MemberSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -809,7 +695,6 @@ export type MemberSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   createdAt?: boolean
   studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  roleRef?: boolean | Prisma.Member$roleRefArgs<ExtArgs>
 }, ExtArgs["result"]["member"]>
 
 export type MemberSelectScalar = {
@@ -824,19 +709,16 @@ export type MemberOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
 export type MemberInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  roleRef?: boolean | Prisma.Member$roleRefArgs<ExtArgs>
   bookings?: boolean | Prisma.Member$bookingsArgs<ExtArgs>
   _count?: boolean | Prisma.MemberCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type MemberIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  roleRef?: boolean | Prisma.Member$roleRefArgs<ExtArgs>
 }
 export type MemberIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  roleRef?: boolean | Prisma.Member$roleRefArgs<ExtArgs>
 }
 
 export type $MemberPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -844,7 +726,6 @@ export type $MemberPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
   objects: {
     studio: Prisma.$StudioPayload<ExtArgs>
     user: Prisma.$UserPayload<ExtArgs>
-    roleRef: Prisma.$RolePayload<ExtArgs> | null
     bookings: Prisma.$BookingPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -1249,7 +1130,6 @@ export interface Prisma__MemberClient<T, Null = never, ExtArgs extends runtime.T
   readonly [Symbol.toStringTag]: "PrismaPromise"
   studio<T extends Prisma.StudioDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudioDefaultArgs<ExtArgs>>): Prisma.Prisma__StudioClient<runtime.Types.Result.GetResult<Prisma.$StudioPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   user<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  roleRef<T extends Prisma.Member$roleRefArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$roleRefArgs<ExtArgs>>): Prisma.Prisma__RoleClient<runtime.Types.Result.GetResult<Prisma.$RolePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   bookings<T extends Prisma.Member$bookingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$bookingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BookingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1683,25 +1563,6 @@ export type MemberDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Intern
    * Limit how many Members to delete.
    */
   limit?: number
-}
-
-/**
- * Member.roleRef
- */
-export type Member$roleRefArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the Role
-   */
-  select?: Prisma.RoleSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the Role
-   */
-  omit?: Prisma.RoleOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.RoleInclude<ExtArgs> | null
-  where?: Prisma.RoleWhereInput
 }
 
 /**

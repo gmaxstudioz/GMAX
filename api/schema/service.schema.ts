@@ -31,12 +31,19 @@ export const ServiceVariantInputSchema = z.object({
   maxPrice: z.number().nonnegative().nullable().optional(),
   sessionDurationMins: z.number().int().positive(),
   logisticsIncluded: z.boolean().default(true),
+  deliverables: z.array(z.object({
+      label: z.string().min(1, "Label is required"),
+      quantity: z.number().nullable().optional(),
+      detail: z.string().nullable().optional(),
+      isFree: z.boolean().default(false),
+  })).default([]),
 });
 
 const ServiceBaseSchema = z.object({
   id: z.string(),
   name: z.string().min(1),
   isAddon: z.boolean().default(false),
+  isActive: z.boolean().default(true),
   description: z.string().min(1),
   features: z.array(z.string()),
   categoryId: z.string(),

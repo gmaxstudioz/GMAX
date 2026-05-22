@@ -1,12 +1,14 @@
-remember to run db push
+# GMAX API Documentation
 
-That is exactly right. The architecture we set up guarantees that the actual `Booking` record is **only** created if the Paystack webhook receives a verified `charge.success` event. If the user closes the tab or the payment fails, the system strictly prevents the booking from ever existing.
+*Note: Remember to run the database push command to synchronize the schema.*
 
-To handle the second part of your rule—deleting the abandoned `BookingIntent`—we need an automated cleanup mechanism. Because payment gateways don't reliably send a webhook when a user simply closes their browser, the standard approach is to use a **Cron Job** to sweep the database and delete intents that have expired.
+## Booking Lifecycle and Automated Cleanup
 
-Since you already have an `expiresAt` field set to 1 hour in your `createPublicBooking` function, you can create a background route to delete anything past that time.
+The system architecture guarantees that a `Booking` record is exclusively created upon receiving a verified `charge.success` webhook event from Paystack. If a payment fails or is abandoned, no booking is created.
 
-Here is how to set up the automated cleanup in your Next.js backend.
+The `createPublicBooking` function generates an initial `BookingIntent` record with an `expiresAt` field set to 1 hour. Because payment gateways do not reliably dispatch webhooks for abandoned checkout sessions, an automated cleanup mechanism is required to purge stale records.
+
+The following instructions detail how to configure a Next.js background cron route to automatically sweep and delete expired `BookingIntent` records.
 
 ### 1. Create the Cleanup API Route
 

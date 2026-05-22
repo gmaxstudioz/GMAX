@@ -289,7 +289,7 @@ export type StudioCreateInput = {
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
-  roles?: Prisma.RoleCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   courses?: Prisma.CourseCreateNestedManyWithoutStudioInput
   enrollments?: Prisma.EnrollmentCreateNestedManyWithoutStudioInput
   bookingIntents?: Prisma.BookingIntentCreateNestedManyWithoutStudioInput
@@ -309,7 +309,7 @@ export type StudioUncheckedCreateInput = {
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
-  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   courses?: Prisma.CourseUncheckedCreateNestedManyWithoutStudioInput
   enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutStudioInput
   bookingIntents?: Prisma.BookingIntentUncheckedCreateNestedManyWithoutStudioInput
@@ -329,7 +329,7 @@ export type StudioUpdateInput = {
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
-  roles?: Prisma.RoleUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   courses?: Prisma.CourseUpdateManyWithoutStudioNestedInput
   enrollments?: Prisma.EnrollmentUpdateManyWithoutStudioNestedInput
   bookingIntents?: Prisma.BookingIntentUpdateManyWithoutStudioNestedInput
@@ -349,7 +349,7 @@ export type StudioUncheckedUpdateInput = {
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
-  roles?: Prisma.RoleUncheckedUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   courses?: Prisma.CourseUncheckedUpdateManyWithoutStudioNestedInput
   enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutStudioNestedInput
   bookingIntents?: Prisma.BookingIntentUncheckedUpdateManyWithoutStudioNestedInput
@@ -663,7 +663,7 @@ export type StudioCreateWithoutStudioSessionsInput = {
   categories?: Prisma.CategoryCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
-  roles?: Prisma.RoleCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   courses?: Prisma.CourseCreateNestedManyWithoutStudioInput
   enrollments?: Prisma.EnrollmentCreateNestedManyWithoutStudioInput
   bookingIntents?: Prisma.BookingIntentCreateNestedManyWithoutStudioInput
@@ -682,7 +682,7 @@ export type StudioUncheckedCreateWithoutStudioSessionsInput = {
   categories?: Prisma.CategoryUncheckedCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
-  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   courses?: Prisma.CourseUncheckedCreateNestedManyWithoutStudioInput
   enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutStudioInput
   bookingIntents?: Prisma.BookingIntentUncheckedCreateNestedManyWithoutStudioInput
@@ -717,7 +717,7 @@ export type StudioUpdateWithoutStudioSessionsInput = {
   categories?: Prisma.CategoryUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
-  roles?: Prisma.RoleUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   courses?: Prisma.CourseUpdateManyWithoutStudioNestedInput
   enrollments?: Prisma.EnrollmentUpdateManyWithoutStudioNestedInput
   bookingIntents?: Prisma.BookingIntentUpdateManyWithoutStudioNestedInput
@@ -736,7 +736,7 @@ export type StudioUncheckedUpdateWithoutStudioSessionsInput = {
   categories?: Prisma.CategoryUncheckedUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
-  roles?: Prisma.RoleUncheckedUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   courses?: Prisma.CourseUncheckedUpdateManyWithoutStudioNestedInput
   enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutStudioNestedInput
   bookingIntents?: Prisma.BookingIntentUncheckedUpdateManyWithoutStudioNestedInput
@@ -755,7 +755,7 @@ export type StudioCreateWithoutMembersInput = {
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
-  roles?: Prisma.RoleCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   courses?: Prisma.CourseCreateNestedManyWithoutStudioInput
   enrollments?: Prisma.EnrollmentCreateNestedManyWithoutStudioInput
   bookingIntents?: Prisma.BookingIntentCreateNestedManyWithoutStudioInput
@@ -774,7 +774,7 @@ export type StudioUncheckedCreateWithoutMembersInput = {
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
-  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   courses?: Prisma.CourseUncheckedCreateNestedManyWithoutStudioInput
   enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutStudioInput
   bookingIntents?: Prisma.BookingIntentUncheckedCreateNestedManyWithoutStudioInput
@@ -809,7 +809,7 @@ export type StudioUpdateWithoutMembersInput = {
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
-  roles?: Prisma.RoleUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   courses?: Prisma.CourseUpdateManyWithoutStudioNestedInput
   enrollments?: Prisma.EnrollmentUpdateManyWithoutStudioNestedInput
   bookingIntents?: Prisma.BookingIntentUpdateManyWithoutStudioNestedInput
@@ -828,7 +828,7 @@ export type StudioUncheckedUpdateWithoutMembersInput = {
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
-  roles?: Prisma.RoleUncheckedUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   courses?: Prisma.CourseUncheckedUpdateManyWithoutStudioNestedInput
   enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutStudioNestedInput
   bookingIntents?: Prisma.BookingIntentUncheckedUpdateManyWithoutStudioNestedInput
@@ -847,7 +847,7 @@ export type StudioCreateWithoutInvitationsInput = {
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
-  roles?: Prisma.RoleCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   courses?: Prisma.CourseCreateNestedManyWithoutStudioInput
   enrollments?: Prisma.EnrollmentCreateNestedManyWithoutStudioInput
   bookingIntents?: Prisma.BookingIntentCreateNestedManyWithoutStudioInput
@@ -866,7 +866,7 @@ export type StudioUncheckedCreateWithoutInvitationsInput = {
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
-  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   courses?: Prisma.CourseUncheckedCreateNestedManyWithoutStudioInput
   enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutStudioInput
   bookingIntents?: Prisma.BookingIntentUncheckedCreateNestedManyWithoutStudioInput
@@ -901,7 +901,7 @@ export type StudioUpdateWithoutInvitationsInput = {
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
-  roles?: Prisma.RoleUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   courses?: Prisma.CourseUpdateManyWithoutStudioNestedInput
   enrollments?: Prisma.EnrollmentUpdateManyWithoutStudioNestedInput
   bookingIntents?: Prisma.BookingIntentUpdateManyWithoutStudioNestedInput
@@ -920,7 +920,7 @@ export type StudioUncheckedUpdateWithoutInvitationsInput = {
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
-  roles?: Prisma.RoleUncheckedUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   courses?: Prisma.CourseUncheckedUpdateManyWithoutStudioNestedInput
   enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutStudioNestedInput
   bookingIntents?: Prisma.BookingIntentUncheckedUpdateManyWithoutStudioNestedInput
@@ -939,7 +939,7 @@ export type StudioCreateWithoutCategoriesInput = {
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
-  roles?: Prisma.RoleCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   courses?: Prisma.CourseCreateNestedManyWithoutStudioInput
   enrollments?: Prisma.EnrollmentCreateNestedManyWithoutStudioInput
   bookingIntents?: Prisma.BookingIntentCreateNestedManyWithoutStudioInput
@@ -958,7 +958,7 @@ export type StudioUncheckedCreateWithoutCategoriesInput = {
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
-  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   courses?: Prisma.CourseUncheckedCreateNestedManyWithoutStudioInput
   enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutStudioInput
   bookingIntents?: Prisma.BookingIntentUncheckedCreateNestedManyWithoutStudioInput
@@ -993,7 +993,7 @@ export type StudioUpdateWithoutCategoriesInput = {
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
-  roles?: Prisma.RoleUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   courses?: Prisma.CourseUpdateManyWithoutStudioNestedInput
   enrollments?: Prisma.EnrollmentUpdateManyWithoutStudioNestedInput
   bookingIntents?: Prisma.BookingIntentUpdateManyWithoutStudioNestedInput
@@ -1012,7 +1012,7 @@ export type StudioUncheckedUpdateWithoutCategoriesInput = {
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
-  roles?: Prisma.RoleUncheckedUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   courses?: Prisma.CourseUncheckedUpdateManyWithoutStudioNestedInput
   enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutStudioNestedInput
   bookingIntents?: Prisma.BookingIntentUncheckedUpdateManyWithoutStudioNestedInput
@@ -1032,7 +1032,7 @@ export type StudioCreateWithoutCoursesInput = {
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
-  roles?: Prisma.RoleCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   enrollments?: Prisma.EnrollmentCreateNestedManyWithoutStudioInput
   bookingIntents?: Prisma.BookingIntentCreateNestedManyWithoutStudioInput
 }
@@ -1051,7 +1051,7 @@ export type StudioUncheckedCreateWithoutCoursesInput = {
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
-  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutStudioInput
   bookingIntents?: Prisma.BookingIntentUncheckedCreateNestedManyWithoutStudioInput
 }
@@ -1086,7 +1086,7 @@ export type StudioUpdateWithoutCoursesInput = {
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
-  roles?: Prisma.RoleUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   enrollments?: Prisma.EnrollmentUpdateManyWithoutStudioNestedInput
   bookingIntents?: Prisma.BookingIntentUpdateManyWithoutStudioNestedInput
 }
@@ -1105,7 +1105,7 @@ export type StudioUncheckedUpdateWithoutCoursesInput = {
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
-  roles?: Prisma.RoleUncheckedUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutStudioNestedInput
   bookingIntents?: Prisma.BookingIntentUncheckedUpdateManyWithoutStudioNestedInput
 }
@@ -1124,7 +1124,7 @@ export type StudioCreateWithoutEnrollmentsInput = {
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
-  roles?: Prisma.RoleCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   courses?: Prisma.CourseCreateNestedManyWithoutStudioInput
   bookingIntents?: Prisma.BookingIntentCreateNestedManyWithoutStudioInput
 }
@@ -1143,7 +1143,7 @@ export type StudioUncheckedCreateWithoutEnrollmentsInput = {
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
-  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   courses?: Prisma.CourseUncheckedCreateNestedManyWithoutStudioInput
   bookingIntents?: Prisma.BookingIntentUncheckedCreateNestedManyWithoutStudioInput
 }
@@ -1178,7 +1178,7 @@ export type StudioUpdateWithoutEnrollmentsInput = {
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
-  roles?: Prisma.RoleUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   courses?: Prisma.CourseUpdateManyWithoutStudioNestedInput
   bookingIntents?: Prisma.BookingIntentUpdateManyWithoutStudioNestedInput
 }
@@ -1197,7 +1197,7 @@ export type StudioUncheckedUpdateWithoutEnrollmentsInput = {
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
-  roles?: Prisma.RoleUncheckedUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   courses?: Prisma.CourseUncheckedUpdateManyWithoutStudioNestedInput
   bookingIntents?: Prisma.BookingIntentUncheckedUpdateManyWithoutStudioNestedInput
 }
@@ -1215,7 +1215,7 @@ export type StudioCreateWithoutClientsInput = {
   categories?: Prisma.CategoryCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
-  roles?: Prisma.RoleCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   courses?: Prisma.CourseCreateNestedManyWithoutStudioInput
   enrollments?: Prisma.EnrollmentCreateNestedManyWithoutStudioInput
   bookingIntents?: Prisma.BookingIntentCreateNestedManyWithoutStudioInput
@@ -1234,7 +1234,7 @@ export type StudioUncheckedCreateWithoutClientsInput = {
   categories?: Prisma.CategoryUncheckedCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
-  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   courses?: Prisma.CourseUncheckedCreateNestedManyWithoutStudioInput
   enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutStudioInput
   bookingIntents?: Prisma.BookingIntentUncheckedCreateNestedManyWithoutStudioInput
@@ -1269,7 +1269,7 @@ export type StudioUpdateWithoutClientsInput = {
   categories?: Prisma.CategoryUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
-  roles?: Prisma.RoleUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   courses?: Prisma.CourseUpdateManyWithoutStudioNestedInput
   enrollments?: Prisma.EnrollmentUpdateManyWithoutStudioNestedInput
   bookingIntents?: Prisma.BookingIntentUpdateManyWithoutStudioNestedInput
@@ -1288,7 +1288,7 @@ export type StudioUncheckedUpdateWithoutClientsInput = {
   categories?: Prisma.CategoryUncheckedUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
-  roles?: Prisma.RoleUncheckedUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   courses?: Prisma.CourseUncheckedUpdateManyWithoutStudioNestedInput
   enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutStudioNestedInput
   bookingIntents?: Prisma.BookingIntentUncheckedUpdateManyWithoutStudioNestedInput
@@ -1308,7 +1308,7 @@ export type StudioCreateWithoutBookingIntentsInput = {
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
-  roles?: Prisma.RoleCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   courses?: Prisma.CourseCreateNestedManyWithoutStudioInput
   enrollments?: Prisma.EnrollmentCreateNestedManyWithoutStudioInput
 }
@@ -1327,7 +1327,7 @@ export type StudioUncheckedCreateWithoutBookingIntentsInput = {
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
-  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   courses?: Prisma.CourseUncheckedCreateNestedManyWithoutStudioInput
   enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutStudioInput
 }
@@ -1362,7 +1362,7 @@ export type StudioUpdateWithoutBookingIntentsInput = {
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
-  roles?: Prisma.RoleUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   courses?: Prisma.CourseUpdateManyWithoutStudioNestedInput
   enrollments?: Prisma.EnrollmentUpdateManyWithoutStudioNestedInput
 }
@@ -1381,7 +1381,7 @@ export type StudioUncheckedUpdateWithoutBookingIntentsInput = {
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
-  roles?: Prisma.RoleUncheckedUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   courses?: Prisma.CourseUncheckedUpdateManyWithoutStudioNestedInput
   enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutStudioNestedInput
 }
@@ -1399,7 +1399,7 @@ export type StudioCreateWithoutBookingsInput = {
   categories?: Prisma.CategoryCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
-  roles?: Prisma.RoleCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   courses?: Prisma.CourseCreateNestedManyWithoutStudioInput
   enrollments?: Prisma.EnrollmentCreateNestedManyWithoutStudioInput
   bookingIntents?: Prisma.BookingIntentCreateNestedManyWithoutStudioInput
@@ -1418,7 +1418,7 @@ export type StudioUncheckedCreateWithoutBookingsInput = {
   categories?: Prisma.CategoryUncheckedCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
-  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutStudioInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   courses?: Prisma.CourseUncheckedCreateNestedManyWithoutStudioInput
   enrollments?: Prisma.EnrollmentUncheckedCreateNestedManyWithoutStudioInput
   bookingIntents?: Prisma.BookingIntentUncheckedCreateNestedManyWithoutStudioInput
@@ -1453,7 +1453,7 @@ export type StudioUpdateWithoutBookingsInput = {
   categories?: Prisma.CategoryUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
-  roles?: Prisma.RoleUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   courses?: Prisma.CourseUpdateManyWithoutStudioNestedInput
   enrollments?: Prisma.EnrollmentUpdateManyWithoutStudioNestedInput
   bookingIntents?: Prisma.BookingIntentUpdateManyWithoutStudioNestedInput
@@ -1472,7 +1472,7 @@ export type StudioUncheckedUpdateWithoutBookingsInput = {
   categories?: Prisma.CategoryUncheckedUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
-  roles?: Prisma.RoleUncheckedUpdateManyWithoutStudioNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   courses?: Prisma.CourseUncheckedUpdateManyWithoutStudioNestedInput
   enrollments?: Prisma.EnrollmentUncheckedUpdateManyWithoutStudioNestedInput
   bookingIntents?: Prisma.BookingIntentUncheckedUpdateManyWithoutStudioNestedInput

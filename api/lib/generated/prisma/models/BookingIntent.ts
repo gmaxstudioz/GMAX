@@ -28,11 +28,13 @@ export type AggregateBookingIntent = {
 
 export type BookingIntentAvgAggregateOutputType = {
   sessionCount: number | null
+  totalAmount: runtime.Decimal | null
   amount: runtime.Decimal | null
 }
 
 export type BookingIntentSumAggregateOutputType = {
   sessionCount: number | null
+  totalAmount: runtime.Decimal | null
   amount: runtime.Decimal | null
 }
 
@@ -44,11 +46,14 @@ export type BookingIntentMinAggregateOutputType = {
   clientPhone: string | null
   existingClientId: string | null
   serviceId: string | null
+  serviceVariantId: string | null
   sessionCount: number | null
   bookingDate: Date | null
   notes: string | null
   paystackReference: string | null
+  totalAmount: runtime.Decimal | null
   amount: runtime.Decimal | null
+  paymentPlan: $Enums.PaymentPlan | null
   status: $Enums.BookingIntentStatus | null
   expiresAt: Date | null
   resolvedBookingId: string | null
@@ -63,11 +68,14 @@ export type BookingIntentMaxAggregateOutputType = {
   clientPhone: string | null
   existingClientId: string | null
   serviceId: string | null
+  serviceVariantId: string | null
   sessionCount: number | null
   bookingDate: Date | null
   notes: string | null
   paystackReference: string | null
+  totalAmount: runtime.Decimal | null
   amount: runtime.Decimal | null
+  paymentPlan: $Enums.PaymentPlan | null
   status: $Enums.BookingIntentStatus | null
   expiresAt: Date | null
   resolvedBookingId: string | null
@@ -82,12 +90,15 @@ export type BookingIntentCountAggregateOutputType = {
   clientPhone: number
   existingClientId: number
   serviceId: number
+  serviceVariantId: number
   addonIds: number
   sessionCount: number
   bookingDate: number
   notes: number
   paystackReference: number
+  totalAmount: number
   amount: number
+  paymentPlan: number
   status: number
   expiresAt: number
   resolvedBookingId: number
@@ -98,11 +109,13 @@ export type BookingIntentCountAggregateOutputType = {
 
 export type BookingIntentAvgAggregateInputType = {
   sessionCount?: true
+  totalAmount?: true
   amount?: true
 }
 
 export type BookingIntentSumAggregateInputType = {
   sessionCount?: true
+  totalAmount?: true
   amount?: true
 }
 
@@ -114,11 +127,14 @@ export type BookingIntentMinAggregateInputType = {
   clientPhone?: true
   existingClientId?: true
   serviceId?: true
+  serviceVariantId?: true
   sessionCount?: true
   bookingDate?: true
   notes?: true
   paystackReference?: true
+  totalAmount?: true
   amount?: true
+  paymentPlan?: true
   status?: true
   expiresAt?: true
   resolvedBookingId?: true
@@ -133,11 +149,14 @@ export type BookingIntentMaxAggregateInputType = {
   clientPhone?: true
   existingClientId?: true
   serviceId?: true
+  serviceVariantId?: true
   sessionCount?: true
   bookingDate?: true
   notes?: true
   paystackReference?: true
+  totalAmount?: true
   amount?: true
+  paymentPlan?: true
   status?: true
   expiresAt?: true
   resolvedBookingId?: true
@@ -152,12 +171,15 @@ export type BookingIntentCountAggregateInputType = {
   clientPhone?: true
   existingClientId?: true
   serviceId?: true
+  serviceVariantId?: true
   addonIds?: true
   sessionCount?: true
   bookingDate?: true
   notes?: true
   paystackReference?: true
+  totalAmount?: true
   amount?: true
+  paymentPlan?: true
   status?: true
   expiresAt?: true
   resolvedBookingId?: true
@@ -259,12 +281,15 @@ export type BookingIntentGroupByOutputType = {
   clientPhone: string | null
   existingClientId: string | null
   serviceId: string
+  serviceVariantId: string | null
   addonIds: string[]
   sessionCount: number
   bookingDate: Date
   notes: string | null
   paystackReference: string
+  totalAmount: runtime.Decimal
   amount: runtime.Decimal
+  paymentPlan: $Enums.PaymentPlan
   status: $Enums.BookingIntentStatus
   expiresAt: Date
   resolvedBookingId: string | null
@@ -302,12 +327,15 @@ export type BookingIntentWhereInput = {
   clientPhone?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
   existingClientId?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
   serviceId?: Prisma.StringFilter<"BookingIntent"> | string
+  serviceVariantId?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
   addonIds?: Prisma.StringNullableListFilter<"BookingIntent">
   sessionCount?: Prisma.IntFilter<"BookingIntent"> | number
   bookingDate?: Prisma.DateTimeFilter<"BookingIntent"> | Date | string
   notes?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
   paystackReference?: Prisma.StringFilter<"BookingIntent"> | string
+  totalAmount?: Prisma.DecimalFilter<"BookingIntent"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   amount?: Prisma.DecimalFilter<"BookingIntent"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: Prisma.EnumPaymentPlanFilter<"BookingIntent"> | $Enums.PaymentPlan
   status?: Prisma.EnumBookingIntentStatusFilter<"BookingIntent"> | $Enums.BookingIntentStatus
   expiresAt?: Prisma.DateTimeFilter<"BookingIntent"> | Date | string
   resolvedBookingId?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
@@ -323,12 +351,15 @@ export type BookingIntentOrderByWithRelationInput = {
   clientPhone?: Prisma.SortOrderInput | Prisma.SortOrder
   existingClientId?: Prisma.SortOrderInput | Prisma.SortOrder
   serviceId?: Prisma.SortOrder
+  serviceVariantId?: Prisma.SortOrderInput | Prisma.SortOrder
   addonIds?: Prisma.SortOrder
   sessionCount?: Prisma.SortOrder
   bookingDate?: Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   paystackReference?: Prisma.SortOrder
+  totalAmount?: Prisma.SortOrder
   amount?: Prisma.SortOrder
+  paymentPlan?: Prisma.SortOrder
   status?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
   resolvedBookingId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -348,11 +379,14 @@ export type BookingIntentWhereUniqueInput = Prisma.AtLeast<{
   clientPhone?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
   existingClientId?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
   serviceId?: Prisma.StringFilter<"BookingIntent"> | string
+  serviceVariantId?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
   addonIds?: Prisma.StringNullableListFilter<"BookingIntent">
   sessionCount?: Prisma.IntFilter<"BookingIntent"> | number
   bookingDate?: Prisma.DateTimeFilter<"BookingIntent"> | Date | string
   notes?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
+  totalAmount?: Prisma.DecimalFilter<"BookingIntent"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   amount?: Prisma.DecimalFilter<"BookingIntent"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: Prisma.EnumPaymentPlanFilter<"BookingIntent"> | $Enums.PaymentPlan
   status?: Prisma.EnumBookingIntentStatusFilter<"BookingIntent"> | $Enums.BookingIntentStatus
   expiresAt?: Prisma.DateTimeFilter<"BookingIntent"> | Date | string
   resolvedBookingId?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
@@ -368,12 +402,15 @@ export type BookingIntentOrderByWithAggregationInput = {
   clientPhone?: Prisma.SortOrderInput | Prisma.SortOrder
   existingClientId?: Prisma.SortOrderInput | Prisma.SortOrder
   serviceId?: Prisma.SortOrder
+  serviceVariantId?: Prisma.SortOrderInput | Prisma.SortOrder
   addonIds?: Prisma.SortOrder
   sessionCount?: Prisma.SortOrder
   bookingDate?: Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   paystackReference?: Prisma.SortOrder
+  totalAmount?: Prisma.SortOrder
   amount?: Prisma.SortOrder
+  paymentPlan?: Prisma.SortOrder
   status?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
   resolvedBookingId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -396,12 +433,15 @@ export type BookingIntentScalarWhereWithAggregatesInput = {
   clientPhone?: Prisma.StringNullableWithAggregatesFilter<"BookingIntent"> | string | null
   existingClientId?: Prisma.StringNullableWithAggregatesFilter<"BookingIntent"> | string | null
   serviceId?: Prisma.StringWithAggregatesFilter<"BookingIntent"> | string
+  serviceVariantId?: Prisma.StringNullableWithAggregatesFilter<"BookingIntent"> | string | null
   addonIds?: Prisma.StringNullableListFilter<"BookingIntent">
   sessionCount?: Prisma.IntWithAggregatesFilter<"BookingIntent"> | number
   bookingDate?: Prisma.DateTimeWithAggregatesFilter<"BookingIntent"> | Date | string
   notes?: Prisma.StringNullableWithAggregatesFilter<"BookingIntent"> | string | null
   paystackReference?: Prisma.StringWithAggregatesFilter<"BookingIntent"> | string
+  totalAmount?: Prisma.DecimalWithAggregatesFilter<"BookingIntent"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   amount?: Prisma.DecimalWithAggregatesFilter<"BookingIntent"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: Prisma.EnumPaymentPlanWithAggregatesFilter<"BookingIntent"> | $Enums.PaymentPlan
   status?: Prisma.EnumBookingIntentStatusWithAggregatesFilter<"BookingIntent"> | $Enums.BookingIntentStatus
   expiresAt?: Prisma.DateTimeWithAggregatesFilter<"BookingIntent"> | Date | string
   resolvedBookingId?: Prisma.StringNullableWithAggregatesFilter<"BookingIntent"> | string | null
@@ -415,12 +455,15 @@ export type BookingIntentCreateInput = {
   clientPhone?: string | null
   existingClientId?: string | null
   serviceId: string
+  serviceVariantId?: string | null
   addonIds?: Prisma.BookingIntentCreateaddonIdsInput | string[]
   sessionCount: number
   bookingDate: Date | string
   notes?: string | null
   paystackReference: string
+  totalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: $Enums.PaymentPlan
   status?: $Enums.BookingIntentStatus
   expiresAt: Date | string
   resolvedBookingId?: string | null
@@ -436,12 +479,15 @@ export type BookingIntentUncheckedCreateInput = {
   clientPhone?: string | null
   existingClientId?: string | null
   serviceId: string
+  serviceVariantId?: string | null
   addonIds?: Prisma.BookingIntentCreateaddonIdsInput | string[]
   sessionCount: number
   bookingDate: Date | string
   notes?: string | null
   paystackReference: string
+  totalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: $Enums.PaymentPlan
   status?: $Enums.BookingIntentStatus
   expiresAt: Date | string
   resolvedBookingId?: string | null
@@ -455,12 +501,15 @@ export type BookingIntentUpdateInput = {
   clientPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   existingClientId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   serviceId?: Prisma.StringFieldUpdateOperationsInput | string
+  serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   addonIds?: Prisma.BookingIntentUpdateaddonIdsInput | string[]
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paystackReference?: Prisma.StringFieldUpdateOperationsInput | string
+  totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
   status?: Prisma.EnumBookingIntentStatusFieldUpdateOperationsInput | $Enums.BookingIntentStatus
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resolvedBookingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -476,12 +525,15 @@ export type BookingIntentUncheckedUpdateInput = {
   clientPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   existingClientId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   serviceId?: Prisma.StringFieldUpdateOperationsInput | string
+  serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   addonIds?: Prisma.BookingIntentUpdateaddonIdsInput | string[]
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paystackReference?: Prisma.StringFieldUpdateOperationsInput | string
+  totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
   status?: Prisma.EnumBookingIntentStatusFieldUpdateOperationsInput | $Enums.BookingIntentStatus
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resolvedBookingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -496,12 +548,15 @@ export type BookingIntentCreateManyInput = {
   clientPhone?: string | null
   existingClientId?: string | null
   serviceId: string
+  serviceVariantId?: string | null
   addonIds?: Prisma.BookingIntentCreateaddonIdsInput | string[]
   sessionCount: number
   bookingDate: Date | string
   notes?: string | null
   paystackReference: string
+  totalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: $Enums.PaymentPlan
   status?: $Enums.BookingIntentStatus
   expiresAt: Date | string
   resolvedBookingId?: string | null
@@ -515,12 +570,15 @@ export type BookingIntentUpdateManyMutationInput = {
   clientPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   existingClientId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   serviceId?: Prisma.StringFieldUpdateOperationsInput | string
+  serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   addonIds?: Prisma.BookingIntentUpdateaddonIdsInput | string[]
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paystackReference?: Prisma.StringFieldUpdateOperationsInput | string
+  totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
   status?: Prisma.EnumBookingIntentStatusFieldUpdateOperationsInput | $Enums.BookingIntentStatus
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resolvedBookingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -535,12 +593,15 @@ export type BookingIntentUncheckedUpdateManyInput = {
   clientPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   existingClientId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   serviceId?: Prisma.StringFieldUpdateOperationsInput | string
+  serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   addonIds?: Prisma.BookingIntentUpdateaddonIdsInput | string[]
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paystackReference?: Prisma.StringFieldUpdateOperationsInput | string
+  totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
   status?: Prisma.EnumBookingIntentStatusFieldUpdateOperationsInput | $Enums.BookingIntentStatus
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resolvedBookingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -565,12 +626,15 @@ export type BookingIntentCountOrderByAggregateInput = {
   clientPhone?: Prisma.SortOrder
   existingClientId?: Prisma.SortOrder
   serviceId?: Prisma.SortOrder
+  serviceVariantId?: Prisma.SortOrder
   addonIds?: Prisma.SortOrder
   sessionCount?: Prisma.SortOrder
   bookingDate?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   paystackReference?: Prisma.SortOrder
+  totalAmount?: Prisma.SortOrder
   amount?: Prisma.SortOrder
+  paymentPlan?: Prisma.SortOrder
   status?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
   resolvedBookingId?: Prisma.SortOrder
@@ -579,6 +643,7 @@ export type BookingIntentCountOrderByAggregateInput = {
 
 export type BookingIntentAvgOrderByAggregateInput = {
   sessionCount?: Prisma.SortOrder
+  totalAmount?: Prisma.SortOrder
   amount?: Prisma.SortOrder
 }
 
@@ -590,11 +655,14 @@ export type BookingIntentMaxOrderByAggregateInput = {
   clientPhone?: Prisma.SortOrder
   existingClientId?: Prisma.SortOrder
   serviceId?: Prisma.SortOrder
+  serviceVariantId?: Prisma.SortOrder
   sessionCount?: Prisma.SortOrder
   bookingDate?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   paystackReference?: Prisma.SortOrder
+  totalAmount?: Prisma.SortOrder
   amount?: Prisma.SortOrder
+  paymentPlan?: Prisma.SortOrder
   status?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
   resolvedBookingId?: Prisma.SortOrder
@@ -609,11 +677,14 @@ export type BookingIntentMinOrderByAggregateInput = {
   clientPhone?: Prisma.SortOrder
   existingClientId?: Prisma.SortOrder
   serviceId?: Prisma.SortOrder
+  serviceVariantId?: Prisma.SortOrder
   sessionCount?: Prisma.SortOrder
   bookingDate?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   paystackReference?: Prisma.SortOrder
+  totalAmount?: Prisma.SortOrder
   amount?: Prisma.SortOrder
+  paymentPlan?: Prisma.SortOrder
   status?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
   resolvedBookingId?: Prisma.SortOrder
@@ -622,6 +693,7 @@ export type BookingIntentMinOrderByAggregateInput = {
 
 export type BookingIntentSumOrderByAggregateInput = {
   sessionCount?: Prisma.SortOrder
+  totalAmount?: Prisma.SortOrder
   amount?: Prisma.SortOrder
 }
 
@@ -676,6 +748,10 @@ export type BookingIntentUpdateaddonIdsInput = {
   push?: string | string[]
 }
 
+export type EnumPaymentPlanFieldUpdateOperationsInput = {
+  set?: $Enums.PaymentPlan
+}
+
 export type EnumBookingIntentStatusFieldUpdateOperationsInput = {
   set?: $Enums.BookingIntentStatus
 }
@@ -687,12 +763,15 @@ export type BookingIntentCreateWithoutStudioInput = {
   clientPhone?: string | null
   existingClientId?: string | null
   serviceId: string
+  serviceVariantId?: string | null
   addonIds?: Prisma.BookingIntentCreateaddonIdsInput | string[]
   sessionCount: number
   bookingDate: Date | string
   notes?: string | null
   paystackReference: string
+  totalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: $Enums.PaymentPlan
   status?: $Enums.BookingIntentStatus
   expiresAt: Date | string
   resolvedBookingId?: string | null
@@ -706,12 +785,15 @@ export type BookingIntentUncheckedCreateWithoutStudioInput = {
   clientPhone?: string | null
   existingClientId?: string | null
   serviceId: string
+  serviceVariantId?: string | null
   addonIds?: Prisma.BookingIntentCreateaddonIdsInput | string[]
   sessionCount: number
   bookingDate: Date | string
   notes?: string | null
   paystackReference: string
+  totalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: $Enums.PaymentPlan
   status?: $Enums.BookingIntentStatus
   expiresAt: Date | string
   resolvedBookingId?: string | null
@@ -755,12 +837,15 @@ export type BookingIntentScalarWhereInput = {
   clientPhone?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
   existingClientId?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
   serviceId?: Prisma.StringFilter<"BookingIntent"> | string
+  serviceVariantId?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
   addonIds?: Prisma.StringNullableListFilter<"BookingIntent">
   sessionCount?: Prisma.IntFilter<"BookingIntent"> | number
   bookingDate?: Prisma.DateTimeFilter<"BookingIntent"> | Date | string
   notes?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
   paystackReference?: Prisma.StringFilter<"BookingIntent"> | string
+  totalAmount?: Prisma.DecimalFilter<"BookingIntent"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   amount?: Prisma.DecimalFilter<"BookingIntent"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: Prisma.EnumPaymentPlanFilter<"BookingIntent"> | $Enums.PaymentPlan
   status?: Prisma.EnumBookingIntentStatusFilter<"BookingIntent"> | $Enums.BookingIntentStatus
   expiresAt?: Prisma.DateTimeFilter<"BookingIntent"> | Date | string
   resolvedBookingId?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
@@ -774,12 +859,15 @@ export type BookingIntentCreateManyStudioInput = {
   clientPhone?: string | null
   existingClientId?: string | null
   serviceId: string
+  serviceVariantId?: string | null
   addonIds?: Prisma.BookingIntentCreateaddonIdsInput | string[]
   sessionCount: number
   bookingDate: Date | string
   notes?: string | null
   paystackReference: string
+  totalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: $Enums.PaymentPlan
   status?: $Enums.BookingIntentStatus
   expiresAt: Date | string
   resolvedBookingId?: string | null
@@ -793,12 +881,15 @@ export type BookingIntentUpdateWithoutStudioInput = {
   clientPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   existingClientId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   serviceId?: Prisma.StringFieldUpdateOperationsInput | string
+  serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   addonIds?: Prisma.BookingIntentUpdateaddonIdsInput | string[]
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paystackReference?: Prisma.StringFieldUpdateOperationsInput | string
+  totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
   status?: Prisma.EnumBookingIntentStatusFieldUpdateOperationsInput | $Enums.BookingIntentStatus
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resolvedBookingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -812,12 +903,15 @@ export type BookingIntentUncheckedUpdateWithoutStudioInput = {
   clientPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   existingClientId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   serviceId?: Prisma.StringFieldUpdateOperationsInput | string
+  serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   addonIds?: Prisma.BookingIntentUpdateaddonIdsInput | string[]
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paystackReference?: Prisma.StringFieldUpdateOperationsInput | string
+  totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
   status?: Prisma.EnumBookingIntentStatusFieldUpdateOperationsInput | $Enums.BookingIntentStatus
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resolvedBookingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -831,12 +925,15 @@ export type BookingIntentUncheckedUpdateManyWithoutStudioInput = {
   clientPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   existingClientId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   serviceId?: Prisma.StringFieldUpdateOperationsInput | string
+  serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   addonIds?: Prisma.BookingIntentUpdateaddonIdsInput | string[]
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paystackReference?: Prisma.StringFieldUpdateOperationsInput | string
+  totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
   status?: Prisma.EnumBookingIntentStatusFieldUpdateOperationsInput | $Enums.BookingIntentStatus
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resolvedBookingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -853,12 +950,15 @@ export type BookingIntentSelect<ExtArgs extends runtime.Types.Extensions.Interna
   clientPhone?: boolean
   existingClientId?: boolean
   serviceId?: boolean
+  serviceVariantId?: boolean
   addonIds?: boolean
   sessionCount?: boolean
   bookingDate?: boolean
   notes?: boolean
   paystackReference?: boolean
+  totalAmount?: boolean
   amount?: boolean
+  paymentPlan?: boolean
   status?: boolean
   expiresAt?: boolean
   resolvedBookingId?: boolean
@@ -874,12 +974,15 @@ export type BookingIntentSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   clientPhone?: boolean
   existingClientId?: boolean
   serviceId?: boolean
+  serviceVariantId?: boolean
   addonIds?: boolean
   sessionCount?: boolean
   bookingDate?: boolean
   notes?: boolean
   paystackReference?: boolean
+  totalAmount?: boolean
   amount?: boolean
+  paymentPlan?: boolean
   status?: boolean
   expiresAt?: boolean
   resolvedBookingId?: boolean
@@ -895,12 +998,15 @@ export type BookingIntentSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   clientPhone?: boolean
   existingClientId?: boolean
   serviceId?: boolean
+  serviceVariantId?: boolean
   addonIds?: boolean
   sessionCount?: boolean
   bookingDate?: boolean
   notes?: boolean
   paystackReference?: boolean
+  totalAmount?: boolean
   amount?: boolean
+  paymentPlan?: boolean
   status?: boolean
   expiresAt?: boolean
   resolvedBookingId?: boolean
@@ -916,19 +1022,22 @@ export type BookingIntentSelectScalar = {
   clientPhone?: boolean
   existingClientId?: boolean
   serviceId?: boolean
+  serviceVariantId?: boolean
   addonIds?: boolean
   sessionCount?: boolean
   bookingDate?: boolean
   notes?: boolean
   paystackReference?: boolean
+  totalAmount?: boolean
   amount?: boolean
+  paymentPlan?: boolean
   status?: boolean
   expiresAt?: boolean
   resolvedBookingId?: boolean
   createdAt?: boolean
 }
 
-export type BookingIntentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studioId" | "clientName" | "clientEmail" | "clientPhone" | "existingClientId" | "serviceId" | "addonIds" | "sessionCount" | "bookingDate" | "notes" | "paystackReference" | "amount" | "status" | "expiresAt" | "resolvedBookingId" | "createdAt", ExtArgs["result"]["bookingIntent"]>
+export type BookingIntentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studioId" | "clientName" | "clientEmail" | "clientPhone" | "existingClientId" | "serviceId" | "serviceVariantId" | "addonIds" | "sessionCount" | "bookingDate" | "notes" | "paystackReference" | "totalAmount" | "amount" | "paymentPlan" | "status" | "expiresAt" | "resolvedBookingId" | "createdAt", ExtArgs["result"]["bookingIntent"]>
 export type BookingIntentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
 }
@@ -952,12 +1061,15 @@ export type $BookingIntentPayload<ExtArgs extends runtime.Types.Extensions.Inter
     clientPhone: string | null
     existingClientId: string | null
     serviceId: string
+    serviceVariantId: string | null
     addonIds: string[]
     sessionCount: number
     bookingDate: Date
     notes: string | null
     paystackReference: string
+    totalAmount: runtime.Decimal
     amount: runtime.Decimal
+    paymentPlan: $Enums.PaymentPlan
     status: $Enums.BookingIntentStatus
     expiresAt: Date
     resolvedBookingId: string | null
@@ -1393,12 +1505,15 @@ export interface BookingIntentFieldRefs {
   readonly clientPhone: Prisma.FieldRef<"BookingIntent", 'String'>
   readonly existingClientId: Prisma.FieldRef<"BookingIntent", 'String'>
   readonly serviceId: Prisma.FieldRef<"BookingIntent", 'String'>
+  readonly serviceVariantId: Prisma.FieldRef<"BookingIntent", 'String'>
   readonly addonIds: Prisma.FieldRef<"BookingIntent", 'String[]'>
   readonly sessionCount: Prisma.FieldRef<"BookingIntent", 'Int'>
   readonly bookingDate: Prisma.FieldRef<"BookingIntent", 'DateTime'>
   readonly notes: Prisma.FieldRef<"BookingIntent", 'String'>
   readonly paystackReference: Prisma.FieldRef<"BookingIntent", 'String'>
+  readonly totalAmount: Prisma.FieldRef<"BookingIntent", 'Decimal'>
   readonly amount: Prisma.FieldRef<"BookingIntent", 'Decimal'>
+  readonly paymentPlan: Prisma.FieldRef<"BookingIntent", 'PaymentPlan'>
   readonly status: Prisma.FieldRef<"BookingIntent", 'BookingIntentStatus'>
   readonly expiresAt: Prisma.FieldRef<"BookingIntent", 'DateTime'>
   readonly resolvedBookingId: Prisma.FieldRef<"BookingIntent", 'String'>

@@ -62,3 +62,4 @@ export type ServiceVariantInput     = z.infer<typeof ServiceVariantSchema>;
 export type ServiceDeliverableInput = z.infer<typeof ServiceDeliverableSchema>;
 export type CategoryPayload         = z.infer<typeof CategorySchema>;
 export type ServicePayload = z.output<typeof ServiceSchema>;
+export type ServiceOutput = z.infer<typeof ServiceOutput>;

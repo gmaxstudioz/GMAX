@@ -9,6 +9,7 @@ import {
     RescheduleBookingContract,
     UpdateBookingStatusContract,
     CheckClientContract,
+    VerifyBookingContract,
 } from "./bookings.contract";
 
 import {
@@ -98,6 +99,7 @@ export const contract = {
         reschedule: RescheduleBookingContract,
         updateStatus: UpdateBookingStatusContract,
         checkClient: CheckClientContract,
+        verifyBooking: VerifyBookingContract,
     },
 
     // ── Service ───────────────────────────────────────────────────────────────

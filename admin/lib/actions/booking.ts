@@ -121,7 +121,7 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
                 createdBy: session.user.id,
                 ...(addonIds && addonIds.length > 0 && {
                     addons: {
-                        connect: addonIds.map(id => ({ id })),
+                        connect: addonIds.map(id => ({ id: id.split(":")[0] })),
                     },
                 }),
             }
@@ -525,6 +525,7 @@ export async function updateBookingFull(
     data: {
         clientId?: string;
         serviceId?: string;
+        serviceVariantId?: string;
         memberId?: string;
         bookingDate?: string;
         sessionCount?: number;
@@ -533,6 +534,8 @@ export async function updateBookingFull(
         paymentStatus?: string;
         deliveryStatus?: string;
         addonIds?: string[];
+        totalAmount?: number;
+        paymentPlan?: any;
     }
 ) {
     try {
@@ -558,12 +561,15 @@ export async function updateBookingFull(
 
         if (data.clientId) updateData.clientId = data.clientId;
         if (data.serviceId) updateData.serviceId = data.serviceId;
+        if (data.serviceVariantId) updateData.serviceVariantId = data.serviceVariantId;
         if (data.memberId) updateData.memberId = data.memberId;
         if (data.notes !== undefined) updateData.notes = data.notes;
         if (data.sessionCount !== undefined) updateData.sessionCount = Math.max(1, data.sessionCount);
         if (data.bookingStatus) updateData.bookingStatus = data.bookingStatus;
         if (data.paymentStatus) updateData.paymentStatus = data.paymentStatus;
         if (data.deliveryStatus) updateData.deliveryStatus = data.deliveryStatus;
+        if (data.totalAmount !== undefined) updateData.totalAmount = data.totalAmount;
+        if (data.paymentPlan) updateData.paymentPlan = data.paymentPlan;
 
         // Handle date change with overlap checking
         if (data.bookingDate) {
@@ -614,7 +620,7 @@ export async function updateBookingFull(
         // Handle addon updates
         if (data.addonIds !== undefined) {
             updateData.addons = {
-                set: data.addonIds.map(id => ({ id })),
+                set: data.addonIds.map(id => ({ id: id.split(":")[0] })),
             };
         }
 

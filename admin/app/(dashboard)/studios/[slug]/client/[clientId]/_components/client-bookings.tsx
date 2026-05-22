@@ -237,7 +237,7 @@ export function ClientBookingsList({
                                     <Link 
                                         href={`/studios/${slug}/bookings/detail/${bookingItem.id}`} 
                                         key={bookingItem.id} 
-                                        className={bookingProps({ status: bookingItem.bookingStatus.toLowerCase() as "pending" | "completed" | "cancelled" | null | undefined, overdue: isOverdue })}
+                                        className={bookingProps({ status: bookingItem.bookingStatus.toLowerCase() as "pending" | "confirmed" | "completed" | "cancelled" | null | undefined, overdue: isOverdue })}
                                     >
                                         <div className="flex justify-between w-full items-center gap-2">
                                             <h1 className="font-semibold text-lg max-w-[65%] truncate">{bookingItem.service?.name || "Unknown"}</h1>

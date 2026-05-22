@@ -37,21 +37,24 @@ export function ResetPasswordForm() {
 
     async function onSubmit(values: FormValues) {
         setIsPending(true);
-        const { error } = await authClient.changePassword({
-            newPassword: values.newPassword,
-            currentPassword: values.currentPassword,
-            revokeOtherSessions: true,
-        });
 
-        setIsPending(false);
+        try {
+            const { error } = await authClient.changePassword({
+                newPassword: values.newPassword,
+                currentPassword: values.currentPassword,
+                revokeOtherSessions: true,
+            });
 
-        if (error) {
-            toast.error(error.message || "Failed to reset password.");
-            return;
+            if (error) {
+                toast.error(error.message || "Failed to reset password.");
+                return;
+            }
+
+            toast.success("Password successfully reset!");
+            form.reset();
+        } finally {
+            setIsPending(false);
         }
-
-        toast.success("Password successfully reset!");
-        form.reset();
     }
 
     return (

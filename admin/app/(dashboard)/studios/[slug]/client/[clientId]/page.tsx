@@ -78,7 +78,7 @@ export default async function ClientPage({ params }: ClientPageProps) {
                         phone: clientData.phone,
                         address: clientData.address,
                         notes: clientData.notes,
-                        clientType: clientData.type as "regular" | "vip"
+                        type: clientData.type as "regular" | "vip" | "vvip"
                     }} 
                 />
             </div>
@@ -104,9 +104,9 @@ export default async function ClientPage({ params }: ClientPageProps) {
                                     <p className="text-sm">Phone Numbers</p>
                                 </div>
                                 <div className="flex flex-col gap-1 mt-1">
-                                    {clientData.phone.length > 0 ? clientData.phone.map((p, i) => (
-                                        <p key={i} className="text-sm font-medium p-2 bg-primary/10 rounded-lg">{p}</p>
-                                    )) : (
+                                    {clientData.phone ? (
+                                        <p className="text-sm font-medium p-2 bg-primary/10 rounded-lg">{clientData.phone}</p>
+                                    ) : (
                                         <p className="text-sm italic text-muted-foreground">No phone number</p>
                                     )}
                                 </div>
