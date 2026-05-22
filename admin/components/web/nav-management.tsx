@@ -12,8 +12,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 export function NavManagement({
-    items,
-    ...props
+    items
   }: {
     items: {
       title: string

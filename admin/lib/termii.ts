@@ -76,7 +76,7 @@ export async function sendTemplateEmail(params: {
     email: string;
     subject: string;
     templateId: string;
-    variables: Record<string, string>;
+    variables: Record<string, string | null>;
 }) {
     return termiiPost("/api/templates/send-email", {
         email: params.email,
@@ -175,7 +175,7 @@ export async function sendDeliveryEmail(params: {
     clientName: string;
     studioName: string;
     downloadLink: string;
-    accessCode: string;
+    accessCode: string | null;
 }) {
     const templateId = process.env.TERMII_BOOKING_DELIVERY_TEMPLATE_ID;
     if (!templateId) {
@@ -201,7 +201,7 @@ export async function sendDeliverySMS(params: {
     clientName: string;
     studioName: string;
     downloadLink: string;
-    accessCode: string;
+    accessCode: string | null;
 }) {
     const message = `Hi ${params.clientName}, your photos from ${params.studioName} are ready! Download them here: ${params.downloadLink} (Access Code: ${params.accessCode})`;
     return sendSMS(params.phone, message).catch(e => console.error("Termii Delivery SMS failed", e));
@@ -212,7 +212,7 @@ export async function sendDeliveryWhatsApp(params: {
     clientName: string;
     studioName: string;
     downloadLink: string;
-    accessCode: string;
+    accessCode: string | null;
 }) {
     const message = `Hi ${params.clientName}! 👋\n\nYour photos from *${params.studioName}* are ready for download.\n\nAccess your gallery here: ${params.downloadLink}\n*Access Code:* ${params.accessCode}\n\nThank you for choosing us!`;
     return sendWhatsApp(params.phone, message).catch(e => console.error("Termii Delivery WhatsApp failed", e));

@@ -67,7 +67,7 @@ export async function deliverBooking(bookingId: string) {
                 clientName: booking.client.name,
                 studioName: booking.studio.name,
                 downloadLink,
-                accessCode,
+                accessCode: accessCode ?? "",
             })
         );
     }

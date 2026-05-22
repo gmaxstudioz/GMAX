@@ -25,7 +25,7 @@ import Link from "next/link";
 import { useTransition, useState, useMemo, useEffect, Suspense } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useSearchParams } from "next/navigation";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { CalenderGrid } from "./calender/Calender";
 import { DateTimeSlotPicker } from "./DateTimeSlotPicker";
 import AddClient from "./AddClient";
@@ -724,12 +724,11 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
     }, [studioData.clients, clientSearch]);
 
     // Watch reactive values for price calculation
-    const watchedServiceId = form.watch("serviceId");
-    const watchedServiceVariantId = form.watch("serviceVariantId");
-    const watchedSessionCount = form.watch("sessionCount");
-    const watchedClientId = form.watch("clientId");
-    const watchedPaymentPlan = form.watch("paymentPlan") || "FULL";
-    const watchedTotalAmount = form.watch("totalAmount") || 0;
+    const watchedServiceId      = useWatch({ control: form.control, name: "serviceId" });
+    const watchedServiceVariantId = useWatch({ control: form.control, name: "serviceVariantId" });
+    const watchedSessionCount   = useWatch({ control: form.control, name: "sessionCount" }) ?? 1;
+    const watchedClientId       = useWatch({ control: form.control, name: "clientId" });
+    const watchedPaymentPlan    = useWatch({ control: form.control, name: "paymentPlan" }) ?? "FULL";
 
     const selectedService = useMemo(() => allServices.find(s => s.id === watchedServiceId), [allServices, watchedServiceId]);
     const selectedVariant = useMemo(() => selectedService?.variants?.find((v) => v.id === watchedServiceVariantId), [selectedService, watchedServiceVariantId]);
@@ -1259,31 +1258,31 @@ function BookingIntents({ data }: { data: StudioWithRelations }) {
                                             <p className="font-medium">
                                                 {intent.amount != null ? `₦${Number(intent.amount).toLocaleString()}` : "—"}
                                             </p>
-                                            {(() => {
-                                                const totalAmount = (intent as { totalAmount?: number | string }).totalAmount;
-                                                if (totalAmount != null && intent.amount != null && Number(totalAmount) !== Number(intent.amount)) {
-                                                    return (
-                                                        <p className="text-xs text-muted-foreground">
-                                                            of ₦{Number(totalAmount).toLocaleString()}
-                                                        </p>
-                                                    );
-                                                }
-                                                return null;
-                                            })()}
-                                        </div>
-                                    </td>
-                                    <td className="py-3 px-2">
                                         {(() => {
-                                            const paymentPlan = (intent as { paymentPlan?: string }).paymentPlan;
-                                            if (!paymentPlan) return null;
-                                            const label = planLabels[paymentPlan as keyof typeof planLabels];
-                                            return (
-                                                <Badge variant="outline" className="text-xs">
-                                                    {label || paymentPlan}
-                                                </Badge>
-                                            );
+                                            const totalAmount = (intent as any).totalAmount;
+                                            if (totalAmount != null && intent.amount != null && Number(totalAmount) !== Number(intent.amount)) {
+                                                return (
+                                                    <p className="text-xs text-muted-foreground">
+                                                        of ₦{Number(totalAmount).toLocaleString()}
+                                                    </p>
+                                                );
+                                            }
+                                            return null;
                                         })()}
-                                    </td>
+                                    </div>
+                                </td>
+                                <td className="py-3 px-2">
+                                    {(() => {
+                                        const paymentPlan = (intent as any).paymentPlan;
+                                        if (!paymentPlan) return null;
+                                        const label = planLabels[paymentPlan as keyof typeof planLabels];
+                                        return (
+                                            <Badge variant="outline" className="text-xs">
+                                                {label || paymentPlan}
+                                            </Badge>
+                                        );
+                                    })()}
+                                </td>
                                     <td className="py-3 px-2">
                                         <Badge variant="outline" className={`text-xs ${statusStyles[intent.status] || ""}`}>
                                             {intent.status}

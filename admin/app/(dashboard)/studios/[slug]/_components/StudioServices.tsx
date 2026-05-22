@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { createCategory, deleteCategory, createService, deleteService, updateCategory, updateService } from "@/lib/actions/service";
-import { Controller, useForm, useFieldArray, Control } from "react-hook-form";
+import { Controller, useForm, useFieldArray, Control, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CategorySchema, CategoryPayload, ServiceSchema, ServicePayload } from "@/lib/schemas/service";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -144,6 +144,11 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
             }],
         }
     });
+
+    // At the top of StudioServices, after your hooks
+    const watchedFeatures = useWatch({ control: serviceForm.control, name: "features" }) ?? [];
+    const watchedVariants = useWatch({ control: serviceForm.control, name: "variants" });
+    const watchedSessionId = useWatch({ control: serviceForm.control, name: "studioSessionId" });
 
     const { fields: variantFields, append: appendVariant, remove: removeVariant } = useFieldArray({
         control: serviceForm.control,
@@ -565,7 +570,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                 variant="outline"
                                                 size="icon"
                                                 onClick={() => removeFeatureField(index)}
-                                                disabled={isPending || (serviceForm.watch("features") || []).length <= 1 && !featureValue}
+                                                disabled={isPending || (watchedFeatures.length <= 1 && !featureValue)}
                                             >
                                                 <MinusIcon className="h-4 w-4" />
                                             </Button>
@@ -606,7 +611,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                 </div>
                                 
                                 {variantFields.map((field, index) => {
-                                    const usedLocationTypes = serviceForm.watch("variants").map(v => v.locationType);
+                                    const usedLocationTypes = watchedVariants.map(v => v.locationType);
                                     
                                     return (
                                         <div key={field.id} className="p-4 border rounded-md bg-muted/10 relative flex flex-col gap-3">
@@ -788,9 +793,9 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                             }} disabled={isPending}>
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={isPending || studioData.studioSessions.length === 0 || !serviceForm.watch("studioSessionId")}>
+                            <Button type="submit" disabled={isPending || studioData.studioSessions.length === 0 || !watchedSessionId}>
                                 {isPending ? <Loader2Icon className="animate-spin size-4 mr-2" /> : null}
-                                {editModeService ? "Update" : "Bind"} Service
+                                {editModeService ? "Update" : "Add"} Service
                             </Button>
                         </DialogFooter>
                     </form>

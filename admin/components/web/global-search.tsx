@@ -8,7 +8,6 @@ import {
   CircleUserIcon,
   CreditCardIcon,
   FolderOpenIcon,
-  SearchIcon,
   SettingsIcon,
   StoreIcon,
   UsersIcon,

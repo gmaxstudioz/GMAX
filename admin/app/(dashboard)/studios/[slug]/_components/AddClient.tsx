@@ -10,7 +10,7 @@ import { tryCatch } from "@/hooks/try-catch";
 import { CreateClient } from "@/lib/actions/client";
 import { Client, ClientSchema, ClientTypeEnum } from "@/lib/schemas/client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ChevronDown, ChevronUp, CirclePlusIcon, Loader2Icon, PlusIcon, MinusIcon } from "lucide-react";
+import { ChevronDown, ChevronUp, CirclePlusIcon, Loader2Icon, PlusIcon } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";

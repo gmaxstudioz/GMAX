@@ -26,14 +26,14 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { tryCatch } from "@/hooks/try-catch";
-import { fetchPortfolioItems, deletePortfolioItem, createPortfolioItem, updatePortfolioItem, togglePortfolioPublish } from "@/lib/actions/portfolio";
+import { fetchPortfolioItems, deletePortfolioItem, createPortfolioItem, togglePortfolioPublish } from "@/lib/actions/portfolio";
 import { Filter, Loading, Refresh01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useMemo, useState, useTransition, useEffect, useRef, useCallback } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { toast } from "sonner";
 import Image from "next/image";
-import { SearchIcon, ImageIcon, Trash2, Plus, Eye, EyeOff, Pencil } from "lucide-react";
+import { SearchIcon, ImageIcon, Trash2, Plus, Eye, EyeOff } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

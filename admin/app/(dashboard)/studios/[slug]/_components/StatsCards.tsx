@@ -1,15 +1,11 @@
-
-import { Badge } from "@/components/ui/badge"
 import {
   Card,
   CardAction,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
 import { Prisma } from "@/lib/generated/prisma/client";
-import { TrendingUpIcon, TrendingDownIcon, MinusIcon } from "lucide-react"
 import { startOfMonth, subMonths, endOfMonth } from "date-fns";
 import { calcTrend, TrendBadge, TrendFooter } from "@/components/web/trend-indicators";
 

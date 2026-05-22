@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo, useEffect } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -127,14 +127,10 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
     const watchedAddonIds = form.watch("addonIds") || [];
     const watchedPaymentPlan = form.watch("paymentPlan") || "FULL";
     const watchedTotalAmount = form.watch("totalAmount") || 0;
-    const watchedSessionCount = form.watch("sessionCount") || 1;
 
     const selectedClient = useMemo(() => clients.find(c => c.id === watchedClientId), [clients, watchedClientId]);
     const selectedService = useMemo(() => mainServices.find(s => s.id === watchedServiceId), [mainServices, watchedServiceId]);
     const selectedVariant = useMemo(() => selectedService?.variants?.find(v => v.id === watchedServiceVariantId), [selectedService, watchedServiceVariantId]);
-
-    const selectedAddonVariants = useMemo(() => flattenedAddons.filter(a => watchedAddonIds.includes(a.compositeId)), [flattenedAddons, watchedAddonIds]);
-
     function toggleAddon(compositeId: string) {
         const baseAddonId = compositeId.split(':')[0];
         

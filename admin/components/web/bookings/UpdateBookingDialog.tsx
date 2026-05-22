@@ -15,8 +15,8 @@ import { tryCatch } from "@/hooks/try-catch";
 import { toast } from "sonner";
 import { Loader2, ChevronDown } from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertCircleIcon } from "@hugeicons/core-free-icons";
-import { useForm, Controller } from "react-hook-form";
+import { AlertCircleIcon, PencilEdit02Icon } from "@hugeicons/core-free-icons";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { UpdateBookingSchema, UpdateBookingInput, BookingStatus, PaymentStatus, DeliveryStatus, PaymentPlan } from "@/lib/schemas/booking";
 import { Field, FieldLabel } from "@/components/ui/field";
@@ -108,19 +108,16 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
         }
     });
 
-    const watchedClientId = form.watch("clientId");
-    const watchedServiceId = form.watch("serviceId");
-    const watchedServiceVariantId = form.watch("serviceVariantId");
-    const watchedAddonIds = form.watch("addonIds") || [];
-    const watchedPaymentPlan = form.watch("paymentPlan") || "FULL";
-    const watchedTotalAmount = form.watch("totalAmount") || 0;
-    const watchedSessionCount = form.watch("sessionCount") || 1;
+    const watchedClientId         = useWatch({ control: form.control, name: "clientId" });
+    const watchedServiceId        = useWatch({ control: form.control, name: "serviceId" });
+    const watchedServiceVariantId = useWatch({ control: form.control, name: "serviceVariantId" });
+    const watchedAddonIds         = useWatch({ control: form.control, name: "addonIds" }) ?? [];
+    const watchedPaymentPlan      = useWatch({ control: form.control, name: "paymentPlan" }) ?? "FULL";
+    const watchedTotalAmount      = useWatch({ control: form.control, name: "totalAmount" }) ?? 0;
 
     const selectedClient = useMemo(() => clients.find(c => c.id === watchedClientId), [clients, watchedClientId]);
     const selectedService = useMemo(() => mainServices.find(s => s.id === watchedServiceId), [mainServices, watchedServiceId]);
     const selectedVariant = useMemo(() => selectedService?.variants?.find(v => v.id === watchedServiceVariantId), [selectedService, watchedServiceVariantId]);
-
-    const selectedAddonVariants = useMemo(() => flattenedAddons.filter(a => watchedAddonIds.includes(a.compositeId)), [flattenedAddons, watchedAddonIds]);
 
     function toggleAddon(compositeId: string) {
         const baseAddonId = compositeId.split(':')[0];
