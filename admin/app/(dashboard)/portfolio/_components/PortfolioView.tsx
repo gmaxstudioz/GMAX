@@ -471,35 +471,45 @@ function UploadDialog({
                     const { uploadId, key } = await initiateRes.json();
                     finalKey = key;
 
-                    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-                    const parts: { ETag: string; PartNumber: number }[] = [];
+                    try {
+                        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+                        const parts: { ETag: string; PartNumber: number }[] = [];
 
-                    for (let i = 0; i < totalChunks; i++) {
-                        const partNumber = i + 1;
-                        const chunk = file.slice(i * CHUNK_SIZE, Math.min((i + 1) * CHUNK_SIZE, file.size));
+                        for (let i = 0; i < totalChunks; i++) {
+                            const partNumber = i + 1;
+                            const chunk = file.slice(i * CHUNK_SIZE, Math.min((i + 1) * CHUNK_SIZE, file.size));
 
-                        const partRes = await fetch("/api/s3/multipart/presign-part", {
+                            const partRes = await fetch("/api/s3/multipart/presign-part", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ key, uploadId, partNumber }),
+                            });
+                            if (!partRes.ok) throw new Error(`Failed to get presigned URL for part ${partNumber}`);
+                            const { presignedUrl } = await partRes.json();
+
+                            const putRes = await fetch(presignedUrl, { method: "PUT", body: chunk, headers: { "Content-Type": file.type } });
+                            if (!putRes.ok) throw new Error(`Part ${partNumber} upload failed`);
+
+                            const etag = putRes.headers.get("ETag");
+                            if (!etag) throw new Error(`ETag missing for part ${partNumber} — check R2 CORS ExposeHeaders config`);
+                            parts.push({ ETag: etag, PartNumber: partNumber });
+                        }
+
+                        const completeRes = await fetch("/api/s3/multipart/complete", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ key, uploadId, partNumber }),
+                            body: JSON.stringify({ key, uploadId, parts }),
                         });
-                        if (!partRes.ok) throw new Error(`Failed to get presigned URL for part ${partNumber}`);
-                        const { presignedUrl } = await partRes.json();
-
-                        const putRes = await fetch(presignedUrl, { method: "PUT", body: chunk, headers: { "Content-Type": file.type } });
-                        if (!putRes.ok) throw new Error(`Part ${partNumber} upload failed`);
-
-                        const etag = putRes.headers.get("ETag");
-                        if (!etag) throw new Error(`ETag missing for part ${partNumber} — check R2 CORS ExposeHeaders config`);
-                        parts.push({ ETag: etag, PartNumber: partNumber });
+                        if (!completeRes.ok) throw new Error("Failed to complete multipart upload");
+                    } catch (uploadErr) {
+                        // Best-effort abort on failure to prevent orphaned parts
+                        fetch("/api/s3/multipart/abort", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ key, uploadId }),
+                        }).catch(e => console.error("Abort failed:", e));
+                        throw uploadErr;
                     }
-
-                    const completeRes = await fetch("/api/s3/multipart/complete", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ key, uploadId, parts }),
-                    });
-                    if (!completeRes.ok) throw new Error("Failed to complete multipart upload");
                 }
 
                 // 3. Create DB record

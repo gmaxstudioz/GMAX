@@ -17,6 +17,7 @@ const ROUTES = {
     initiate: "/api/s3/multipart/initiate",
     part: "/api/s3/multipart/presign-part",
     complete: "/api/s3/multipart/complete",
+    abort: "/api/s3/multipart/abort",
 } as const;
 
 type UploadStatus = "idle" | "uploading" | "success" | "error";
@@ -138,41 +139,51 @@ export function MultipartUploader({
         if (!initiateRes.ok) throw new Error("Failed to initiate multipart upload");
         const { uploadId, key } = await initiateRes.json();
 
-        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-        const parts: { ETag: string; PartNumber: number }[] = [];
+        try {
+            const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+            const parts: { ETag: string; PartNumber: number }[] = [];
 
-        for (let i = 0; i < totalChunks; i++) {
-            const partNumber = i + 1;
-            const chunk = file.slice(i * CHUNK_SIZE, Math.min((i + 1) * CHUNK_SIZE, file.size));
+            for (let i = 0; i < totalChunks; i++) {
+                const partNumber = i + 1;
+                const chunk = file.slice(i * CHUNK_SIZE, Math.min((i + 1) * CHUNK_SIZE, file.size));
 
-            const partRes = await fetch(ROUTES.part, {
+                const partRes = await fetch(ROUTES.part, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ key, uploadId, partNumber }),
+                });
+                if (!partRes.ok) throw new Error(`Failed to get presigned URL for part ${partNumber}`);
+                const { presignedUrl } = await partRes.json();
+
+                const putRes = await fetch(presignedUrl, { method: "PUT", body: chunk, headers: { "Content-Type": file.type } });
+                if (!putRes.ok) throw new Error(`Part ${partNumber} upload failed`);
+
+                const etag = putRes.headers.get("ETag");
+                if (!etag) throw new Error(`ETag missing for part ${partNumber} — check R2 CORS ExposeHeaders config`);
+                parts.push({ ETag: etag, PartNumber: partNumber });
+
+                setState((prev) => ({ ...prev, progress: Math.round((partNumber / totalChunks) * 100) }));
+            }
+
+            const completeRes = await fetch(ROUTES.complete, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ key, uploadId, partNumber }),
+                body: JSON.stringify({ key, uploadId, parts }),
             });
-            if (!partRes.ok) throw new Error(`Failed to get presigned URL for part ${partNumber}`);
-            const { presignedUrl } = await partRes.json();
+            if (!completeRes.ok) throw new Error("Failed to complete multipart upload");
 
-            const putRes = await fetch(presignedUrl, { method: "PUT", body: chunk, headers: { "Content-Type": file.type } });
-            if (!putRes.ok) throw new Error(`Part ${partNumber} upload failed`);
-
-            const etag = putRes.headers.get("ETag");
-            if (!etag) throw new Error(`ETag missing for part ${partNumber} — check R2 CORS ExposeHeaders config`);
-            parts.push({ ETag: etag, PartNumber: partNumber });
-
-            setState((prev) => ({ ...prev, progress: Math.round((partNumber / totalChunks) * 100) }));
+            setState((prev) => ({ ...prev, status: "success", progress: 100, key, displayName: file.name, displaySize: file.size }));
+            onUploadComplete?.({ key, fileName: file.name, fileSize: file.size, mimeType: file.type });
+            toast.success("File uploaded successfully");
+        } catch (uploadErr) {
+            // Best-effort abort on failure to prevent orphaned parts
+            fetch(ROUTES.abort, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ key, uploadId }),
+            }).catch(e => console.error("Abort failed:", e));
+            throw uploadErr;
         }
-
-        const completeRes = await fetch(ROUTES.complete, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ key, uploadId, parts }),
-        });
-        if (!completeRes.ok) throw new Error("Failed to complete multipart upload");
-
-        setState((prev) => ({ ...prev, status: "success", progress: 100, key, displayName: file.name, displaySize: file.size }));
-        onUploadComplete?.({ key, fileName: file.name, fileSize: file.size, mimeType: file.type });
-        toast.success("File uploaded successfully");
     }
 
     const onDrop = (acceptedFiles: File[]) => {
