@@ -20,20 +20,18 @@ export async function deliverBooking(bookingId: string) {
 
     // Generate access code if one doesn't exist
     let accessCode = booking.accessCode;
-    if (!accessCode) {
+    const isNewAccessCode = !accessCode;
+    if (isNewAccessCode) {
         accessCode = crypto.randomBytes(3).toString("hex").toUpperCase(); // 6 chars, e.g., "A1B2C3"
-        
-        // Ensure uniqueness (in a real app you might want to retry if collision occurs)
-        await prisma.booking.update({
-            where: { id: bookingId },
-            data: { accessCode },
-        });
     }
 
-    // Mark as delivered
+    // Mark as delivered and set access code
     await prisma.booking.update({
         where: { id: bookingId },
-        data: { deliveryStatus: "DELIVERED" },
+        data: { 
+            deliveryStatus: "DELIVERED",
+            ...(isNewAccessCode && { accessCode })
+        },
     });
 
     // Send notifications
