@@ -81,6 +81,7 @@ export async function createPublicBooking(data: {
     clientEmail?: string;
     existingClientId?: string;
     serviceId: string;
+    selectedVariantId?: string;
     addonIds?: string[];
     sessionCount: number;
     bookingDate: string; // "YYYY-MM-DD"
@@ -139,13 +140,25 @@ export async function createPublicBooking(data: {
         const bookingDateUTC = new Date(Date.UTC(y, m - 1, d));
 
         const service = await prisma.service.findUnique({ where: { id: data.serviceId }, include: { variants: true } });
+        const selectedVariant = data.selectedVariantId 
+            ? service?.variants?.find((v) => v.id === data.selectedVariantId) 
+            : service?.variants?.[0];
+
         // Clean addon composite IDs to UUIDs for DB lookup
-        const cleanAddonIds = data.addonIds?.map(id => id.split(":")[0]) || [];
+        const parsedAddons = (data.addonIds || []).map(str => {
+            const parts = str.split(":");
+            return { addonId: parts[0], variantId: parts[1] };
+        });
+        const cleanAddonIds = [...new Set(parsedAddons.map(p => p.addonId))];
         const addonsList = cleanAddonIds.length ? await prisma.service.findMany({ where: { id: { in: cleanAddonIds } }, include: { variants: true } }) : [];
 
-        const servicePrice = Number(service?.variants?.[0]?.basePrice ?? 0);
+        const servicePrice = Number(selectedVariant?.basePrice ?? 0);
         const sessionTotal = servicePrice * data.sessionCount;
-        const addonsTotal = addonsList.reduce((sum, a) => sum + Number(a.variants?.[0]?.basePrice ?? 0), 0);
+        const addonsTotal = parsedAddons.reduce((sum, p) => {
+            const addon = addonsList.find(a => a.id === p.addonId);
+            const variant = p.variantId ? addon?.variants?.find((v) => v.id === p.variantId) : addon?.variants?.[0];
+            return sum + Number(variant?.basePrice ?? 0);
+        }, 0);
         const grandTotal = sessionTotal + addonsTotal;
 
         const booking = await prisma.booking.create({
@@ -158,6 +171,7 @@ export async function createPublicBooking(data: {
                 paymentStatus: "PENDING",
                 deliveryStatus: "PENDING",
                 serviceId: data.serviceId,
+                serviceVariantId: data.selectedVariantId || selectedVariant?.id || null,
                 studioId: data.studioId,
                 clientId,
                 memberId: defaultMember.id,
