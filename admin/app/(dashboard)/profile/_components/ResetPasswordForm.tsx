@@ -52,6 +52,9 @@ export function ResetPasswordForm() {
 
             toast.success("Password successfully reset!");
             form.reset();
+        } catch (e) {
+            const err = e as Error;
+            toast.error(err?.message || "Failed to reset password.");
         } finally {
             setIsPending(false);
         }
