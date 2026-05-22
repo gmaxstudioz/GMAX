@@ -379,15 +379,18 @@ model BookingIntent {
   existingClientId String? // if returning client
 
   // Service info
-  serviceId    String
-  addonIds     String[]
-  sessionCount Int
-  bookingDate  DateTime
-  notes        String?
+  serviceId        String
+  serviceVariantId String?
+  addonIds         String[]
+  sessionCount     Int
+  bookingDate      DateTime
+  notes            String?
 
   // Payment
-  paystackReference String  @unique
-  amount            Decimal @db.Decimal(12, 2)
+  paystackReference String      @unique
+  totalAmount       Decimal     @db.Decimal(12, 2) @default(0)
+  amount            Decimal     @db.Decimal(12, 2)
+  paymentPlan       PaymentPlan @default(FULL)
 
   status    BookingIntentStatus @default(PENDING)
   expiresAt DateTime // e.g. 1 hour from creation
