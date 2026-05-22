@@ -27,7 +27,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 const steps = [
-  { id: 1, title: "Studio", icon: Building2, description: "Choose location" },
+  { id: 1, title: "Studio", icon: Building2, description: "Select a location close to you" },
   { id: 2, title: "Service", icon: Calendar, description: "Select service & date" },
   { id: 3, title: "Client", icon: User, description: "Your details" },
   { id: 4, title: "Payment", icon: CreditCard, description: "Confirm & pay" },
@@ -239,7 +239,7 @@ export default function BookingPage() {
         return (
           <div className="space-y-6">
             <div className="space-y-4">
-              <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Select Studio</Label>
+              <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Select a location close to you</Label>
               {studiosList.length === 0 ? (
                  <p className="text-muted-foreground">No studios available at the moment.</p>
               ) : (
