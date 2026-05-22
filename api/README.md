@@ -1,6 +1,6 @@
 # GMAX API Documentation
 
-*Note: Remember to run the database push command to synchronize the schema.*
++*Note: For production, run `npx prisma migrate deploy` to apply tracked migrations safely.*
 
 ## Booking Lifecycle and Automated Cleanup
 

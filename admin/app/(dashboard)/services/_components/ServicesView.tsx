@@ -224,7 +224,9 @@ export function ServicesView({ studioGroups }: { studioGroups: StudioGroup[] }) 
                                     {/* Service Cards Grid (max 6 per category) */}
                                     <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
                                         {category.services.slice(0, 6).map((service) => {
-                                            const prices = service.variants?.map(v => Number(v.basePrice)) || [0];
+                                            const prices = service.variants?.length 
+                                                ? service.variants.map(v => Number(v.basePrice)) 
+                                                : [0];
                                             const minPrice = Math.min(...prices);
                                             const maxPrice = Math.max(...prices);
                                             const priceDisplay = prices.length > 1 && minPrice !== maxPrice 

@@ -12,7 +12,7 @@ type StudioWithCounts = {
     id: string;
     createdAt: Date;
     clients: { id: string; createdAt: Date }[];
-    bookings: { id: string; createdAt: Date; bookingDate: Date; bookingStatus: string; paymentStatus: string; sessionCount: number; service: { variants: { basePrice: string }[] } | null }[];
+    bookings: { id: string; createdAt: Date; bookingDate: Date; bookingStatus: string; paymentStatus: string; sessionCount: number; totalAmount?: number | string | null; serviceVariantId?: string | null; service: { variants: { id: string; basePrice: string }[] } | null }[];
     members: { id: string }[];
 };
 
@@ -59,7 +59,11 @@ export function StudioStatsCards({ studioData }: { studioData: StudioWithCounts[
         return bookings
             .filter(b => b.paymentStatus === "PAID")
             .reduce((sum, b) => {
-                const basePrice = b.service?.variants?.[0]?.basePrice ? Number(b.service.variants[0].basePrice) : 0;
+                if (b.totalAmount != null) {
+                    return sum + Number(b.totalAmount);
+                }
+                const bookedVariant = b.service?.variants?.find(v => v.id === b.serviceVariantId);
+                const basePrice = bookedVariant?.basePrice ? Number(bookedVariant.basePrice) : 0;
                 const sessionTotal = basePrice * (b.sessionCount || 1);
                 return sum + sessionTotal;
             }, 0);

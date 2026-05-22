@@ -54,7 +54,11 @@ export function StudioStatsCards({ data }: { data: StudioWithRelations }) {
         return bookings
             .filter(b => b.paymentStatus === "PAID")
             .reduce((sum, b) => {
-                const servicePrice = Number(b.service?.variants?.[0]?.basePrice ?? 0);
+                if (b.totalAmount != null) {
+                    return sum + Number(b.totalAmount);
+                }
+                const bookedVariant = b.service?.variants?.find(v => v.id === b.serviceVariantId);
+                const servicePrice = Number(bookedVariant?.basePrice ?? 0);
                 const sessionTotal = servicePrice * (b.sessionCount || 1);
                 return sum + sessionTotal;
             }, 0);

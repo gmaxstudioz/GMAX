@@ -15,8 +15,8 @@ This workspace consists of three distinct Next.js applications: `api`, `admin`, 
 2. Under "Root Directory", set it to `admin`.
 3. In the "Environment Variables" section, copy the keys from `admin/.env.example`.
 4. Ensure you set:
-   - `NEXT_PUBLIC_API_URL` to the domain from Step 1 (e.g., `https://gmax-api.vercel.app/api`).
-   - `NEXT_PUBLIC_AUTH_URL` to the domain Vercel provides for this admin app (e.g., `https://gmax-admin.vercel.app`).
+   - `NEXT_PUBLIC_API_URL` to the domain from Step 1 (e.g., `https://api.gmaxstudioz.com/api`).
+   - `NEXT_PUBLIC_AUTH_URL` to the domain Vercel provides for this admin app (e.g., `https://admin.gmaxstudioz.com`).
    - `BETTER_AUTH_URL` to the same as `NEXT_PUBLIC_AUTH_URL`.
 5. Click **Deploy**. Note the domain name.
 
@@ -24,8 +24,8 @@ This workspace consists of three distinct Next.js applications: `api`, `admin`, 
 1. Create a third project in Vercel, importing the same repository.
 2. Under "Root Directory", set it to `public`.
 3. In the "Environment Variables", copy the keys from `public/.env.example`.
-4. Set `NEXT_PUBLIC_API_URL` to the domain from Step 1.
-5. Click **Deploy**. Note the domain name (e.g., `https://gmax-public.vercel.app`).
+4. Set `NEXT_PUBLIC_API_URL` to the API base path from Step 1 (e.g., `https://api.gmaxstudioz.com/api`).
+5. Click **Deploy**. Note the domain name (e.g., `https://gmaxstudioz.com`).
 
 ## Step 4: Finalize Configuration
 Once all three are deployed and you have their final domains, go back into the Vercel dashboard:
