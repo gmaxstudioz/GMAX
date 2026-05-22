@@ -156,10 +156,12 @@ export default async function Page() {
 
   const tableData = rawRecentBookings.map(b => ({
       id: b.id,
-      clientName: b.client.name,
-      clientImage: b.client.image,
-      serviceName: b.service.name,
-      bookingDate: b.bookingDate.toISOString(),
+      clientName: b.client?.name ?? 'Unknown',
+      clientImage: b.client?.image ?? null,
+      serviceName: b.service?.name ?? 'Unknown',
+      bookingDate: b.bookingDate && typeof b.bookingDate.getTime === 'function' && !isNaN(b.bookingDate.getTime()) 
+          ? b.bookingDate.toISOString() 
+          : new Date().toISOString(),
       totalAmount: Number(b.totalAmount),
       bookingStatus: b.bookingStatus
   }));
