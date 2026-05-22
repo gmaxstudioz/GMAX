@@ -252,15 +252,15 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
 
     return (
         <div className="space-y-6">
-            {/* Progress Bar */}
-            <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-2">
+            {/* Progress Bar (Desktop) */}
+            <div className="hidden sm:flex items-center gap-2 overflow-x-auto pb-2">
                 {STEPS.map((s, i) => {
                     const Icon = s.icon;
                     const isActive = step === s.id;
                     const isDone = step > s.id;
                     return (
-                        <div key={s.id} className="flex items-center gap-1 sm:gap-2 shrink-0">
-                            <div className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                        <div key={s.id} className="flex items-center gap-2 shrink-0">
+                            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                                 isActive ? "bg-primary text-primary-foreground" :
                                 isDone ? "bg-primary/10 text-primary" :
                                 "bg-muted text-muted-foreground"
@@ -270,15 +270,30 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                                 ) : (
                                     <Icon className="h-3.5 w-3.5" />
                                 )}
-                                <span className="hidden sm:inline">{s.label}</span>
-                                <span className="sm:hidden">{s.id}</span>
+                                <span>{s.label}</span>
                             </div>
                             {i < STEPS.length - 1 && (
-                                <div className={`w-4 sm:w-8 h-0.5 rounded ${isDone ? "bg-primary" : "bg-muted"}`} />
+                                <div className={`w-8 h-0.5 rounded ${isDone ? "bg-primary" : "bg-muted"}`} />
                             )}
                         </div>
                     );
                 })}
+            </div>
+
+            {/* Progress Indicator (Mobile) */}
+            <div className="flex sm:hidden items-center justify-between bg-muted/40 p-3 rounded-lg border">
+                <div className="flex items-center gap-2 text-primary">
+                    {STEPS.find(s => s.id === step)?.icon && (() => {
+                        const CurrentIcon = STEPS.find(s => s.id === step)!.icon;
+                        return <CurrentIcon className="h-4 w-4" />;
+                    })()}
+                    <span className="text-sm font-semibold">
+                        {STEPS.find(s => s.id === step)?.label}
+                    </span>
+                </div>
+                <div className="text-xs text-muted-foreground font-medium bg-background px-2 py-1 rounded-md border shadow-sm">
+                    Step {step} of {STEPS.length}
+                </div>
             </div>
 
             {/* Step Content */}
