@@ -5,6 +5,7 @@ import { authMiddleware, optionalAuthMiddleware, BaseContext } from "./middlewar
 import { v4 as uuidv4 } from "uuid";
 import crypto from "crypto";
 import { getPresignedUrl } from "@/lib/r2";
+import { sendAccessLinkEmail, sendSMS } from "@/lib/termii";
 import { Prisma } from "@/lib/generated/prisma/client";
 
 // Initialize the oRPC implementation builder with the base context
@@ -16,6 +17,8 @@ function generateReceiptNumber(): string {
 }
 
 // Generates a secure, random hex string for authentication tokens
+const PORTAL_URL = process.env.PORTAL_URL || "http://localhost:3000";
+
 function generateToken(): string {
     return crypto.randomBytes(32).toString("hex");
 }
@@ -288,12 +291,45 @@ export const requestAccessLink = os.product.requestAccessLink
         const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
         // Store access credentials string reference directly inside database records
-        await prisma.buyerAccessToken.create({
+        const tokenRecord = await prisma.buyerAccessToken.create({
             data: { buyerId: buyer.id, token, expiresAt, used: false },
         });
 
-        // Log authorization path details to environment command lines
-        console.log(`[Shop] Magic link for ${buyer.email}: ${process.env.PORTAL_URL}/shop/access?token=${token}`);
+        const accessLink = `${PORTAL_URL}/shop/access/${token}`;
+        let deliveryMethod: "EMAIL" | "SMS" | null = null;
+
+        if (buyer.email) {
+            try {
+                const emailResult = await sendAccessLinkEmail({
+                    email: buyer.email,
+                    buyerName: buyer.name,
+                    accessLink,
+                });
+                if (emailResult) {
+                    deliveryMethod = "EMAIL";
+                }
+            } catch (error) {
+                console.error("[Shop] Access link email failed:", error);
+            }
+        }
+
+        if (!deliveryMethod && buyer.phone) {
+            try {
+                await sendSMS(buyer.phone, `Your GMAX access link: ${accessLink}`);
+                deliveryMethod = "SMS";
+            } catch (error) {
+                console.error("[Shop] Access link SMS failed:", error);
+            }
+        }
+
+        if (!deliveryMethod) {
+            console.error(`[Shop] No delivery channel available for buyer ${buyer.id}`);
+            throw new Error("No delivery channel available for access link.");
+        }
+
+        console.info(
+            `[Shop] Magic access link record ${tokenRecord.id} created and delivered via ${deliveryMethod}`
+        );
 
         return { sent: true };
     });

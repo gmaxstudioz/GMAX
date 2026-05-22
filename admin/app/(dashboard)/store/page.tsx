@@ -38,9 +38,16 @@ export default async function Page() {
       }
   });
 
+  // Serialize Prisma Decimal objects to plain numbers for Client Components
+  const serializedProducts = JSON.parse(JSON.stringify(products, (_key, value) =>
+      value !== null && typeof value === "object" && typeof value.toNumber === "function"
+          ? value.toNumber()
+          : value
+  ));
+
   return (
     <div className="flex flex-col gap-4 py-4 px-4 md:gap-6 md:py-6 md:px-6">
-      <StoreView initialProducts={products} />
+      <StoreView initialProducts={serializedProducts} />
     </div>
   )
 }

@@ -176,22 +176,30 @@ export const createBookings = os.booking.create.use(optionalAuthMiddleware).hand
         });
 
         let fetchedAddons: any[] = [];
+        let addonMapById: Record<string, any> = {};
         if (addonIds && addonIds.length > 0) {
             fetchedAddons = await prisma.service.findMany({
                 where: { id: { in: addonIds } },
                 include: { variants: true }
             });
+            // Create a map from addon ID to addon object for consistent lookup
+            addonMapById = Object.fromEntries(fetchedAddons.map(addon => [addon.id, addon]));
         }
 
-        // 2. Build pricing objects for the calculator 
+        // 2. Build pricing objects for the calculator
+        // Use the first available variant (default/primary variant) for pricing calculation
         const servicePricingObj = {
-            price: service.variants[0]?.basePrice ? Number(service.variants[0].basePrice) : 0,
+            price: service.variants?.[0]?.basePrice ? Number(service.variants[0].basePrice) : 0,
             salePrice: null
         };
-        const addonPricingObjs = fetchedAddons.map(a => ({
-            price: a.variants[0]?.basePrice ? Number(a.variants[0].basePrice) : 0,
-            salePrice: null
-        }));
+        // Map addon IDs to their pricing in the order they were selected, using the first variant of each addon
+        const addonPricingObjs = (addonIds || []).map(addonId => {
+            const addon = addonMapById[addonId];
+            return {
+                price: addon?.variants?.[0]?.basePrice ? Number(addon.variants[0].basePrice) : 0,
+                salePrice: null
+            };
+        });
 
         // 3. Calculate the grand total
         const grandTotal = calculateGrandTotal(servicePricingObj, addonPricingObjs, bookingData.sessionCount);
@@ -436,25 +444,67 @@ export const createPublicBooking = os.booking.createPublic
             data: { resourceType: "Studio", resourceId: input.studioId },
         });
 
-        const service = await prisma.service.findUnique({
-            where: { id: input.selectedServiceId },
+        const service = await prisma.service.findFirst({
+            where: { id: input.selectedServiceId, category: { studioId: input.studioId } },
             include: { variants: true },
         });
         if (!service) throw errors.NOT_FOUND({
             data: { resourceType: "Service", resourceId: input.selectedServiceId },
         });
 
-        // Construct a pricing object that satisfies calculateGrandTotal
+        const selectedVariant = service.variants.find(v => v.id === input.selectedVariantId);
+        if (!selectedVariant) throw errors.BAD_REQUEST({ message: "Selected service option is invalid." });
+
+        // Fetch selected addons to get their pricing
+        let selectedAddonsMap: Record<string, any> = {};
+        const parsedAddons = (input.selectedAddonIds || []).map(str => {
+            // Support composite strings "addonId:variantId" or fallback to "addonId"
+            const parts = str.split(":");
+            return { addonId: parts[0], variantId: parts[1] };
+        });
+        const uniqueAddonIds = [...new Set(parsedAddons.map(p => p.addonId))];
+
+        if (uniqueAddonIds.length > 0) {
+            const selectedAddons = await prisma.service.findMany({
+                where: { id: { in: uniqueAddonIds }, category: { studioId: input.studioId }, isAddon: true },
+                include: { variants: true },
+            });
+            selectedAddonsMap = Object.fromEntries(selectedAddons.map(addon => [addon.id, addon]));
+        }
+
+        // Construct pricing objects using the selected variant
         const servicePricingObj = {
-            price: service.variants[0]?.basePrice ? Number(service.variants[0].basePrice) : 0,
+            price: Number(selectedVariant.basePrice),
             salePrice: null
         };
+        // Map selected addon IDs to their pricing in the order they were selected
+        const addonPricingObjs = parsedAddons.map(({ addonId, variantId }) => {
+            const addon = selectedAddonsMap[addonId];
+            if (!addon) {
+                throw errors.BAD_REQUEST({ message: `Addon ${addonId} not found.` });
+            }
+            
+            const variant = variantId ? addon.variants?.find((v: any) => v.id === variantId) : addon.variants?.[0];
+            if (!variant) {
+                throw errors.BAD_REQUEST({ message: `Variant for addon ${addon.name} not found.` });
+            }
+
+            return {
+                price: Number(variant.basePrice),
+                salePrice: null
+            };
+        });
 
         const grandTotal = calculateGrandTotal(
             servicePricingObj,
-            [], // addons resolved separately
+            addonPricingObjs,
             input.sessionCount,
         );
+
+        // Calculate the amount to charge based on payment plan
+        const paymentPlan = input.paymentPlan ?? "FULL";
+        const planMultiplier = paymentPlan === "QUARTER" ? 0.25 : paymentPlan === "HALF" ? 0.5 : 1;
+        const chargeAmount = Math.round(grandTotal * planMultiplier * 100) / 100; // round to 2 decimal places
 
         const reference = `gmax-pub-${uuidv4().slice(0, 8)}`;
 
@@ -467,12 +517,15 @@ export const createPublicBooking = os.booking.createPublic
                 clientPhone:     input.clientPhone ?? null,
                 existingClientId: input.existingClientId ?? null,
                 serviceId:       input.selectedServiceId,
+                serviceVariantId: input.selectedVariantId,
                 addonIds:        input.selectedAddonIds ?? [],
                 sessionCount:    input.sessionCount,
                 bookingDate:     new Date(input.bookingDate),
                 notes:           input.notes ?? null,
                 paystackReference: reference,
-                amount:          grandTotal,
+                totalAmount:     grandTotal,
+                amount:          chargeAmount,
+                paymentPlan,
                 expiresAt:       new Date(Date.now() + 60 * 60 * 1000), // 1 hour
             },
         });
@@ -484,7 +537,7 @@ export const createPublicBooking = os.booking.createPublic
                 bookingId:  reference,
                 paymentUrl: null,
                 reference,
-                amount:     grandTotal,
+                amount:     chargeAmount,
                 warning: "No email provided — payment link must be sent manually.",
             };
         }
@@ -496,7 +549,7 @@ export const createPublicBooking = os.booking.createPublic
             method: "POST",
             body: JSON.stringify({
                 email:    clientEmail,
-                amount:   Math.round(grandTotal * 100), // kobo
+                amount:   Math.round(chargeAmount * 100), // kobo
                 reference,
                 metadata: {
                     type:     "booking",
@@ -511,7 +564,7 @@ export const createPublicBooking = os.booking.createPublic
             bookingId:  reference,
             paymentUrl: paystack.data?.authorization_url ?? null,
             reference,
-            amount:     grandTotal,
+            amount:     chargeAmount,
         };
     });
 
@@ -541,3 +594,200 @@ export const checkClient = os.booking.checkClient
         };
     });
 
+export const verifyBooking = os.booking.verifyBooking
+    .use(optionalAuthMiddleware)
+    .handler(async ({ input }) => {
+        let intent = await prisma.bookingIntent.findUnique({
+            where: { paystackReference: input.reference },
+        });
+
+        if (!intent) {
+            return {
+                status: "FAILED" as const,
+                clientName: "",
+                serviceName: "",
+                bookingDate: "",
+                totalAmount: 0,
+                amountPaid: 0,
+                paymentPlan: "FULL" as const,
+                reference: input.reference,
+                bookingId: null,
+            };
+        }
+
+        // If intent is still PENDING, verify with Paystack and process if paid
+        if (intent.status === "PENDING") {
+            try {
+                const verification = await paystackFetch<{
+                    status: boolean;
+                    data?: { status?: string; amount?: number; currency?: string; reference?: string };
+                }>(`/transaction/verify/${encodeURIComponent(input.reference)}`);
+
+                if (verification.status && verification.data?.status === "success") {
+                    const paidAmount = Number(verification.data.amount ?? 0);
+                    const expectedAmount = Math.round(Number(intent.amount) * 100);
+                    const paidCurrency = String(verification.data.currency ?? "").toUpperCase();
+
+                    if (paidAmount === expectedAmount && paidCurrency === "NGN") {
+                        // Process the booking — same logic as webhook
+                        const studio = await prisma.studio.findUnique({
+                            where: { id: intent.studioId },
+                            include: { members: true },
+                        });
+
+                        const defaultMember = studio?.members.find(m => m.role === "owner") ?? studio?.members[0];
+
+                        if (studio && defaultMember) {
+                            try {
+                                await prisma.$transaction(async (tx) => {
+                                    // 0. Atomically claim the intent
+                                    const claimResult = await tx.bookingIntent.updateMany({
+                                        where: { 
+                                            paystackReference: input.reference,
+                                            status: "PENDING" 
+                                        },
+                                        data: { status: "COMPLETED" }
+                                    });
+
+                                    if (claimResult.count === 0) {
+                                        // Already processed or being processed by another request
+                                        return;
+                                    }
+
+                                    // Defensively check for existing payment
+                                    const existingPayment = await tx.payment.findUnique({
+                                        where: { paystackReference: input.reference }
+                                    });
+
+                                    if (existingPayment) {
+                                        return; // Duplicate
+                                    }
+
+                                    // 1. Resolve client
+                                    let clientId = intent!.existingClientId;
+                                    if (!clientId) {
+                                        const phone = intent!.clientPhone?.trim() ?? "";
+                                        let existing = null;
+                                        if (intent!.clientEmail) {
+                                            existing = await tx.client.findFirst({
+                                                where: { studioId: intent!.studioId, email: intent!.clientEmail },
+                                            });
+                                        }
+                                        if (!existing && phone) {
+                                            existing = await tx.client.findFirst({
+                                                where: { studioId: intent!.studioId, phone },
+                                            });
+                                        }
+                                        if (existing) {
+                                            clientId = existing.id;
+                                        } else {
+                                            const client = await tx.client.create({
+                                                data: {
+                                                    name: intent!.clientName,
+                                                    phone,
+                                                    email: intent!.clientEmail ?? null,
+                                                    type: "regular",
+                                                    studioId: intent!.studioId,
+                                                },
+                                            });
+                                            clientId = client.id;
+                                        }
+                                    }
+
+                                    // 2. Create booking
+                                    const service = await tx.service.findUnique({
+                                        where: { id: intent!.serviceId },
+                                        include: { variants: true },
+                                    });
+                                    const booking = await tx.booking.create({
+                                        data: {
+                                            bookingDate: intent!.bookingDate,
+                                            sessionCount: intent!.sessionCount,
+                                            notes: intent!.notes,
+                                            totalAmount: intent!.totalAmount,
+                                            paymentPlan: intent!.paymentPlan,
+                                            bookingStatus: "CONFIRMED",
+                                            paymentStatus: intent!.paymentPlan === "FULL" ? "PAID" : "PARTIALLY_PAID",
+                                            deliveryStatus: "PENDING",
+                                            serviceId: intent!.serviceId,
+                                            studioId: intent!.studioId,
+                                            clientId: clientId!,
+                                            memberId: defaultMember.id,
+                                            createdBy: defaultMember.userId,
+                                            serviceVariantId: intent!.serviceVariantId ?? service?.variants?.[0]?.id ?? null,
+                                            ...(intent!.addonIds.length > 0 && {
+                                                addons: { connect: [...new Set(intent!.addonIds.map((id: string) => id.split(":")[0]))].map(id => ({ id })) },
+                                            }),
+                                        },
+                                    });
+
+                                    // 3. Create payment record
+                                    const installmentType = intent!.paymentPlan === "FULL" ? "FULL" : "DEPOSIT";
+                                    await tx.payment.create({
+                                        data: {
+                                            amount: intent!.amount,
+                                            method: "TRANSFER",
+                                            status: "PAID",
+                                            paystackReference: input.reference,
+                                            paystackResponse: verification.data as any,
+                                            receiptNumber: `RCP-${Date.now()}-${uuidv4().slice(0, 8).toUpperCase()}`,
+                                            bookingId: booking.id,
+                                            recordedById: defaultMember.userId,
+                                            installmentType,
+                                            sequence: 1,
+                                            expectedAmount: intent!.amount,
+                                            paymentDate: new Date(),
+                                        },
+                                    });
+
+                                    // 4. Mark intent resolved
+                                    await tx.bookingIntent.update({
+                                        where: { paystackReference: input.reference },
+                                        data: {
+                                            status: "COMPLETED",
+                                            resolvedBookingId: booking.id,
+                                        },
+                                    });
+                                });
+                            } catch (txErr) {
+                                console.error(`[Verify] Transaction failed for ${input.reference}:`, txErr);
+                            }
+
+                            // Re-fetch updated intent
+                            intent = await prisma.bookingIntent.findUnique({
+                                where: { paystackReference: input.reference },
+                            });
+                        }
+                    } else {
+                        // Amount mismatch
+                        console.error(`[Verify] Payment mismatch for ${input.reference}: expected ${expectedAmount}, got ${paidAmount}`);
+                    }
+                }
+            } catch (err) {
+                console.error(`[Verify] Paystack verification failed for ${input.reference}:`, err);
+                // Continue to return current status — don't crash
+            }
+        }
+
+        const service = await prisma.service.findUnique({
+            where: { id: intent!.serviceId },
+            select: { name: true },
+        });
+
+        // Check if expired
+        const status = intent!.status === "PENDING" && intent!.expiresAt < new Date()
+            ? "EXPIRED" as const
+            : intent!.status as "PENDING" | "COMPLETED" | "EXPIRED" | "FAILED";
+
+        return {
+            status,
+            clientName: intent!.clientName,
+            serviceName: service?.name ?? "Session",
+            bookingDate: intent!.bookingDate.toISOString(),
+            totalAmount: Number(intent!.totalAmount),
+            amountPaid: Number(intent!.amount),
+            paymentPlan: intent!.paymentPlan,
+            reference: input.reference,
+            bookingId: intent!.resolvedBookingId,
+        };
+    });

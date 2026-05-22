@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { approvePhoto, rejectPhoto, deletePhoto } from "@/lib/actions/booking";
 import { tryCatch } from "@/hooks/try-catch";
@@ -284,7 +284,7 @@ export function MediaGallery({ photos, isManager, r2PublicUrl }: MediaGalleryPro
                         {previewUrl.match(/\.(mp4|mov|webm|avi)/i) ? (
                             <video src={previewUrl} controls className="w-full max-h-[80vh] rounded-lg" />
                         ) : (
-                            <img src={previewUrl} alt="Preview" className="w-full max-h-[80vh] object-contain rounded-lg" />
+                            <Image src={previewUrl} alt="Preview" className="w-full max-h-[80vh] object-contain rounded-lg" />
                         )}
                     </DialogContent>
                 </Dialog>

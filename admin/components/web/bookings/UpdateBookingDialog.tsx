@@ -15,10 +15,10 @@ import { tryCatch } from "@/hooks/try-catch";
 import { toast } from "sonner";
 import { Loader2, ChevronDown } from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { PencilEdit02Icon } from "@hugeicons/core-free-icons";
-import { useForm, Controller } from "react-hook-form";
+import { AlertCircleIcon, PencilEdit02Icon } from "@hugeicons/core-free-icons";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { UpdateBookingSchema, UpdateBookingInput, BookingStatus, PaymentStatus, DeliveryStatus } from "@/lib/schemas/booking";
+import { UpdateBookingSchema, UpdateBookingInput, BookingStatus, PaymentStatus, DeliveryStatus, PaymentPlan } from "@/lib/schemas/booking";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { ClientOutput } from "@/lib/schemas/client";
 import { ServiceOutput } from "@/lib/schemas/service";
@@ -36,9 +36,12 @@ interface UpdateBookingDialogProps {
         deliveryStatus: string;
         clientId: string;
         serviceId: string;
+        serviceVariantId?: string;
         memberId: string;
         bookingDate: string;
         addonIds: string[];
+        totalAmount?: number;
+        paymentPlan?: string;
     };
     clients: ClientOutput[];
     services: ServiceOutput[];
@@ -56,19 +59,30 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
     const [serviceOpen, setServiceOpen] = useState(false);
 
     // Derived data
-    const mainServices = useMemo(() => services.filter(s => s.type !== "addon"), [services]);
-    const addonServices = useMemo(() => services.filter(s => s.type === "addon"), [services]);
+    const mainServices = useMemo(() => services.filter(s => !s.isAddon), [services]);
+    const addonServices = useMemo(() => services.filter(s => s.isAddon), [services]);
+
+    // Flatten addons into variants
+    const flattenedAddons = useMemo(() => {
+        return addonServices.flatMap(addon => 
+            (addon.variants || []).map((variant: NonNullable<ServiceOutput["variants"]>[number]) => ({
+                compositeId: `${addon.id}:${variant.id}`,
+                addon,
+                variant
+            }))
+        );
+    }, [addonServices]);
 
     const filteredClients = useMemo(() => {
         if (!clientSearch.trim()) return clients;
         const q = clientSearch.toLowerCase();
-        return clients.filter(c => c.name.toLowerCase().includes(q) || c.phone.some(p => p.includes(q)));
+        return clients.filter(c => c.name.toLowerCase().includes(q) || c.phone.includes(q));
     }, [clients, clientSearch]);
 
     const filteredMainServices = useMemo(() => {
         if (!serviceSearch.trim()) return mainServices;
         const q = serviceSearch.toLowerCase();
-        return mainServices.filter(s => s.name.toLowerCase().includes(q) || s.type.toLowerCase().includes(q));
+        return mainServices.filter(s => s.name.toLowerCase().includes(q));
     }, [mainServices, serviceSearch]);
 
     const form = useForm<UpdateBookingInput>({
@@ -81,23 +95,44 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
             deliveryStatus: currentData.deliveryStatus as DeliveryStatus,
             clientId: currentData.clientId,
             serviceId: currentData.serviceId,
+            serviceVariantId: currentData.serviceVariantId,
             memberId: currentData.memberId,
             bookingDate: currentData.bookingDate ? new Date(currentData.bookingDate) : undefined,
-            addonIds: currentData.addonIds || [],
+            addonIds: (currentData.addonIds || []).map(id => {
+                if (id.includes(':')) return id;
+                const match = flattenedAddons.find(fa => fa.compositeId.startsWith(`${id}:`));
+                return match ? match.compositeId : id;
+            }),
+            totalAmount: currentData.totalAmount ?? 0,
+            paymentPlan: (currentData.paymentPlan as PaymentPlan) ?? "FULL",
         }
     });
 
-    const watchedClientId = form.watch("clientId");
-    const watchedServiceId = form.watch("serviceId");
-    const watchedAddonIds = form.watch("addonIds") || [];
+    const watchedClientId         = useWatch({ control: form.control, name: "clientId" });
+    const watchedServiceId        = useWatch({ control: form.control, name: "serviceId" });
+    const watchedServiceVariantId = useWatch({ control: form.control, name: "serviceVariantId" });
+    const watchedAddonIds         = useWatch({ control: form.control, name: "addonIds" }) ?? [];
+    const watchedPaymentPlan      = useWatch({ control: form.control, name: "paymentPlan" }) ?? "FULL";
+    const watchedTotalAmount      = useWatch({ control: form.control, name: "totalAmount" }) ?? 0;
 
     const selectedClient = useMemo(() => clients.find(c => c.id === watchedClientId), [clients, watchedClientId]);
     const selectedService = useMemo(() => mainServices.find(s => s.id === watchedServiceId), [mainServices, watchedServiceId]);
+    const selectedVariant = useMemo(() => selectedService?.variants?.find(v => v.id === watchedServiceVariantId), [selectedService, watchedServiceVariantId]);
 
-    function toggleAddon(addonId: string) {
-        const next = watchedAddonIds.includes(addonId)
-            ? watchedAddonIds.filter(id => id !== addonId)
-            : [...watchedAddonIds, addonId];
+    function toggleAddon(compositeId: string) {
+        const baseAddonId = compositeId.split(':')[0];
+        
+        // Remove any existing variant of this exact same addon
+        const filtered = watchedAddonIds.filter(id => id.split(':')[0] !== baseAddonId);
+        
+        // If the exact same composite ID was clicked, it means we are unchecking it
+        if (watchedAddonIds.includes(compositeId)) {
+            form.setValue("addonIds", filtered, { shouldValidate: true });
+            return;
+        }
+        
+        // Otherwise, add the new selection
+        const next = [...filtered, compositeId];
         form.setValue("addonIds", next, { shouldValidate: true });
     }
 
@@ -111,9 +146,12 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                 deliveryStatus: data.deliveryStatus,
                 clientId: data.clientId,
                 serviceId: data.serviceId,
+                serviceVariantId: data.serviceVariantId,
                 memberId: data.memberId,
                 bookingDate: data.bookingDate ? data.bookingDate.toISOString() : undefined,
                 addonIds: data.addonIds,
+                totalAmount: data.totalAmount,
+                paymentPlan: data.paymentPlan as PaymentPlan,
             }));
             
             if (error) {
@@ -140,9 +178,12 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                 deliveryStatus: currentData.deliveryStatus as DeliveryStatus,
                 clientId: currentData.clientId,
                 serviceId: currentData.serviceId,
+                serviceVariantId: currentData.serviceVariantId,
                 memberId: currentData.memberId,
                 bookingDate: currentData.bookingDate ? new Date(currentData.bookingDate) : undefined,
                 addonIds: currentData.addonIds || [],
+                totalAmount: currentData.totalAmount ?? 0,
+                paymentPlan: (currentData.paymentPlan as PaymentPlan) ?? "FULL",
             });
             setClientSearch("");
             setServiceSearch("");
@@ -204,7 +245,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                                                     </Avatar>
                                                     <span>{c.name}</span>
                                                 </div>
-                                                <Badge variant="outline" className="text-[10px] capitalize">{c.clientType}</Badge>
+                                                <Badge variant="outline" className="text-[10px] capitalize">{c.type}</Badge>
                                             </div>
                                         )) : (
                                             <p className="text-sm text-muted-foreground text-center py-3">No clients found</p>
@@ -228,12 +269,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                                 className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring"
                             >
                                 <span className={selectedService ? "" : "text-muted-foreground"}>
-                                    {selectedService ? (
-                                        <span className="flex items-center gap-2">
-                                            {selectedService.name}
-                                            <Badge variant="outline" className="text-[10px] capitalize">{selectedService.type}</Badge>
-                                        </span>
-                                    ) : "Choose a service..."}
+                                    {selectedService ? selectedService.name : "Choose a service..."}
                                 </span>
                                 <ChevronDown className="h-4 w-4 opacity-50" />
                             </button>
@@ -252,15 +288,15 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                                         {filteredMainServices.length > 0 ? filteredMainServices.map(s => (
                                             <div
                                                 key={s.id}
-                                                onClick={() => { form.setValue("serviceId", s.id, { shouldValidate: true }); setServiceOpen(false); setServiceSearch(""); }}
+                                                onClick={() => { form.setValue("serviceId", s.id, { shouldValidate: true }); form.setValue("serviceVariantId", ""); setServiceOpen(false); setServiceSearch(""); }}
                                                 className={`flex items-center justify-between px-3 py-2 cursor-pointer text-sm rounded-md transition-colors hover:bg-accent ${watchedServiceId === s.id ? "bg-accent font-medium" : ""}`}
                                             >
                                                 <div className="flex items-center gap-2">
                                                     <span>{s.name}</span>
-                                                    <Badge variant="outline" className="text-[10px] capitalize">{s.type.toUpperCase()}</Badge>
+                                                    <Badge variant="outline" className="text-[10px] capitalize">{s.isAddon ? "ADDON" : "SERVICE"}</Badge>
                                                 </div>
                                                 <span className="text-muted-foreground font-mono text-xs">
-                                                    {s.salePrice ? (<><s className="opacity-50">₦{s.price.toLocaleString()}</s> ₦{s.salePrice.toLocaleString()}</>) : `₦${s.price.toLocaleString()}`}
+                                                    ₦{Number(s.variants?.[0]?.basePrice ?? 0).toLocaleString()}
                                                 </span>
                                             </div>
                                         )) : (
@@ -275,25 +311,82 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                         )}
                     </div>
 
+                    {/* Variant Selection */}
+                    {selectedService && selectedService.variants && selectedService.variants.length > 0 && (
+                        <Controller
+                            control={form.control}
+                            name="serviceVariantId"
+                            render={({ field }) => (
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-sm font-medium">Variant (Location & Logistics)</label>
+                                    <Select value={field.value} onValueChange={field.onChange}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a variant..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {selectedService.variants?.map((v: NonNullable<ServiceOutput["variants"]>[number]) => (
+                                                <SelectItem key={v.id} value={v.id}>
+                                                    {v.locationType} — ₦{Number(v.basePrice).toLocaleString()}
+                                                    {v.maxPrice && ` to ₦${Number(v.maxPrice).toLocaleString()}`}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {selectedVariant && (
+                                        <div className="mt-2 text-sm bg-accent/50 p-3 rounded-md space-y-2">
+                                            {!selectedVariant.logisticsIncluded && (
+                                                <div className="text-amber-600 font-medium text-xs flex items-center gap-1.5 bg-amber-500/10 p-2 rounded">
+                                                    <HugeiconsIcon icon={AlertCircleIcon} size={14} aria-label="Logistics Warning" />
+                                                    Client must cover logistics for this location.
+                                                </div>
+                                            )}
+                                            {selectedVariant.deliverables && selectedVariant.deliverables.length > 0 && (
+                                                <div>
+                                                    <p className="font-semibold text-xs text-muted-foreground mb-1">Deliverables:</p>
+                                                    <ul className="list-disc list-inside text-xs space-y-0.5 ml-1">
+                                                        {selectedVariant.deliverables.map((d: NonNullable<NonNullable<ServiceOutput["variants"]>[number]["deliverables"]>[number]) => (
+                                                            <li key={d.label}>
+                                                                {d.quantity ? `${d.quantity} ` : ""}{d.label}
+                                                                {d.detail && <span className="text-muted-foreground ml-1">({d.detail})</span>}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        />
+                    )}
+
                     {/* Add-ons */}
-                    {addonServices.length > 0 && (
+                    {flattenedAddons.length > 0 && (
                         <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium">Add-ons <span className="text-muted-foreground font-normal">(Optional)</span></label>
-                            <div className="border rounded-lg max-h-[140px] overflow-y-auto">
-                                {addonServices.map(addon => (
+                            <div className="border rounded-lg max-h-[220px] overflow-y-auto">
+                                {flattenedAddons.map(item => (
                                     <label
-                                        key={addon.id}
-                                        className="flex items-center justify-between px-3 py-2 cursor-pointer text-sm transition-colors hover:bg-accent"
+                                        key={item.compositeId}
+                                        className="flex items-start justify-between px-3 py-3 cursor-pointer text-sm transition-colors hover:bg-accent border-b last:border-0"
                                     >
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-start gap-3">
                                             <Checkbox
-                                                checked={watchedAddonIds.includes(addon.id)}
-                                                onCheckedChange={() => toggleAddon(addon.id)}
+                                                className="mt-1"
+                                                checked={watchedAddonIds.includes(item.compositeId)}
+                                                onCheckedChange={() => toggleAddon(item.compositeId)}
                                             />
-                                            <span>{addon.name}</span>
+                                            <div className="flex flex-col">
+                                                <span>{item.addon.name} <span className="text-muted-foreground text-xs font-medium ml-1">({item.variant.locationType})</span></span>
+                                                {item.variant.deliverables && item.variant.deliverables.length > 0 && (
+                                                    <div className="text-xs text-muted-foreground mt-1">
+                                                        {item.variant.deliverables.map((d: NonNullable<NonNullable<ServiceOutput["variants"]>[number]["deliverables"]>[number]) => `${d.quantity ? d.quantity + ' ' : ''}${d.label}`).join(" • ")}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                        <span className="text-muted-foreground font-mono text-xs">
-                                            {addon.salePrice ? (<><s className="opacity-50">₦{addon.price.toLocaleString()}</s> ₦{addon.salePrice.toLocaleString()}</>) : `₦${addon.price.toLocaleString()}`}
+                                        <span className="text-muted-foreground font-mono text-xs whitespace-nowrap ml-4 mt-1">
+                                            ₦{Number(item.variant.basePrice).toLocaleString()}
                                         </span>
                                     </label>
                                 ))}
@@ -421,6 +514,55 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                             )}
                         />
                     </div>
+
+                    <Separator />
+
+                    {/* Financials */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <Controller
+                            control={form.control}
+                            name="paymentPlan"
+                            render={({ field }) => (
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-sm font-medium">Payment Plan</label>
+                                    <Select value={field.value} onValueChange={field.onChange}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="FULL">Full Payment (100%)</SelectItem>
+                                            <SelectItem value="HALF">Half Payment (50%)</SelectItem>
+                                            <SelectItem value="QUARTER">Quarter Payment (25%)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+                        />
+                        <Controller
+                            control={form.control}
+                            name="totalAmount"
+                            render={({ field: { value, onChange } }) => (
+                                <Field className="flex flex-col gap-2">
+                                    <FieldLabel>Total Amount (₦)</FieldLabel>
+                                    <Input
+                                        type="number"
+                                        min={0}
+                                        value={value}
+                                        onChange={(e) => onChange(Number(e.target.value))}
+                                    />
+                                    {form.formState.errors.totalAmount && (
+                                        <p className="text-xs text-red-500">{form.formState.errors.totalAmount.message}</p>
+                                    )}
+                                </Field>
+                            )}
+                        />
+                        <div className="col-span-2 bg-muted p-3 rounded-md flex justify-between items-center text-sm">
+                            <span className="font-medium">Amount Due Now ({watchedPaymentPlan}):</span>
+                            <span className="font-bold text-lg">
+                                ₦{(watchedTotalAmount * (watchedPaymentPlan === "FULL" ? 1 : watchedPaymentPlan === "HALF" ? 0.5 : 0.25)).toLocaleString()}
+                            </span>
+                        </div>
+                    </div>
+
+                    <Separator />
 
                     {/* Notes */}
                     <Controller

@@ -47,6 +47,14 @@ export const PublicServiceOutputSchema = z.object({
         basePrice: z.string(),
         maxPrice: z.string().nullable(),
         sessionDurationMins: z.number().int(),
+        logisticsIncluded: z.boolean().optional(),
+        deliverables: z.array(z.object({
+            id: z.string(),
+            label: z.string(),
+            quantity: z.number().int().nullable().optional(),
+            detail: z.string().nullable().optional(),
+            isFree: z.boolean(),
+        })).optional(),
     })),
 });
 

@@ -30,12 +30,10 @@ const handler = new OpenAPIHandler(router, {
       
       const cause = error.cause as Record<string, unknown> | undefined;
       if (cause && typeof cause === 'object' && 'issues' in cause) {
-        console.error('Zod issues:', JSON.stringify(cause.issues, null, 2));
-        
-        const data = cause.data as Record<string, unknown> | undefined;
-        const items = data?.items as unknown[] | undefined;
-        console.error('Data sample:', JSON.stringify(items?.[0], null, 2));
-      }
+        console.error('Validation failed', {
+          issueCount: Array.isArray(cause.issues) ? cause.issues.length : undefined,
+        });
+     }
     }),
   ],
 });

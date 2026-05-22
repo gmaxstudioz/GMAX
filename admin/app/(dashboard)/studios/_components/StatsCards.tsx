@@ -1,13 +1,10 @@
-import { Badge } from "@/components/ui/badge"
 import {
   Card,
   CardAction,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { TrendingUpIcon, TrendingDownIcon, MinusIcon } from "lucide-react"
 import { startOfMonth, subMonths, endOfMonth } from "date-fns";
 import { calcTrend, TrendBadge, TrendFooter } from "@/components/web/trend-indicators";
 
@@ -15,7 +12,7 @@ type StudioWithCounts = {
     id: string;
     createdAt: Date;
     clients: { id: string; createdAt: Date }[];
-    bookings: { id: string; createdAt: Date; bookingDate: Date; bookingStatus: string; paymentStatus: string; sessionCount: number; service: { price: number } | null }[];
+    bookings: { id: string; createdAt: Date; bookingDate: Date; bookingStatus: string; paymentStatus: string; sessionCount: number; totalAmount?: number | string | null; serviceVariantId?: string | null; service: { variants: { id: string; basePrice: string }[] } | null }[];
     members: { id: string }[];
 };
 
@@ -27,9 +24,8 @@ export function StudioStatsCards({ studioData }: { studioData: StudioWithCounts[
     const prevMonthEnd = endOfMonth(subMonths(now, 1));
 
     // Flatten across all studios
-    const allBookings = studioData.flatMap(s => s.bookings);
-    const allClients = studioData.flatMap(s => s.clients);
-    const allMembers = studioData.flatMap(s => s.members);
+    const allBookings = studioData.flatMap(s => s.bookings || []);
+    const allClients = studioData.flatMap(s => s.clients || []);
 
     // --- Total Studios ---
     const totalStudios = studioData.length;
@@ -63,7 +59,12 @@ export function StudioStatsCards({ studioData }: { studioData: StudioWithCounts[
         return bookings
             .filter(b => b.paymentStatus === "PAID")
             .reduce((sum, b) => {
-                const sessionTotal = (b.service?.price || 0) * (b.sessionCount || 1);
+                if (b.totalAmount != null) {
+                    return sum + Number(b.totalAmount);
+                }
+                const bookedVariant = b.service?.variants?.find(v => v.id === b.serviceVariantId) || b.service?.variants?.[0];
+                const basePrice = bookedVariant?.basePrice ? Number(bookedVariant.basePrice) : 0;
+                const sessionTotal = basePrice * (b.sessionCount || 1);
                 return sum + sessionTotal;
             }, 0);
     }

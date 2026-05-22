@@ -28,7 +28,7 @@ export async function POST(req: Request) {
                 where: { paystackReference: reference },
                 include: {
                     booking: {
-                        include: { service: true, addons: true, payments: true },
+                        include: { service: { include: { variants: true } }, addons: { include: { variants: true } }, payments: true },
                     },
                 },
             });
@@ -53,9 +53,9 @@ export async function POST(req: Request) {
 
                 const booking = payment.booking;
                 if (booking && payment.bookingId) {
-                    const servicePrice = booking.service?.salePrice ?? booking.service?.price ?? 0;
+                    const servicePrice = Number(booking.service?.variants?.[0]?.basePrice ?? 0);
                     const sessionTotal = servicePrice * booking.sessionCount;
-                    const addonsTotal = booking.addons.reduce((sum, a) => sum + (a.salePrice ?? a.price), 0);
+                    const addonsTotal = booking.addons.reduce((sum, a) => sum + Number(a.variants?.[0]?.basePrice ?? 0), 0);
                     const grandTotal = sessionTotal + addonsTotal;
 
                     const newStatus = totalPaid >= grandTotal ? "PAID" : "PARTIALLY_PAID";

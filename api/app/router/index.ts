@@ -2,7 +2,7 @@ import { implement } from "@orpc/server";
 import { contract } from "@/app/contract";
 import { BaseContext } from "./middleware";
 import {
-    checkClient,
+    checkClient, verifyBooking,
     createBookings, createPublicBooking, deleteBooking,
     getAllBookings, getBookingById, reassignBooking,
     rescheduleBooking, updateBooking, updateBookingStatus,
@@ -31,6 +31,7 @@ export const router = os.router({
         reschedule: rescheduleBooking,
         updateStatus: updateBookingStatus,
         checkClient: checkClient,
+        verifyBooking: verifyBooking,
     },
 
     product: {

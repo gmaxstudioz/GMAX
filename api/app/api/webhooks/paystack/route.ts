@@ -1,10 +1,13 @@
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
+import { sendSMS } from "@/lib/termii";
 
 function generateReceiptNumber(): string {
     return `RCP-${Date.now()}-${uuidv4().slice(0, 8).toUpperCase()}`;
 }
+
+const PORTAL_URL = process.env.PORTAL_URL ?? "";
 
 export async function POST(req: Request) {
     const rawBody = await req.text();
@@ -29,19 +32,30 @@ export async function POST(req: Request) {
     const { reference } = payload.data;
 
     // ── Public Booking Flow ───────────────────────────────────────────────────
+
     if (reference.startsWith("gmax-pub-")) {
+        // Use Prisma findUnique instead of raw SQL to get proper camelCase fields
         const intent = await prisma.bookingIntent.findUnique({
             where: { paystackReference: reference },
         });
 
-        if (!intent) {
-            console.warn(`[Webhook] No booking intent for reference: ${reference}`);
+        if (!intent || intent.status !== "PENDING") {
+            console.info(`[Webhook] Intent ${reference} already processed or not found`);
             return Response.json({ received: true });
         }
 
-        // Idempotency guard — Paystack retries webhooks on non-2xx responses
-        if (intent.status !== "PENDING") {
-            console.info(`[Webhook] Intent ${reference} already processed: ${intent.status}`);
+        const paidAmount = Number(payload.data.amount ?? 0);
+        const paidCurrency = String(payload.data.currency ?? "").toUpperCase();
+        const expectedAmount = Math.round(Number(intent.amount) * 100);
+
+        if (paidAmount !== expectedAmount || paidCurrency !== "NGN") {
+            console.error(
+                `[Webhook] Booking payment mismatch for ${reference}. expected ${expectedAmount} NGN, got ${paidAmount} ${paidCurrency}`
+            );
+            await prisma.bookingIntent.update({
+                where: { paystackReference: reference },
+                data: { status: "FAILED" },
+            });
             return Response.json({ received: true });
         }
 
@@ -71,6 +85,8 @@ export async function POST(req: Request) {
             return Response.json({ received: true });
         }
 
+        let bookingId = "";
+
         await prisma.$transaction(async (tx) => {
             // 1. Resolve client
             let clientId = intent.existingClientId;
@@ -96,7 +112,7 @@ export async function POST(req: Request) {
                     const client = await tx.client.create({
                         data: {
                             name:     intent.clientName,
-                            phone,                          // ← now a string
+                            phone,
                             email:    intent.clientEmail ?? null,
                             type:     "regular",
                             studioId: intent.studioId,
@@ -107,27 +123,36 @@ export async function POST(req: Request) {
             }
 
             // 2. Create booking
+            const service = await tx.service.findUnique({
+                where: { id: intent.serviceId },
+                include: { variants: true },
+            });
             const booking = await tx.booking.create({
                 data: {
                     bookingDate:   intent.bookingDate,
                     sessionCount:  intent.sessionCount,
                     notes:         intent.notes,
-                    totalAmount:   intent.amount,
+                    totalAmount:   intent.totalAmount,
+                    paymentPlan:   intent.paymentPlan,
                     bookingStatus: "CONFIRMED",
-                    paymentStatus: "PAID",
+                    paymentStatus: intent.paymentPlan === "FULL" ? "PAID" : "PARTIALLY_PAID",
                     deliveryStatus: "PENDING",
                     serviceId:     intent.serviceId,
                     studioId:      intent.studioId,
                     clientId:      clientId!,
                     memberId:      defaultMember.id,
                     createdBy:     defaultMember.userId,
+                    serviceVariantId: intent.serviceVariantId ?? service?.variants?.[0]?.id ?? null,
                     ...(intent.addonIds.length > 0 && {
-                        addons: { connect: intent.addonIds.map(id => ({ id })) },
+                        addons: { connect: [...new Set(intent.addonIds.map((id: string) => id.split(":")[0]))].map(id => ({ id })) },
                     }),
                 },
             });
 
+            bookingId = booking.id;
+
             // 3. Create payment record
+            const installmentType = intent.paymentPlan === "FULL" ? "FULL" : "DEPOSIT";
             await tx.payment.create({
                 data: {
                     amount:            intent.amount,
@@ -138,7 +163,7 @@ export async function POST(req: Request) {
                     receiptNumber:     generateReceiptNumber(),
                     bookingId:         booking.id,
                     recordedById:      defaultMember.userId,
-                    installmentType:   "FULL",
+                    installmentType,
                     sequence:          1,
                     expectedAmount:    intent.amount,
                     paymentDate:       new Date(),
@@ -154,6 +179,25 @@ export async function POST(req: Request) {
                 },
             });
         });
+
+        // 5. Send SMS notification to client (fire-and-forget)
+        try {
+            const clientPhone = intent.clientPhone?.trim();
+            if (clientPhone) {
+                const service = await prisma.service.findUnique({ where: { id: intent.serviceId }, select: { name: true } });
+                const bookingDate = intent.bookingDate.toLocaleDateString("en-NG", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+                const amount = Number(intent.amount).toLocaleString("en-NG");
+                const planLabel = intent.paymentPlan === "FULL" ? "Full" : intent.paymentPlan === "HALF" ? "Half (50%)" : "Quarter (25%)";
+                const verifyLink = `${PORTAL_URL}/booking/verify?reference=${reference}`;
+                const message = `GMAX Studioz: Booking Confirmed! ✅\n\nService: ${service?.name ?? "Session"}\nDate: ${bookingDate}\nPaid: ₦${amount} (${planLabel})\nRef: ${reference}\n\nView details: ${verifyLink}`;
+
+                await sendSMS(clientPhone, message);
+                console.info(`[Webhook] SMS sent to ${clientPhone} for ${reference}`);
+            }
+        } catch (smsErr) {
+            console.error(`[Webhook] SMS notification failed for ${reference}:`, smsErr);
+            // Don't fail the webhook — booking is already created
+        }
 
         return Response.json({ received: true });
     }
@@ -172,6 +216,25 @@ export async function POST(req: Request) {
         // Idempotency guard
         if (payment.status === "PAID") {
             console.info(`[Webhook] Shop payment ${reference} already processed`);
+            return Response.json({ received: true });
+        }
+
+        const paidAmount = Number(payload.data.amount ?? 0);
+        const paidCurrency = String(payload.data.currency ?? "").toUpperCase();
+        const expectedAmount = Math.round(Number(payment.expectedAmount ?? payment.amount) * 100);
+
+        if (paidAmount !== expectedAmount || paidCurrency !== "NGN") {
+            console.error(
+                `[Webhook] Shop payment mismatch for ${reference}. expected ${expectedAmount} NGN, got ${paidAmount} ${paidCurrency}`
+            );
+            await prisma.payment.update({
+                where: { id: payment.id },
+                data: {
+                    status: "PENDING",
+                    paystackResponse: payload.data,
+                    paymentDate: new Date(),
+                },
+            });
             return Response.json({ received: true });
         }
 

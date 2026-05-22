@@ -30,7 +30,7 @@ type StudioGroup = {
         id: string;
         name: string;
         email: string | null;
-        phone: string[];
+        phone: string | null;
         address?: string | null;
         notes?: string | null;
         image?: string | null;
@@ -92,7 +92,7 @@ export function ClientsView({ studioGroups }: { studioGroups: StudioGroup[] }) {
                     const matchesSearch = !query ||
                         client.name.toLowerCase().includes(query) ||
                         (client.email && client.email.toLowerCase().includes(query)) ||
-                        client.phone.some(p => p.toLowerCase().includes(query));
+                        (client.phone && client.phone.toLowerCase().includes(query));
                     const matchesFilter = filterType === "ALL" || client.type === filterType;
                     return matchesSearch && matchesFilter;
                 }),
@@ -216,11 +216,7 @@ export function ClientsView({ studioGroups }: { studioGroups: StudioGroup[] }) {
                                                         <p className="text-foreground/80 font-semibold">Contact</p>
                                                         <div className="flex items-center gap-1">
                                                             <Phone size={16} className="text-foreground" />
-                                                            {client.phone.map((phone, index) => (
-                                                                <p key={index} className="flex gap-1.5">
-                                                                    {phone}{index !== client.phone.length - 1 && ","}
-                                                                </p>
-                                                            ))}
+                                                            <p>{client.phone}</p>
                                                         </div>
                                                         {client.email && (
                                                             <p className="flex gap-1.5">
@@ -244,10 +240,10 @@ export function ClientsView({ studioGroups }: { studioGroups: StudioGroup[] }) {
                                                                     initialData={{
                                                                         name: client.name,
                                                                         email: client.email || undefined,
-                                                                        phone: client.phone,
+                                                                        phone: client.phone || "",
                                                                         address: client.address || undefined,
                                                                         notes: client.notes || undefined,
-                                                                        clientType: client.type as "vvip" | "vip" | "regular"
+                                                                        type: client.type as "vvip" | "vip" | "regular"
                                                                     }}
                                                                     triggerItem={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Edit</DropdownMenuItem>}
                                                                 />
@@ -270,11 +266,11 @@ export function ClientsView({ studioGroups }: { studioGroups: StudioGroup[] }) {
                                                 clientId={client.id}
                                                 initialData={{
                                                     name: client.name,
-                                                    email: client.email,
-                                                    phone: client.phone,
-                                                    address: client.address,
-                                                    notes: client.notes,
-                                                    clientType: client.type as "vvip" | "vip" | "regular"
+                                                    email: client.email || undefined,
+                                                    phone: client.phone || "",
+                                                    address: client.address || undefined,
+                                                    notes: client.notes || undefined,
+                                                    type: client.type as "vvip" | "vip" | "regular"
                                                 }}
                                                 triggerItem={<ContextMenuItem onSelect={(e) => e.preventDefault()}>Edit</ContextMenuItem>}
                                             />

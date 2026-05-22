@@ -1,15 +1,11 @@
-
-import { Badge } from "@/components/ui/badge"
 import {
   Card,
   CardAction,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
 import { Prisma } from "@/lib/generated/prisma/client";
-import { TrendingUpIcon, TrendingDownIcon, MinusIcon } from "lucide-react"
 import { startOfMonth, subMonths, endOfMonth } from "date-fns";
 import { calcTrend, TrendBadge, TrendFooter } from "@/components/web/trend-indicators";
 
@@ -34,7 +30,12 @@ type StudioWithRelations = Prisma.StudioGetPayload<{
     bookings: {
       include: {
         client: true,
-        service: true
+        service: {
+          include: { variants: true }
+        },
+        addons: {
+          include: { variants: true }
+        }
       }
     }
   }
@@ -52,11 +53,19 @@ export function StudioStatsCards({ data }: { data: StudioWithRelations }) {
         return bookings
             .filter(b => b.paymentStatus === "PAID")
             .reduce((sum, b) => {
-                const sessionTotal = (b.service?.price || 0) * (b.sessionCount || 1);
-                const addonsTotal = (b as Record<string, unknown>).addons
-                    ? ((b as Record<string, unknown>).addons as Record<string, unknown>[]).reduce((aSum: number, a: Record<string, unknown>) => aSum + ((a.salePrice as number | undefined) ?? (a.price as number | undefined) ?? 0), 0)
-                    : 0;
-                return sum + sessionTotal + addonsTotal;
+                if (b.totalAmount != null) {
+                    return sum + Number(b.totalAmount);
+                }
+                
+                const bookedVariant = b.service?.variants?.find(v => v.id === b.serviceVariantId) || b.service?.variants?.[0];
+                const servicePrice = Number(bookedVariant?.basePrice ?? 0);
+                
+                const addonsTotal = (b.addons || []).reduce((acc, addon) => {
+                    return acc + Number(addon.variants?.[0]?.basePrice ?? 0);
+                }, 0);
+                
+                const sessionTotal = (servicePrice * (b.sessionCount || 1)) + addonsTotal;
+                return sum + sessionTotal;
             }, 0);
     }
 

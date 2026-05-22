@@ -10,7 +10,7 @@ import { tryCatch } from "@/hooks/try-catch";
 import { CreateClient } from "@/lib/actions/client";
 import { Client, ClientSchema, ClientTypeEnum } from "@/lib/schemas/client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ChevronDown, ChevronUp, CirclePlusIcon, Loader2Icon, PlusIcon, MinusIcon } from "lucide-react";
+import { ChevronDown, ChevronUp, CirclePlusIcon, Loader2Icon, PlusIcon } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -25,10 +25,10 @@ export default function AddClient({studioId}: {studioId: string}) {
         defaultValues: {
             name: "",
             email: "",
-            phone: [""],
+            phone: "",
             address: "",
             notes: "",
-            clientType: "regular",
+            type: "regular",
         }
     });
 
@@ -51,23 +51,7 @@ export default function AddClient({studioId}: {studioId: string}) {
         });
     }
 
-    const handlePhoneChange = (index: number, value: string) => {
-        const currentPhones = form.getValues("phone");
-        const newPhones = [...currentPhones];
-        newPhones[index] = value;
-        form.setValue("phone", newPhones, { shouldDirty: true });
-    };
 
-    const addPhoneField = () => {
-        const currentPhones = form.getValues("phone");
-        form.setValue("phone", [...currentPhones, ""], { shouldDirty: true });
-    };
-
-    const removePhoneField = (index: number) => {
-        const currentPhones = form.getValues("phone");
-        const newPhones = currentPhones.filter((_, i) => i !== index);
-        form.setValue("phone", newPhones, { shouldDirty: true });
-    };
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -100,39 +84,20 @@ export default function AddClient({studioId}: {studioId: string}) {
                                 </Field>
                             )}
                         />
-                        <Field>
-                            <FieldLabel>Phone Number</FieldLabel>
-                            <div className="flex flex-col gap-2">
-                                {form.watch("phone").map((phoneValue, index) => (
-                                    <div key={index} className="flex items-center gap-2">
-                                        <Input
-                                            value={phoneValue}
-                                            onChange={(e) => handlePhoneChange(index, e.target.value)}
-                                            required={index === 0}
-                                            placeholder="e.g 08000000000"
-                                        />
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="icon"
-                                            onClick={() => removePhoneField(index)}
-                                            disabled={form.watch("phone").length === 1}
-                                        >
-                                            <MinusIcon className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                ))}
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={addPhoneField}
-                                    className="w-full text-xs"
-                                >
-                                    <PlusIcon className="mr-2 h-4 w-4" />
-                                    Add Another Phone
-                                </Button>
-                            </div>
-                        </Field>
+                        <Controller
+                            name="phone"
+                            control={form.control}
+                            render={({ field }) => (
+                                <Field>
+                                    <FieldLabel>Phone Number</FieldLabel>
+                                    <Input
+                                        {...field}
+                                        required
+                                        placeholder="e.g 08000000000"
+                                    />
+                                </Field>
+                            )}
+                        />
                         <Controller
                             name="email"
                             control={form.control}
@@ -148,7 +113,7 @@ export default function AddClient({studioId}: {studioId: string}) {
                             )}
                         />
                         <Controller
-                            name="clientType"
+                            name="type"
                             control={form.control}
                             render={({ field }) => (
                                 <Field>

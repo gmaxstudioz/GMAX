@@ -47,7 +47,7 @@ export async function checkClientName(studioId: string, name: string) {
         });
 
         if (existing) {
-            const firstPhone = existing.phone[0] ?? "";
+            const firstPhone = existing.phone ?? "";
 
             // Strip non-digits before masking so +2348012345678 works correctly.
             const digitsOnly = firstPhone.replace(/\D/g, "");
@@ -81,6 +81,7 @@ export async function createPublicBooking(data: {
     clientEmail?: string;
     existingClientId?: string;
     serviceId: string;
+    selectedVariantId?: string;
     addonIds?: string[];
     sessionCount: number;
     bookingDate: string; // "YYYY-MM-DD"
@@ -118,15 +119,10 @@ export async function createPublicBooking(data: {
         let clientId = data.existingClientId;
 
         if (!clientId) {
-            const phones = data.clientPhone
-                .split(",")
-                .map((p) => p.trim())
-                .filter(Boolean);
-
             const client = await prisma.client.create({
                 data: {
                     name: data.clientName,
-                    phone: phones,
+                    phone: data.clientPhone.trim(),
                     email: data.clientEmail || null,
                     type: "regular",
                     studioId: data.studioId,
@@ -143,31 +139,59 @@ export async function createPublicBooking(data: {
         const [y, m, d] = data.bookingDate.split("-").map(Number);
         const bookingDateUTC = new Date(Date.UTC(y, m - 1, d));
 
+        const service = await prisma.service.findUnique({ where: { id: data.serviceId }, include: { variants: true } });
+        if (!service) throw new Error("Service not found");
+
+        const selectedVariant = data.selectedVariantId 
+            ? service.variants.find((v) => v.id === data.selectedVariantId) 
+            : service.variants[0];
+            
+        if (!selectedVariant) throw new Error("Invalid service variant selected");
+
+        // Clean addon composite IDs to UUIDs for DB lookup
+        const parsedAddons = (data.addonIds || []).map(str => {
+            const parts = str.split(":");
+            return { addonId: parts[0], variantId: parts[1] };
+        });
+        const cleanAddonIds = [...new Set(parsedAddons.map(p => p.addonId))];
+        const addonsList = cleanAddonIds.length ? await prisma.service.findMany({ where: { id: { in: cleanAddonIds } }, include: { variants: true } }) : [];
+
+        const servicePrice = Number(selectedVariant.basePrice);
+        const sessionTotal = servicePrice * data.sessionCount;
+        
+        const addonsTotal = parsedAddons.reduce((sum, p) => {
+            const addon = addonsList.find(a => a.id === p.addonId);
+            if (!addon) throw new Error(`Addon not found: ${p.addonId}`);
+            
+            const variant = p.variantId ? addon.variants.find((v) => v.id === p.variantId) : addon.variants[0];
+            if (!variant) throw new Error(`Invalid variant for addon: ${addon.name}`);
+            
+            return sum + Number(variant.basePrice);
+        }, 0);
+        
+        const grandTotal = sessionTotal + addonsTotal;
+
         const booking = await prisma.booking.create({
             data: {
                 bookingDate: bookingDateUTC,
                 sessionCount: data.sessionCount,
                 notes: data.notes || null,
+                totalAmount: grandTotal,
                 bookingStatus: "PENDING",
                 paymentStatus: "PENDING",
                 deliveryStatus: "PENDING",
                 serviceId: data.serviceId,
+                serviceVariantId: data.selectedVariantId || selectedVariant?.id || null,
                 studioId: data.studioId,
                 clientId,
                 memberId: defaultMember.id,
                 createdBy: defaultMember.userId,
-                addons: data.addonIds?.length
-                    ? { connect: data.addonIds.map((id) => ({ id })) }
+                addons: cleanAddonIds.length
+                    ? { connect: cleanAddonIds.map((id) => ({ id })) }
                     : undefined,
             },
-            include: { service: true, addons: true, client: true },
+            include: { client: true },
         });
-
-        // Calculate total
-        const servicePrice = booking.service?.salePrice ?? booking.service?.price ?? 0;
-        const sessionTotal = servicePrice * booking.sessionCount;
-        const addonsTotal = booking.addons.reduce((sum, a) => sum + (a.salePrice ?? a.price), 0);
-        const grandTotal = sessionTotal + addonsTotal;
 
         const reference = `gmax-pub-${uuidv4().slice(0, 8)}`;
         const receiptNumber = generateReceiptNumber();

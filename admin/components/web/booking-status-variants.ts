@@ -6,6 +6,7 @@ export const bookingProps = cva(
         variants: {
             status: {
                 pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/50",
+                confirmed: "bg-blue-500/10 text-blue-500 border-blue-500/50",
                 completed: "bg-green-500/10 text-green-500 border-green-500/50",
                 cancelled: "bg-muted text-muted-foreground border-border grayscale",
             },

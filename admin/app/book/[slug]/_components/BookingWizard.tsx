@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { checkClientName, createPublicBooking } from "@/lib/actions/public-booking";
@@ -22,7 +21,7 @@ import {
     Loader2,
     AlertCircleIcon,
 } from "lucide-react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PublicBookingSchema, PublicBookingInput } from "@/lib/schemas/booking";
 import Link from "next/link";
@@ -33,9 +32,8 @@ interface Category {
     services: {
         id: string;
         name: string;
-        type: string;
-        price: number;
-        salePrice: number | null;
+        isAddon: boolean;
+        basePrice: number;
         studioSession: { duration: number } | null;
     }[];
 }
@@ -43,8 +41,7 @@ interface Category {
 interface Addon {
     id: string;
     name: string;
-    price: number;
-    salePrice: number | null;
+    basePrice: number;
 }
 
 interface BookingWizardProps {
@@ -79,12 +76,25 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
             sessionCount: 1,
             bookingDate: "",
             bookingTime: "",
+            paymentPlan: "FULL",
             notes: "",
         },
         mode: "onBlur"
     });
 
-    const { watch, setValue, formState: { errors }, trigger, control } = form;
+    const { setValue, formState: { errors }, trigger, control } = form;
+
+    // ✅ All reactive subscriptions via useWatch
+    const clientName        = useWatch({ control, name: "clientName" }) ?? "";
+    const clientPhone       = useWatch({ control, name: "clientPhone" }) ?? "";
+    const clientEmail       = useWatch({ control, name: "clientEmail" }) ?? "";
+    const useExisting       = useWatch({ control, name: "useExisting" }) ?? false;
+    const selectedServiceId = useWatch({ control, name: "selectedServiceId" }) ?? "";
+    const selectedAddonIds  = useWatch({ control, name: "selectedAddonIds" }) ?? [];
+    const sessionCount      = useWatch({ control, name: "sessionCount" }) ?? 1;
+    const bookingDate       = useWatch({ control, name: "bookingDate" }) ?? "";
+    const bookingTime       = useWatch({ control, name: "bookingTime" }) ?? "";
+    const notes             = useWatch({ control, name: "notes" }) ?? "";
 
     const [existingClient, setExistingClient] = useState<{
         exists: boolean;
@@ -92,19 +102,6 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
     } | null>(null);
     const [nameCheckLoading, setNameCheckLoading] = useState(false);
 
-    // Watch fields for rendering and calculations
-    const clientName = watch("clientName");
-    const clientPhone = watch("clientPhone");
-    const clientEmail = watch("clientEmail");
-    const useExisting = watch("useExisting");
-    const selectedServiceId = watch("selectedServiceId");
-    const selectedAddonIds = watch("selectedAddonIds");
-    const sessionCount = watch("sessionCount");
-    const bookingDate = watch("bookingDate");
-    const bookingTime = watch("bookingTime");
-    const notes = watch("notes");
-
-    // Step 5: Result
     const [bookingResult, setBookingResult] = useState<{
         bookingId: string;
         paymentUrl: string | null;
@@ -112,23 +109,20 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
         amount: number;
     } | null>(null);
 
-    // Computed
     const allServices = useMemo(() => categories.flatMap(c => c.services), [categories]);
     const selectedService = useMemo(() => allServices.find(s => s.id === selectedServiceId), [allServices, selectedServiceId]);
     const selectedAddons = useMemo(() => addons.filter(a => selectedAddonIds.includes(a.id)), [addons, selectedAddonIds]);
 
-    const servicePrice = selectedService?.salePrice ?? selectedService?.price ?? 0;
+    const servicePrice = selectedService?.basePrice ?? 0;
     const sessionTotal = servicePrice * sessionCount;
-    const addonsTotal = selectedAddons.reduce((sum, a) => sum + (a.salePrice ?? a.price), 0);
+    const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.basePrice, 0);
     const grandTotal = sessionTotal + addonsTotal;
 
-    // Name check with debounce
     useEffect(() => {
         if (!clientName || clientName.trim().length < 2) {
             setExistingClient(null);
             return;
         }
-
         const timeout = setTimeout(async () => {
             setNameCheckLoading(true);
             const result = await checkClientName(studioId, clientName.trim());
@@ -138,18 +132,14 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
             }
             setNameCheckLoading(false);
         }, 600);
-
         return () => clearTimeout(timeout);
     }, [clientName, studioId, setValue]);
 
     const handleNext = async () => {
         let isValid = false;
         if (step === 1) {
-            // Check if name is valid
             const nameValid = await trigger("clientName");
             if (!nameValid) return;
-
-            // Manual check for step 1 logic
             if (existingClient?.exists && !useExisting) {
                 if (!clientPhone?.trim()) {
                     form.setError("clientPhone", { type: "manual", message: "Phone number required for a new client" });
@@ -161,11 +151,8 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                     return;
                 }
             }
-            
-            // Re-validate email if provided
             const emailValid = await trigger("clientEmail");
             if (!emailValid) return;
-            
             isValid = true;
         } else if (step === 2) {
             const serviceValid = await trigger(["selectedServiceId", "sessionCount"]);
@@ -176,10 +163,7 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
             if (!dateValid) return;
             isValid = true;
         }
-
-        if (isValid) {
-            setStep(s => s + 1);
-        }
+        if (isValid) setStep(s => s + 1);
     };
 
     const onSubmit = (data: PublicBookingInput) => {
@@ -206,8 +190,6 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
             if (result?.status === "success" && result.data) {
                 setBookingResult(result.data);
                 setStep(5);
-
-                // Auto redirect to payment if link exists
                 if (result.data.paymentUrl) {
                     setTimeout(() => {
                         window.open(result.data!.paymentUrl!, "_blank");
@@ -222,7 +204,6 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
     const formatCurrency = (v: number) =>
         new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(v);
 
-    // Step 5: Confirmation
     if (step === 5 && bookingResult) {
         return (
             <Card className="shadow-lg">
@@ -236,13 +217,11 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                             Your session has been booked successfully. {bookingResult.paymentUrl ? "Complete your payment to confirm." : "The studio will contact you shortly."}
                         </p>
                     </div>
-
                     <div className="rounded-lg bg-muted/50 border p-4 text-center space-y-1 w-full max-w-xs">
                         <p className="text-xs text-muted-foreground">Total Amount</p>
                         <p className="text-2xl font-bold">{formatCurrency(bookingResult.amount)}</p>
                         <p className="text-[10px] text-muted-foreground">Ref: {bookingResult.reference}</p>
                     </div>
-
                     {bookingResult.paymentUrl && (
                         <Link href={bookingResult.paymentUrl} target="_blank" rel="noopener noreferrer" className="w-full max-w-xs">
                             <Button className="w-full gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg">
@@ -251,7 +230,6 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                             </Button>
                         </Link>
                     )}
-
                     <Link href="/book" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                         ← Back to Studios
                     </Link>
@@ -303,17 +281,24 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {/* Step 1: Client Info */}
+
+                        {/* ── STEP 1: Client Info ── */}
                         <div className={step === 1 ? "block space-y-4" : "hidden"}>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Full Name *</label>
-                                <Input
-                                    {...form.register("clientName")}
-                                    onChange={(e) => {
-                                        form.register("clientName").onChange(e);
-                                        setValue("useExisting", false);
-                                    }}
-                                    placeholder="Enter your full name"
+                                <Controller
+                                    name="clientName"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <Input
+                                            {...field}
+                                            onChange={(e) => {
+                                                field.onChange(e);
+                                                setValue("useExisting", false);
+                                            }}
+                                            placeholder="Enter your full name"
+                                        />
+                                    )}
                                 />
                                 {errors.clientName && (
                                     <p className="text-xs text-red-500">{errors.clientName.message}</p>
@@ -333,24 +318,32 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                                             )}
                                         </p>
                                         <div className="flex gap-2">
-                                            <Button
-                                                type="button"
-                                                size="sm"
-                                                variant={useExisting ? "default" : "outline"}
-                                                onClick={() => { setValue("useExisting", true); form.clearErrors("clientPhone"); }}
-                                                className="text-xs"
-                                            >
-                                                Yes, that&apos;s me
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                size="sm"
-                                                variant={!useExisting ? "default" : "outline"}
-                                                onClick={() => setValue("useExisting", false)}
-                                                className="text-xs"
-                                            >
-                                                No, I&apos;m someone new
-                                            </Button>
+                                            <Controller
+                                                name="useExisting"
+                                                control={control}
+                                                render={({ field }) => (
+                                                    <>
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant={field.value ? "default" : "outline"}
+                                                            onClick={() => { field.onChange(true); form.clearErrors("clientPhone"); }}
+                                                            className="text-xs"
+                                                        >
+                                                            Yes, that&apos;s me
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant={!field.value ? "default" : "outline"}
+                                                            onClick={() => field.onChange(false)}
+                                                            className="text-xs"
+                                                        >
+                                                            No, I&apos;m someone new
+                                                        </Button>
+                                                    </>
+                                                )}
+                                            />
                                         </div>
                                     </div>
                                 )}
@@ -359,10 +352,16 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                             {(!existingClient?.exists || !useExisting) && (
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Phone Number *</label>
-                                    <Input
-                                        {...form.register("clientPhone")}
-                                        placeholder="e.g. 08012345678"
-                                        type="tel"
+                                    <Controller
+                                        name="clientPhone"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <Input
+                                                {...field}
+                                                placeholder="e.g. 08012345678"
+                                                type="tel"
+                                            />
+                                        )}
                                     />
                                     {errors.clientPhone && (
                                         <p className="text-xs text-red-500">{errors.clientPhone.message}</p>
@@ -374,10 +373,17 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                                 <label className="text-sm font-medium">
                                     Email <span className="text-muted-foreground font-normal">(Optional)</span>
                                 </label>
-                                <Input
-                                    {...form.register("clientEmail")}
-                                    placeholder="your@email.com"
-                                    type="email"
+                                <Controller
+                                    name="clientEmail"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <Input
+                                            {...field}
+                                            value={field.value ?? ""}
+                                            placeholder="your@email.com"
+                                            type="email"
+                                        />
+                                    )}
                                 />
                                 {errors.clientEmail && (
                                     <p className="text-xs text-red-500">{errors.clientEmail.message}</p>
@@ -385,7 +391,12 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                             </div>
                         </div>
 
-                        {/* Step 2: Service Selection */}
+                        {/* ── STEP 2: Service Selection ── */}
+                        {/*
+                            Service buttons and addon checkboxes use setValue + useWatch.
+                            Controller here would require wrapping custom multi-button UI,
+                            which is more complex than the value it provides.
+                        */}
                         <div className={step === 2 ? "block space-y-6" : "hidden"}>
                             {categories.map(cat => (
                                 <div key={cat.id} className="space-y-3">
@@ -397,7 +408,7 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                                                 <button
                                                     key={service.id}
                                                     type="button"
-                                                    onClick={() => { setValue("selectedServiceId", service.id); form.clearErrors("selectedServiceId") }}
+                                                    onClick={() => { setValue("selectedServiceId", service.id); form.clearErrors("selectedServiceId"); }}
                                                     className={`text-left p-4 rounded-xl border-2 transition-all ${
                                                         isSelected
                                                             ? "border-primary bg-primary/5 shadow-sm"
@@ -408,21 +419,13 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                                                         <div>
                                                             <p className="font-medium text-sm">{service.name}</p>
                                                             <div className="flex items-center gap-2 mt-1">
-                                                                <Badge variant="outline" className="text-[10px] capitalize">{service.type}</Badge>
                                                                 {service.studioSession && (
                                                                     <span className="text-[10px] text-muted-foreground">{service.studioSession.duration}min</span>
                                                                 )}
                                                             </div>
                                                         </div>
                                                         <div className="text-right shrink-0">
-                                                            {service.salePrice ? (
-                                                                <div>
-                                                                    <p className="text-xs text-muted-foreground line-through">₦{service.price.toLocaleString()}</p>
-                                                                    <p className="font-bold text-sm text-green-600">₦{service.salePrice.toLocaleString()}</p>
-                                                                </div>
-                                                            ) : (
-                                                                <p className="font-bold text-sm">₦{service.price.toLocaleString()}</p>
-                                                            )}
+                                                            <p className="font-bold text-sm">₦{service.basePrice.toLocaleString()}</p>
                                                         </div>
                                                     </div>
                                                     {isSelected && (
@@ -440,57 +443,66 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                                 <p className="text-xs text-red-500 text-center">{errors.selectedServiceId.message}</p>
                             )}
 
-                            {/* Addons */}
                             {addons.length > 0 && (
                                 <div className="space-y-3">
                                     <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Add-ons (Optional)</h3>
                                     <div className="space-y-2">
-                                        {addons.map(addon => {
-                                            const price = addon.salePrice ?? addon.price;
-                                            return (
-                                                <label key={addon.id} className="flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-muted/30 transition-colors">
-                                                    <div className="flex items-center gap-3">
-                                                        <Checkbox
-                                                            checked={selectedAddonIds.includes(addon.id)}
-                                                            onCheckedChange={() => {
-                                                                setValue("selectedAddonIds",
-                                                                    selectedAddonIds.includes(addon.id)
-                                                                        ? selectedAddonIds.filter(id => id !== addon.id)
-                                                                        : [...selectedAddonIds, addon.id]
-                                                                );
-                                                            }}
-                                                        />
-                                                        <span className="text-sm">{addon.name}</span>
-                                                    </div>
-                                                    <span className="text-sm font-medium">₦{price.toLocaleString()}</span>
-                                                </label>
-                                            );
-                                        })}
+                                        {addons.map(addon => (
+                                            <label key={addon.id} className="flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-muted/30 transition-colors">
+                                                <div className="flex items-center gap-3">
+                                                    <Checkbox
+                                                        checked={selectedAddonIds.includes(addon.id)}
+                                                        onCheckedChange={() => {
+                                                            setValue("selectedAddonIds",
+                                                                selectedAddonIds.includes(addon.id)
+                                                                    ? selectedAddonIds.filter(id => id !== addon.id)
+                                                                    : [...selectedAddonIds, addon.id]
+                                                            );
+                                                        }}
+                                                    />
+                                                    <span className="text-sm">{addon.name}</span>
+                                                </div>
+                                                <span className="text-sm font-medium">₦{addon.basePrice.toLocaleString()}</span>
+                                            </label>
+                                        ))}
                                     </div>
                                 </div>
                             )}
 
-                            {/* Session count */}
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Number of Sessions</label>
-                                <Input
-                                    type="number"
-                                    {...form.register("sessionCount", { valueAsNumber: true })}
-                                    min={1}
-                                    className="max-w-[120px]"
+                                <Controller
+                                    name="sessionCount"
+                                    control={control}
+                                    render={({ field: { value, onChange, ...f } }) => (
+                                        <Input
+                                            {...f}
+                                            type="number"
+                                            value={value ?? 1}
+                                            onChange={(e) => onChange(Number(e.target.value))}
+                                            min={1}
+                                            className="max-w-[120px]"
+                                        />
+                                    )}
                                 />
                             </div>
                         </div>
 
-                        {/* Step 3: Date & Time */}
+                        {/* ── STEP 3: Date & Time ── */}
                         <div className={step === 3 ? "block space-y-4" : "hidden"}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Date *</label>
-                                    <Input
-                                        type="date"
-                                        {...form.register("bookingDate")}
-                                        min={new Date().toISOString().split("T")[0]}
+                                    <Controller
+                                        name="bookingDate"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <Input
+                                                {...field}
+                                                type="date"
+                                                min={new Date().toISOString().split("T")[0]}
+                                            />
+                                        )}
                                     />
                                     {errors.bookingDate && (
                                         <p className="text-xs text-red-500">{errors.bookingDate.message}</p>
@@ -498,11 +510,17 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Time *</label>
-                                    <Input
-                                        type="time"
-                                        {...form.register("bookingTime")}
-                                        min="08:00"
-                                        max="20:00"
+                                    <Controller
+                                        name="bookingTime"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <Input
+                                                {...field}
+                                                type="time"
+                                                min="08:00"
+                                                max="20:00"
+                                            />
+                                        )}
                                     />
                                     <p className="text-xs text-muted-foreground">Between 8:00 AM and 8:00 PM</p>
                                     {errors.bookingTime && (
@@ -515,16 +533,23 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                                 <label className="text-sm font-medium">
                                     Notes <span className="text-muted-foreground font-normal">(Optional)</span>
                                 </label>
-                                <Textarea
-                                    {...form.register("notes")}
-                                    placeholder="Any special requests or notes..."
-                                    rows={3}
-                                    className="resize-none"
+                                <Controller
+                                    name="notes"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <Textarea
+                                            {...field}
+                                            value={field.value ?? ""}
+                                            placeholder="Any special requests or notes..."
+                                            rows={3}
+                                            className="resize-none"
+                                        />
+                                    )}
                                 />
                             </div>
                         </div>
 
-                        {/* Step 4: Review */}
+                        {/* ── STEP 4: Review ── */}
                         <div className={step === 4 ? "block space-y-4" : "hidden"}>
                             <div className="rounded-lg border p-4 space-y-3">
                                 <div className="flex justify-between text-sm">
@@ -586,7 +611,7 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                                 {selectedAddons.map(a => (
                                     <div key={a.id} className="flex justify-between text-sm text-muted-foreground">
                                         <span>+ {a.name}</span>
-                                        <span>{formatCurrency(a.salePrice ?? a.price)}</span>
+                                        <span>{formatCurrency(a.basePrice)}</span>
                                     </div>
                                 ))}
                                 <Separator />

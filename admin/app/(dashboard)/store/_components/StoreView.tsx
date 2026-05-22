@@ -96,7 +96,12 @@ export function StoreView({ initialProducts }: { initialProducts: ProductWithCou
             }
 
             if (result?.status === "success") {
-                setProducts(result.data as ProductWithCount[]);
+                const serialized = (result.data as Array<Omit<ProductWithCount, "price" | "salePrice"> & { price: { toNumber?: () => number } | number | string, salePrice: { toNumber?: () => number } | number | string | null }>).map(p => ({
+                    ...p,
+                    price: p.price !== null && typeof p.price === "object" && typeof p.price.toNumber === "function" ? p.price.toNumber() : Number(p.price),
+                    salePrice: p.salePrice !== null && typeof p.salePrice === "object" && typeof p.salePrice.toNumber === "function" ? p.salePrice.toNumber() : (p.salePrice !== null && p.salePrice !== undefined ? Number(p.salePrice) : null),
+                })) as ProductWithCount[];
+                setProducts(serialized);
                 toast.success("Refreshed");
             } else if (result?.status === "error") {
                 toast.error(result.message);

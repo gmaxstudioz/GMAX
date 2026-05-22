@@ -26,15 +26,12 @@ export const clientPhotoAccess = os.photo.clientAccess
             data: { resourceType: "Booking", resourceId: input.bookingId },
         });
 
-        // Verify client identity by phone
-        const inputDigits = input.clientPhone.replace(/\D/g, "");
-        const phoneMatch =
-            booking.client.phone.replace(/\D/g, "") === inputDigits ||
-            (booking.client.altPhone && booking.client.altPhone.replace(/\D/g, "") === inputDigits);
-            
-        if (!phoneMatch) throw errors.FORBIDDEN({
-            message: "Phone number does not match this booking.",
-        });
+        // Verify client identity by access code
+        if (!booking.accessCode || booking.accessCode !== input.accessCode) {
+            throw errors.FORBIDDEN({
+                message: "Invalid access code.",
+            });
+        }
 
         // Generate presigned thumbnail URLs for all approved photos
         const photos = await Promise.all(
@@ -72,14 +69,12 @@ export const clientDownloadPhoto = os.photo.clientDownload
             data: { resourceType: "Booking", resourceId: input.bookingId },
         });
 
-        const inputDigits = input.clientPhone.replace(/\D/g, "");
-        const phoneMatch = 
-            booking.client.phone.replace(/\D/g, "") === inputDigits ||
-            (booking.client.altPhone && booking.client.altPhone.replace(/\D/g, "") === inputDigits);
-            
-        if (!phoneMatch) throw errors.FORBIDDEN({
-            message: "Phone number does not match this booking.",
-        });
+        // Verify client identity by access code
+        if (!booking.accessCode || booking.accessCode !== input.accessCode) {
+            throw errors.FORBIDDEN({
+                message: "Invalid access code.",
+            });
+        }
 
         const photo = await prisma.photo.findUnique({
             where: { id: input.photoId, bookingId: input.bookingId },

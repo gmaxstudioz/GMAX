@@ -41,14 +41,17 @@ export default async function StudioDetails({ params }: StudioDetailsProps) {
             },
             invitations: true,
             categories: {
-                include: { services: { include: { studioSession: true } } }
+                include: { services: { include: { studioSession: true, variants: { include: { deliverables: true } } } } }
             },
             studioSessions: true,
             clients: {
                 include: { bookings: true }
             },
             bookings: {
-                include: { client: true, service: true }
+                include: { client: true, service: { include: { variants: { include: { deliverables: true } } } } }
+            },
+            bookingIntents: {
+                orderBy: { createdAt: 'desc' as const },
             },
         },
     });
@@ -66,6 +69,13 @@ export default async function StudioDetails({ params }: StudioDetailsProps) {
     }
     const userRole = myMembership.role;
 
+    // Serialize Prisma Decimal/Date objects to plain values for Client Components
+    const serialized = JSON.parse(JSON.stringify(studioData, (_key, value) =>
+        value !== null && typeof value === "object" && typeof value.toNumber === "function"
+            ? value.toNumber()
+            : value
+    ));
+
     return (
         <div className="flex flex-col gap-4 py-4 px-4 md:gap-6 md:py-6 md:px-6">
             <div className="flex items-center justify-center gap-2 w-full">
@@ -74,8 +84,8 @@ export default async function StudioDetails({ params }: StudioDetailsProps) {
                     <h1 className="text-2xl font-bold">{studioData?.name.toUpperCase()}</h1>
                 </div>
             </div>
-            <StudioStatsCards data={studioData} />
-            <StudioData studioData={studioData} userRole={userRole} />
+            <StudioStatsCards data={serialized} />
+            <StudioData studioData={serialized} userRole={userRole} />
         </div>
     )
-}
+}

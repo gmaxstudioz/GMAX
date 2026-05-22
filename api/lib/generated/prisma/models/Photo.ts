@@ -317,6 +317,7 @@ export type PhotoWhereInput = {
   approvedById?: Prisma.StringNullableFilter<"Photo"> | string | null
   uploadedById?: Prisma.StringFilter<"Photo"> | string
   booking?: Prisma.XOR<Prisma.BookingScalarRelationFilter, Prisma.BookingWhereInput>
+  approvedBy?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   uploadedBy?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
 }
 
@@ -339,6 +340,7 @@ export type PhotoOrderByWithRelationInput = {
   approvedById?: Prisma.SortOrderInput | Prisma.SortOrder
   uploadedById?: Prisma.SortOrder
   booking?: Prisma.BookingOrderByWithRelationInput
+  approvedBy?: Prisma.UserOrderByWithRelationInput
   uploadedBy?: Prisma.UserOrderByWithRelationInput
 }
 
@@ -364,6 +366,7 @@ export type PhotoWhereUniqueInput = Prisma.AtLeast<{
   approvedById?: Prisma.StringNullableFilter<"Photo"> | string | null
   uploadedById?: Prisma.StringFilter<"Photo"> | string
   booking?: Prisma.XOR<Prisma.BookingScalarRelationFilter, Prisma.BookingWhereInput>
+  approvedBy?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   uploadedBy?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
 }, "id">
 
@@ -430,8 +433,8 @@ export type PhotoCreateInput = {
   approvalStatus?: $Enums.PhotoApprovalStatus
   rejectionReason?: string | null
   approvedAt?: Date | string | null
-  approvedById?: string | null
   booking: Prisma.BookingCreateNestedOneWithoutPhotosInput
+  approvedBy?: Prisma.UserCreateNestedOneWithoutApprovedPhotosInput
   uploadedBy: Prisma.UserCreateNestedOneWithoutPhotosInput
 }
 
@@ -470,8 +473,8 @@ export type PhotoUpdateInput = {
   approvalStatus?: Prisma.EnumPhotoApprovalStatusFieldUpdateOperationsInput | $Enums.PhotoApprovalStatus
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  approvedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   booking?: Prisma.BookingUpdateOneRequiredWithoutPhotosNestedInput
+  approvedBy?: Prisma.UserUpdateOneWithoutApprovedPhotosNestedInput
   uploadedBy?: Prisma.UserUpdateOneRequiredWithoutPhotosNestedInput
 }
 
@@ -530,7 +533,6 @@ export type PhotoUpdateManyMutationInput = {
   approvalStatus?: Prisma.EnumPhotoApprovalStatusFieldUpdateOperationsInput | $Enums.PhotoApprovalStatus
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  approvedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type PhotoUncheckedUpdateManyInput = {
@@ -640,10 +642,24 @@ export type PhotoCreateNestedManyWithoutUploadedByInput = {
   connect?: Prisma.PhotoWhereUniqueInput | Prisma.PhotoWhereUniqueInput[]
 }
 
+export type PhotoCreateNestedManyWithoutApprovedByInput = {
+  create?: Prisma.XOR<Prisma.PhotoCreateWithoutApprovedByInput, Prisma.PhotoUncheckedCreateWithoutApprovedByInput> | Prisma.PhotoCreateWithoutApprovedByInput[] | Prisma.PhotoUncheckedCreateWithoutApprovedByInput[]
+  connectOrCreate?: Prisma.PhotoCreateOrConnectWithoutApprovedByInput | Prisma.PhotoCreateOrConnectWithoutApprovedByInput[]
+  createMany?: Prisma.PhotoCreateManyApprovedByInputEnvelope
+  connect?: Prisma.PhotoWhereUniqueInput | Prisma.PhotoWhereUniqueInput[]
+}
+
 export type PhotoUncheckedCreateNestedManyWithoutUploadedByInput = {
   create?: Prisma.XOR<Prisma.PhotoCreateWithoutUploadedByInput, Prisma.PhotoUncheckedCreateWithoutUploadedByInput> | Prisma.PhotoCreateWithoutUploadedByInput[] | Prisma.PhotoUncheckedCreateWithoutUploadedByInput[]
   connectOrCreate?: Prisma.PhotoCreateOrConnectWithoutUploadedByInput | Prisma.PhotoCreateOrConnectWithoutUploadedByInput[]
   createMany?: Prisma.PhotoCreateManyUploadedByInputEnvelope
+  connect?: Prisma.PhotoWhereUniqueInput | Prisma.PhotoWhereUniqueInput[]
+}
+
+export type PhotoUncheckedCreateNestedManyWithoutApprovedByInput = {
+  create?: Prisma.XOR<Prisma.PhotoCreateWithoutApprovedByInput, Prisma.PhotoUncheckedCreateWithoutApprovedByInput> | Prisma.PhotoCreateWithoutApprovedByInput[] | Prisma.PhotoUncheckedCreateWithoutApprovedByInput[]
+  connectOrCreate?: Prisma.PhotoCreateOrConnectWithoutApprovedByInput | Prisma.PhotoCreateOrConnectWithoutApprovedByInput[]
+  createMany?: Prisma.PhotoCreateManyApprovedByInputEnvelope
   connect?: Prisma.PhotoWhereUniqueInput | Prisma.PhotoWhereUniqueInput[]
 }
 
@@ -661,6 +677,20 @@ export type PhotoUpdateManyWithoutUploadedByNestedInput = {
   deleteMany?: Prisma.PhotoScalarWhereInput | Prisma.PhotoScalarWhereInput[]
 }
 
+export type PhotoUpdateManyWithoutApprovedByNestedInput = {
+  create?: Prisma.XOR<Prisma.PhotoCreateWithoutApprovedByInput, Prisma.PhotoUncheckedCreateWithoutApprovedByInput> | Prisma.PhotoCreateWithoutApprovedByInput[] | Prisma.PhotoUncheckedCreateWithoutApprovedByInput[]
+  connectOrCreate?: Prisma.PhotoCreateOrConnectWithoutApprovedByInput | Prisma.PhotoCreateOrConnectWithoutApprovedByInput[]
+  upsert?: Prisma.PhotoUpsertWithWhereUniqueWithoutApprovedByInput | Prisma.PhotoUpsertWithWhereUniqueWithoutApprovedByInput[]
+  createMany?: Prisma.PhotoCreateManyApprovedByInputEnvelope
+  set?: Prisma.PhotoWhereUniqueInput | Prisma.PhotoWhereUniqueInput[]
+  disconnect?: Prisma.PhotoWhereUniqueInput | Prisma.PhotoWhereUniqueInput[]
+  delete?: Prisma.PhotoWhereUniqueInput | Prisma.PhotoWhereUniqueInput[]
+  connect?: Prisma.PhotoWhereUniqueInput | Prisma.PhotoWhereUniqueInput[]
+  update?: Prisma.PhotoUpdateWithWhereUniqueWithoutApprovedByInput | Prisma.PhotoUpdateWithWhereUniqueWithoutApprovedByInput[]
+  updateMany?: Prisma.PhotoUpdateManyWithWhereWithoutApprovedByInput | Prisma.PhotoUpdateManyWithWhereWithoutApprovedByInput[]
+  deleteMany?: Prisma.PhotoScalarWhereInput | Prisma.PhotoScalarWhereInput[]
+}
+
 export type PhotoUncheckedUpdateManyWithoutUploadedByNestedInput = {
   create?: Prisma.XOR<Prisma.PhotoCreateWithoutUploadedByInput, Prisma.PhotoUncheckedCreateWithoutUploadedByInput> | Prisma.PhotoCreateWithoutUploadedByInput[] | Prisma.PhotoUncheckedCreateWithoutUploadedByInput[]
   connectOrCreate?: Prisma.PhotoCreateOrConnectWithoutUploadedByInput | Prisma.PhotoCreateOrConnectWithoutUploadedByInput[]
@@ -672,6 +702,20 @@ export type PhotoUncheckedUpdateManyWithoutUploadedByNestedInput = {
   connect?: Prisma.PhotoWhereUniqueInput | Prisma.PhotoWhereUniqueInput[]
   update?: Prisma.PhotoUpdateWithWhereUniqueWithoutUploadedByInput | Prisma.PhotoUpdateWithWhereUniqueWithoutUploadedByInput[]
   updateMany?: Prisma.PhotoUpdateManyWithWhereWithoutUploadedByInput | Prisma.PhotoUpdateManyWithWhereWithoutUploadedByInput[]
+  deleteMany?: Prisma.PhotoScalarWhereInput | Prisma.PhotoScalarWhereInput[]
+}
+
+export type PhotoUncheckedUpdateManyWithoutApprovedByNestedInput = {
+  create?: Prisma.XOR<Prisma.PhotoCreateWithoutApprovedByInput, Prisma.PhotoUncheckedCreateWithoutApprovedByInput> | Prisma.PhotoCreateWithoutApprovedByInput[] | Prisma.PhotoUncheckedCreateWithoutApprovedByInput[]
+  connectOrCreate?: Prisma.PhotoCreateOrConnectWithoutApprovedByInput | Prisma.PhotoCreateOrConnectWithoutApprovedByInput[]
+  upsert?: Prisma.PhotoUpsertWithWhereUniqueWithoutApprovedByInput | Prisma.PhotoUpsertWithWhereUniqueWithoutApprovedByInput[]
+  createMany?: Prisma.PhotoCreateManyApprovedByInputEnvelope
+  set?: Prisma.PhotoWhereUniqueInput | Prisma.PhotoWhereUniqueInput[]
+  disconnect?: Prisma.PhotoWhereUniqueInput | Prisma.PhotoWhereUniqueInput[]
+  delete?: Prisma.PhotoWhereUniqueInput | Prisma.PhotoWhereUniqueInput[]
+  connect?: Prisma.PhotoWhereUniqueInput | Prisma.PhotoWhereUniqueInput[]
+  update?: Prisma.PhotoUpdateWithWhereUniqueWithoutApprovedByInput | Prisma.PhotoUpdateWithWhereUniqueWithoutApprovedByInput[]
+  updateMany?: Prisma.PhotoUpdateManyWithWhereWithoutApprovedByInput | Prisma.PhotoUpdateManyWithWhereWithoutApprovedByInput[]
   deleteMany?: Prisma.PhotoScalarWhereInput | Prisma.PhotoScalarWhereInput[]
 }
 
@@ -736,8 +780,8 @@ export type PhotoCreateWithoutUploadedByInput = {
   approvalStatus?: $Enums.PhotoApprovalStatus
   rejectionReason?: string | null
   approvedAt?: Date | string | null
-  approvedById?: string | null
   booking: Prisma.BookingCreateNestedOneWithoutPhotosInput
+  approvedBy?: Prisma.UserCreateNestedOneWithoutApprovedPhotosInput
 }
 
 export type PhotoUncheckedCreateWithoutUploadedByInput = {
@@ -766,6 +810,54 @@ export type PhotoCreateOrConnectWithoutUploadedByInput = {
 
 export type PhotoCreateManyUploadedByInputEnvelope = {
   data: Prisma.PhotoCreateManyUploadedByInput | Prisma.PhotoCreateManyUploadedByInput[]
+  skipDuplicates?: boolean
+}
+
+export type PhotoCreateWithoutApprovedByInput = {
+  id?: string
+  r2Key: string
+  fileName: string
+  fileSize: number
+  mimeType: string
+  thumbnailKey?: string | null
+  uploadedAt?: Date | string
+  expiresAt: Date | string
+  downloaded?: boolean
+  downloadedAt?: Date | string | null
+  downloadCount?: number
+  approvalStatus?: $Enums.PhotoApprovalStatus
+  rejectionReason?: string | null
+  approvedAt?: Date | string | null
+  booking: Prisma.BookingCreateNestedOneWithoutPhotosInput
+  uploadedBy: Prisma.UserCreateNestedOneWithoutPhotosInput
+}
+
+export type PhotoUncheckedCreateWithoutApprovedByInput = {
+  id?: string
+  bookingId: string
+  r2Key: string
+  fileName: string
+  fileSize: number
+  mimeType: string
+  thumbnailKey?: string | null
+  uploadedAt?: Date | string
+  expiresAt: Date | string
+  downloaded?: boolean
+  downloadedAt?: Date | string | null
+  downloadCount?: number
+  approvalStatus?: $Enums.PhotoApprovalStatus
+  rejectionReason?: string | null
+  approvedAt?: Date | string | null
+  uploadedById: string
+}
+
+export type PhotoCreateOrConnectWithoutApprovedByInput = {
+  where: Prisma.PhotoWhereUniqueInput
+  create: Prisma.XOR<Prisma.PhotoCreateWithoutApprovedByInput, Prisma.PhotoUncheckedCreateWithoutApprovedByInput>
+}
+
+export type PhotoCreateManyApprovedByInputEnvelope = {
+  data: Prisma.PhotoCreateManyApprovedByInput | Prisma.PhotoCreateManyApprovedByInput[]
   skipDuplicates?: boolean
 }
 
@@ -808,6 +900,22 @@ export type PhotoScalarWhereInput = {
   uploadedById?: Prisma.StringFilter<"Photo"> | string
 }
 
+export type PhotoUpsertWithWhereUniqueWithoutApprovedByInput = {
+  where: Prisma.PhotoWhereUniqueInput
+  update: Prisma.XOR<Prisma.PhotoUpdateWithoutApprovedByInput, Prisma.PhotoUncheckedUpdateWithoutApprovedByInput>
+  create: Prisma.XOR<Prisma.PhotoCreateWithoutApprovedByInput, Prisma.PhotoUncheckedCreateWithoutApprovedByInput>
+}
+
+export type PhotoUpdateWithWhereUniqueWithoutApprovedByInput = {
+  where: Prisma.PhotoWhereUniqueInput
+  data: Prisma.XOR<Prisma.PhotoUpdateWithoutApprovedByInput, Prisma.PhotoUncheckedUpdateWithoutApprovedByInput>
+}
+
+export type PhotoUpdateManyWithWhereWithoutApprovedByInput = {
+  where: Prisma.PhotoScalarWhereInput
+  data: Prisma.XOR<Prisma.PhotoUpdateManyMutationInput, Prisma.PhotoUncheckedUpdateManyWithoutApprovedByInput>
+}
+
 export type PhotoCreateWithoutBookingInput = {
   id?: string
   r2Key: string
@@ -823,7 +931,7 @@ export type PhotoCreateWithoutBookingInput = {
   approvalStatus?: $Enums.PhotoApprovalStatus
   rejectionReason?: string | null
   approvedAt?: Date | string | null
-  approvedById?: string | null
+  approvedBy?: Prisma.UserCreateNestedOneWithoutApprovedPhotosInput
   uploadedBy: Prisma.UserCreateNestedOneWithoutPhotosInput
 }
 
@@ -891,6 +999,25 @@ export type PhotoCreateManyUploadedByInput = {
   approvedById?: string | null
 }
 
+export type PhotoCreateManyApprovedByInput = {
+  id?: string
+  bookingId: string
+  r2Key: string
+  fileName: string
+  fileSize: number
+  mimeType: string
+  thumbnailKey?: string | null
+  uploadedAt?: Date | string
+  expiresAt: Date | string
+  downloaded?: boolean
+  downloadedAt?: Date | string | null
+  downloadCount?: number
+  approvalStatus?: $Enums.PhotoApprovalStatus
+  rejectionReason?: string | null
+  approvedAt?: Date | string | null
+  uploadedById: string
+}
+
 export type PhotoUpdateWithoutUploadedByInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   r2Key?: Prisma.StringFieldUpdateOperationsInput | string
@@ -906,8 +1033,8 @@ export type PhotoUpdateWithoutUploadedByInput = {
   approvalStatus?: Prisma.EnumPhotoApprovalStatusFieldUpdateOperationsInput | $Enums.PhotoApprovalStatus
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  approvedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   booking?: Prisma.BookingUpdateOneRequiredWithoutPhotosNestedInput
+  approvedBy?: Prisma.UserUpdateOneWithoutApprovedPhotosNestedInput
 }
 
 export type PhotoUncheckedUpdateWithoutUploadedByInput = {
@@ -948,6 +1075,63 @@ export type PhotoUncheckedUpdateManyWithoutUploadedByInput = {
   approvedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
+export type PhotoUpdateWithoutApprovedByInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  r2Key?: Prisma.StringFieldUpdateOperationsInput | string
+  fileName?: Prisma.StringFieldUpdateOperationsInput | string
+  fileSize?: Prisma.IntFieldUpdateOperationsInput | number
+  mimeType?: Prisma.StringFieldUpdateOperationsInput | string
+  thumbnailKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  uploadedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  downloaded?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  downloadedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  downloadCount?: Prisma.IntFieldUpdateOperationsInput | number
+  approvalStatus?: Prisma.EnumPhotoApprovalStatusFieldUpdateOperationsInput | $Enums.PhotoApprovalStatus
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  booking?: Prisma.BookingUpdateOneRequiredWithoutPhotosNestedInput
+  uploadedBy?: Prisma.UserUpdateOneRequiredWithoutPhotosNestedInput
+}
+
+export type PhotoUncheckedUpdateWithoutApprovedByInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  bookingId?: Prisma.StringFieldUpdateOperationsInput | string
+  r2Key?: Prisma.StringFieldUpdateOperationsInput | string
+  fileName?: Prisma.StringFieldUpdateOperationsInput | string
+  fileSize?: Prisma.IntFieldUpdateOperationsInput | number
+  mimeType?: Prisma.StringFieldUpdateOperationsInput | string
+  thumbnailKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  uploadedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  downloaded?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  downloadedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  downloadCount?: Prisma.IntFieldUpdateOperationsInput | number
+  approvalStatus?: Prisma.EnumPhotoApprovalStatusFieldUpdateOperationsInput | $Enums.PhotoApprovalStatus
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  uploadedById?: Prisma.StringFieldUpdateOperationsInput | string
+}
+
+export type PhotoUncheckedUpdateManyWithoutApprovedByInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  bookingId?: Prisma.StringFieldUpdateOperationsInput | string
+  r2Key?: Prisma.StringFieldUpdateOperationsInput | string
+  fileName?: Prisma.StringFieldUpdateOperationsInput | string
+  fileSize?: Prisma.IntFieldUpdateOperationsInput | number
+  mimeType?: Prisma.StringFieldUpdateOperationsInput | string
+  thumbnailKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  uploadedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  downloaded?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  downloadedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  downloadCount?: Prisma.IntFieldUpdateOperationsInput | number
+  approvalStatus?: Prisma.EnumPhotoApprovalStatusFieldUpdateOperationsInput | $Enums.PhotoApprovalStatus
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  uploadedById?: Prisma.StringFieldUpdateOperationsInput | string
+}
+
 export type PhotoCreateManyBookingInput = {
   id?: string
   r2Key: string
@@ -982,7 +1166,7 @@ export type PhotoUpdateWithoutBookingInput = {
   approvalStatus?: Prisma.EnumPhotoApprovalStatusFieldUpdateOperationsInput | $Enums.PhotoApprovalStatus
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  approvedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedBy?: Prisma.UserUpdateOneWithoutApprovedPhotosNestedInput
   uploadedBy?: Prisma.UserUpdateOneRequiredWithoutPhotosNestedInput
 }
 
@@ -1045,6 +1229,7 @@ export type PhotoSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   approvedById?: boolean
   uploadedById?: boolean
   booking?: boolean | Prisma.BookingDefaultArgs<ExtArgs>
+  approvedBy?: boolean | Prisma.Photo$approvedByArgs<ExtArgs>
   uploadedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["photo"]>
 
@@ -1067,6 +1252,7 @@ export type PhotoSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   approvedById?: boolean
   uploadedById?: boolean
   booking?: boolean | Prisma.BookingDefaultArgs<ExtArgs>
+  approvedBy?: boolean | Prisma.Photo$approvedByArgs<ExtArgs>
   uploadedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["photo"]>
 
@@ -1089,6 +1275,7 @@ export type PhotoSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   approvedById?: boolean
   uploadedById?: boolean
   booking?: boolean | Prisma.BookingDefaultArgs<ExtArgs>
+  approvedBy?: boolean | Prisma.Photo$approvedByArgs<ExtArgs>
   uploadedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["photo"]>
 
@@ -1115,14 +1302,17 @@ export type PhotoSelectScalar = {
 export type PhotoOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "bookingId" | "r2Key" | "fileName" | "fileSize" | "mimeType" | "thumbnailKey" | "uploadedAt" | "expiresAt" | "downloaded" | "downloadedAt" | "downloadCount" | "approvalStatus" | "rejectionReason" | "approvedAt" | "approvedById" | "uploadedById", ExtArgs["result"]["photo"]>
 export type PhotoInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   booking?: boolean | Prisma.BookingDefaultArgs<ExtArgs>
+  approvedBy?: boolean | Prisma.Photo$approvedByArgs<ExtArgs>
   uploadedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
 export type PhotoIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   booking?: boolean | Prisma.BookingDefaultArgs<ExtArgs>
+  approvedBy?: boolean | Prisma.Photo$approvedByArgs<ExtArgs>
   uploadedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
 export type PhotoIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   booking?: boolean | Prisma.BookingDefaultArgs<ExtArgs>
+  approvedBy?: boolean | Prisma.Photo$approvedByArgs<ExtArgs>
   uploadedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
 
@@ -1130,6 +1320,7 @@ export type $PhotoPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   name: "Photo"
   objects: {
     booking: Prisma.$BookingPayload<ExtArgs>
+    approvedBy: Prisma.$UserPayload<ExtArgs> | null
     uploadedBy: Prisma.$UserPayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -1545,6 +1736,7 @@ readonly fields: PhotoFieldRefs;
 export interface Prisma__PhotoClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   booking<T extends Prisma.BookingDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BookingDefaultArgs<ExtArgs>>): Prisma.Prisma__BookingClient<runtime.Types.Result.GetResult<Prisma.$BookingPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  approvedBy<T extends Prisma.Photo$approvedByArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Photo$approvedByArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   uploadedBy<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1990,6 +2182,25 @@ export type PhotoDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Interna
    * Limit how many Photos to delete.
    */
   limit?: number
+}
+
+/**
+ * Photo.approvedBy
+ */
+export type Photo$approvedByArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the User
+   */
+  select?: Prisma.UserSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the User
+   */
+  omit?: Prisma.UserOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserInclude<ExtArgs> | null
+  where?: Prisma.UserWhereInput
 }
 
 /**

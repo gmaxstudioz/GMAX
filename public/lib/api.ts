@@ -89,7 +89,7 @@ export const getStudioBySlug = (slug: string) =>
 
 /** GET /studio/getAll — contract: getAllStudiosContract */
 export const getStudios = (page = 1, perPage = 20) =>
-    get<{ items: { id: string; name: string; slug: string; logo: string | null }[]; meta: { total: number; page: number; perPage: number; totalPages: number } }>("/studio/getAll", {
+    get<{ items: { id: string; name: string; slug: string; logo: string | null; metadata: Record<string, unknown> | null }[]; meta: { total: number; page: number; perPage: number; totalPages: number } }>("/studio/getAll", {
         page: String(page),
         perPage: String(perPage),
     });
@@ -104,7 +104,20 @@ export const checkClient = (studioId: string, name: string, email?: string) =>
 export const createPublicBooking = (input: PublicBookingInput) =>
     post<PublicBookingOutput>("/bookings/public", input);
 
-// ── Products ──────────────────────────────────────────────────────────────────
+/** GET /bookings/verify — contract: VerifyBookingContract */
+export type VerifyBookingResult = {
+    status: "PENDING" | "COMPLETED" | "EXPIRED" | "FAILED";
+    clientName: string;
+    serviceName: string;
+    bookingDate: string;
+    totalAmount: number;
+    amountPaid: number;
+    paymentPlan: string;
+    reference: string;
+    bookingId: string | null;
+};
+export const verifyBookingPayment = (reference: string) =>
+    get<VerifyBookingResult>("/bookings/verify", { reference });
 
 /** GET /products — contract: GetAllProductsContract */
 export const getProducts = (page = 1, perPage = 20) =>

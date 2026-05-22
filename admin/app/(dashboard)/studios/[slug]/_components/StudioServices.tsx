@@ -12,8 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { createCategory, deleteCategory, createService, deleteService, updateCategory, updateService } from "@/lib/actions/service";
-import { useRouter } from "next/navigation";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useFieldArray, Control, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CategorySchema, CategoryPayload, ServiceSchema, ServicePayload } from "@/lib/schemas/service";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -21,10 +20,96 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 // ✅ Ensure variants are included in the expected type
 type StudioWithRelations = Prisma.StudioGetPayload<{
     include: {
-        categories: { include: { services: { include: { variants: true } } } },
+        categories: { include: { services: { include: { variants: { include: { deliverables: true } } } } } },
         studioSessions: true,
     }
 }>;
+
+function VariantDeliverables({ control, variantIndex, isPending }: { control: Control<ServicePayload>, variantIndex: number, isPending: boolean }) {
+    const { fields, append, remove } = useFieldArray({
+        control,
+        name: `variants.${variantIndex}.deliverables` as const
+    });
+
+    return (
+        <div className="flex flex-col gap-2 mt-3 p-3 border rounded-md bg-background/50">
+            <div className="flex items-center justify-between">
+                <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Deliverables</h5>
+                <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-7 text-[10px] gap-1"
+                    onClick={() => append({ label: "", quantity: 1, detail: "", isFree: false })}
+                    disabled={isPending}
+                >
+                    <PlusIcon className="size-3" /> Add Item
+                </Button>
+            </div>
+            
+            {fields.length === 0 ? (
+                <div className="text-[10px] text-muted-foreground py-2 text-center">No deliverables defined.</div>
+            ) : (
+                <div className="flex flex-col gap-2">
+                    {fields.map((field, index) => (
+                        <div key={field.id} className="grid grid-cols-12 gap-2 items-start bg-card p-2 rounded border shadow-sm">
+                            <div className="col-span-12 md:col-span-4">
+                                <Controller
+                                    name={`variants.${variantIndex}.deliverables.${index}.label`}
+                                    control={control}
+                                    render={({ field }) => <Input {...field} placeholder="e.g. Edited Photos" className="h-8 text-xs" disabled={isPending} />}
+                                />
+                            </div>
+                            <div className="col-span-6 md:col-span-2">
+                                <Controller
+                                    name={`variants.${variantIndex}.deliverables.${index}.quantity`}
+                                    control={control}
+                                    render={({ field: { value, onChange, ...f } }) => (
+                                        <Input 
+                                            {...f} 
+                                            value={value ?? ""} 
+                                            onChange={e => onChange(e.target.value ? Number(e.target.value) : undefined)} 
+                                            placeholder="Qty" 
+                                            type="number" 
+                                            className="h-8 text-xs" 
+                                            disabled={isPending} 
+                                        />
+                                    )}
+                                />
+                            </div>
+                            <div className="col-span-6 md:col-span-3">
+                                <Controller
+                                    name={`variants.${variantIndex}.deliverables.${index}.detail`}
+                                    control={control}
+                                    render={({ field: { value, onChange, ...f } }) => (
+                                        <Input {...f} value={value ?? ""} onChange={onChange} placeholder="Detail (opt)" className="h-8 text-xs" disabled={isPending} />
+                                    )}
+                                />
+                            </div>
+                            <div className="col-span-6 md:col-span-2 flex items-center h-8">
+                                <Controller
+                                    name={`variants.${variantIndex}.deliverables.${index}.isFree`}
+                                    control={control}
+                                    render={({ field: { value, onChange } }) => (
+                                        <label className="flex items-center gap-1.5 text-[10px] cursor-pointer">
+                                            <input type="checkbox" checked={value} onChange={e => onChange(e.target.checked)} disabled={isPending} className="rounded border-muted-foreground/30 text-primary focus:ring-primary" />
+                                            Free?
+                                        </label>
+                                    )}
+                                />
+                            </div>
+                            <div className="col-span-6 md:col-span-1 flex justify-end">
+                                <Button type="button" variant="ghost" size="icon" className="size-8 text-destructive" onClick={() => remove(index)} disabled={isPending}>
+                                    <Trash className="size-3" />
+                                </Button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default function StudioServices({ studioData }: { studioData: StudioWithRelations }) {
     const [isPending, startTransition] = useTransition();
@@ -54,9 +139,20 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                 basePrice: 0,
                 maxPrice: undefined,
                 sessionDurationMins: 45,
-                logisticsIncluded: true
+                logisticsIncluded: true,
+                deliverables: []
             }],
         }
+    });
+
+    // At the top of StudioServices, after your hooks
+    const watchedFeatures = useWatch({ control: serviceForm.control, name: "features" }) ?? [];
+    const watchedVariants = useWatch({ control: serviceForm.control, name: "variants" });
+    const watchedSessionId = useWatch({ control: serviceForm.control, name: "studioSessionId" });
+
+    const { fields: variantFields, append: appendVariant, remove: removeVariant } = useFieldArray({
+        control: serviceForm.control,
+        name: "variants"
     });
 
     const resetCategoryState = () => {
@@ -77,7 +173,8 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                 basePrice: 0,
                 maxPrice: undefined,
                 sessionDurationMins: 45,
-                logisticsIncluded: true
+                logisticsIncluded: true,
+                deliverables: []
             }]
         });
         setEditModeService(null);
@@ -362,25 +459,33 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                 className="size-6 h-6 w-6 text-muted-foreground hover:text-primary"
                                                                 onClick={() => {
                                                                     setEditModeService(svc.id);
-                                                                    serviceForm.setValue("name", svc.name);
-                                                                    serviceForm.setValue("description", svc.description);
-                                                                    serviceForm.setValue("isAddon", svc.isAddon);
-                                                                    serviceForm.setValue("isActive", svc.isActive);
-                                                                    serviceForm.setValue("studioSessionId", svc.studioSessionId);
                                                                     const svcFeatures = (svc.features && svc.features.length > 0) ? svc.features : [""];
-                                                                    serviceForm.setValue("features", svcFeatures);
                                                                     
-                                                                    // Map existing variants to form
-                                                                    if (svc.variants && svc.variants.length > 0) {
-                                                                        serviceForm.setValue("variants", svc.variants.map(v => ({
+                                                                    const mappedVariants = (svc.variants && svc.variants.length > 0) 
+                                                                        ? svc.variants.map((v) => ({
                                                                             locationType: v.locationType as "STUDIO" | "OUTDOOR" | "BOTH" | "MULTIPLE",
                                                                             basePrice: Number(v.basePrice),
                                                                             maxPrice: v.maxPrice ? Number(v.maxPrice) : undefined,
                                                                             sessionDurationMins: v.sessionDurationMins,
-                                                                            logisticsIncluded: v.logisticsIncluded
-                                                                        })));
-                                                                    }
-                                                                    
+                                                                            logisticsIncluded: v.logisticsIncluded,
+                                                                            deliverables: v.deliverables?.map((d) => ({
+                                                                                label: d.label,
+                                                                                quantity: d.quantity ?? undefined,
+                                                                                detail: d.detail ?? undefined,
+                                                                                isFree: d.isFree
+                                                                            })) || []
+                                                                        }))
+                                                                        : [];
+
+                                                                    serviceForm.reset({
+                                                                        name: svc.name,
+                                                                        description: svc.description || "",
+                                                                        isAddon: svc.isAddon,
+                                                                        isActive: svc.isActive,
+                                                                        studioSessionId: svc.studioSessionId || "",
+                                                                        features: svcFeatures,
+                                                                        variants: mappedVariants
+                                                                    });
                                                                     setServiceDialogOpenForCategory(category.id);
                                                                 }}
                                                                 title="Edit Service"
@@ -417,7 +522,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                 open={!!serviceDialogOpenForCategory}
                 onOpenChange={(isOpen) => !isOpen && setServiceDialogOpenForCategory(null)}
             >
-                <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="sm:max-w-3xl md:max-w-4xl max-h-[90vh] overflow-y-auto w-full">
                     <DialogHeader>
                         <DialogTitle>{editModeService ? "Edit Service" : "Add Service"}</DialogTitle>
                         <DialogDescription>
@@ -465,7 +570,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                 variant="outline"
                                                 size="icon"
                                                 onClick={() => removeFeatureField(index)}
-                                                disabled={isPending || (serviceForm.watch("features") || []).length <= 1 && !featureValue}
+                                                disabled={isPending || (watchedFeatures.length <= 1 && !featureValue)}
                                             >
                                                 <MinusIcon className="h-4 w-4" />
                                             </Button>
@@ -478,53 +583,138 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                 </div>
                             </Field>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                {/* ✅ Updated to bind to variants.0.basePrice */}
-                                <Controller
-                                    name="variants.0.basePrice"
-                                    control={serviceForm.control}
-                                    render={({ field: { value, onChange, ...field } }) => (
-                                        <Field>
-                                            <FieldLabel>Base Price</FieldLabel>
-                                            <div className="relative">
-                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
-                                                <Input
-                                                    {...field}
-                                                    value={value === 0 ? "" : value}
-                                                    onChange={(e) => onChange(e.target.value === "" ? 0 : Number(e.target.value))}
-                                                    type="number"
-                                                    className="pl-8"
-                                                    placeholder="25000"
+                            {/* Dynamic Variants */}
+                            <div className="flex flex-col gap-4 mt-4">
+                                <div className="flex items-center justify-between">
+                                    <FieldLabel className="mb-0">Pricing & Variants</FieldLabel>
+                                    <Button 
+                                        type="button" 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="h-8 gap-1"
+                                        onClick={() => {
+                                            // Auto-detect a good default duration from the session if selected
+                                            const sessionId = serviceForm.getValues("studioSessionId");
+                                            const session = studioData.studioSessions.find(s => s.id === sessionId);
+                                            appendVariant({ 
+                                                locationType: "STUDIO", 
+                                                basePrice: 0, 
+                                                sessionDurationMins: session ? session.duration : 45, 
+                                                logisticsIncluded: true, 
+                                                deliverables: [] 
+                                            });
+                                        }}
+                                        disabled={isPending || variantFields.length >= 4}
+                                    >
+                                        <PlusIcon className="size-3.5" /> Add Variant
+                                    </Button>
+                                </div>
+                                
+                                {variantFields.map((field, index) => {
+                                    const usedLocationTypes = watchedVariants.map(v => v.locationType);
+                                    
+                                    return (
+                                        <div key={field.id} className="p-4 border rounded-md bg-muted/10 relative flex flex-col gap-3">
+                                            {variantFields.length > 1 && (
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="absolute top-2 right-2 size-6 text-muted-foreground hover:text-destructive z-10"
+                                                    onClick={() => removeVariant(index)}
                                                     disabled={isPending}
+                                                >
+                                                    <Trash className="size-3" />
+                                                </Button>
+                                            )}
+                                            
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                <Controller
+                                                    name={`variants.${index}.locationType`}
+                                                    control={serviceForm.control}
+                                                    render={({ field }) => (
+                                                        <Field>
+                                                            <FieldLabel>Location Type</FieldLabel>
+                                                            <Select value={field.value} onValueChange={field.onChange} disabled={isPending}>
+                                                                <SelectTrigger>
+                                                                    <SelectValue placeholder="Location" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {["STUDIO", "OUTDOOR", "BOTH", "MULTIPLE"].map(loc => (
+                                                                        <SelectItem 
+                                                                            key={loc} 
+                                                                            value={loc} 
+                                                                            disabled={usedLocationTypes.includes(loc as "STUDIO" | "OUTDOOR" | "BOTH" | "MULTIPLE") && loc !== field.value}
+                                                                        >
+                                                                            {loc}
+                                                                        </SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </Field>
+                                                    )}
+                                                />
+                                                <div className="flex gap-2">
+                                                    <Controller
+                                                        name={`variants.${index}.basePrice`}
+                                                        control={serviceForm.control}
+                                                        render={({ field: { value, onChange, ...f } }) => (
+                                                            <Field className="flex-1">
+                                                                <FieldLabel>Base Price</FieldLabel>
+                                                                <div className="relative">
+                                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
+                                                                    <Input {...f} value={value === 0 ? "" : value} onChange={(e) => onChange(e.target.value === "" ? 0 : Number(e.target.value))} type="number" className="pl-8" placeholder="25000" disabled={isPending} />
+                                                                </div>
+                                                            </Field>
+                                                        )}
+                                                    />
+                                                    <Controller
+                                                        name={`variants.${index}.maxPrice`}
+                                                        control={serviceForm.control}
+                                                        render={({ field: { value, onChange, ...f } }) => (
+                                                            <Field className="flex-1">
+                                                                <FieldLabel>Max Price</FieldLabel>
+                                                                <div className="relative">
+                                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
+                                                                    <Input {...f} value={value ?? ""} onChange={(e) => onChange(e.target.value === "" ? undefined : Number(e.target.value))} type="number" className="pl-8" placeholder="(Opt)" disabled={isPending} />
+                                                                </div>
+                                                            </Field>
+                                                        )}
+                                                    />
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                <Controller
+                                                    name={`variants.${index}.sessionDurationMins`}
+                                                    control={serviceForm.control}
+                                                    render={({ field: { value, onChange, ...f } }) => (
+                                                        <Field>
+                                                            <FieldLabel>Duration (Mins)</FieldLabel>
+                                                            <Input {...f} value={value || ""} onChange={e => onChange(Number(e.target.value))} type="number" disabled={isPending} />
+                                                        </Field>
+                                                    )}
+                                                />
+                                                <Controller
+                                                    name={`variants.${index}.logisticsIncluded`}
+                                                    control={serviceForm.control}
+                                                    render={({ field: { value, onChange } }) => (
+                                                        <Field className="justify-center">
+                                                            <label className="flex items-center gap-2 mt-6 cursor-pointer text-sm font-medium">
+                                                                <input type="checkbox" checked={value} onChange={e => onChange(e.target.checked)} disabled={isPending} className="rounded border-muted-foreground/30 text-primary focus:ring-primary size-4" />
+                                                                Logistics Included?
+                                                            </label>
+                                                        </Field>
+                                                    )}
                                                 />
                                             </div>
-                                        </Field>
-                                    )}
-                                />
-                                {/* ✅ Updated to bind to variants.0.maxPrice */}
-                                <Controller
-                                    name="variants.0.maxPrice"
-                                    control={serviceForm.control}
-                                    render={({ field: { value, onChange, ...field } }) => (
-                                        <Field>
-                                            <FieldLabel>Sale / Max Price</FieldLabel>
-                                            <div className="relative">
-                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
-                                                <Input
-                                                    {...field}
-                                                    value={value === undefined || value === null ? "" : value}
-                                                    onChange={(e) => onChange(e.target.value === "" ? undefined : Number(e.target.value))}
-                                                    type="number"
-                                                    className="pl-8"
-                                                    placeholder="(Optional)"
-                                                    disabled={isPending}
-                                                />
-                                            </div>
-                                        </Field>
-                                    )}
-                                />
+                                            
+                                            <VariantDeliverables control={serviceForm.control} variantIndex={index} isPending={isPending} />
+                                        </div>
+                                    );
+                                })}
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                                 <Controller
                                     name="studioSessionId"
                                     control={serviceForm.control}
@@ -576,6 +766,18 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                         </Field>
                                     )}
                                 />
+                                <Controller
+                                    name="isActive"
+                                    control={serviceForm.control}
+                                    render={({ field: { value, onChange } }) => (
+                                        <Field className="justify-center">
+                                            <label className="flex items-center gap-2 mt-6 cursor-pointer text-sm font-medium">
+                                                <input type="checkbox" checked={value} onChange={e => onChange(e.target.checked)} disabled={isPending} className="rounded border-muted-foreground/30 text-primary focus:ring-primary size-4" />
+                                                Active (Bookable)
+                                            </label>
+                                        </Field>
+                                    )}
+                                />
                             </div>
 
                             {studioData.studioSessions.length === 0 && (
@@ -591,9 +793,9 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                             }} disabled={isPending}>
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={isPending || studioData.studioSessions.length === 0 || !serviceForm.watch("studioSessionId")}>
+                            <Button type="submit" disabled={isPending || studioData.studioSessions.length === 0 || !watchedSessionId}>
                                 {isPending ? <Loader2Icon className="animate-spin size-4 mr-2" /> : null}
-                                {editModeService ? "Update" : "Bind"} Service
+                                {editModeService ? "Update" : "Add"} Service
                             </Button>
                         </DialogFooter>
                     </form>

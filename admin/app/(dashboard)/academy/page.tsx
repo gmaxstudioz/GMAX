@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { AcademyStatsCards } from "./_components/StatsCards";
 
 export const metadata: Metadata = {
   title: "Academy",

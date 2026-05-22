@@ -37,24 +37,26 @@ export async function createPortfolioItem(data: {
     }
 
     try {
-        // Get the highest sort order to place the new item at the end
-        const lastItem = await prisma.portfolioItem.findFirst({
-            orderBy: { sortOrder: "desc" },
-            select: { sortOrder: true },
-        });
+        const item = await prisma.$transaction(async (tx) => {
+            const [sequenceRow] = await tx.$queryRaw<{ nextval: string }[]>`
+                SELECT nextval('portfolio_item_sort_order_seq') AS nextval;
+            `;
 
-        const item = await prisma.portfolioItem.create({
-            data: {
-                title: data.title || null,
-                category: data.category,
-                r2Key: data.r2Key,
-                fileName: data.fileName,
-                fileSize: data.fileSize,
-                mimeType: data.mimeType,
-                thumbnailKey: data.thumbnailKey || null,
-                isPublished: data.isPublished ?? true,
-                sortOrder: (lastItem?.sortOrder ?? 0) + 1,
-            },
+            const sortOrder = Number(sequenceRow?.nextval ?? 1);
+
+            return await tx.portfolioItem.create({
+                data: {
+                    title: data.title || null,
+                    category: data.category,
+                    r2Key: data.r2Key,
+                    fileName: data.fileName,
+                    fileSize: data.fileSize,
+                    mimeType: data.mimeType,
+                    thumbnailKey: data.thumbnailKey || null,
+                    isPublished: data.isPublished ?? true,
+                    sortOrder,
+                },
+            });
         });
 
         revalidatePath("/portfolio");

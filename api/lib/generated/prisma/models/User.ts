@@ -229,6 +229,7 @@ export type UserWhereInput = {
   bookings?: Prisma.BookingListRelationFilter
   payments?: Prisma.PaymentListRelationFilter
   photos?: Prisma.PhotoListRelationFilter
+  approvedPhotos?: Prisma.PhotoListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -249,6 +250,7 @@ export type UserOrderByWithRelationInput = {
   bookings?: Prisma.BookingOrderByRelationAggregateInput
   payments?: Prisma.PaymentOrderByRelationAggregateInput
   photos?: Prisma.PhotoOrderByRelationAggregateInput
+  approvedPhotos?: Prisma.PhotoOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -272,6 +274,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   bookings?: Prisma.BookingListRelationFilter
   payments?: Prisma.PaymentListRelationFilter
   photos?: Prisma.PhotoListRelationFilter
+  approvedPhotos?: Prisma.PhotoListRelationFilter
 }, "id" | "email" | "phoneNumber">
 
 export type UserOrderByWithAggregationInput = {
@@ -324,6 +327,7 @@ export type UserCreateInput = {
   bookings?: Prisma.BookingCreateNestedManyWithoutCreatorInput
   payments?: Prisma.PaymentCreateNestedManyWithoutRecordedByInput
   photos?: Prisma.PhotoCreateNestedManyWithoutUploadedByInput
+  approvedPhotos?: Prisma.PhotoCreateNestedManyWithoutApprovedByInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -344,6 +348,7 @@ export type UserUncheckedCreateInput = {
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutCreatorInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutRecordedByInput
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutUploadedByInput
+  approvedPhotos?: Prisma.PhotoUncheckedCreateNestedManyWithoutApprovedByInput
 }
 
 export type UserUpdateInput = {
@@ -364,6 +369,7 @@ export type UserUpdateInput = {
   bookings?: Prisma.BookingUpdateManyWithoutCreatorNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutRecordedByNestedInput
   photos?: Prisma.PhotoUpdateManyWithoutUploadedByNestedInput
+  approvedPhotos?: Prisma.PhotoUpdateManyWithoutApprovedByNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -384,6 +390,7 @@ export type UserUncheckedUpdateInput = {
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutCreatorNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutRecordedByNestedInput
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutUploadedByNestedInput
+  approvedPhotos?: Prisma.PhotoUncheckedUpdateManyWithoutApprovedByNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -580,10 +587,26 @@ export type UserUpdateOneWithoutPaymentsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutPaymentsInput, Prisma.UserUpdateWithoutPaymentsInput>, Prisma.UserUncheckedUpdateWithoutPaymentsInput>
 }
 
+export type UserCreateNestedOneWithoutApprovedPhotosInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutApprovedPhotosInput, Prisma.UserUncheckedCreateWithoutApprovedPhotosInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutApprovedPhotosInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
 export type UserCreateNestedOneWithoutPhotosInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutPhotosInput, Prisma.UserUncheckedCreateWithoutPhotosInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutPhotosInput
   connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneWithoutApprovedPhotosNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutApprovedPhotosInput, Prisma.UserUncheckedCreateWithoutApprovedPhotosInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutApprovedPhotosInput
+  upsert?: Prisma.UserUpsertWithoutApprovedPhotosInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutApprovedPhotosInput, Prisma.UserUpdateWithoutApprovedPhotosInput>, Prisma.UserUncheckedUpdateWithoutApprovedPhotosInput>
 }
 
 export type UserUpdateOneRequiredWithoutPhotosNestedInput = {
@@ -611,6 +634,7 @@ export type UserCreateWithoutSessionsInput = {
   bookings?: Prisma.BookingCreateNestedManyWithoutCreatorInput
   payments?: Prisma.PaymentCreateNestedManyWithoutRecordedByInput
   photos?: Prisma.PhotoCreateNestedManyWithoutUploadedByInput
+  approvedPhotos?: Prisma.PhotoCreateNestedManyWithoutApprovedByInput
 }
 
 export type UserUncheckedCreateWithoutSessionsInput = {
@@ -630,6 +654,7 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutCreatorInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutRecordedByInput
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutUploadedByInput
+  approvedPhotos?: Prisma.PhotoUncheckedCreateNestedManyWithoutApprovedByInput
 }
 
 export type UserCreateOrConnectWithoutSessionsInput = {
@@ -665,6 +690,7 @@ export type UserUpdateWithoutSessionsInput = {
   bookings?: Prisma.BookingUpdateManyWithoutCreatorNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutRecordedByNestedInput
   photos?: Prisma.PhotoUpdateManyWithoutUploadedByNestedInput
+  approvedPhotos?: Prisma.PhotoUpdateManyWithoutApprovedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -684,6 +710,7 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutCreatorNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutRecordedByNestedInput
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutUploadedByNestedInput
+  approvedPhotos?: Prisma.PhotoUncheckedUpdateManyWithoutApprovedByNestedInput
 }
 
 export type UserCreateWithoutAccountsInput = {
@@ -703,6 +730,7 @@ export type UserCreateWithoutAccountsInput = {
   bookings?: Prisma.BookingCreateNestedManyWithoutCreatorInput
   payments?: Prisma.PaymentCreateNestedManyWithoutRecordedByInput
   photos?: Prisma.PhotoCreateNestedManyWithoutUploadedByInput
+  approvedPhotos?: Prisma.PhotoCreateNestedManyWithoutApprovedByInput
 }
 
 export type UserUncheckedCreateWithoutAccountsInput = {
@@ -722,6 +750,7 @@ export type UserUncheckedCreateWithoutAccountsInput = {
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutCreatorInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutRecordedByInput
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutUploadedByInput
+  approvedPhotos?: Prisma.PhotoUncheckedCreateNestedManyWithoutApprovedByInput
 }
 
 export type UserCreateOrConnectWithoutAccountsInput = {
@@ -757,6 +786,7 @@ export type UserUpdateWithoutAccountsInput = {
   bookings?: Prisma.BookingUpdateManyWithoutCreatorNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutRecordedByNestedInput
   photos?: Prisma.PhotoUpdateManyWithoutUploadedByNestedInput
+  approvedPhotos?: Prisma.PhotoUpdateManyWithoutApprovedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAccountsInput = {
@@ -776,6 +806,7 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutCreatorNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutRecordedByNestedInput
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutUploadedByNestedInput
+  approvedPhotos?: Prisma.PhotoUncheckedUpdateManyWithoutApprovedByNestedInput
 }
 
 export type UserCreateWithoutMembersInput = {
@@ -795,6 +826,7 @@ export type UserCreateWithoutMembersInput = {
   bookings?: Prisma.BookingCreateNestedManyWithoutCreatorInput
   payments?: Prisma.PaymentCreateNestedManyWithoutRecordedByInput
   photos?: Prisma.PhotoCreateNestedManyWithoutUploadedByInput
+  approvedPhotos?: Prisma.PhotoCreateNestedManyWithoutApprovedByInput
 }
 
 export type UserUncheckedCreateWithoutMembersInput = {
@@ -814,6 +846,7 @@ export type UserUncheckedCreateWithoutMembersInput = {
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutCreatorInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutRecordedByInput
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutUploadedByInput
+  approvedPhotos?: Prisma.PhotoUncheckedCreateNestedManyWithoutApprovedByInput
 }
 
 export type UserCreateOrConnectWithoutMembersInput = {
@@ -849,6 +882,7 @@ export type UserUpdateWithoutMembersInput = {
   bookings?: Prisma.BookingUpdateManyWithoutCreatorNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutRecordedByNestedInput
   photos?: Prisma.PhotoUpdateManyWithoutUploadedByNestedInput
+  approvedPhotos?: Prisma.PhotoUpdateManyWithoutApprovedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutMembersInput = {
@@ -868,6 +902,7 @@ export type UserUncheckedUpdateWithoutMembersInput = {
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutCreatorNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutRecordedByNestedInput
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutUploadedByNestedInput
+  approvedPhotos?: Prisma.PhotoUncheckedUpdateManyWithoutApprovedByNestedInput
 }
 
 export type UserCreateWithoutInvitationsInput = {
@@ -887,6 +922,7 @@ export type UserCreateWithoutInvitationsInput = {
   bookings?: Prisma.BookingCreateNestedManyWithoutCreatorInput
   payments?: Prisma.PaymentCreateNestedManyWithoutRecordedByInput
   photos?: Prisma.PhotoCreateNestedManyWithoutUploadedByInput
+  approvedPhotos?: Prisma.PhotoCreateNestedManyWithoutApprovedByInput
 }
 
 export type UserUncheckedCreateWithoutInvitationsInput = {
@@ -906,6 +942,7 @@ export type UserUncheckedCreateWithoutInvitationsInput = {
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutCreatorInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutRecordedByInput
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutUploadedByInput
+  approvedPhotos?: Prisma.PhotoUncheckedCreateNestedManyWithoutApprovedByInput
 }
 
 export type UserCreateOrConnectWithoutInvitationsInput = {
@@ -941,6 +978,7 @@ export type UserUpdateWithoutInvitationsInput = {
   bookings?: Prisma.BookingUpdateManyWithoutCreatorNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutRecordedByNestedInput
   photos?: Prisma.PhotoUpdateManyWithoutUploadedByNestedInput
+  approvedPhotos?: Prisma.PhotoUpdateManyWithoutApprovedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutInvitationsInput = {
@@ -960,6 +998,7 @@ export type UserUncheckedUpdateWithoutInvitationsInput = {
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutCreatorNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutRecordedByNestedInput
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutUploadedByNestedInput
+  approvedPhotos?: Prisma.PhotoUncheckedUpdateManyWithoutApprovedByNestedInput
 }
 
 export type UserCreateWithoutBookingsInput = {
@@ -979,6 +1018,7 @@ export type UserCreateWithoutBookingsInput = {
   invitations?: Prisma.InvitationCreateNestedManyWithoutUserInput
   payments?: Prisma.PaymentCreateNestedManyWithoutRecordedByInput
   photos?: Prisma.PhotoCreateNestedManyWithoutUploadedByInput
+  approvedPhotos?: Prisma.PhotoCreateNestedManyWithoutApprovedByInput
 }
 
 export type UserUncheckedCreateWithoutBookingsInput = {
@@ -998,6 +1038,7 @@ export type UserUncheckedCreateWithoutBookingsInput = {
   invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutUserInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutRecordedByInput
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutUploadedByInput
+  approvedPhotos?: Prisma.PhotoUncheckedCreateNestedManyWithoutApprovedByInput
 }
 
 export type UserCreateOrConnectWithoutBookingsInput = {
@@ -1033,6 +1074,7 @@ export type UserUpdateWithoutBookingsInput = {
   invitations?: Prisma.InvitationUpdateManyWithoutUserNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutRecordedByNestedInput
   photos?: Prisma.PhotoUpdateManyWithoutUploadedByNestedInput
+  approvedPhotos?: Prisma.PhotoUpdateManyWithoutApprovedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutBookingsInput = {
@@ -1052,6 +1094,7 @@ export type UserUncheckedUpdateWithoutBookingsInput = {
   invitations?: Prisma.InvitationUncheckedUpdateManyWithoutUserNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutRecordedByNestedInput
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutUploadedByNestedInput
+  approvedPhotos?: Prisma.PhotoUncheckedUpdateManyWithoutApprovedByNestedInput
 }
 
 export type UserCreateWithoutPaymentsInput = {
@@ -1071,6 +1114,7 @@ export type UserCreateWithoutPaymentsInput = {
   invitations?: Prisma.InvitationCreateNestedManyWithoutUserInput
   bookings?: Prisma.BookingCreateNestedManyWithoutCreatorInput
   photos?: Prisma.PhotoCreateNestedManyWithoutUploadedByInput
+  approvedPhotos?: Prisma.PhotoCreateNestedManyWithoutApprovedByInput
 }
 
 export type UserUncheckedCreateWithoutPaymentsInput = {
@@ -1090,6 +1134,7 @@ export type UserUncheckedCreateWithoutPaymentsInput = {
   invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutUserInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutCreatorInput
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutUploadedByInput
+  approvedPhotos?: Prisma.PhotoUncheckedCreateNestedManyWithoutApprovedByInput
 }
 
 export type UserCreateOrConnectWithoutPaymentsInput = {
@@ -1125,6 +1170,7 @@ export type UserUpdateWithoutPaymentsInput = {
   invitations?: Prisma.InvitationUpdateManyWithoutUserNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutCreatorNestedInput
   photos?: Prisma.PhotoUpdateManyWithoutUploadedByNestedInput
+  approvedPhotos?: Prisma.PhotoUpdateManyWithoutApprovedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutPaymentsInput = {
@@ -1144,6 +1190,52 @@ export type UserUncheckedUpdateWithoutPaymentsInput = {
   invitations?: Prisma.InvitationUncheckedUpdateManyWithoutUserNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutCreatorNestedInput
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutUploadedByNestedInput
+  approvedPhotos?: Prisma.PhotoUncheckedUpdateManyWithoutApprovedByNestedInput
+}
+
+export type UserCreateWithoutApprovedPhotosInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string
+  phoneNumber?: string | null
+  phoneNumberVerified?: boolean | null
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  members?: Prisma.MemberCreateNestedManyWithoutUserInput
+  invitations?: Prisma.InvitationCreateNestedManyWithoutUserInput
+  bookings?: Prisma.BookingCreateNestedManyWithoutCreatorInput
+  payments?: Prisma.PaymentCreateNestedManyWithoutRecordedByInput
+  photos?: Prisma.PhotoCreateNestedManyWithoutUploadedByInput
+}
+
+export type UserUncheckedCreateWithoutApprovedPhotosInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string
+  phoneNumber?: string | null
+  phoneNumberVerified?: boolean | null
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  members?: Prisma.MemberUncheckedCreateNestedManyWithoutUserInput
+  invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutUserInput
+  bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutCreatorInput
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutRecordedByInput
+  photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutUploadedByInput
+}
+
+export type UserCreateOrConnectWithoutApprovedPhotosInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutApprovedPhotosInput, Prisma.UserUncheckedCreateWithoutApprovedPhotosInput>
 }
 
 export type UserCreateWithoutPhotosInput = {
@@ -1163,6 +1255,7 @@ export type UserCreateWithoutPhotosInput = {
   invitations?: Prisma.InvitationCreateNestedManyWithoutUserInput
   bookings?: Prisma.BookingCreateNestedManyWithoutCreatorInput
   payments?: Prisma.PaymentCreateNestedManyWithoutRecordedByInput
+  approvedPhotos?: Prisma.PhotoCreateNestedManyWithoutApprovedByInput
 }
 
 export type UserUncheckedCreateWithoutPhotosInput = {
@@ -1182,11 +1275,63 @@ export type UserUncheckedCreateWithoutPhotosInput = {
   invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutUserInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutCreatorInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutRecordedByInput
+  approvedPhotos?: Prisma.PhotoUncheckedCreateNestedManyWithoutApprovedByInput
 }
 
 export type UserCreateOrConnectWithoutPhotosInput = {
   where: Prisma.UserWhereUniqueInput
   create: Prisma.XOR<Prisma.UserCreateWithoutPhotosInput, Prisma.UserUncheckedCreateWithoutPhotosInput>
+}
+
+export type UserUpsertWithoutApprovedPhotosInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutApprovedPhotosInput, Prisma.UserUncheckedUpdateWithoutApprovedPhotosInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutApprovedPhotosInput, Prisma.UserUncheckedCreateWithoutApprovedPhotosInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutApprovedPhotosInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutApprovedPhotosInput, Prisma.UserUncheckedUpdateWithoutApprovedPhotosInput>
+}
+
+export type UserUpdateWithoutApprovedPhotosInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  phoneNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phoneNumberVerified?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  members?: Prisma.MemberUpdateManyWithoutUserNestedInput
+  invitations?: Prisma.InvitationUpdateManyWithoutUserNestedInput
+  bookings?: Prisma.BookingUpdateManyWithoutCreatorNestedInput
+  payments?: Prisma.PaymentUpdateManyWithoutRecordedByNestedInput
+  photos?: Prisma.PhotoUpdateManyWithoutUploadedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutApprovedPhotosInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  phoneNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phoneNumberVerified?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  members?: Prisma.MemberUncheckedUpdateManyWithoutUserNestedInput
+  invitations?: Prisma.InvitationUncheckedUpdateManyWithoutUserNestedInput
+  bookings?: Prisma.BookingUncheckedUpdateManyWithoutCreatorNestedInput
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutRecordedByNestedInput
+  photos?: Prisma.PhotoUncheckedUpdateManyWithoutUploadedByNestedInput
 }
 
 export type UserUpsertWithoutPhotosInput = {
@@ -1217,6 +1362,7 @@ export type UserUpdateWithoutPhotosInput = {
   invitations?: Prisma.InvitationUpdateManyWithoutUserNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutCreatorNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutRecordedByNestedInput
+  approvedPhotos?: Prisma.PhotoUpdateManyWithoutApprovedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutPhotosInput = {
@@ -1236,6 +1382,7 @@ export type UserUncheckedUpdateWithoutPhotosInput = {
   invitations?: Prisma.InvitationUncheckedUpdateManyWithoutUserNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutCreatorNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutRecordedByNestedInput
+  approvedPhotos?: Prisma.PhotoUncheckedUpdateManyWithoutApprovedByNestedInput
 }
 
 
@@ -1251,6 +1398,7 @@ export type UserCountOutputType = {
   bookings: number
   payments: number
   photos: number
+  approvedPhotos: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1261,6 +1409,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   bookings?: boolean | UserCountOutputTypeCountBookingsArgs
   payments?: boolean | UserCountOutputTypeCountPaymentsArgs
   photos?: boolean | UserCountOutputTypeCountPhotosArgs
+  approvedPhotos?: boolean | UserCountOutputTypeCountApprovedPhotosArgs
 }
 
 /**
@@ -1322,6 +1471,13 @@ export type UserCountOutputTypeCountPhotosArgs<ExtArgs extends runtime.Types.Ext
   where?: Prisma.PhotoWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountApprovedPhotosArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PhotoWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1341,6 +1497,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   bookings?: boolean | Prisma.User$bookingsArgs<ExtArgs>
   payments?: boolean | Prisma.User$paymentsArgs<ExtArgs>
   photos?: boolean | Prisma.User$photosArgs<ExtArgs>
+  approvedPhotos?: boolean | Prisma.User$approvedPhotosArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -1392,6 +1549,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   bookings?: boolean | Prisma.User$bookingsArgs<ExtArgs>
   payments?: boolean | Prisma.User$paymentsArgs<ExtArgs>
   photos?: boolean | Prisma.User$photosArgs<ExtArgs>
+  approvedPhotos?: boolean | Prisma.User$approvedPhotosArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -1407,6 +1565,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     bookings: Prisma.$BookingPayload<ExtArgs>[]
     payments: Prisma.$PaymentPayload<ExtArgs>[]
     photos: Prisma.$PhotoPayload<ExtArgs>[]
+    approvedPhotos: Prisma.$PhotoPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1820,6 +1979,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   bookings<T extends Prisma.User$bookingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$bookingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BookingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   payments<T extends Prisma.User$paymentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$paymentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PaymentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   photos<T extends Prisma.User$photosArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$photosArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PhotoPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  approvedPhotos<T extends Prisma.User$approvedPhotosArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$approvedPhotosArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PhotoPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2399,6 +2559,30 @@ export type User$paymentsArgs<ExtArgs extends runtime.Types.Extensions.InternalA
  * User.photos
  */
 export type User$photosArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Photo
+   */
+  select?: Prisma.PhotoSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Photo
+   */
+  omit?: Prisma.PhotoOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PhotoInclude<ExtArgs> | null
+  where?: Prisma.PhotoWhereInput
+  orderBy?: Prisma.PhotoOrderByWithRelationInput | Prisma.PhotoOrderByWithRelationInput[]
+  cursor?: Prisma.PhotoWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PhotoScalarFieldEnum | Prisma.PhotoScalarFieldEnum[]
+}
+
+/**
+ * User.approvedPhotos
+ */
+export type User$approvedPhotosArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
    * Select specific fields to fetch from the Photo
    */

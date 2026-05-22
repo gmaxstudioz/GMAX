@@ -126,7 +126,7 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
       });
       
       // Check if user has NO administrative roles across all studios
-      const adminRoles = ["owner", "developer", "manager"];
+      const adminRoles = ["owner", "developer", "manager", "admin"];
       const hasAdminRole = members.some(m => adminRoles.includes(m.role));
       isOnlyMinorRole = members.length > 0 && !hasAdminRole;
     }

@@ -174,9 +174,9 @@ export type StudioScalarFieldEnum = (typeof StudioScalarFieldEnum)[keyof typeof 
 
 export const RoleScalarFieldEnum = {
   id: 'id',
-  studioId: 'studioId',
-  name: 'name',
-  permissions: 'permissions',
+  organizationId: 'organizationId',
+  role: 'role',
+  permission: 'permission',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -344,12 +344,15 @@ export const BookingIntentScalarFieldEnum = {
   clientPhone: 'clientPhone',
   existingClientId: 'existingClientId',
   serviceId: 'serviceId',
+  serviceVariantId: 'serviceVariantId',
   addonIds: 'addonIds',
   sessionCount: 'sessionCount',
   bookingDate: 'bookingDate',
   notes: 'notes',
   paystackReference: 'paystackReference',
+  totalAmount: 'totalAmount',
   amount: 'amount',
+  paymentPlan: 'paymentPlan',
   status: 'status',
   expiresAt: 'expiresAt',
   resolvedBookingId: 'resolvedBookingId',
@@ -376,7 +379,8 @@ export const BookingScalarFieldEnum = {
   memberId: 'memberId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  serviceVariantId: 'serviceVariantId'
+  serviceVariantId: 'serviceVariantId',
+  accessCode: 'accessCode'
 } as const
 
 export type BookingScalarFieldEnum = (typeof BookingScalarFieldEnum)[keyof typeof BookingScalarFieldEnum]

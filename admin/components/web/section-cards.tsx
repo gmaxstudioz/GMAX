@@ -9,101 +9,113 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { TrendingUpIcon, TrendingDownIcon } from "lucide-react"
+import { TrendingUpIcon, TrendingDownIcon, WalletIcon, CalendarIcon, UsersIcon, CheckCircleIcon } from "lucide-react"
 
-export function SectionCards() {
+export interface DashboardMetrics {
+  totalRevenue: number;
+  revenueGrowth: number;
+  totalBookings: number;
+  bookingsGrowth: number;
+  activeClients: number;
+  clientsGrowth: number;
+  completionRate: number;
+  completionRateGrowth: number;
+}
+
+export function SectionCards({ metrics }: { metrics: DashboardMetrics }) {
+  const renderGrowthBadge = (growth: number) => {
+    const isPositive = growth >= 0;
+    const Icon = isPositive ? TrendingUpIcon : TrendingDownIcon;
+    return (
+      <Badge variant={isPositive ? "outline" : "destructive"}>
+        <Icon className="size-3 mr-1" />
+        {isPositive ? "+" : ""}{growth.toFixed(1)}%
+      </Badge>
+    );
+  };
+
+  const renderGrowthFooter = (growth: number, labelPositive: string, labelNegative: string) => {
+    const isPositive = growth >= 0;
+    const Icon = isPositive ? TrendingUpIcon : TrendingDownIcon;
+    return (
+      <div className="line-clamp-1 flex gap-2 font-medium">
+        {isPositive ? labelPositive : labelNegative} {Math.abs(growth).toFixed(1)}%
+        <Icon className="size-4" />
+      </div>
+    );
+  };
+
   return (
     <div className="grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4 dark:*:data-[slot=card]:bg-card">
+      {/* Total Revenue */}
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Total Revenue</CardDescription>
+          <CardDescription className="flex items-center gap-2"><WalletIcon className="size-4 text-muted-foreground"/> Total Revenue</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            $1,250.00
+            ₦{metrics.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </CardTitle>
           <CardAction>
-            <Badge variant="outline">
-              <TrendingUpIcon
-              />
-              +12.5%
-            </Badge>
+            {renderGrowthBadge(metrics.revenueGrowth)}
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            Trending up this month{" "}
-            <TrendingUpIcon className="size-4" />
-          </div>
+          {renderGrowthFooter(metrics.revenueGrowth, "Trending up", "Trending down")}
           <div className="text-muted-foreground">
-            Visitors for the last 6 months
+            Compared to last 30 days
           </div>
         </CardFooter>
       </Card>
+
+      {/* New Bookings */}
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>New Customers</CardDescription>
+          <CardDescription className="flex items-center gap-2"><CalendarIcon className="size-4 text-muted-foreground"/> Total Bookings</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            1,234
+            {metrics.totalBookings.toLocaleString()}
           </CardTitle>
           <CardAction>
-            <Badge variant="outline">
-              <TrendingDownIcon
-              />
-              -20%
-            </Badge>
+            {renderGrowthBadge(metrics.bookingsGrowth)}
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            Down 20% this period{" "}
-            <TrendingDownIcon className="size-4" />
-          </div>
+          {renderGrowthFooter(metrics.bookingsGrowth, "Up from last month by", "Down from last month by")}
           <div className="text-muted-foreground">
-            Acquisition needs attention
+            Total active bookings
           </div>
         </CardFooter>
       </Card>
+
+      {/* Active Clients */}
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Active Accounts</CardDescription>
+          <CardDescription className="flex items-center gap-2"><UsersIcon className="size-4 text-muted-foreground"/> Active Clients</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            45,678
+            {metrics.activeClients.toLocaleString()}
           </CardTitle>
           <CardAction>
-            <Badge variant="outline">
-              <TrendingUpIcon
-              />
-              +12.5%
-            </Badge>
+            {renderGrowthBadge(metrics.clientsGrowth)}
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            Strong user retention{" "}
-            <TrendingUpIcon className="size-4" />
-          </div>
-          <div className="text-muted-foreground">Engagement exceed targets</div>
+          {renderGrowthFooter(metrics.clientsGrowth, "Growing audience by", "Shrinking audience by")}
+          <div className="text-muted-foreground">Unique clients who booked</div>
         </CardFooter>
       </Card>
+
+      {/* Completion Rate */}
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Growth Rate</CardDescription>
+          <CardDescription className="flex items-center gap-2"><CheckCircleIcon className="size-4 text-muted-foreground"/> Completion Rate</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            4.5%
+            {metrics.completionRate.toFixed(1)}%
           </CardTitle>
           <CardAction>
-            <Badge variant="outline">
-              <TrendingUpIcon
-              />
-              +4.5%
-            </Badge>
+            {renderGrowthBadge(metrics.completionRateGrowth)}
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            Steady performance increase{" "}
-            <TrendingUpIcon className="size-4" />
-          </div>
-          <div className="text-muted-foreground">Meets growth projections</div>
+          {renderGrowthFooter(metrics.completionRateGrowth, "Increased rate by", "Decreased rate by")}
+          <div className="text-muted-foreground">Percent of COMPLETED bookings</div>
         </CardFooter>
       </Card>
     </div>

@@ -47,6 +47,7 @@ export default async function ServicesPage() {
                                     duration: true,
                                 }
                             },
+                            variants: true,
                             _count: {
                                 select: {
                                     bookings: true,
@@ -77,9 +78,16 @@ export default async function ServicesPage() {
         })),
     }));
 
+    // Serialize Prisma Decimal objects to plain numbers for Client Components
+    const serialized = JSON.parse(JSON.stringify(studioGroups, (_key, value) =>
+        value !== null && typeof value === "object" && typeof value.toNumber === "function"
+            ? value.toNumber()
+            : value
+    ));
+
     return (
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">
-            <ServicesView studioGroups={studioGroups} />
+            <ServicesView studioGroups={serialized} />
         </div>
     );
 }

@@ -34,7 +34,8 @@ export default async function StudiosPage() {
             members: true,
             categories: { include: { services: { include: { variants: true } } } },
             studioSessions: true,
-            bookings: { include: { creator: true } } // Explicitly include the 'creator' relation
+            clients: true,
+            bookings: { include: { creator: true, service: { include: { variants: true } } } } // Explicitly include the 'creator' and 'service' relation for revenue calculation
         },
     });
 

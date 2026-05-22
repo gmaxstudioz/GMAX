@@ -16,7 +16,7 @@ import { ContextMenu, ContextMenuContent, ContextMenuGroup, ContextMenuItem, Con
 import { UpdateBookingDialog } from "@/components/web/bookings/UpdateBookingDialog";
 import { ClientOutput, ClientType } from "@/lib/schemas/client";
 import { MemberRole, MembersOutput, StudioMetadata, StudioOutput } from "@/lib/schemas/studio";
-import { ServiceOutput, ServiceType } from "@/lib/schemas/service";
+import { ServiceOutput } from "@/lib/schemas/service";
 
 export const metadata: Metadata = {
     title: "Global Daily Bookings",
@@ -56,7 +56,7 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
                     },
                     categories: {
                         include: {
-                            services: true
+                            services: { include: { variants: { include: { deliverables: true } } } }
                         }
                     }
                 }
@@ -100,14 +100,35 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
                     id: c.id,
                     name: c.name,
                     phone: c.phone,
-                    clientType: c.type as ClientType,
+                    type: c.type as ClientType,
                     email: c.email ?? undefined,
                     image: c.image ?? undefined,
                 })),
                 studioServices: allServices.map(s => ({
-                    ...s,
-                    type: s.type as ServiceType,
-                    salePrice: s.salePrice ?? undefined,
+                    id: s.id,
+                    name: s.name,
+                    description: s.description,
+                    features: s.features,
+                    isAddon: s.isAddon,
+                    isActive: s.isActive,
+                    studioSessionId: s.studioSessionId,
+                    categoryId: s.categoryId,
+                    variants: s.variants?.map(v => ({
+                        id: v.id,
+                        serviceId: v.serviceId,
+                        locationType: v.locationType,
+                        basePrice: Number(v.basePrice),
+                        maxPrice: v.maxPrice ? Number(v.maxPrice) : undefined,
+                        sessionDurationMins: v.sessionDurationMins,
+                        logisticsIncluded: v.logisticsIncluded,
+                        deliverables: v.deliverables?.map(d => ({
+                            id: d.id,
+                            label: d.label,
+                            quantity: d.quantity ?? undefined,
+                            detail: d.detail ?? undefined,
+                            isFree: d.isFree,
+                        })) ?? [],
+                    })) ?? [],
                 })),
                 studioMembers: booking.studio.members.map(m => ({
                     id: m.id,
@@ -231,9 +252,12 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
                                                                 deliveryStatus: booking.deliveryStatus,
                                                                 clientId: booking.clientId,
                                                                 serviceId: booking.serviceId,
+                                                                serviceVariantId: booking.serviceVariantId ?? undefined,
                                                                 memberId: booking.memberId || "",
                                                                 bookingDate: booking.bookingDate.toISOString(),
-                                                                addonIds: booking.addons.map(addon => addon.id)
+                                                                addonIds: booking.addons.map(addon => addon.id),
+                                                                totalAmount: Number(booking.totalAmount),
+                                                                paymentPlan: booking.paymentPlan,
                                                             }}
                                                         />
                                                     </div>

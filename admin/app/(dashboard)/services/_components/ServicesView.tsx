@@ -20,15 +20,15 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 type ServiceWithRelations = {
     id: string;
     name: string;
-    type: string;
+    isAddon: boolean;
+    isActive: boolean;
     description: string;
     features: string[];
-    price: number;
-    salePrice: number | null;
     categoryId: string;
     studioSessionId: string;
     createdAt: Date;
     updatedAt: Date;
+    variants: { id: string; basePrice: string | number; maxPrice: string | number | null; locationType: string; deliverables: unknown[] }[];
     studioSession: {
         id: string;
         name: string;
@@ -60,9 +60,7 @@ type StudioGroup = {
 };
 
 const SERVICE_TYPE_COLORS: Record<string, string> = {
-    standard: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-    vvip: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-    premium: "bg-purple-500/10 text-purple-600 border-purple-500/20",
+    service: "bg-blue-500/10 text-blue-600 border-blue-500/20",
     addon: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
 };
 
@@ -96,8 +94,8 @@ export function ServicesView({ studioGroups }: { studioGroups: StudioGroup[] }) 
     }
 
     // Compute all services flat for totals and type filter options
-    const allServices = studioGroups.flatMap(g => g.categories.flatMap(c => c.services));
-    const allTypes = Array.from(new Set(allServices.map(s => s.type)));
+    // const allServices = studioGroups.flatMap(g => g.categories.flatMap(c => c.services));
+    const allTypes = ['ALL', 'service', 'addon'] as const;
 
     const [page, setPage] = useState(1);
     const ITEMS_PER_PAGE = 3;
@@ -117,7 +115,7 @@ export function ServicesView({ studioGroups }: { studioGroups: StudioGroup[] }) 
                                 service.name.toLowerCase().includes(query) ||
                                 service.description.toLowerCase().includes(query) ||
                                 service.features.some(f => f.toLowerCase().includes(query));
-                            const matchesFilter = filterType === "ALL" || service.type === filterType;
+                            const matchesFilter = filterType === "ALL" || (filterType === "addon" ? service.isAddon : !service.isAddon);
                             return matchesSearch && matchesFilter;
                         }),
                     }))
@@ -225,27 +223,46 @@ export function ServicesView({ studioGroups }: { studioGroups: StudioGroup[] }) 
 
                                     {/* Service Cards Grid (max 6 per category) */}
                                     <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
-                                        {category.services.slice(0, 6).map((service) => (
-                                            <Card key={service.id} className="@container/card">
-                                                <CardHeader>
-                                                    <div className="w-full flex items-center justify-between">
+                                        {category.services.slice(0, 6).map((service) => {
+                                            const prices = service.variants?.length 
+                                                ? service.variants.map(v => Number(v.basePrice)) 
+                                                : [0];
+                                            const minPrice = Math.min(...prices);
+                                            const maxPrice = Math.max(...prices);
+                                            const priceDisplay = prices.length > 1 && minPrice !== maxPrice 
+                                                ? `From ₦${minPrice.toLocaleString()}` 
+                                                : `₦${minPrice.toLocaleString()}`;
+                                            const totalDeliverables = service.variants?.reduce((sum, v) => sum + (v.deliverables?.length || 0), 0) || 0;
+                                            
+                                            return (
+                                            <Card key={service.id} className={`@container/card relative ${!service.isActive ? 'opacity-70' : ''}`}>
+                                                <CardHeader className="pb-3">
+                                                    <div className="w-full flex items-start justify-between gap-2">
                                                         <CardTitle className="text-lg font-bold line-clamp-1">{service.name}</CardTitle>
-                                                        <Badge variant="outline" className={SERVICE_TYPE_COLORS[service.type] || ""}>
-                                                            <Sparkles className="size-3 mr-1" />
-                                                            {service.type.charAt(0).toUpperCase() + service.type.slice(1)}
-                                                        </Badge>
+                                                        {!service.isActive && (
+                                                            <Badge variant="secondary" className="text-[10px] shrink-0 bg-destructive/10 text-destructive border-destructive/20">Inactive</Badge>
+                                                        )}
                                                     </div>
                                                     <CardDescription className="line-clamp-2 mt-1">{service.description}</CardDescription>
+                                                    <div className="flex flex-wrap gap-1.5 mt-2">
+                                                        <Badge variant="outline" className={SERVICE_TYPE_COLORS[service.isAddon ? 'addon' : 'service'] || ""}>
+                                                            <Sparkles className="size-3 mr-1" />
+                                                            {service.isAddon ? 'Addon' : 'Service'}
+                                                        </Badge>
+                                                        {service.variants?.length > 1 && (
+                                                            <Badge variant="outline" className="text-muted-foreground">{service.variants.length} Variants</Badge>
+                                                        )}
+                                                        {totalDeliverables > 0 && (
+                                                            <Badge variant="outline" className="text-muted-foreground">{totalDeliverables} Deliverables</Badge>
+                                                        )}
+                                                    </div>
                                                 </CardHeader>
                                                 <CardContent className="text-muted-foreground flex flex-col gap-3">
                                                     {/* Pricing */}
                                                     <div className="flex items-center gap-2">
                                                         <Tag className="size-4 text-foreground" />
                                                         <div className="flex items-baseline gap-2">
-                                                            <span className="text-lg font-bold text-primary">₦{service.price.toLocaleString()}</span>
-                                                            {service.salePrice && (
-                                                                <span className="text-sm line-through text-muted-foreground/60">₦{service.salePrice.toLocaleString()}</span>
-                                                            )}
+                                                            <span className="text-lg font-bold text-primary">{priceDisplay}</span>
                                                         </div>
                                                     </div>
 
@@ -309,7 +326,8 @@ export function ServicesView({ studioGroups }: { studioGroups: StudioGroup[] }) 
                                                     </div>
                                                 </CardContent>
                                             </Card>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                     {category.services.length > 6 && (
                                         <p className="text-xs text-muted-foreground mt-3 text-center">

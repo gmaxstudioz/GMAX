@@ -11,6 +11,7 @@ const TERMII_BASE = process.env.TERMII_BASE_URL ?? "https://v3.api.termii.com";
 const TERMII_API_KEY = process.env.TERMII_API_KEY ?? "";
 const TERMII_SMS_SENDER = process.env.TERMII_SMS_SENDER_ID ?? "GMAX Studio";
 const TERMII_EMAIL_CONFIG_ID = process.env.TERMII_EMAIL_CONFIG_ID ?? "";
+const TERMII_ACCESS_LINK_TEMPLATE_ID = process.env.TERMII_ACCESS_LINK_TEMPLATE_ID ?? "";
 const TERMII_INVITE_TEMPLATE_ID = process.env.TERMII_INVITE_TEMPLATE_ID ?? "";
 const TERMII_RESET_TEMPLATE_ID = process.env.TERMII_RESET_TEMPLATE_ID ?? "";
 const TERMII_PURCHASE_TEMPLATE_ID = process.env.TERMII_PURCHASE_TEMPLATE_ID ?? "";
@@ -191,6 +192,30 @@ export async function sendInvitationWhatsApp(params: {
 /**
  * Send a purchase access link email after successful payment.
  */
+export async function sendAccessLinkEmail(params: {
+    email: string;
+    buyerName: string;
+    accessLink: string;
+}) {
+    if (!TERMII_ACCESS_LINK_TEMPLATE_ID) {
+        console.warn(
+            "[Termii] TERMII_ACCESS_LINK_TEMPLATE_ID not set — skipping access link email.",
+            { to: params.email, buyerName: params.buyerName },
+        );
+        return;
+    }
+
+    return sendTemplateEmail({
+        email: params.email,
+        subject: "Your GMAX Shop Access Link",
+        templateId: TERMII_ACCESS_LINK_TEMPLATE_ID,
+        variables: {
+            buyer_name: params.buyerName,
+            access_link: params.accessLink,
+        },
+    });
+}
+
 export async function sendPurchaseAccessEmail(params: {
     email: string;
     buyerName: string;
@@ -229,6 +254,43 @@ export async function sendPurchaseAccessSMS(params: {
 }) {
     const message = `GMAX Studioz: Payment confirmed for "${params.productTitle}"! Access your download here: ${params.accessLink}`;
     return sendSMS(params.phone, message);
+}
+
+/**
+ * Send a purchase access link via WhatsApp after successful payment.
+ */
+export async function sendPurchaseAccessWhatsApp(params: {
+    phone: string;
+    productTitle: string;
+    accessLink: string;
+}) {
+    const message = `Hi! 👋\n\nPayment confirmed for *${params.productTitle}* on GMAX Studioz!\n\nAccess your download here: ${params.accessLink}`;
+    return sendWhatsApp(params.phone, message);
+}
+
+/**
+ * Send a booking payment confirmation via SMS.
+ */
+export async function sendBookingPaymentSMS(params: {
+    phone: string;
+    serviceName: string;
+    reference: string;
+}) {
+    const message = `GMAX Studioz: Payment confirmed for your booking (${params.serviceName}). Ref: ${params.reference}`;
+    return sendSMS(params.phone, message);
+}
+
+/**
+ * Send a booking payment confirmation via WhatsApp.
+ */
+export async function sendBookingPaymentWhatsApp(params: {
+    phone: string;
+    clientName: string;
+    serviceName: string;
+    reference: string;
+}) {
+    const message = `Hi ${params.clientName}! 👋\n\nYour payment for *${params.serviceName}* on GMAX Studioz has been confirmed.\n\nReference: ${params.reference}\n\nThank you for choosing GMAX Studioz!`;
+    return sendWhatsApp(params.phone, message);
 }
 
 /**
