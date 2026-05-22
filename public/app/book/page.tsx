@@ -741,19 +741,19 @@ export default function BookingPage() {
           </p>
         </div>
 
-        {/* Stepper */}
-        <div className="mb-12 relative">
-          <div className="absolute top-1/2 left-0 w-full h-0.5 bg-border/50 -translate-y-1/2 z-0 hidden md:block"></div>
-          <div className="absolute top-1/2 left-0 h-0.5 bg-primary -translate-y-1/2 z-0 hidden md:block transition-all duration-500 ease-in-out" style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}></div>
+        {/* Stepper (Desktop) */}
+        <div className="mb-12 relative hidden md:block">
+          <div className="absolute top-1/2 left-0 w-full h-0.5 bg-border/50 -translate-y-1/2 z-0"></div>
+          <div className="absolute top-1/2 left-0 h-0.5 bg-primary -translate-y-1/2 z-0 transition-all duration-500 ease-in-out" style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}></div>
           
-          <div className="relative z-10 flex flex-col md:flex-row justify-between gap-6 md:gap-0">
+          <div className="relative z-10 flex justify-between gap-0">
             {steps.map((step) => {
               const Icon = step.icon;
               const isActive = currentStep === step.id;
               const isCompleted = currentStep > step.id;
               
               return (
-                <div key={step.id} className="flex flex-row md:flex-col items-center gap-4 md:gap-2">
+                <div key={step.id} className="flex flex-col items-center gap-2">
                   <div 
                     className={cn(
                       "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-500 border-2",
@@ -764,18 +764,45 @@ export default function BookingPage() {
                   >
                     <Icon className="w-5 h-5" />
                   </div>
-                  <div className="text-left md:text-center">
+                  <div className="text-center">
                     <div className={cn(
                       "text-sm font-bold uppercase tracking-wider transition-colors",
                       isActive ? "text-primary" : isCompleted ? "text-foreground" : "text-muted-foreground"
                     )}>
                       {step.title}
                     </div>
-                    <div className="text-xs text-muted-foreground hidden md:block">{step.description}</div>
+                    <div className="text-xs text-muted-foreground">{step.description}</div>
                   </div>
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Stepper (Mobile) */}
+        <div className="mb-8 md:hidden">
+          <div className="flex items-center justify-between bg-card border border-border/50 p-4 rounded-2xl shadow-sm">
+            <div className="flex items-center gap-3 text-primary">
+              {steps.find(s => s.id === currentStep)?.icon && (() => {
+                const CurrentIcon = steps.find(s => s.id === currentStep)!.icon;
+                return (
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    <CurrentIcon className="w-5 h-5" />
+                  </div>
+                );
+              })()}
+              <div>
+                <span className="text-sm font-bold uppercase tracking-wider block">
+                  {steps.find(s => s.id === currentStep)?.title}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {steps.find(s => s.id === currentStep)?.description}
+                </span>
+              </div>
+            </div>
+            <div className="text-xs font-bold bg-primary text-primary-foreground px-3 py-1.5 rounded-full">
+              Step {currentStep} of {steps.length}
+            </div>
           </div>
         </div>
 
