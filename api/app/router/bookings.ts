@@ -444,8 +444,8 @@ export const createPublicBooking = os.booking.createPublic
             data: { resourceType: "Studio", resourceId: input.studioId },
         });
 
-        const service = await prisma.service.findUnique({
-            where: { id: input.selectedServiceId },
+        const service = await prisma.service.findFirst({
+            where: { id: input.selectedServiceId, category: { studioId: input.studioId } },
             include: { variants: true },
         });
         if (!service) throw errors.NOT_FOUND({
@@ -466,7 +466,7 @@ export const createPublicBooking = os.booking.createPublic
 
         if (uniqueAddonIds.length > 0) {
             const selectedAddons = await prisma.service.findMany({
-                where: { id: { in: uniqueAddonIds } },
+                where: { id: { in: uniqueAddonIds }, category: { studioId: input.studioId }, isAddon: true },
                 include: { variants: true },
             });
             selectedAddonsMap = Object.fromEntries(selectedAddons.map(addon => [addon.id, addon]));

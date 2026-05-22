@@ -544,9 +544,8 @@ function UploadDialog({
 
         if (uploaded > 0) {
             toast.success(`${uploaded} ${uploaded === 1 ? "image" : "images"} uploaded!`);
+            onComplete?.();
         }
-
-        onComplete?.();
     };
 
     return (

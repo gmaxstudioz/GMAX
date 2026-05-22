@@ -89,7 +89,7 @@ export const verifyPurchase = os.payment.verifyPurchase
                     if (prismaError.code === "P2025") {
                         return {
                             verified: true,
-                            buyerId: payment.productAccess?.buyerId,
+                            buyerId: buyerId,
                         };
                     }
                     throw error;

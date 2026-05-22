@@ -24,7 +24,7 @@ export interface RecentBooking {
   clientName: string;
   clientImage?: string | null;
   serviceName: string;
-  bookingDate: string;
+  bookingDate: string | null;
   totalAmount: number;
   bookingStatus: string;
 }
@@ -59,6 +59,7 @@ const columns: ColumnDef<RecentBooking>[] = [
     accessorKey: "bookingDate",
     header: "Date",
     cell: ({ row }) => {
+      if (!row.original.bookingDate) return <div className="text-sm text-muted-foreground">—</div>;
       const date = new Date(row.original.bookingDate);
       return (
         <div className="text-sm">

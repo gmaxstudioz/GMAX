@@ -22,6 +22,13 @@ export async function POST(req: Request) {
 
         const { key, uploadId } = validation.data;
 
+        if (!process.env.R2_BUCKET_NAME) {
+            return NextResponse.json(
+                { error: "R2_BUCKET_NAME environment variable is not defined" },
+                { status: 500 }
+            );
+        }
+
         const command = new AbortMultipartUploadCommand({
             Bucket: process.env.R2_BUCKET_NAME,
             Key: key,

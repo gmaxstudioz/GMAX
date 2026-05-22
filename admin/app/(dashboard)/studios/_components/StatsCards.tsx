@@ -62,7 +62,7 @@ export function StudioStatsCards({ studioData }: { studioData: StudioWithCounts[
                 if (b.totalAmount != null) {
                     return sum + Number(b.totalAmount);
                 }
-                const bookedVariant = b.service?.variants?.find(v => v.id === b.serviceVariantId);
+                const bookedVariant = b.service?.variants?.find(v => v.id === b.serviceVariantId) || b.service?.variants?.[0];
                 const basePrice = bookedVariant?.basePrice ? Number(bookedVariant.basePrice) : 0;
                 const sessionTotal = basePrice * (b.sessionCount || 1);
                 return sum + sessionTotal;

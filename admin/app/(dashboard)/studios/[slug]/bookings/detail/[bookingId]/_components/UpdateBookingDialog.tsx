@@ -39,7 +39,7 @@ interface ServiceOption {
 
 interface MemberOption {
     id: string;
-    userName: string;
+    name: string;
     role: string;
 }
 
@@ -424,7 +424,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                                         <SelectContent>
                                             {members.map(m => (
                                                 <SelectItem key={m.id} value={m.id}>
-                                                    {m.userName} <span className="text-muted-foreground capitalize ml-1">({m.role})</span>
+                                                    {m.name} <span className="text-muted-foreground capitalize ml-1">({m.role})</span>
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>

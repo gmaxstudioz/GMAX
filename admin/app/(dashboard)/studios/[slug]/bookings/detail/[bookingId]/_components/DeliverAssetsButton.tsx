@@ -15,7 +15,7 @@ export function DeliverAssetsButton({ bookingId }: { bookingId: string }) {
         setIsPending(true);
         try {
             await deliverBooking(bookingId);
-            toast.success("Assets delivered successfully! Notifications have been sent.");
+            toast.success("Assets delivered successfully.");
         } catch (error) {
             console.error(error);
             const errMessage = error instanceof Error ? error.message : String(error);

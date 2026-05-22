@@ -140,9 +140,13 @@ export async function createPublicBooking(data: {
         const bookingDateUTC = new Date(Date.UTC(y, m - 1, d));
 
         const service = await prisma.service.findUnique({ where: { id: data.serviceId }, include: { variants: true } });
+        if (!service) throw new Error("Service not found");
+
         const selectedVariant = data.selectedVariantId 
-            ? service?.variants?.find((v) => v.id === data.selectedVariantId) 
-            : service?.variants?.[0];
+            ? service.variants.find((v) => v.id === data.selectedVariantId) 
+            : service.variants[0];
+            
+        if (!selectedVariant) throw new Error("Invalid service variant selected");
 
         // Clean addon composite IDs to UUIDs for DB lookup
         const parsedAddons = (data.addonIds || []).map(str => {
@@ -152,13 +156,19 @@ export async function createPublicBooking(data: {
         const cleanAddonIds = [...new Set(parsedAddons.map(p => p.addonId))];
         const addonsList = cleanAddonIds.length ? await prisma.service.findMany({ where: { id: { in: cleanAddonIds } }, include: { variants: true } }) : [];
 
-        const servicePrice = Number(selectedVariant?.basePrice ?? 0);
+        const servicePrice = Number(selectedVariant.basePrice);
         const sessionTotal = servicePrice * data.sessionCount;
+        
         const addonsTotal = parsedAddons.reduce((sum, p) => {
             const addon = addonsList.find(a => a.id === p.addonId);
-            const variant = p.variantId ? addon?.variants?.find((v) => v.id === p.variantId) : addon?.variants?.[0];
-            return sum + Number(variant?.basePrice ?? 0);
+            if (!addon) throw new Error(`Addon not found: ${p.addonId}`);
+            
+            const variant = p.variantId ? addon.variants.find((v) => v.id === p.variantId) : addon.variants[0];
+            if (!variant) throw new Error(`Invalid variant for addon: ${addon.name}`);
+            
+            return sum + Number(variant.basePrice);
         }, 0);
+        
         const grandTotal = sessionTotal + addonsTotal;
 
         const booking = await prisma.booking.create({

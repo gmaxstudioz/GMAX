@@ -138,10 +138,7 @@ export default async function BookingDetailPage({ params }: Props) {
     const totalPaid = booking.payments
         .filter((p) => p.status === "PAID")
         .reduce((sum, p) => sum + Number(p.amount), 0);
-
-    const servicePrice = Number(booking.service?.variants?.[0]?.basePrice ?? 0);
-    const addonsTotal = booking.addons.reduce((sum, a) => sum + Number(a.variants?.[0]?.basePrice ?? 0), 0);
-    const grandTotal = servicePrice + addonsTotal;
+    const grandTotal = Number(booking.totalAmount);
     const balanceDue = Math.max(0, grandTotal - totalPaid);
 
     const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
@@ -207,7 +204,7 @@ export default async function BookingDetailPage({ params }: Props) {
 
     const mappedMembers = studioMembers.map(m => ({
         id: m.id,
-        userName: m.user.name,
+        name: m.user.name,
         role: m.role
     }));
 
@@ -395,10 +392,10 @@ export default async function BookingDetailPage({ params }: Props) {
                         totalPaid={totalPaid}
                         paymentStatus={serializedBooking.paymentStatus}
                         payments={serializedPayments}
-                        addonsTotal={addonsTotal}
-                        servicePrice={servicePrice}
+                        addonsTotal={0}
+                        servicePrice={grandTotal}
                         salePrice={null}
-                        addonsCount={serializedBooking.addons.length}
+                        addonsCount={0}
                     />
 
                     {/* Meta / Timestamps */}

@@ -53,7 +53,7 @@ export function StudioStatsCards({ data }: { data: StudioWithRelations }) {
         return bookings
             .filter(b => b.paymentStatus === "PAID")
             .reduce((sum, b) => {
-                if (b.totalAmount != null && Number(b.totalAmount) > 0) {
+                if (b.totalAmount != null) {
                     return sum + Number(b.totalAmount);
                 }
                 
@@ -64,7 +64,7 @@ export function StudioStatsCards({ data }: { data: StudioWithRelations }) {
                     return acc + Number(addon.variants?.[0]?.basePrice ?? 0);
                 }, 0);
                 
-                const sessionTotal = (servicePrice + addonsTotal) * (b.sessionCount || 1);
+                const sessionTotal = (servicePrice * (b.sessionCount || 1)) + addonsTotal;
                 return sum + sessionTotal;
             }, 0);
     }

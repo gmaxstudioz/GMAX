@@ -39,18 +39,37 @@ export async function deliverBooking(bookingId: string) {
     // Generate access code if one doesn't exist
     let accessCode = booking.accessCode;
     const isNewAccessCode = !accessCode;
-    if (isNewAccessCode) {
-        accessCode = crypto.randomBytes(3).toString("hex").toUpperCase(); // 6 chars, e.g., "A1B2C3"
-    }
 
-    // Mark as delivered and set access code
-    await prisma.booking.update({
-        where: { id: bookingId },
-        data: { 
-            deliveryStatus: "DELIVERED",
-            ...(isNewAccessCode && { accessCode })
-        },
-    });
+    let updated = false;
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    while (!updated && attempts < maxAttempts) {
+        if (isNewAccessCode) {
+            accessCode = crypto.randomBytes(3).toString("hex").toUpperCase(); // 6 chars, e.g., "A1B2C3"
+        }
+
+        try {
+            // Mark as delivered and set access code
+            await prisma.booking.update({
+                where: { id: bookingId },
+                data: { 
+                    deliveryStatus: "DELIVERED",
+                    ...(isNewAccessCode && { accessCode })
+                },
+            });
+            updated = true;
+        } catch (error: any) {
+            if (isNewAccessCode && error.code === 'P2002') {
+                attempts++;
+                if (attempts >= maxAttempts) {
+                    throw new Error("Failed to generate a unique access code after multiple attempts");
+                }
+            } else {
+                throw error;
+            }
+        }
+    }
 
     // Send notifications
     // Assume public app runs on the same domain for now, or a known env variable

@@ -288,7 +288,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                                         {filteredMainServices.length > 0 ? filteredMainServices.map(s => (
                                             <div
                                                 key={s.id}
-                                                onClick={() => { form.setValue("serviceId", s.id, { shouldValidate: true }); setServiceOpen(false); setServiceSearch(""); }}
+                                                onClick={() => { form.setValue("serviceId", s.id, { shouldValidate: true }); form.setValue("serviceVariantId", ""); setServiceOpen(false); setServiceSearch(""); }}
                                                 className={`flex items-center justify-between px-3 py-2 cursor-pointer text-sm rounded-md transition-colors hover:bg-accent ${watchedServiceId === s.id ? "bg-accent font-medium" : ""}`}
                                             >
                                                 <div className="flex items-center gap-2">

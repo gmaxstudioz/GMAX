@@ -163,7 +163,7 @@ export default async function Page() {
       serviceName: b.service?.name ?? 'Unknown',
       bookingDate: b.bookingDate && typeof b.bookingDate.getTime === 'function' && !isNaN(b.bookingDate.getTime()) 
           ? b.bookingDate.toISOString() 
-          : new Date().toISOString(),
+          : null,
       totalAmount: Number(b.totalAmount),
       bookingStatus: b.bookingStatus
   }));

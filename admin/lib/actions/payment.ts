@@ -69,7 +69,7 @@ export async function initializePayment(bookingId: string) {
             const variant = variantId ? a.variants?.find((v) => v.id === variantId) : a.variants?.[0];
             return sum + Number(variant?.basePrice ?? 0);
         }, 0);
-        const grandTotal = Number(booking.totalAmount) || (sessionTotal + addonsTotal);
+        const grandTotal = booking.totalAmount != null ? Number(booking.totalAmount) : (sessionTotal + addonsTotal);
 
         const totalPaid = booking.payments
             .filter((p) => p.status === "PAID")
@@ -232,7 +232,7 @@ export async function verifyPayment(reference: string) {
                 const variant = variantId ? a.variants?.find((v) => v.id === variantId) : a.variants?.[0];
                 return sum + Number(variant?.basePrice ?? 0);
             }, 0);
-            const grandTotal = Number(booking.totalAmount) || (sessionTotal + addonsTotal);
+            const grandTotal = booking.totalAmount != null ? Number(booking.totalAmount) : (sessionTotal + addonsTotal);
 
             // Step 3: Recalculate with the freshly updated payment included
             const totalPaid = allPayments
