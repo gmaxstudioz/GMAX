@@ -295,7 +295,7 @@ export const requestAccessLink = os.product.requestAccessLink
             data: { buyerId: buyer.id, token, expiresAt, used: false },
         });
 
-        const accessLink = `${PORTAL_URL}/shop/access?token=${token}`;
+        const accessLink = `${PORTAL_URL}/shop/access/${token}`;
         let deliveryMethod: "EMAIL" | "SMS" | null = null;
 
         if (buyer.email) {
