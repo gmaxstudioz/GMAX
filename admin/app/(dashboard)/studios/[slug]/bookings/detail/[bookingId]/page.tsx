@@ -247,7 +247,7 @@ export default async function BookingDetailPage({ params }: Props) {
                             serviceVariantId: serializedBooking.serviceVariantId ?? undefined,
                             memberId: serializedBooking.memberId || "",
                             bookingDate: serializedBooking.bookingDate,
-                            addonIds: serializedBooking.addons.map((addon: { id: string }) => addon.id),
+                            addonIds: serializedBooking.addons.map((addon: { id: string; variants?: { id: string }[] }) => `${addon.id}:${addon.variants?.[0]?.id}`),
                             totalAmount: Number(serializedBooking.totalAmount),
                             paymentPlan: serializedBooking.paymentPlan,
                         }}
