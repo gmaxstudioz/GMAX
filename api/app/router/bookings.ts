@@ -638,93 +638,120 @@ export const verifyBooking = os.booking.verifyBooking
                         const defaultMember = studio?.members.find(m => m.role === "owner") ?? studio?.members[0];
 
                         if (studio && defaultMember) {
-                            await prisma.$transaction(async (tx) => {
-                                // 1. Resolve client
-                                let clientId = intent!.existingClientId;
-                                if (!clientId) {
-                                    const phone = intent!.clientPhone?.trim() ?? "";
-                                    let existing = null;
-                                    if (intent!.clientEmail) {
-                                        existing = await tx.client.findFirst({
-                                            where: { studioId: intent!.studioId, email: intent!.clientEmail },
-                                        });
-                                    }
-                                    if (!existing && phone) {
-                                        existing = await tx.client.findFirst({
-                                            where: { studioId: intent!.studioId, phone },
-                                        });
-                                    }
-                                    if (existing) {
-                                        clientId = existing.id;
-                                    } else {
-                                        const client = await tx.client.create({
-                                            data: {
-                                                name: intent!.clientName,
-                                                phone,
-                                                email: intent!.clientEmail ?? null,
-                                                type: "regular",
-                                                studioId: intent!.studioId,
-                                            },
-                                        });
-                                        clientId = client.id;
-                                    }
-                                }
+                            try {
+                                await prisma.$transaction(async (tx) => {
+                                    // 0. Atomically claim the intent
+                                    const claimResult = await tx.bookingIntent.updateMany({
+                                        where: { 
+                                            paystackReference: input.reference,
+                                            status: "PENDING" 
+                                        },
+                                        data: { status: "COMPLETED" }
+                                    });
 
-                                // 2. Create booking
-                                const service = await tx.service.findUnique({
-                                    where: { id: intent!.serviceId },
-                                    include: { variants: true },
-                                });
-                                const booking = await tx.booking.create({
-                                    data: {
-                                        bookingDate: intent!.bookingDate,
-                                        sessionCount: intent!.sessionCount,
-                                        notes: intent!.notes,
-                                        totalAmount: intent!.totalAmount,
-                                        paymentPlan: intent!.paymentPlan,
-                                        bookingStatus: "CONFIRMED",
-                                        paymentStatus: intent!.paymentPlan === "FULL" ? "PAID" : "PARTIALLY_PAID",
-                                        deliveryStatus: "PENDING",
-                                        serviceId: intent!.serviceId,
-                                        studioId: intent!.studioId,
-                                        clientId: clientId!,
-                                        memberId: defaultMember.id,
-                                        createdBy: defaultMember.userId,
-                                        serviceVariantId: intent!.serviceVariantId ?? service?.variants?.[0]?.id ?? null,
-                                        ...(intent!.addonIds.length > 0 && {
-                                            addons: { connect: [...new Set(intent!.addonIds.map((id: string) => id.split(":")[0]))].map(id => ({ id })) },
-                                        }),
-                                    },
-                                });
+                                    if (claimResult.count === 0) {
+                                        // Already processed or being processed by another request
+                                        return;
+                                    }
 
-                                // 3. Create payment record
-                                const installmentType = intent!.paymentPlan === "FULL" ? "FULL" : "DEPOSIT";
-                                await tx.payment.create({
-                                    data: {
-                                        amount: intent!.amount,
-                                        method: "TRANSFER",
-                                        status: "PAID",
-                                        paystackReference: input.reference,
-                                        paystackResponse: verification.data as any,
-                                        receiptNumber: `RCP-${Date.now()}-${uuidv4().slice(0, 8).toUpperCase()}`,
-                                        bookingId: booking.id,
-                                        recordedById: defaultMember.userId,
-                                        installmentType,
-                                        sequence: 1,
-                                        expectedAmount: intent!.amount,
-                                        paymentDate: new Date(),
-                                    },
-                                });
+                                    // Defensively check for existing payment
+                                    const existingPayment = await tx.payment.findUnique({
+                                        where: { paystackReference: input.reference }
+                                    });
 
-                                // 4. Mark intent resolved
-                                await tx.bookingIntent.update({
-                                    where: { paystackReference: input.reference },
-                                    data: {
-                                        status: "COMPLETED",
-                                        resolvedBookingId: booking.id,
-                                    },
+                                    if (existingPayment) {
+                                        return; // Duplicate
+                                    }
+
+                                    // 1. Resolve client
+                                    let clientId = intent!.existingClientId;
+                                    if (!clientId) {
+                                        const phone = intent!.clientPhone?.trim() ?? "";
+                                        let existing = null;
+                                        if (intent!.clientEmail) {
+                                            existing = await tx.client.findFirst({
+                                                where: { studioId: intent!.studioId, email: intent!.clientEmail },
+                                            });
+                                        }
+                                        if (!existing && phone) {
+                                            existing = await tx.client.findFirst({
+                                                where: { studioId: intent!.studioId, phone },
+                                            });
+                                        }
+                                        if (existing) {
+                                            clientId = existing.id;
+                                        } else {
+                                            const client = await tx.client.create({
+                                                data: {
+                                                    name: intent!.clientName,
+                                                    phone,
+                                                    email: intent!.clientEmail ?? null,
+                                                    type: "regular",
+                                                    studioId: intent!.studioId,
+                                                },
+                                            });
+                                            clientId = client.id;
+                                        }
+                                    }
+
+                                    // 2. Create booking
+                                    const service = await tx.service.findUnique({
+                                        where: { id: intent!.serviceId },
+                                        include: { variants: true },
+                                    });
+                                    const booking = await tx.booking.create({
+                                        data: {
+                                            bookingDate: intent!.bookingDate,
+                                            sessionCount: intent!.sessionCount,
+                                            notes: intent!.notes,
+                                            totalAmount: intent!.totalAmount,
+                                            paymentPlan: intent!.paymentPlan,
+                                            bookingStatus: "CONFIRMED",
+                                            paymentStatus: intent!.paymentPlan === "FULL" ? "PAID" : "PARTIALLY_PAID",
+                                            deliveryStatus: "PENDING",
+                                            serviceId: intent!.serviceId,
+                                            studioId: intent!.studioId,
+                                            clientId: clientId!,
+                                            memberId: defaultMember.id,
+                                            createdBy: defaultMember.userId,
+                                            serviceVariantId: intent!.serviceVariantId ?? service?.variants?.[0]?.id ?? null,
+                                            ...(intent!.addonIds.length > 0 && {
+                                                addons: { connect: [...new Set(intent!.addonIds.map((id: string) => id.split(":")[0]))].map(id => ({ id })) },
+                                            }),
+                                        },
+                                    });
+
+                                    // 3. Create payment record
+                                    const installmentType = intent!.paymentPlan === "FULL" ? "FULL" : "DEPOSIT";
+                                    await tx.payment.create({
+                                        data: {
+                                            amount: intent!.amount,
+                                            method: "TRANSFER",
+                                            status: "PAID",
+                                            paystackReference: input.reference,
+                                            paystackResponse: verification.data as any,
+                                            receiptNumber: `RCP-${Date.now()}-${uuidv4().slice(0, 8).toUpperCase()}`,
+                                            bookingId: booking.id,
+                                            recordedById: defaultMember.userId,
+                                            installmentType,
+                                            sequence: 1,
+                                            expectedAmount: intent!.amount,
+                                            paymentDate: new Date(),
+                                        },
+                                    });
+
+                                    // 4. Mark intent resolved
+                                    await tx.bookingIntent.update({
+                                        where: { paystackReference: input.reference },
+                                        data: {
+                                            status: "COMPLETED",
+                                            resolvedBookingId: booking.id,
+                                        },
+                                    });
                                 });
-                            });
+                            } catch (txErr) {
+                                console.error(`[Verify] Transaction failed for ${input.reference}:`, txErr);
+                            }
 
                             // Re-fetch updated intent
                             intent = await prisma.bookingIntent.findUnique({
