@@ -4,8 +4,18 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { sendDeliveryEmail, sendDeliverySMS, sendDeliveryWhatsApp } from "@/lib/termii";
 import crypto from "crypto";
+import { auth } from "../auth";
+import { headers } from "next/headers";
 
 export async function deliverBooking(bookingId: string) {
+    const session = await auth.api.getSession({
+        headers: await headers()
+    });
+
+    if (!session?.user) {
+        throw new Error("Unauthorized");
+    }
+
     const booking = await prisma.booking.findUnique({
         where: { id: bookingId },
         include: {
@@ -16,6 +26,14 @@ export async function deliverBooking(bookingId: string) {
 
     if (!booking) {
         throw new Error("Booking not found");
+    }
+
+    const member = await prisma.member.findFirst({
+        where: { userId: session.user.id, studioId: booking.studioId }
+    });
+
+    if (!member) {
+        throw new Error("Unauthorized access to studio");
     }
 
     // Generate access code if one doesn't exist
