@@ -3,8 +3,8 @@
 export interface ServiceDeliverableOutput {
     id: string;
     label: string;
-    quantity: number | null;
-    detail: string | null;
+    quantity?: number | null;
+    detail?: string | null;
     isFree: boolean;
 }
 
