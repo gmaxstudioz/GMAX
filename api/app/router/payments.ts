@@ -4,7 +4,7 @@ import { implement } from "@orpc/server";
 import { contract } from "@/app/contract";
 import { BaseContext, optionalAuthMiddleware } from "./middleware";
 import { paystackFetch } from "@/lib/paystack";
-import { sendPurchaseAccessEmail, sendPurchaseAccessSMS, sendBookingPaymentEmail } from "@/lib/termii";
+import { sendPurchaseAccessEmail, sendPurchaseAccessSMS, sendPurchaseAccessWhatsApp, sendBookingPaymentEmail, sendBookingPaymentSMS, sendBookingPaymentWhatsApp } from "@/lib/termii";
 import { Prisma } from "@/lib/generated/prisma/client";
 import crypto from "crypto";
 
@@ -129,7 +129,7 @@ export const verifyPurchase = os.payment.verifyPurchase
                             }
                         }
 
-                        // Also send SMS if we have the phone number
+                        // Also send SMS & WhatsApp if we have the phone number
                         const buyer = await prisma.buyer.findUnique({ where: { id: buyerId } });
                         if (buyer?.phone) {
                             await sendPurchaseAccessSMS({
@@ -138,6 +138,14 @@ export const verifyPurchase = os.payment.verifyPurchase
                                 accessLink,
                             }).catch(err => {
                                 console.error("[verifyPurchase] SMS failed:", err);
+                            });
+
+                            await sendPurchaseAccessWhatsApp({
+                                phone: buyer.phone,
+                                productTitle,
+                                accessLink,
+                            }).catch(err => {
+                                console.error("[verifyPurchase] WhatsApp failed:", err);
                             });
                         }
 
@@ -173,6 +181,30 @@ export const verifyPurchase = os.payment.verifyPurchase
                         } catch (emailErr) {
                             console.error("[verifyPurchase] Failed to send booking email:", emailErr);
                         }
+                    }
+
+                    // Send SMS and WhatsApp
+                    const clientPhone = payment.booking.client?.phone;
+                    if (clientPhone) {
+                        const clientName = payment.booking.client?.name || "Customer";
+                        const serviceName = payment.booking.service?.name || "Service";
+
+                        await sendBookingPaymentSMS({
+                            phone: clientPhone,
+                            serviceName,
+                            reference: input.reference,
+                        }).catch(err => {
+                            console.error("[verifyPurchase] Booking SMS failed:", err);
+                        });
+
+                        await sendBookingPaymentWhatsApp({
+                            phone: clientPhone,
+                            clientName,
+                            serviceName,
+                            reference: input.reference,
+                        }).catch(err => {
+                            console.error("[verifyPurchase] Booking WhatsApp failed:", err);
+                        });
                     }
 
                     return { verified: true };

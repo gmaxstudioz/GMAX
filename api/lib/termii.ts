@@ -257,6 +257,43 @@ export async function sendPurchaseAccessSMS(params: {
 }
 
 /**
+ * Send a purchase access link via WhatsApp after successful payment.
+ */
+export async function sendPurchaseAccessWhatsApp(params: {
+    phone: string;
+    productTitle: string;
+    accessLink: string;
+}) {
+    const message = `Hi! 👋\n\nPayment confirmed for *${params.productTitle}* on GMAX Studioz!\n\nAccess your download here: ${params.accessLink}`;
+    return sendWhatsApp(params.phone, message);
+}
+
+/**
+ * Send a booking payment confirmation via SMS.
+ */
+export async function sendBookingPaymentSMS(params: {
+    phone: string;
+    serviceName: string;
+    reference: string;
+}) {
+    const message = `GMAX Studioz: Payment confirmed for your booking (${params.serviceName}). Ref: ${params.reference}`;
+    return sendSMS(params.phone, message);
+}
+
+/**
+ * Send a booking payment confirmation via WhatsApp.
+ */
+export async function sendBookingPaymentWhatsApp(params: {
+    phone: string;
+    clientName: string;
+    serviceName: string;
+    reference: string;
+}) {
+    const message = `Hi ${params.clientName}! 👋\n\nYour payment for *${params.serviceName}* on GMAX Studioz has been confirmed.\n\nReference: ${params.reference}\n\nThank you for choosing GMAX Studioz!`;
+    return sendWhatsApp(params.phone, message);
+}
+
+/**
  * Send a booking payment confirmation email.
  */
 export async function sendBookingPaymentEmail(params: {
