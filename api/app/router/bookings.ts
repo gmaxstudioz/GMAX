@@ -480,9 +480,17 @@ export const createPublicBooking = os.booking.createPublic
         // Map selected addon IDs to their pricing in the order they were selected
         const addonPricingObjs = parsedAddons.map(({ addonId, variantId }) => {
             const addon = selectedAddonsMap[addonId];
-            const variant = variantId ? addon?.variants?.find((v: any) => v.id === variantId) : addon?.variants?.[0];
+            if (!addon) {
+                throw errors.BAD_REQUEST({ message: `Addon ${addonId} not found.` });
+            }
+            
+            const variant = variantId ? addon.variants?.find((v: any) => v.id === variantId) : addon.variants?.[0];
+            if (!variant) {
+                throw errors.BAD_REQUEST({ message: `Variant for addon ${addon.name} not found.` });
+            }
+
             return {
-                price: variant?.basePrice ? Number(variant.basePrice) : 0,
+                price: Number(variant.basePrice),
                 salePrice: null
             };
         });
