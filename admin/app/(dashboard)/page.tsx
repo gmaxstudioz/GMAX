@@ -8,6 +8,8 @@ import { prisma } from "@/lib/prisma"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BriefcaseIcon, CheckCircleIcon, ClockIcon } from "lucide-react"
 
+import { redirect } from "next/navigation";
+
 export const metadata: Metadata = {
   title: "Dashboard",
   description:
@@ -20,7 +22,7 @@ export default async function Page() {
   });
 
   if (!session?.user) {
-    return <div>Unauthorized</div>;
+    redirect("/auth/login");
   }
 
   const members = await prisma.member.findMany({
