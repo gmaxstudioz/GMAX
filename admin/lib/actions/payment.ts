@@ -61,10 +61,15 @@ export async function initializePayment(bookingId: string) {
         if (!member) return { status: "error", message: "Unauthorized access to this booking" };
 
         // Calculate balance due
-        const servicePrice = Number(booking.service?.variants?.[0]?.basePrice ?? 0);
+        const servicePrice = Number(booking.service?.variants?.find((v) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.variants?.[0]?.basePrice ?? 0);
         const sessionTotal = servicePrice * booking.sessionCount;
-        const addonsTotal = booking.addons.reduce((sum, a) => sum + Number(a.variants?.[0]?.basePrice ?? 0), 0);
-        const grandTotal = sessionTotal + addonsTotal;
+        const addonsTotal = booking.addons.reduce((sum, a) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const variantId = (a as any).addonVariantId;
+            const variant = variantId ? a.variants?.find((v) => v.id === variantId) : a.variants?.[0];
+            return sum + Number(variant?.basePrice ?? 0);
+        }, 0);
+        const grandTotal = Number(booking.totalAmount) || (sessionTotal + addonsTotal);
 
         const totalPaid = booking.payments
             .filter((p) => p.status === "PAID")
@@ -219,10 +224,15 @@ export async function verifyPayment(reference: string) {
             const booking = payment.booking;
             if (!booking) return;
 
-            const servicePrice = Number(booking.service?.variants?.[0]?.basePrice ?? 0);
+            const servicePrice = Number(booking.service?.variants?.find((v) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.variants?.[0]?.basePrice ?? 0);
             const sessionTotal = servicePrice * booking.sessionCount;
-            const addonsTotal = booking.addons.reduce((sum, a) => sum + Number(a.variants?.[0]?.basePrice ?? 0), 0);
-            const grandTotal = sessionTotal + addonsTotal;
+            const addonsTotal = booking.addons.reduce((sum, a) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const variantId = (a as any).addonVariantId;
+                const variant = variantId ? a.variants?.find((v) => v.id === variantId) : a.variants?.[0];
+                return sum + Number(variant?.basePrice ?? 0);
+            }, 0);
+            const grandTotal = Number(booking.totalAmount) || (sessionTotal + addonsTotal);
 
             // Step 3: Recalculate with the freshly updated payment included
             const totalPaid = allPayments
