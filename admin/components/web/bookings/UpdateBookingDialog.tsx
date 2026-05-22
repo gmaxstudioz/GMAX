@@ -98,7 +98,11 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
             serviceVariantId: currentData.serviceVariantId,
             memberId: currentData.memberId,
             bookingDate: currentData.bookingDate ? new Date(currentData.bookingDate) : undefined,
-            addonIds: currentData.addonIds || [],
+            addonIds: (currentData.addonIds || []).map(id => {
+                if (id.includes(':')) return id;
+                const match = flattenedAddons.find(fa => fa.compositeId.startsWith(`${id}:`));
+                return match ? match.compositeId : id;
+            }),
             totalAmount: currentData.totalAmount ?? 0,
             paymentPlan: (currentData.paymentPlan as PaymentPlan) ?? "FULL",
         }
