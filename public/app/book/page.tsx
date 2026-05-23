@@ -256,7 +256,7 @@ export default function BookingPage() {
     switch (currentStep) {
                   case 1: {
         const selectedCategory = studio?.categories.find((c: any) => c.services.some((s: any) => s.id === selectedServiceId));
-        const categoryAddons = selectedCategory?.services.filter((s: any) => s.isAddon && s.isActive !== false) || [];
+        const categoryAddons = studio?.categories.flatMap((c: any) => c.services).filter((s: any) => s.isAddon && s.isActive !== false) || [];
 
         const occasionAnswers = [
           { label: "Birthday", mappedCategory: "Photography", icon: "🎂" },
@@ -491,73 +491,6 @@ export default function BookingPage() {
                   </div>
                 </div>
 
-                {/* Outfits Stepper */}
-                <div className="space-y-4 pt-4 border-t border-border/50">
-                  <div className="flex justify-between items-center">
-                    <Label className="text-sm font-medium text-foreground uppercase tracking-wider">
-                      How many outfits?
-                    </Label>
-                    {selectedTime && (
-                      <span className="text-xs text-primary font-medium bg-primary/10 px-3 py-1 rounded-full">
-                        Max: {maxAvailableSessions}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-6">
-                    <div className="flex items-center border border-border rounded-xl overflow-hidden bg-card shadow-sm">
-                      <button type="button" onClick={() => { const cur = watch("sessionCount") || 1; if (cur > 1) setValue("sessionCount", cur - 1, { shouldValidate: true }); }} className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors">−</button>
-                      <div className="w-14 h-12 flex items-center justify-center font-bold text-lg border-x border-border">{watch("sessionCount") || 1}</div>
-                      <button type="button" onClick={() => { const cur = watch("sessionCount") || 1; if (cur < maxAvailableSessions) setValue("sessionCount", cur + 1, { shouldValidate: true }); }} className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors">+</button>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-primary">₦{(Number(selectedVariant.basePrice) * (watch("sessionCount") || 1)).toLocaleString("en-NG")}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{watch("sessionCount") || 1} outfit{(watch("sessionCount") || 1) !== 1 ? "s" : ""} · subtotal</p>
-                    </div>
-                  </div>
-                  {!selectedTime && <p className="text-xs text-muted-foreground/70">Select a time slot below to unlock the maximum available outfits.</p>}
-                  {errors.sessionCount && <p className="text-destructive text-sm">{errors.sessionCount.message}</p>}
-                </div>
-
-                {/* Add-ons */}
-                {categoryAddons.length > 0 && (
-                  <div className="space-y-4 pt-6 border-t border-border/50">
-                    <Label className="text-sm font-medium text-foreground uppercase tracking-wider">
-                      Enhance Your Session <span className="ml-2 text-xs normal-case font-normal text-muted-foreground/60">(optional)</span>
-                    </Label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {categoryAddons.flatMap((addon: any) =>
-                        addon.variants.map((variant: any) => {
-                          const compositeId = `${addon.id}:${variant.id}`;
-                          const isChosen    = selectedAddonIds.includes(compositeId);
-                          return (
-                            <div
-                              key={compositeId}
-                              onClick={() => {
-                                if (isChosen) {
-                                  setValue("selectedAddonIds", selectedAddonIds.filter(id => id !== compositeId));
-                                } else {
-                                  const filtered = selectedAddonIds.filter(id => !id.startsWith(`${addon.id}:`));
-                                  setValue("selectedAddonIds", [...filtered, compositeId]);
-                                }
-                              }}
-                              className={cn("p-5 rounded-2xl border cursor-pointer transition-all duration-300 hover:shadow-sm", isChosen ? "border-primary bg-primary/10 ring-1 ring-primary" : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5")}
-                            >
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <span className="font-semibold text-base block">{addon.name}</span>
-                                  <span className="text-sm font-bold text-primary mt-1 block">+₦{Number(variant.basePrice || 0).toLocaleString("en-NG")}</span>
-                                </div>
-                                {isChosen && <CheckCircle2 className="text-primary w-5 h-5 shrink-0" />}
-                              </div>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                )}
-
                 {/* Date & Time */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-border/50">
                   <div className="space-y-3">
@@ -583,6 +516,80 @@ export default function BookingPage() {
                     {errors.bookingDate && <p className="text-destructive text-sm mt-2">{errors.bookingDate.message}</p>}
                   </div>
                 </div>
+
+                {/* Outfits Stepper */}
+                <div className="space-y-4 pt-6 border-t border-border/50">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-sm font-medium text-foreground uppercase tracking-wider">
+                      How many outfits?
+                    </Label>
+                    {selectedTime && (
+                      <span className="text-xs text-primary font-medium bg-primary/10 px-3 py-1 rounded-full">
+                        Max: {maxAvailableSessions}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center border border-border rounded-xl overflow-hidden bg-card shadow-sm">
+                      <button type="button" onClick={() => { const cur = watch("sessionCount") || 1; if (cur > 1) setValue("sessionCount", cur - 1, { shouldValidate: true }); }} className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors">−</button>
+                      <div className="w-14 h-12 flex items-center justify-center font-bold text-lg border-x border-border">{watch("sessionCount") || 1}</div>
+                      <button type="button" onClick={() => { const cur = watch("sessionCount") || 1; if (cur < maxAvailableSessions) setValue("sessionCount", cur + 1, { shouldValidate: true }); }} className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors">+</button>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-primary">₦{(Number(selectedVariant.basePrice) * (watch("sessionCount") || 1)).toLocaleString("en-NG")}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{watch("sessionCount") || 1} outfit{(watch("sessionCount") || 1) !== 1 ? "s" : ""} · subtotal</p>
+                    </div>
+                  </div>
+                  {!selectedTime && <p className="text-xs text-muted-foreground/70">Select a time slot above to unlock the maximum available outfits.</p>}
+                  {errors.sessionCount && <p className="text-destructive text-sm">{errors.sessionCount.message}</p>}
+                </div>
+
+                {/* Add-ons */}
+                {categoryAddons.length > 0 && (
+                  <div className="space-y-4 pt-6 border-t border-border/50">
+                    <Label className="text-sm font-medium text-foreground uppercase tracking-wider">
+                      Enhance Your Session <span className="ml-2 text-xs normal-case font-normal text-muted-foreground/60">(optional)</span>
+                    </Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {categoryAddons.flatMap((addon: any) =>
+                        addon.variants
+                          .filter((variant: any) => {
+                            if (!selectedVariant) return true;
+                            const mainLoc = selectedVariant.locationType.toLowerCase();
+                            const addonLoc = variant.locationType.toLowerCase();
+                            return addonLoc === mainLoc || addonLoc === "both" || mainLoc === "both";
+                          })
+                          .map((variant: any) => {
+                            const compositeId = `${addon.id}:${variant.id}`;
+                            const isChosen    = selectedAddonIds.includes(compositeId);
+                            return (
+                              <div
+                                key={compositeId}
+                                onClick={() => {
+                                  if (isChosen) {
+                                    setValue("selectedAddonIds", selectedAddonIds.filter(id => id !== compositeId));
+                                  } else {
+                                    const filtered = selectedAddonIds.filter(id => !id.startsWith(`${addon.id}:`));
+                                    setValue("selectedAddonIds", [...filtered, compositeId]);
+                                  }
+                                }}
+                                className={cn("p-5 rounded-2xl border cursor-pointer transition-all duration-300 hover:shadow-sm", isChosen ? "border-primary bg-primary/10 ring-1 ring-primary" : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5")}
+                              >
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <span className="font-semibold text-base block">{addon.name}</span>
+                                    <span className="text-sm font-bold text-primary mt-1 block">+₦{Number(variant.basePrice || 0).toLocaleString("en-NG")}</span>
+                                  </div>
+                                  {isChosen && <CheckCircle2 className="text-primary w-5 h-5 shrink-0" />}
+                                </div>
+                              </div>
+                            );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
 
               </div>
             )}
