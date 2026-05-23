@@ -571,26 +571,62 @@ export default function BookingPage() {
                           })
                           .map((variant: any) => {
                             const compositeId = `${addon.id}:${variant.id}`;
-                            const isChosen    = selectedAddonIds.includes(compositeId);
+                            const count = selectedAddonIds.filter(id => id === compositeId).length;
                             return (
                               <div
                                 key={compositeId}
-                                onClick={() => {
-                                  if (isChosen) {
-                                    setValue("selectedAddonIds", selectedAddonIds.filter(id => id !== compositeId));
-                                  } else {
-                                    const filtered = selectedAddonIds.filter(id => !id.startsWith(`${addon.id}:`));
-                                    setValue("selectedAddonIds", [...filtered, compositeId]);
-                                  }
-                                }}
-                                className={cn("p-5 rounded-2xl border cursor-pointer transition-all duration-300 hover:shadow-sm", isChosen ? "border-primary bg-primary/10 ring-1 ring-primary" : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5")}
+                                className={cn("p-4 rounded-2xl border transition-all duration-300 hover:shadow-sm", count > 0 ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5")}
                               >
-                                <div className="flex justify-between items-start">
+                                <div className="flex justify-between items-center">
                                   <div>
                                     <span className="font-semibold text-base block">{addon.name}</span>
+                                    {addon.variants.length > 1 && (
+                                       <span className="text-xs text-muted-foreground uppercase tracking-wider block mt-0.5">{variant.locationType}</span>
+                                    )}
                                     <span className="text-sm font-bold text-primary mt-1 block">+₦{Number(variant.basePrice || 0).toLocaleString("en-NG")}</span>
                                   </div>
-                                  {isChosen && <CheckCircle2 className="text-primary w-5 h-5 shrink-0" />}
+                                  
+                                  {count === 0 ? (
+                                    <button 
+                                      type="button" 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setValue("selectedAddonIds", [...selectedAddonIds, compositeId]);
+                                      }} 
+                                      className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
+                                    >
+                                      +
+                                    </button>
+                                  ) : (
+                                    <div className="flex items-center gap-3 bg-background border border-border rounded-full p-1 shadow-sm" onClick={e => e.stopPropagation()}>
+                                      <button 
+                                        type="button" 
+                                        onClick={(e) => {
+                                           e.stopPropagation();
+                                           const idx = selectedAddonIds.indexOf(compositeId);
+                                           if (idx > -1) {
+                                             const newArr = [...selectedAddonIds];
+                                             newArr.splice(idx, 1);
+                                             setValue("selectedAddonIds", newArr);
+                                           }
+                                        }} 
+                                        className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-muted text-muted-foreground transition-colors"
+                                      >
+                                        −
+                                      </button>
+                                      <span className="text-sm font-bold w-4 text-center">{count}</span>
+                                      <button 
+                                        type="button" 
+                                        onClick={(e) => {
+                                           e.stopPropagation();
+                                           setValue("selectedAddonIds", [...selectedAddonIds, compositeId]);
+                                        }} 
+                                        className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-muted text-muted-foreground transition-colors"
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             );
