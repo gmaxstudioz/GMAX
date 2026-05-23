@@ -255,8 +255,7 @@ export default function BookingPage() {
   const renderStepContent = () => {
     switch (currentStep) {
                   case 1: {
-        const selectedCategory = studio?.categories.find((c: any) => c.services.some((s: any) => s.id === selectedServiceId));
-        const categoryAddons = studio?.categories.flatMap((c: any) => c.services).filter((s: any) => s.isAddon && s.isActive !== false) || [];
+        const categoryAddons = studio?.addons?.filter((s: any) => s.isActive !== false) || [];
 
         const occasionAnswers = [
           { label: "Birthday", mappedCategory: "Photography", icon: "🎂" },
@@ -408,6 +407,16 @@ export default function BookingPage() {
                                 <div className="pr-8">
                                   <h4 className="font-heading font-bold text-lg leading-snug">{service.name}</h4>
                                   {service.description && <p className="text-sm text-muted-foreground mt-2 line-clamp-2 leading-relaxed">{service.description}</p>}
+                                  {service.features && service.features.length > 0 && (
+                                    <ul className="mt-3 space-y-1">
+                                      {service.features.map((feature: string, idx: number) => (
+                                        <li key={idx} className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                          <div className="w-1 h-1 rounded-full bg-primary/50 shrink-0" />
+                                          <span className="line-clamp-1">{feature}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
                                 </div>
                               </div>
                             );
