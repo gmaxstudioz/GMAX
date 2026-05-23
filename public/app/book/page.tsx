@@ -12,6 +12,7 @@ import { publicBookingSchema, type PublicBookingInput } from "@/lib/schemas/book
 import { getStudioBySlug, getStudios, createPublicBooking } from "@/lib/api";
 import type { PublicStudioOutput, PublicServiceOutput } from "@/lib/types/studio";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
