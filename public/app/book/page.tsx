@@ -588,7 +588,60 @@ export default function BookingPage() {
           </div>
         );
       }
-case 2: {
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div className="mb-8">
+              <Label className="text-2xl font-bold font-heading text-foreground">
+                Your Details
+              </Label>
+              <p className="text-sm text-muted-foreground mt-2">Please provide your contact information.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Full Name</Label>
+                <Input
+                  type="text"
+                  placeholder="John Doe"
+                  {...register("clientName")}
+                  className="rounded-xl bg-card/50 h-12"
+                />
+                {errors.clientName && <p className="text-destructive text-sm">{errors.clientName.message}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Email</Label>
+                <Input
+                  type="email"
+                  placeholder="john@example.com"
+                  {...register("clientEmail")}
+                  className="rounded-xl bg-card/50 h-12"
+                />
+                {errors.clientEmail && <p className="text-destructive text-sm">{errors.clientEmail.message}</p>}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Phone Number</Label>
+              <Input
+                type="tel"
+                placeholder="+1 (555) 000-0000"
+                {...register("clientPhone")}
+                className="rounded-xl bg-card/50 h-12"
+              />
+              {errors.clientPhone && <p className="text-destructive text-sm">{errors.clientPhone.message}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Additional Notes (Optional)</Label>
+              <Textarea
+                placeholder="Tell us about your vision..."
+                rows={4}
+                {...register("notes")}
+                className="rounded-xl bg-card/50 resize-none"
+              />
+              {errors.notes && <p className="text-destructive text-sm">{errors.notes.message}</p>}
+            </div>
+          </div>
+        );
+      case 3: {
         const sessionCount = watch("sessionCount") || 1;
         const servicePrice = Number(selectedVariant?.basePrice || selectedService?.variants[0]?.basePrice || 0);
         const serviceTotal = servicePrice * sessionCount;
