@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import gsap from "gsap";
 import { buttonVariants } from "../ui/button";
 import { ArrowUpRight } from "lucide-react";
@@ -20,6 +21,7 @@ const navLinks = [
 export default function NavBar() {
     const isMobile = useIsMobile();
     const [menuOpen, setMenuOpen] = useState(false);
+    const pathname = usePathname();
 
     const menuRef = useRef<HTMLElement>(null);
     const topBarRef = useRef<HTMLSpanElement>(null);
@@ -98,6 +100,10 @@ export default function NavBar() {
         animateIcon(false);
         setMenuOpen(false);
     };
+
+    if (pathname === '/links') {
+        return null;
+    }
 
     return (
         <header className="fixed w-full z-50 backdrop-blur-md bg-background/80">

@@ -2,10 +2,17 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { ArrowUpRight } from 'lucide-react';
 import Magnetic from '@/components/ui/magnetic';
 
 export default function Footer() {
+  const pathname = usePathname();
+
+  if (pathname === '/links') {
+    return null;
+  }
+
   return (
     <footer className="relative w-full bg-[#0a0a0a] text-white pt-24 pb-8 px-4 sm:px-6 mt-32 border-t border-white/10 overflow-hidden">
       <div className="max-w-7xl mx-auto flex flex-col gap-16">

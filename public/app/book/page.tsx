@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import gsap from "gsap";
 import { buttonVariants } from "@/components/ui/button";
-import { ArrowRight, ArrowLeft, CheckCircle2, Calendar, User, CreditCard, Loader2, Building2, Clock } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle2, Calendar, User, CreditCard, Loader2, Building2, Clock, Sparkles, Camera, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,30 +12,21 @@ import { publicBookingSchema, type PublicBookingInput } from "@/lib/schemas/book
 import { getStudioBySlug, getStudios, createPublicBooking } from "@/lib/api";
 import type { PublicStudioOutput, PublicServiceOutput } from "@/lib/types/studio";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 const steps = [
-  { id: 1, title: "Studio", icon: Building2, description: "Select a location close to you" },
-  { id: 2, title: "Service", icon: Calendar, description: "Select service & date" },
-  { id: 3, title: "Client", icon: User, description: "Your details" },
-  { id: 4, title: "Payment", icon: CreditCard, description: "Confirm & pay" },
+  { id: 1, title: 'Configuration', icon: Sparkles,  description: 'Build your session'      },
+  { id: 2, title: 'Details',       icon: User,      description: 'Your information'        },
+  { id: 3, title: 'Payment',       icon: CreditCard, description: 'Confirm & pay'          },
 ];
 
 export default function BookingPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
+  const [configStep, setConfigStep] = useState(1);
+  const [selectedOccasionType, setSelectedOccasionType] = useState<string>("");
   const containerRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
   
@@ -170,291 +161,393 @@ export default function BookingPage() {
 
   const navigateStep = async (direction: "next" | "prev") => {
     if (direction === "next") {
-      let isValid = false;
+      let ok = false;
+
       if (currentStep === 1) {
-        isValid = await trigger(["studioId"]);
-        if (isValid && selectedStudioSlug) {
-           await fetchStudioServices(selectedStudioSlug);
+        if (configStep === 1) {
+          if (!selectedStudioId) { toast.error("Please select a location."); return; }
+          setConfigStep(2);
+          return;
+        } else if (configStep === 2) {
+          if (!selectedOccasionType) { toast.error("Please select an occasion."); return; }
+          setConfigStep(3);
+          return;
+        } else if (configStep === 3) {
+          if (!selectedServiceId) { toast.error("Please select a package."); return; }
+          if (selectedService?.variants.length === 1) setConfigStep(5);
+          else setConfigStep(4);
+          return;
+        } else if (configStep === 4) {
+          if (!selectedVariantId) { toast.error("Please select a shoot location."); return; }
+          setConfigStep(5);
+          return;
+        } else if (configStep === 5) {
+          if (!selectedDate || !selectedTime) { toast.error("Please select both a date and a time."); return; }
+          ok = await trigger(["studioId", "selectedServiceId", "selectedVariantId", "bookingDate", "selectedAddonIds"]);
         }
       } else if (currentStep === 2) {
-        if (!selectedDate || !selectedTime) {
-          toast.error("Please select both a date and a time.");
-          return;
-        }
-        isValid = await trigger(["selectedServiceId", "bookingDate", "selectedAddonIds"]);
-      } else if (currentStep === 3) {
-        isValid = await trigger(["clientName", "clientEmail", "clientPhone"]);
+        ok = await trigger(["clientName", "clientEmail", "clientPhone"]);
       }
-      
-      if (!isValid) return;
-    }
 
-    const newStep = direction === "next" ? currentStep + 1 : currentStep - 1;
-    if (newStep >= 1 && newStep <= 4) {
+      if (!ok) return;
+
       gsap.to(formRef.current, {
         opacity: 0,
-        x: direction === "next" ? -20 : 20,
+        x: -20,
         duration: 0.3,
         onComplete: () => {
-          setCurrentStep(newStep);
-          gsap.fromTo(
-            formRef.current,
-            { opacity: 0, x: direction === "next" ? 20 : -20 },
-            { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" }
-          );
+          setCurrentStep((prev) => Math.min(prev + 1, steps.length));
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          gsap.fromTo(formRef.current, { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" });
+        },
+      });
+    } else {
+      if (currentStep === 1) {
+        if (configStep > 1) {
+          let prevConfigStep = configStep - 1;
+          if (configStep === 5 && selectedService?.variants.length === 1) {
+            prevConfigStep = 3;
+          }
+          setConfigStep(prevConfigStep);
+        }
+        return;
+      }
+      
+      gsap.to(formRef.current, {
+        opacity: 0,
+        x: 20,
+        duration: 0.3,
+        onComplete: () => {
+          setCurrentStep((prev) => Math.max(prev - 1, 1));
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          gsap.fromTo(formRef.current, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" });
         },
       });
     }
   };
 
-  const onSubmit = async (data: PublicBookingInput) => {
+    const onSubmit = async (data: PublicBookingInput) => {
+    try {
       setIsSubmitting(true);
-      try {
-          const result = await createPublicBooking(data);
-          if (result.paymentUrl) {
-              window.location.href = result.paymentUrl;
-          } else {
-            toast.warning(result.warning ?? "Booking created. Payment link will be sent manually.");
-            router.push(`/book/confirm?reference=${result.reference}`);
-          }
-      } catch (err) {
-          console.error(err);
-          toast.error("Failed to create booking.");
-      } finally {
-          setIsSubmitting(false);
+      const result = await createPublicBooking({
+        ...data,
+        sessionCount: data.sessionCount || 1,
+      });
+      if (result && result.bookingId) {
+        toast.success("Booking created! Redirecting to payment...");
+        if (result.reference) {
+           router.push(`/pay/${result.reference}`);
+        } else {
+           router.push(`/booking/${result.bookingId}/deliverables`);
+        }
+      } else {
+        toast.error("Failed to submit booking");
       }
+    } catch (err) {
+      console.error(err);
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-
-  if (isLoadingStudios) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   const renderStepContent = () => {
     switch (currentStep) {
-      case 1:
+                  case 1: {
+        const selectedCategory = studio?.categories.find((c: any) => c.services.some((s: any) => s.id === selectedServiceId));
+        const categoryAddons = selectedCategory?.services.filter((s: any) => s.isAddon && s.isActive !== false) || [];
+
+        const occasionAnswers = [
+          { label: "Birthday", mappedCategory: "Photography", icon: "🎂" },
+          { label: "Wedding", mappedCategory: "Wedding", icon: "💍" },
+          { label: "Event", mappedCategory: "Wedding", icon: "🎊" },
+          { label: "Graduation", mappedCategory: "Photography", icon: "🎓" },
+          { label: "Personal Shoot", mappedCategory: "Photography", icon: "📸" },
+          { label: "Other", mappedCategory: "Other", icon: "✨" }
+        ];
+
         return (
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Select a location close to you</Label>
-              {studiosList.length === 0 ? (
-                 <p className="text-muted-foreground">No studios available at the moment.</p>
-              ) : (
-                <div className="grid grid-cols-1 gap-4">
-                  {studiosList.map((s) => (
-                    <div
-                      key={s.id}
-                      onClick={() => setValue("studioId", s.id, { shouldValidate: true })}
-                      className={cn(
-                        "p-5 rounded-xl border border-border/50 cursor-pointer transition-all duration-300 hover:border-primary/50 hover:bg-primary/5 flex items-center justify-between",
-                        selectedStudioId === s.id ? "border-primary bg-primary/10 ring-1 ring-primary" : "bg-card"
-                      )}
-                    >
-                      <div className="flex items-center gap-4">
-                        {s.logo ? (
-                          <div className="w-12 h-12 rounded-full overflow-hidden border shadow-sm shrink-0 relative">
-                            <Image
-                                src={`${process.env.NEXT_PUBLIC_R2_PUBLIC_URL || ""}/${s.logo}`}
-                                alt={s.name}
-                                fill
-                                className="object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                            <Building2 className="w-6 h-6" />
-                          </div>
+          <div className="w-full">
+            {/* ─── CONFIG STEP 1: STUDIO ─── */}
+            {configStep === 1 && (
+              <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                <div className="mb-8">
+                  <Label className="text-2xl font-bold font-heading text-foreground">
+                    Select a location close to you
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-2">Pick the studio you would like to visit.</p>
+                </div>
+                {studiosList.length === 0 ? (
+                  <p className="text-muted-foreground">No studios available at the moment.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {studiosList.map((s: any) => (
+                      <div
+                        key={s.id}
+                        onClick={() => {
+                          setValue("studioId", s.id, { shouldValidate: true });
+                          fetchStudioServices(s.slug);
+                          setConfigStep(2);
+                        }}
+                        className={cn(
+                          "p-6 rounded-2xl border cursor-pointer transition-all duration-300 flex flex-col justify-center gap-4 hover:border-primary/50 hover:bg-primary/5 hover:shadow-md",
+                          selectedStudioId === s.id
+                            ? "border-primary bg-primary/10 ring-1 ring-primary shadow-md"
+                            : "border-border/50 bg-card"
                         )}
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-lg break-words whitespace-normal">{s.name}</h4>
-                          <p className="text-sm text-muted-foreground break-words whitespace-normal">{(s.metadata?.description as string) || "Select this location"}</p>
-                          {(() => {
-                            const location = [s.metadata?.address, s.metadata?.city, s.metadata?.state].filter(Boolean).join(", ");
-                            return location ? <p className="text-xs text-muted-foreground/80 mt-1 break-words whitespace-normal">{location}</p> : null;
-                          })()}
+                      >
+                        <div className="flex items-center gap-4">
+                          {s.logo ? (
+                            <div className="w-14 h-14 rounded-full overflow-hidden border shadow-sm shrink-0 relative">
+                              <Image src={`${process.env.NEXT_PUBLIC_R2_PUBLIC_URL || ""}/${s.logo}`} alt={s.name} fill className="object-cover" />
+                            </div>
+                          ) : (
+                            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                              <Building2 className="w-6 h-6 text-primary" />
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <h4 className="font-bold text-lg font-heading">{s.name}</h4>
+                            <p className="text-sm text-muted-foreground line-clamp-1">{(s.metadata?.description as string) || "Select this location"}</p>
+                          </div>
                         </div>
                       </div>
-                      {selectedStudioId === s.id && <CheckCircle2 className="text-primary w-6 h-6" />}
+                    ))}
+                  </div>
+                )}
+                {errors.studioId && <p className="text-destructive text-sm">{errors.studioId.message}</p>}
+              </div>
+            )}
+
+            {/* ─── CONFIG STEP 2: OCCASION QUESTION ─── */}
+            {configStep === 2 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-300">
+                <div className="mb-8">
+                  <Label className="text-2xl font-bold font-heading text-foreground">
+                    What is the occasion?
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-2">Let us know what you're celebrating so we can tailor the experience.</p>
+                </div>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {occasionAnswers.map((answer) => (
+                    <div
+                      key={answer.label}
+                      onClick={() => {
+                        setSelectedOccasionType(answer.mappedCategory);
+                        setConfigStep(3);
+                      }}
+                      className={cn(
+                        "p-6 rounded-2xl border cursor-pointer transition-all duration-300 group hover:border-primary/50 hover:bg-primary/5 flex flex-col items-center justify-center gap-3 bg-card hover:shadow-md"
+                      )}
+                    >
+                      <span className="text-4xl group-hover:scale-110 transition-transform">{answer.icon}</span>
+                      <span className="font-semibold text-center">{answer.label}</span>
                     </div>
                   ))}
                 </div>
-              )}
-              {errors.studioId && <p className="text-destructive text-sm mt-1">{errors.studioId.message}</p>}
-            </div>
-          </div>
-        );
-      case 2:
-        return (
-          <div className="space-y-6">
-            {isLoadingServices ? (
-               <div className="flex flex-col items-center justify-center py-12 gap-4">
-                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                 <p className="text-muted-foreground">Loading services for {studio?.name}...</p>
-               </div>
-            ) : (
-              <>
-                <div className="space-y-4">
-                  <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Select Service</Label>
-                  {services.length === 0 ? (
-                    <p className="text-muted-foreground">No services available for this studio.</p>
-                  ) : (
-                    <div className="space-y-4">
-                      <Select 
-                        onValueChange={(val) => {
-                          const [sId, vId] = val.split(":");
-                          setValue("selectedServiceId", sId, { shouldValidate: true });
-                          setValue("selectedVariantId", vId, { shouldValidate: true });
-                        }} 
-                        value={selectedServiceId && selectedVariantId ? `${selectedServiceId}:${selectedVariantId}` : ""}
-                      >
-                        <SelectTrigger className="h-14 rounded-xl text-base bg-card border-input focus:ring-primary focus:ring-offset-1">
-                          <SelectValue placeholder="Select a service..." />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[300px]">
-                          {studio?.categories.map(category => (
-                            <SelectGroup key={category.id} className="pb-2">
-                              <SelectLabel className="text-primary font-bold text-xs uppercase tracking-wider pl-6 mt-2">{category.name}</SelectLabel>
-                              {category.services.flatMap(service => 
-                                service.variants.map((variant: { id: string; locationType: string; basePrice?: string | number | null }) => (
-                                  <SelectItem key={variant.id} value={`${service.id}:${variant.id}`} className="pl-6 py-2.5 cursor-pointer">
-                                    {service.name} ({variant.locationType}) - ₦{Number(variant.basePrice || 0).toLocaleString()}
-                                  </SelectItem>
-                                ))
-                              )}
-                            </SelectGroup>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      
-                      {selectedService && (
-                        <div className="p-6 rounded-xl border border-border/50 bg-primary/5 animate-in fade-in slide-in-from-top-2">
-                          <div className="flex justify-between items-start mb-4">
-                            <h4 className="font-semibold text-xl">{selectedService.name} {selectedVariant ? `(${selectedVariant.locationType})` : ""}</h4>
-                            {/* ✅ Updated to use selected variant price */}
-                            <span className="text-xl font-bold text-primary">₦{Number(selectedVariant?.basePrice || selectedService.variants[0]?.basePrice || 0).toLocaleString()}</span>
-                          </div>
-                          {selectedService.description && (
-                            <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{selectedService.description}</p>
-                          )}
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6 bg-card w-max px-3 py-1.5 rounded-full border border-border/50">
-                            <Clock className="w-4 h-4 text-primary" />
-                            <span className="font-medium">{selectedVariant?.sessionDurationMins || selectedService.variants[0]?.sessionDurationMins || 0} minutes</span>
-                          </div>
-                          {selectedService.features && selectedService.features.length > 0 && (
-                            <div className="space-y-3 mb-6">
-                              <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Included Features</h5>
-                              <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-muted-foreground/90">
-                                {selectedService.features.map((feature, idx) => (
-                                  <li key={idx} className="flex items-start gap-2.5">
-                                    <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                                    <span>{feature}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          
-                          {selectedVariant?.deliverables && selectedVariant.deliverables.length > 0 && (
-                            <div className="space-y-3">
-                              <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Included Deliverables</h5>
-                              <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-muted-foreground/90">
-                                {selectedVariant.deliverables.map((del: { quantity?: number | null; label?: string; detail?: string | null; isFree?: boolean }, idx: number) => (
-                                  <li key={idx} className="flex items-start gap-2.5">
-                                    <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                                    <span>{del.quantity ? `${del.quantity} ` : ""}{del.label} {del.detail ? `(${del.detail})` : ""} {del.isFree ? "(Free)" : ""}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {errors.selectedServiceId && <p className="text-destructive text-sm mt-1">{errors.selectedServiceId.message}</p>}
+              </div>
+            )}
+
+            {/* ─── CONFIG STEP 3: SERVICE SELECTION ─── */}
+            {configStep === 3 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-300">
+                <div className="mb-8">
+                  <Label className="text-2xl font-bold font-heading text-foreground">
+                    Select a package
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-2">Choose the perfect package for your session.</p>
                 </div>
-                
-                {studio?.addons && studio.addons.length > 0 && (
-                  <div className="space-y-4 pt-4 border-t border-border/50">
-                    <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Enhance Your Session (Optional)</Label>
+
+                {isLoadingServices ? (
+                  <div className="flex flex-col items-center justify-center py-16 gap-4">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    <p className="text-muted-foreground text-sm">Loading available sessions…</p>
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    {(() => {
+                      const filteredCategories = selectedOccasionType === "Other"
+                        ? studio?.categories
+                        : studio?.categories?.filter((c: any) => c.name.toLowerCase().includes(selectedOccasionType.toLowerCase()));
+
+                      const categoriesToDisplay = filteredCategories?.length ? filteredCategories : studio?.categories;
+                      
+                      const allServices = categoriesToDisplay?.flatMap((c: any) => c.services.filter((s: any) => !s.isAddon && s.isActive !== false)) || [];
+                      
+                      if (allServices.length === 0) return <p className="text-muted-foreground">No services found for this selection.</p>;
+                      
+                      return (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {allServices.map((service: any) => {
+                            const isSelected = selectedServiceId === service.id;
+                            return (
+                              <div
+                                key={service.id}
+                                onClick={() => {
+                                  setValue("selectedServiceId", service.id, { shouldValidate: true });
+                                  setValue("selectedAddonIds", []);
+                                  setSelectedDate("");
+                                  setSelectedTime("");
+                                  
+                                  if (service.variants.length === 1) {
+                                    setValue("selectedVariantId", service.variants[0].id, { shouldValidate: true });
+                                    setConfigStep(5);
+                                  } else {
+                                    setValue("selectedVariantId", "", { shouldValidate: false });
+                                    setConfigStep(4);
+                                  }
+                                }}
+                                className={cn(
+                                  "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 group overflow-hidden flex flex-col justify-center min-h-[120px]",
+                                  isSelected ? "border-primary bg-primary/10 ring-1 ring-primary shadow-md" : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm"
+                                )}
+                              >
+                                {isSelected && <CheckCircle2 className="absolute top-4 right-4 w-5 h-5 text-primary" />}
+                                <div className="pr-8">
+                                  <h4 className="font-heading font-bold text-lg leading-snug">{service.name}</h4>
+                                  {service.description && <p className="text-sm text-muted-foreground mt-2 line-clamp-2 leading-relaxed">{service.description}</p>}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+                {errors.selectedServiceId && <p className="text-destructive text-sm">{errors.selectedServiceId.message}</p>}
+              </div>
+            )}
+
+            {/* ─── CONFIG STEP 4: LOCATION TOGGLE ─── */}
+            {configStep === 4 && selectedService && selectedService.variants.length > 1 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-300">
+                <div className="mb-8">
+                  <Label className="text-2xl font-bold font-heading text-foreground">
+                    Where would you like to snap?
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-2">Select your preferred location type for this session.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {selectedService.variants.map((variant: any) => {
+                    const isSelectedV = selectedVariantId === variant.id;
+                    const locationMeta: Record<string, { label: string; icon: string }> = {
+                      STUDIO:   { label: "Studio",          icon: "🏢" },
+                      OUTDOOR:  { label: "Outdoor",         icon: "🌿" },
+                      BOTH:     { label: "Studio & Outdoor", icon: "✨" },
+                      MULTIPLE: { label: "Multiple Locations", icon: "📍" },
+                    };
+                    const meta = locationMeta[variant.locationType] ?? { label: variant.locationType, icon: "📷" };
+
+                    return (
+                      <div
+                        key={variant.id}
+                        onClick={() => {
+                          setValue("selectedVariantId", variant.id, { shouldValidate: true });
+                          setConfigStep(5);
+                        }}
+                        className={cn(
+                          "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 group hover:shadow-md",
+                          isSelectedV ? "border-primary bg-primary/10 ring-1 ring-primary" : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5"
+                        )}
+                      >
+                        {isSelectedV && <CheckCircle2 className="absolute top-4 right-4 w-5 h-5 text-primary" />}
+                        <div className="text-3xl mb-3">{meta.icon}</div>
+                        <p className="font-semibold text-base">{meta.label}</p>
+                        <p className="text-primary font-bold mt-1 text-sm">₦{Number(variant.basePrice).toLocaleString("en-NG")}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+                {errors.selectedVariantId && <p className="text-destructive text-sm">{errors.selectedVariantId.message}</p>}
+              </div>
+            )}
+
+            {/* ─── CONFIG STEP 5: SESSION CONFIG ─── */}
+            {configStep === 5 && selectedVariant && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-300">
+                <div className="mb-4">
+                  <Label className="text-2xl font-bold font-heading text-foreground">
+                    Configure your session
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-2">Personalize your outfits, add-ons, and choose a date.</p>
+                </div>
+
+                <div className="flex items-center justify-between p-5 rounded-2xl bg-primary/5 border border-primary/20">
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Price per session</p>
+                    <p className="text-2xl font-bold text-primary mt-1">
+                      ₦{Number(selectedVariant.basePrice).toLocaleString("en-NG")}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Duration</p>
+                    <div className="flex items-center gap-1.5 justify-end mt-1">
+                      <Clock className="w-5 h-5 text-primary" />
+                      <span className="font-semibold text-lg">{selectedVariant.sessionDurationMins}min</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Outfits Stepper */}
+                <div className="space-y-4 pt-4 border-t border-border/50">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-sm font-medium text-foreground uppercase tracking-wider">
+                      How many outfits?
+                    </Label>
+                    {selectedTime && (
+                      <span className="text-xs text-primary font-medium bg-primary/10 px-3 py-1 rounded-full">
+                        Max: {maxAvailableSessions}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center border border-border rounded-xl overflow-hidden bg-card shadow-sm">
+                      <button type="button" onClick={() => { const cur = watch("sessionCount") || 1; if (cur > 1) setValue("sessionCount", cur - 1, { shouldValidate: true }); }} className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors">−</button>
+                      <div className="w-14 h-12 flex items-center justify-center font-bold text-lg border-x border-border">{watch("sessionCount") || 1}</div>
+                      <button type="button" onClick={() => { const cur = watch("sessionCount") || 1; if (cur < maxAvailableSessions) setValue("sessionCount", cur + 1, { shouldValidate: true }); }} className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors">+</button>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-primary">₦{(Number(selectedVariant.basePrice) * (watch("sessionCount") || 1)).toLocaleString("en-NG")}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{watch("sessionCount") || 1} outfit{(watch("sessionCount") || 1) !== 1 ? "s" : ""} · subtotal</p>
+                    </div>
+                  </div>
+                  {!selectedTime && <p className="text-xs text-muted-foreground/70">Select a time slot below to unlock the maximum available outfits.</p>}
+                  {errors.sessionCount && <p className="text-destructive text-sm">{errors.sessionCount.message}</p>}
+                </div>
+
+                {/* Add-ons */}
+                {categoryAddons.length > 0 && (
+                  <div className="space-y-4 pt-6 border-t border-border/50">
+                    <Label className="text-sm font-medium text-foreground uppercase tracking-wider">
+                      Enhance Your Session <span className="ml-2 text-xs normal-case font-normal text-muted-foreground/60">(optional)</span>
+                    </Label>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {studio.addons.flatMap(addon => 
-                        addon.variants.map((variant: { id: string; locationType: string; basePrice?: string | number | null; deliverables?: { quantity?: number | null; label?: string; detail?: string | null; isFree?: boolean }[] }) => {
+                      {categoryAddons.flatMap((addon: any) =>
+                        addon.variants.map((variant: any) => {
                           const compositeId = `${addon.id}:${variant.id}`;
-                          const isSelected = selectedAddonIds.includes(compositeId);
-                          const isExpanded = expandedItems[compositeId];
+                          const isChosen    = selectedAddonIds.includes(compositeId);
                           return (
                             <div
                               key={compositeId}
                               onClick={() => {
-                                if (isSelected) {
+                                if (isChosen) {
                                   setValue("selectedAddonIds", selectedAddonIds.filter(id => id !== compositeId));
                                 } else {
-                                  const filtered = selectedAddonIds.filter(id => !id.startsWith(addon.id + ":"));
+                                  const filtered = selectedAddonIds.filter(id => !id.startsWith(`${addon.id}:`));
                                   setValue("selectedAddonIds", [...filtered, compositeId]);
                                 }
                               }}
-                              className={cn(
-                                "p-4 rounded-xl border border-border/50 cursor-pointer transition-all duration-300 hover:border-primary/50 hover:bg-primary/5",
-                                isSelected ? "border-primary bg-primary/10 ring-1 ring-primary" : "bg-card"
-                              )}
+                              className={cn("p-5 rounded-2xl border cursor-pointer transition-all duration-300 hover:shadow-sm", isChosen ? "border-primary bg-primary/10 ring-1 ring-primary" : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5")}
                             >
-                              <div className="flex flex-col h-full">
-                                <div className="flex justify-between items-start mb-2">
-                                  <div>
-                                    <span className="font-medium block">{addon.name} ({variant.locationType})</span>
-                                    {/* ✅ Updated to use specific variant price */}
-                                    <span className="text-sm font-semibold text-primary">+₦{Number(variant.basePrice || 0).toLocaleString()}</span>
-                                  </div>
-                                  {isSelected && <CheckCircle2 className="text-primary w-5 h-5 flex-shrink-0" />}
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <span className="font-semibold text-base block">{addon.name}</span>
+                                  <span className="text-sm font-bold text-primary mt-1 block">+₦{Number(variant.basePrice || 0).toLocaleString("en-NG")}</span>
                                 </div>
-                                
-                                {(addon.description || (addon.features && addon.features.length > 0) || (variant.deliverables && variant.deliverables.length > 0)) && (
-                                  <button 
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setExpandedItems(prev => ({ ...prev, [compositeId]: !prev[compositeId] }));
-                                    }}
-                                    className="text-[11px] font-medium text-primary hover:underline self-start mt-1"
-                                  >
-                                    {isExpanded ? "Hide details" : "View details"}
-                                  </button>
-                                )}
-
-                                {isExpanded && (
-                                  <div className="mt-3 pt-3 border-t border-border/30 animate-in fade-in slide-in-from-top-1 duration-200">
-                                    {addon.description && (
-                                      <p className="text-xs text-muted-foreground mb-3 leading-relaxed">{addon.description}</p>
-                                    )}
-                                    {addon.features && addon.features.length > 0 && (
-                                      <ul className="text-xs space-y-2 text-muted-foreground/90 mb-3">
-                                        {addon.features.map((feature, idx) => (
-                                          <li key={idx} className="flex items-start gap-1.5">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-primary/50 mt-1 shrink-0" />
-                                            <span>{feature}</span>
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    )}
-                                    {variant.deliverables && variant.deliverables.length > 0 && (
-                                      <div className="space-y-2 border-t border-border/30 pt-3">
-                                        <h6 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Deliverables</h6>
-                                        <ul className="text-xs space-y-2 text-muted-foreground/90">
-                                          {variant.deliverables.map((del: { quantity?: number | null; label?: string; detail?: string | null; isFree?: boolean }, idx: number) => (
-                                            <li key={idx} className="flex items-start gap-1.5">
-                                              <div className="w-1.5 h-1.5 rounded-full bg-primary/50 mt-1 shrink-0" />
-                                              <span>{del.quantity ? `${del.quantity} ` : ""}{del.label} {del.detail ? `(${del.detail})` : ""} {del.isFree ? "(Free)" : ""}</span>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
+                                {isChosen && <CheckCircle2 className="text-primary w-5 h-5 shrink-0" />}
                               </div>
                             </div>
                           );
@@ -464,123 +557,38 @@ export default function BookingPage() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-border/50">
-                  <div className="space-y-2 flex flex-col">
-                    <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Select Date</Label>
-                    <Input
-                      type="date"
-                      min={new Date().toISOString().split("T")[0]}
-                      value={selectedDate}
-                      onChange={(e) => {
-                        setSelectedDate(e.target.value);
-                        setSelectedTime(""); 
-                      }}
-                      className="rounded-xl bg-card/50"
-                    />
+                {/* Date & Time */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-border/50">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium text-foreground uppercase tracking-wider">Select Date</Label>
+                    <Input type="date" min={new Date().toISOString().split("T")[0]} value={selectedDate} onChange={e => { setSelectedDate(e.target.value); setSelectedTime(""); }} className="rounded-xl bg-card/50 h-12" />
                   </div>
-                  <div className="space-y-2 flex flex-col">
-                    <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Available Times</Label>
-                    <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium text-foreground uppercase tracking-wider">Available Times</Label>
+                    <div className="grid grid-cols-3 gap-3">
                       {selectedDate ? (
-                        timeSlots.map((time) => {
-                           const isTomorrow = selectedDate === new Date(Date.now() + 86400000).toISOString().split("T")[0];
-                           const isBooked = isTomorrow && timeSlots.indexOf(time) < 3;
-                           
-                           return (
-                            <button
-                              key={time}
-                              type="button"
-                              disabled={isBooked}
-                              onClick={() => setSelectedTime(time)}
-                              className={cn(
-                                "py-2 px-3 text-sm rounded-lg border transition-all",
-                                isBooked ? "bg-muted/50 text-muted-foreground opacity-50 cursor-not-allowed border-transparent" : 
-                                selectedTime === time ? "bg-primary text-primary-foreground border-primary shadow-md" : 
-                                "bg-card hover:border-primary/50 border-border"
-                              )}
-                            >
+                        timeSlots.map(time => {
+                          const isBooked = isTomorrow && timeSlots.indexOf(time) < 3;
+                          return (
+                            <button key={time} type="button" disabled={isBooked} onClick={() => setSelectedTime(time)} className={cn("py-2.5 px-3 text-sm font-medium rounded-xl border transition-all", isBooked ? "bg-muted/50 text-muted-foreground opacity-40 cursor-not-allowed border-transparent" : selectedTime === time ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-card hover:border-primary/50 border-border")}>
                               {time}
                             </button>
-                           );
+                          );
                         })
                       ) : (
-                        <div className="col-span-3 text-sm text-muted-foreground py-2">Please select a date first</div>
+                        <div className="col-span-3 text-sm text-muted-foreground py-3 bg-muted/30 text-center rounded-xl border border-dashed border-border">Select a date to view times</div>
                       )}
                     </div>
                     {errors.bookingDate && <p className="text-destructive text-sm mt-2">{errors.bookingDate.message}</p>}
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-border/50">
-                  <div className="space-y-2 flex flex-col max-w-xs">
-                    <div className="flex justify-between items-center">
-                      <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Number of Sessions</Label>
-                      {selectedTime && <span className="text-xs text-primary font-medium">Max: {maxAvailableSessions}</span>}
-                    </div>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={maxAvailableSessions}
-                      disabled={!selectedTime}
-                      {...register("sessionCount", { valueAsNumber: true })}
-                      className="rounded-xl bg-card/50"
-                    />
-                    {!selectedTime && <p className="text-xs text-muted-foreground">Select a time first to choose sessions.</p>}
-                    {errors.sessionCount && <p className="text-destructive text-sm mt-2">{errors.sessionCount.message}</p>}
-                  </div>
-                </div>
-              </>
+              </div>
             )}
           </div>
         );
-      case 3:
-        return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Full Name</Label>
-                <Input
-                  type="text"
-                  placeholder="John Doe"
-                  {...register("clientName")}
-                  className="rounded-xl bg-card/50"
-                />
-                {errors.clientName && <p className="text-destructive text-sm">{errors.clientName.message}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Email</Label>
-                <Input
-                  type="email"
-                  placeholder="john@example.com"
-                  {...register("clientEmail")}
-                  className="rounded-xl bg-card/50"
-                />
-                {errors.clientEmail && <p className="text-destructive text-sm">{errors.clientEmail.message}</p>}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Phone Number</Label>
-              <Input
-                type="tel"
-                placeholder="+1 (555) 000-0000"
-                {...register("clientPhone")}
-                className="rounded-xl bg-card/50"
-              />
-              {errors.clientPhone && <p className="text-destructive text-sm">{errors.clientPhone.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Additional Notes (Optional)</Label>
-              <Textarea
-                placeholder="Tell us about your vision..."
-                rows={4}
-                {...register("notes")}
-                className="rounded-xl bg-card/50 resize-none"
-              />
-              {errors.notes && <p className="text-destructive text-sm">{errors.notes.message}</p>}
-            </div>
-          </div>
-        );
-      case 4: {
+      }
+case 2: {
         const sessionCount = watch("sessionCount") || 1;
         const servicePrice = Number(selectedVariant?.basePrice || selectedService?.variants[0]?.basePrice || 0);
         const serviceTotal = servicePrice * sessionCount;
