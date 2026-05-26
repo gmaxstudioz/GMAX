@@ -1063,32 +1063,6 @@ export default function BookingPage() {
           </div>
         </div>
 
-        {/* Stepper (Mobile) */}
-        <div className="mb-8 md:hidden">
-          <div className="flex items-center justify-between bg-card border border-border/50 p-4 rounded-2xl shadow-sm">
-            <div className="flex items-center gap-3 text-primary">
-              {steps.find(s => s.id === currentStep)?.icon && (() => {
-                const CurrentIcon = steps.find(s => s.id === currentStep)!.icon;
-                return (
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                    <CurrentIcon className="w-5 h-5" />
-                  </div>
-                );
-              })()}
-              <div>
-                <span className="text-sm font-bold uppercase tracking-wider block">
-                  {steps.find(s => s.id === currentStep)?.title}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {steps.find(s => s.id === currentStep)?.description}
-                </span>
-              </div>
-            </div>
-            <div className="text-xs font-bold bg-primary text-primary-foreground px-3 py-1.5 rounded-full">
-              Step {currentStep} of {steps.length}
-            </div>
-          </div>
-        </div>
 
         {/* Form Area */}
         <div className="bg-card/50 backdrop-blur-xl border border-border/50 rounded-[2rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
