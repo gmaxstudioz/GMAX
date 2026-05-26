@@ -1,13 +1,13 @@
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
-import { sendSMS } from "@/lib/termii";
+import { sendBookingPaymentSMS, sendBookingPaymentWhatsApp, sendBookingPaymentEmail } from "@/lib/termii";
 
 function generateReceiptNumber(): string {
     return `RCP-${Date.now()}-${uuidv4().slice(0, 8).toUpperCase()}`;
 }
 
-const PORTAL_URL = process.env.PORTAL_URL ?? "";
+
 
 export async function POST(req: Request) {
     const rawBody = await req.text();
@@ -177,22 +177,43 @@ export async function POST(req: Request) {
             });
         });
 
-        // 5. Send SMS notification to client (fire-and-forget)
+        // 5. Send notifications to client (fire-and-forget)
         try {
             const clientPhone = intent.clientPhone?.trim();
-            if (clientPhone) {
-                const service = await prisma.service.findUnique({ where: { id: intent.serviceId }, select: { name: true } });
-                const bookingDate = intent.bookingDate.toLocaleDateString("en-NG", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
-                const amount = Number(intent.amount).toLocaleString("en-NG");
-                const planLabel = intent.paymentPlan === "FULL" ? "Full" : intent.paymentPlan === "HALF" ? "Half (50%)" : "Quarter (25%)";
-                const verifyLink = `${PORTAL_URL}/booking/verify?reference=${reference}`;
-                const message = `GMAX Studioz: Booking Confirmed! ✅\n\nService: ${service?.name ?? "Session"}\nDate: ${bookingDate}\nPaid: ₦${amount} (${planLabel})\nRef: ${reference}\n\nView details: ${verifyLink}`;
+            const clientEmail = intent.clientEmail?.trim();
+            const clientName = intent.clientName || "Customer";
+            const service = await prisma.service.findUnique({ where: { id: intent.serviceId }, select: { name: true } });
+            const serviceName = service?.name ?? "Session";
+            const amountFormatted = new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(Number(intent.amount));
 
-                await sendSMS(clientPhone, message);
-                console.info(`[Webhook] SMS sent to ${clientPhone} for ${reference}`);
+            if (clientEmail) {
+                await sendBookingPaymentEmail({
+                    email: clientEmail,
+                    clientName,
+                    serviceName,
+                    amount: amountFormatted,
+                    reference,
+                }).catch(err => console.error(`[Webhook] Email notification failed for ${reference}:`, err));
             }
-        } catch (smsErr) {
-            console.error(`[Webhook] SMS notification failed for ${reference}:`, smsErr);
+
+            if (clientPhone) {
+                await sendBookingPaymentSMS({
+                    phone: clientPhone,
+                    serviceName,
+                    reference,
+                }).catch(err => console.error(`[Webhook] SMS notification failed for ${reference}:`, err));
+
+                await sendBookingPaymentWhatsApp({
+                    phone: clientPhone,
+                    clientName,
+                    serviceName,
+                    reference,
+                }).catch(err => console.error(`[Webhook] WhatsApp notification failed for ${reference}:`, err));
+                
+                console.info(`[Webhook] Notifications dispatched for ${reference}`);
+            }
+        } catch (notifErr) {
+            console.error(`[Webhook] Notification dispatch failed for ${reference}:`, notifErr);
             // Don't fail the webhook — booking is already created
         }
 
