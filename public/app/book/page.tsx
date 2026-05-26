@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import gsap from "gsap";
 import { buttonVariants } from "@/components/ui/button";
-import { ArrowRight, ArrowLeft, CheckCircle2, User, CreditCard, Loader2, Building2, Clock, Sparkles, MapPin, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle2, User, CreditCard, Loader2, Building2, Clock, Sparkles, MapPin, ChevronDown, ChevronUp, ChevronRight, CheckCircle, UploadCloud, Users, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -309,24 +309,24 @@ export default function BookingPage() {
                           setConfigStep(2);
                         }}
                         className={cn(
-                          "p-6 rounded-2xl border cursor-pointer transition-all duration-300 flex flex-col justify-center gap-4 hover:border-primary/50 hover:bg-primary/5 hover:shadow-md",
+                          "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 flex flex-col justify-center gap-4 group hover:-translate-y-1 hover:shadow-lg active:scale-[0.98]",
                           selectedStudioId === s.id
-                            ? "border-primary bg-primary/10 ring-1 ring-primary shadow-md"
-                            : "border-border/50 bg-card"
+                            ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1 shadow-md"
+                            : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5"
                         )}
                       >
                         <div className="flex items-center gap-4">
                           {s.logo ? (
-                            <div className="w-14 h-14 rounded-full overflow-hidden border shadow-sm shrink-0 relative">
+                            <div className="w-14 h-14 rounded-full overflow-hidden border shadow-sm shrink-0 relative group-hover:scale-105 transition-transform">
                               <Image src={`${process.env.NEXT_PUBLIC_R2_PUBLIC_URL || ""}/${s.logo}`} alt={s.name} fill className="object-cover" />
                             </div>
                           ) : (
-                            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                               <Building2 className="w-6 h-6 text-primary" />
                             </div>
                           )}
                           <div className="flex-1">
-                            <h4 className="font-bold text-lg font-heading">{s.name}</h4>
+                            <h4 className="font-bold text-lg font-heading group-hover:text-primary transition-colors">{s.name}</h4>
                             <p className="text-sm text-muted-foreground line-clamp-1 mt-0.5">
                               {s.metadata?.address ? (
                                 <span className="flex items-center gap-1">
@@ -336,6 +336,9 @@ export default function BookingPage() {
                                 (s.metadata?.description as string) || "Select this location"
                               )}
                             </p>
+                          </div>
+                          <div className="shrink-0 text-muted-foreground opacity-50 group-hover:opacity-100 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300">
+                            <ChevronRight className="w-6 h-6" />
                           </div>
                         </div>
                       </div>
@@ -365,11 +368,11 @@ export default function BookingPage() {
                         setConfigStep(3);
                       }}
                       className={cn(
-                        "p-6 rounded-2xl border cursor-pointer transition-all duration-300 group hover:border-primary/50 hover:bg-primary/5 flex flex-col items-center justify-center gap-3 bg-card hover:shadow-md"
+                        "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 group hover:-translate-y-1 hover:border-primary/50 hover:bg-primary/5 flex flex-col items-center justify-center gap-3 bg-card hover:shadow-lg active:scale-[0.98]"
                       )}
                     >
-                      <span className="text-4xl group-hover:scale-110 transition-transform">{answer.icon}</span>
-                      <span className="font-semibold text-center">{answer.label}</span>
+                      <span className="text-4xl group-hover:scale-110 transition-transform duration-300">{answer.icon}</span>
+                      <span className="font-semibold text-center group-hover:text-primary transition-colors">{answer.label}</span>
                     </div>
                   ))}
                 </div>
@@ -426,8 +429,8 @@ export default function BookingPage() {
                                   }
                                 }}
                                 className={cn(
-                                  "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 group overflow-hidden flex flex-col justify-center min-h-[120px]",
-                                  isSelected ? "border-primary bg-primary/10 ring-1 ring-primary shadow-md" : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm"
+                                  "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 group overflow-hidden flex flex-col justify-center min-h-[120px] hover:-translate-y-1 hover:shadow-lg active:scale-[0.98]",
+                                  isSelected ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1 shadow-md" : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5"
                                 )}
                               >
                                 {isSelected && <CheckCircle2 className="absolute top-4 right-4 w-5 h-5 text-primary" />}
@@ -444,6 +447,9 @@ export default function BookingPage() {
                                       ))}
                                     </ul>
                                   )}
+                                </div>
+                                <div className="absolute top-1/2 right-4 -translate-y-1/2 text-muted-foreground opacity-30 group-hover:opacity-100 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300">
+                                  <ChevronRight className="w-6 h-6" />
                                 </div>
                               </div>
                             );
@@ -485,8 +491,8 @@ export default function BookingPage() {
                           setConfigStep(5);
                         }}
                         className={cn(
-                          "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 group hover:shadow-md flex flex-col",
-                          isSelectedV ? "border-primary bg-primary/10 ring-1 ring-primary" : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5"
+                          "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 group hover:-translate-y-1 hover:shadow-lg active:scale-[0.98] flex flex-col",
+                          isSelectedV ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1 shadow-md" : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5"
                         )}
                       >
                         {isSelectedV && <CheckCircle2 className="absolute top-4 right-4 w-5 h-5 text-primary" />}
@@ -656,7 +662,16 @@ export default function BookingPage() {
                             return (
                               <div
                                 key={compositeId}
-                                className={cn("p-4 rounded-2xl border transition-all duration-300 hover:shadow-sm", count > 0 ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5")}
+                                onClick={() => {
+                                  if (count === 0) {
+                                    const newArr = selectedAddonIds.filter(id => !id.startsWith(`${addon.id}:`));
+                                    setValue("selectedAddonIds", [...newArr, compositeId]);
+                                  }
+                                }}
+                                className={cn(
+                                  "relative p-4 rounded-2xl border cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-md active:scale-[0.98] group flex flex-col justify-center",
+                                  count > 0 ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1" : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5"
+                                )}
                               >
                                 <div className="flex justify-between items-center">
                                   <div>
@@ -675,7 +690,7 @@ export default function BookingPage() {
                                         const newArr = selectedAddonIds.filter(id => !id.startsWith(`${addon.id}:`));
                                         setValue("selectedAddonIds", [...newArr, compositeId]);
                                       }} 
-                                      className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
+                                      className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors group-hover:border-primary/50 group-hover:bg-primary/10 group-hover:text-primary"
                                     >
                                       +
                                     </button>

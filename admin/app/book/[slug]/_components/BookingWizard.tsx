@@ -440,10 +440,10 @@ export function BookingWizard({ studioId, categories, addons }: BookingWizardPro
                                                     key={service.id}
                                                     type="button"
                                                     onClick={() => { setValue("selectedServiceId", service.id); form.clearErrors("selectedServiceId"); }}
-                                                    className={`text-left p-4 rounded-xl border-2 transition-all ${
+                                                    className={`text-left p-4 rounded-xl border-2 transition-all hover:-translate-y-1 active:scale-[0.98] ${
                                                         isSelected
-                                                            ? "border-primary bg-primary/5 shadow-sm"
-                                                            : "border-border hover:border-primary/30 hover:bg-muted/30"
+                                                            ? "border-primary bg-primary/10 shadow-md ring-2 ring-primary ring-offset-1"
+                                                            : "border-border hover:border-primary/50 hover:bg-muted/30 hover:shadow-md"
                                                     }`}
                                                 >
                                                     <div className="flex justify-between items-start gap-2">
@@ -479,7 +479,7 @@ export function BookingWizard({ studioId, categories, addons }: BookingWizardPro
                                     <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Add-ons (Optional)</h3>
                                     <div className="space-y-2">
                                         {addons.map(addon => (
-                                            <label key={addon.id} className="flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-muted/30 transition-colors">
+                                            <label key={addon.id} className="flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all hover:-translate-y-1 active:scale-[0.98] hover:shadow-md hover:border-primary/50 hover:bg-muted/30">
                                                 <div className="flex items-center gap-3">
                                                     <Checkbox
                                                         checked={selectedAddonIds.includes(addon.id)}
