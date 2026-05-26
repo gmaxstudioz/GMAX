@@ -551,7 +551,7 @@ export default function BookingPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-border/50">
                   <div className="space-y-3">
                     <Label className="text-sm font-medium text-foreground uppercase tracking-wider">Select Date</Label>
-                    <Input type="date" min={new Date().toISOString().split("T")[0]} value={selectedDate} onChange={e => { setSelectedDate(e.target.value); setSelectedTime(""); }} className="rounded-xl bg-card/50 h-12" />
+                    <Input type="date" min={new Date().toISOString().split("T")[0]} value={selectedDate} onChange={e => { setSelectedDate(e.target.value); setSelectedTime(""); }} className="flex h-12 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary transition-colors hover:border-primary/50" />
                   </div>
                   <div className="space-y-3">
                     <Label className="text-sm font-medium text-foreground uppercase tracking-wider">Available Times</Label>
