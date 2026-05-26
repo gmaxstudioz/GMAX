@@ -45,12 +45,12 @@ export default function BookingPage() {
   const [rulesExpanded, setRulesExpanded] = useState(true);
 
   useEffect(() => {
-    if (currentStep === 1 || currentStep === 3) {
+    if ((currentStep === 1 && configStep === 1) || currentStep === 3) {
       setRulesExpanded(true);
     } else {
       setRulesExpanded(false);
     }
-  }, [currentStep]);
+  }, [currentStep, configStep]);
   
 
 
