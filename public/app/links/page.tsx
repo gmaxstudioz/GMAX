@@ -33,7 +33,7 @@ import Magnetic from "@/components/ui/magnetic";
 const links = [
   { href: "/", label: "GMAX OFFICIAL WEBSITE" },
   { href: "/book", label: "BOOK A SESSION HERE" },
-  { href: "/works", label: "OUR WORKS" },
+  { href: "/academy", label: "ACADEMY" },
   { href: "/about", label: "ABOUT US" },
   { href: "/shop", label: "SHOP" },
 ];
