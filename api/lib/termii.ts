@@ -18,6 +18,7 @@ const TERMII_PURCHASE_TEMPLATE_ID = process.env.TERMII_PURCHASE_TEMPLATE_ID ?? "
 const TERMII_BOOKING_TEMPLATE_ID = process.env.TERMII_BOOKING_TEMPLATE_ID ?? "";
 const TERMII_REVIEW_NOTIFICATION_TEMPLATE_ID = process.env.TERMII_REVIEW_NOTIFICATION_TEMPLATE_ID ?? "";
 const TERMII_ACADEMY_TEMPLATE_ID = process.env.TERMII_ACADEMY_TEMPLATE_ID ?? "";
+const TERMII_PHOTOS_EXPIRING_TEMPLATE_ID = process.env.TERMII_PHOTOS_EXPIRING_TEMPLATE_ID ?? "";
 const TERMII_WHATSAPP_SENDER = process.env.TERMII_WHATSAPP_SENDER_ID ?? "";
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -453,3 +454,53 @@ export async function sendBookingBalanceDueWhatsApp(params: {
     const message = `Hi ${params.clientName}! 👋\n\nYour deliverables from GMAX Studioz are ready!\n\nPlease complete your payment of *${params.balanceDue}* to receive your access link.\n\nPay here: ${params.paymentLink}\n\nThank you!`;
     return sendWhatsApp(params.phone, message);
 }
+
+// ── Photos Expiring ──────────────────────────────────────────────────
+
+export async function sendPhotosExpiringEmail(params: {
+    email: string;
+    clientName: string;
+    studioName: string;
+    expireDate: string;
+    downloadLink: string;
+}) {
+    if (!TERMII_PHOTOS_EXPIRING_TEMPLATE_ID) {
+        console.warn("[Termii] TERMII_PHOTOS_EXPIRING_TEMPLATE_ID not set — skipping photos expiring email.", { to: params.email });
+        return;
+    }
+
+    return sendTemplateEmail({
+        email: params.email,
+        subject: `Your photos from ${params.studioName} are expiring soon!`,
+        templateId: TERMII_PHOTOS_EXPIRING_TEMPLATE_ID,
+        variables: {
+            client_name: params.clientName,
+            studio_name: params.studioName,
+            expire_date: params.expireDate,
+            download_link: params.downloadLink,
+        },
+    });
+}
+
+export async function sendPhotosExpiringSMS(params: {
+    phone: string;
+    clientName: string;
+    studioName: string;
+    daysLeft: number;
+    downloadLink: string;
+}) {
+    const message = `Hi ${params.clientName}, your photos from ${params.studioName} will expire in ${params.daysLeft} days! Please download them here: ${params.downloadLink}`;
+    return sendSMS(params.phone, message);
+}
+
+export async function sendPhotosExpiringWhatsApp(params: {
+    phone: string;
+    clientName: string;
+    studioName: string;
+    daysLeft: number;
+    downloadLink: string;
+}) {
+    const message = `Hi ${params.clientName}! 👋\n\nThis is a quick reminder that your photos from *${params.studioName}* will expire and be deleted in *${params.daysLeft} days*.\n\nPlease download them here: ${params.downloadLink}\n\nThank you!`;
+    return sendWhatsApp(params.phone, message);
+}
+
