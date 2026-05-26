@@ -210,6 +210,10 @@ export default function BookingPage() {
         duration: 0.3,
         onComplete: () => {
           setCurrentStep((prev) => Math.min(prev + 1, steps.length));
+          if (formRef.current) {
+            const y = formRef.current.getBoundingClientRect().top + window.scrollY - 150;
+            window.scrollTo({ top: y, behavior: "smooth" });
+          }
           gsap.fromTo(formRef.current, { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" });
         },
       });
@@ -231,6 +235,10 @@ export default function BookingPage() {
         duration: 0.3,
         onComplete: () => {
           setCurrentStep((prev) => Math.max(prev - 1, 1));
+          if (formRef.current) {
+            const y = formRef.current.getBoundingClientRect().top + window.scrollY - 150;
+            window.scrollTo({ top: y, behavior: "smooth" });
+          }
           gsap.fromTo(formRef.current, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" });
         },
       });
