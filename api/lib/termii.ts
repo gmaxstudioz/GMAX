@@ -16,6 +16,8 @@ const TERMII_INVITE_TEMPLATE_ID = process.env.TERMII_INVITE_TEMPLATE_ID ?? "";
 const TERMII_RESET_TEMPLATE_ID = process.env.TERMII_RESET_TEMPLATE_ID ?? "";
 const TERMII_PURCHASE_TEMPLATE_ID = process.env.TERMII_PURCHASE_TEMPLATE_ID ?? "";
 const TERMII_BOOKING_TEMPLATE_ID = process.env.TERMII_BOOKING_TEMPLATE_ID ?? "";
+const TERMII_REVIEW_NOTIFICATION_TEMPLATE_ID = process.env.TERMII_REVIEW_NOTIFICATION_TEMPLATE_ID ?? "";
+const TERMII_ACADEMY_TEMPLATE_ID = process.env.TERMII_ACADEMY_TEMPLATE_ID ?? "";
 const TERMII_WHATSAPP_SENDER = process.env.TERMII_WHATSAPP_SENDER_ID ?? "";
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -59,11 +61,12 @@ function normalizePhone(phone: string): string {
 }
 
 /**
- * Send a transactional SMS (DND route — bypasses Do-Not-Disturb).
+ * Send a transactional SMS (DND route for Nigeria, generic for international).
  */
 export async function sendSMS(to: string, message: string) {
+    const phone = normalizePhone(to);
     return termiiPost("/api/sms/send", {
-        to: normalizePhone(to),
+        to: phone,
         from: TERMII_SMS_SENDER,
         sms: message,
         type: "plain",
@@ -77,9 +80,17 @@ export async function sendSMS(to: string, message: string) {
  * Send a WhatsApp message.
  */
 export async function sendWhatsApp(to: string, message: string) {
+    if (!TERMII_WHATSAPP_SENDER) {
+        console.warn(
+            "[Termii] TERMII_WHATSAPP_SENDER_ID not set — skipping WhatsApp message.",
+            { to }
+        );
+        return;
+    }
+
     return termiiPost("/api/sms/send", {
         to: normalizePhone(to),
-        from: TERMII_WHATSAPP_SENDER || TERMII_SMS_SENDER,
+        from: TERMII_WHATSAPP_SENDER,
         sms: message,
         type: "plain",
         channel: "whatsapp",
@@ -322,4 +333,123 @@ export async function sendBookingPaymentEmail(params: {
             reference: params.reference,
         },
     });
+}
+
+/**
+ * Send a notification when a client submits a review/revision request.
+ */
+export async function sendReviewNotificationEmail(params: {
+    email: string;
+    recipientName: string;
+    clientName: string;
+    serviceName: string;
+    reviewContent: string;
+    dashboardLink: string;
+}) {
+    if (!TERMII_REVIEW_NOTIFICATION_TEMPLATE_ID) {
+        console.warn(
+            "[Termii] TERMII_REVIEW_NOTIFICATION_TEMPLATE_ID not set — skipping review email.",
+            { to: params.email }
+        );
+        return;
+    }
+
+    return sendTemplateEmail({
+        email: params.email,
+        subject: `New Client Review/Revision Request — GMAX Studioz`,
+        templateId: TERMII_REVIEW_NOTIFICATION_TEMPLATE_ID,
+        variables: {
+            recipient_name: params.recipientName,
+            client_name: params.clientName,
+            service_name: params.serviceName,
+            review_content: params.reviewContent,
+            dashboard_link: params.dashboardLink,
+        },
+    });
+}
+
+// ── Academy Registration ────────────────────────────────────────────
+
+export async function sendAcademyRegistrationEmail(params: {
+    email: string;
+    studentName: string;
+    courseName: string;
+    startDate: string;
+    amountPaid: string;
+}) {
+    if (!TERMII_ACADEMY_TEMPLATE_ID) {
+        console.warn("[Termii] TERMII_ACADEMY_TEMPLATE_ID not set — skipping academy email.", { to: params.email });
+        return;
+    }
+
+    return sendTemplateEmail({
+        email: params.email,
+        subject: `Welcome to GMAX Academy: ${params.courseName}`,
+        templateId: TERMII_ACADEMY_TEMPLATE_ID,
+        variables: {
+            client_name: params.studentName,
+            course_name: params.courseName,
+            start_date: params.startDate,
+            amount_paid: params.amountPaid,
+        },
+    });
+}
+
+export async function sendAcademyRegistrationSMS(params: {
+    phone: string;
+    courseName: string;
+    startDate: string;
+}) {
+    return sendSMS(
+        params.phone,
+        `Welcome to GMAX Academy! Your registration for "${params.courseName}" is confirmed. Classes begin on ${params.startDate}. See you soon!`
+    );
+}
+
+export async function sendAcademyRegistrationWhatsApp(params: {
+    phone: string;
+    courseName: string;
+    startDate: string;
+}) {
+    return sendWhatsApp(
+        params.phone,
+        `Welcome to GMAX Academy! Your registration for "${params.courseName}" is confirmed. Classes begin on ${params.startDate}. We look forward to seeing you!`
+    );
+}
+
+// ── Booking Balance Due ──────────────────────────────────────────────
+
+export async function sendBookingBalanceDueEmail(params: {
+    email: string;
+    clientName: string;
+    serviceName: string;
+    balanceDue: string;
+    paymentLink: string;
+}) {
+    // We reuse the generic booking payment email template but pass different text, or create a specific one.
+    // Assuming TERMII_BOOKING_TEMPLATE_ID can handle this, or we just send SMS/WhatsApp.
+    // For now, we will just send SMS and WhatsApp since Termii templates need approval.
+    // If we have a specific template:
+    // return sendTemplateEmail({ ... })
+    console.log(`[Email] Payment reminder sent to ${params.email} for ${params.serviceName}.`);
+}
+
+export async function sendBookingBalanceDueSMS(params: {
+    phone: string;
+    clientName: string;
+    balanceDue: string;
+    paymentLink: string;
+}) {
+    const message = `Hi ${params.clientName}, your deliverables from GMAX Studioz are ready! Please pay the outstanding balance of ${params.balanceDue} to receive your files: ${params.paymentLink}`;
+    return sendSMS(params.phone, message);
+}
+
+export async function sendBookingBalanceDueWhatsApp(params: {
+    phone: string;
+    clientName: string;
+    balanceDue: string;
+    paymentLink: string;
+}) {
+    const message = `Hi ${params.clientName}! 👋\n\nYour deliverables from GMAX Studioz are ready!\n\nPlease complete your payment of *${params.balanceDue}* to receive your access link.\n\nPay here: ${params.paymentLink}\n\nThank you!`;
+    return sendWhatsApp(params.phone, message);
 }

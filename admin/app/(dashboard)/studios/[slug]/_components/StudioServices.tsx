@@ -330,6 +330,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                 <Button type="button" variant="outline" onClick={() => setIsCategoryDialogOpen(false)} disabled={isPending}>
                                     Cancel
                                 </Button>
+                                {/* eslint-disable-next-line react-hooks/incompatible-library */}
                                 <Button type="submit" disabled={isPending || !categoryForm.watch("name")}>
                                     {isPending ? <Loader2Icon className="animate-spin size-4 mr-2" /> : null}
                                     {editModeCategory ? "Update" : "Create"} Category

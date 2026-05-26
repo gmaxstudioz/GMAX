@@ -28,12 +28,14 @@ export type AggregateBookingIntent = {
 
 export type BookingIntentAvgAggregateOutputType = {
   sessionCount: number | null
+  extraPicturesCount: number | null
   totalAmount: runtime.Decimal | null
   amount: runtime.Decimal | null
 }
 
 export type BookingIntentSumAggregateOutputType = {
   sessionCount: number | null
+  extraPicturesCount: number | null
   totalAmount: runtime.Decimal | null
   amount: runtime.Decimal | null
 }
@@ -48,6 +50,7 @@ export type BookingIntentMinAggregateOutputType = {
   serviceId: string | null
   serviceVariantId: string | null
   sessionCount: number | null
+  extraPicturesCount: number | null
   bookingDate: Date | null
   notes: string | null
   paystackReference: string | null
@@ -70,6 +73,7 @@ export type BookingIntentMaxAggregateOutputType = {
   serviceId: string | null
   serviceVariantId: string | null
   sessionCount: number | null
+  extraPicturesCount: number | null
   bookingDate: Date | null
   notes: string | null
   paystackReference: string | null
@@ -93,6 +97,7 @@ export type BookingIntentCountAggregateOutputType = {
   serviceVariantId: number
   addonIds: number
   sessionCount: number
+  extraPicturesCount: number
   bookingDate: number
   notes: number
   paystackReference: number
@@ -109,12 +114,14 @@ export type BookingIntentCountAggregateOutputType = {
 
 export type BookingIntentAvgAggregateInputType = {
   sessionCount?: true
+  extraPicturesCount?: true
   totalAmount?: true
   amount?: true
 }
 
 export type BookingIntentSumAggregateInputType = {
   sessionCount?: true
+  extraPicturesCount?: true
   totalAmount?: true
   amount?: true
 }
@@ -129,6 +136,7 @@ export type BookingIntentMinAggregateInputType = {
   serviceId?: true
   serviceVariantId?: true
   sessionCount?: true
+  extraPicturesCount?: true
   bookingDate?: true
   notes?: true
   paystackReference?: true
@@ -151,6 +159,7 @@ export type BookingIntentMaxAggregateInputType = {
   serviceId?: true
   serviceVariantId?: true
   sessionCount?: true
+  extraPicturesCount?: true
   bookingDate?: true
   notes?: true
   paystackReference?: true
@@ -174,6 +183,7 @@ export type BookingIntentCountAggregateInputType = {
   serviceVariantId?: true
   addonIds?: true
   sessionCount?: true
+  extraPicturesCount?: true
   bookingDate?: true
   notes?: true
   paystackReference?: true
@@ -284,6 +294,7 @@ export type BookingIntentGroupByOutputType = {
   serviceVariantId: string | null
   addonIds: string[]
   sessionCount: number
+  extraPicturesCount: number
   bookingDate: Date
   notes: string | null
   paystackReference: string
@@ -330,6 +341,7 @@ export type BookingIntentWhereInput = {
   serviceVariantId?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
   addonIds?: Prisma.StringNullableListFilter<"BookingIntent">
   sessionCount?: Prisma.IntFilter<"BookingIntent"> | number
+  extraPicturesCount?: Prisma.IntFilter<"BookingIntent"> | number
   bookingDate?: Prisma.DateTimeFilter<"BookingIntent"> | Date | string
   notes?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
   paystackReference?: Prisma.StringFilter<"BookingIntent"> | string
@@ -354,6 +366,7 @@ export type BookingIntentOrderByWithRelationInput = {
   serviceVariantId?: Prisma.SortOrderInput | Prisma.SortOrder
   addonIds?: Prisma.SortOrder
   sessionCount?: Prisma.SortOrder
+  extraPicturesCount?: Prisma.SortOrder
   bookingDate?: Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   paystackReference?: Prisma.SortOrder
@@ -382,6 +395,7 @@ export type BookingIntentWhereUniqueInput = Prisma.AtLeast<{
   serviceVariantId?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
   addonIds?: Prisma.StringNullableListFilter<"BookingIntent">
   sessionCount?: Prisma.IntFilter<"BookingIntent"> | number
+  extraPicturesCount?: Prisma.IntFilter<"BookingIntent"> | number
   bookingDate?: Prisma.DateTimeFilter<"BookingIntent"> | Date | string
   notes?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
   totalAmount?: Prisma.DecimalFilter<"BookingIntent"> | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -405,6 +419,7 @@ export type BookingIntentOrderByWithAggregationInput = {
   serviceVariantId?: Prisma.SortOrderInput | Prisma.SortOrder
   addonIds?: Prisma.SortOrder
   sessionCount?: Prisma.SortOrder
+  extraPicturesCount?: Prisma.SortOrder
   bookingDate?: Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   paystackReference?: Prisma.SortOrder
@@ -436,6 +451,7 @@ export type BookingIntentScalarWhereWithAggregatesInput = {
   serviceVariantId?: Prisma.StringNullableWithAggregatesFilter<"BookingIntent"> | string | null
   addonIds?: Prisma.StringNullableListFilter<"BookingIntent">
   sessionCount?: Prisma.IntWithAggregatesFilter<"BookingIntent"> | number
+  extraPicturesCount?: Prisma.IntWithAggregatesFilter<"BookingIntent"> | number
   bookingDate?: Prisma.DateTimeWithAggregatesFilter<"BookingIntent"> | Date | string
   notes?: Prisma.StringNullableWithAggregatesFilter<"BookingIntent"> | string | null
   paystackReference?: Prisma.StringWithAggregatesFilter<"BookingIntent"> | string
@@ -458,6 +474,7 @@ export type BookingIntentCreateInput = {
   serviceVariantId?: string | null
   addonIds?: Prisma.BookingIntentCreateaddonIdsInput | string[]
   sessionCount: number
+  extraPicturesCount?: number
   bookingDate: Date | string
   notes?: string | null
   paystackReference: string
@@ -482,6 +499,7 @@ export type BookingIntentUncheckedCreateInput = {
   serviceVariantId?: string | null
   addonIds?: Prisma.BookingIntentCreateaddonIdsInput | string[]
   sessionCount: number
+  extraPicturesCount?: number
   bookingDate: Date | string
   notes?: string | null
   paystackReference: string
@@ -504,6 +522,7 @@ export type BookingIntentUpdateInput = {
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   addonIds?: Prisma.BookingIntentUpdateaddonIdsInput | string[]
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paystackReference?: Prisma.StringFieldUpdateOperationsInput | string
@@ -528,6 +547,7 @@ export type BookingIntentUncheckedUpdateInput = {
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   addonIds?: Prisma.BookingIntentUpdateaddonIdsInput | string[]
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paystackReference?: Prisma.StringFieldUpdateOperationsInput | string
@@ -551,6 +571,7 @@ export type BookingIntentCreateManyInput = {
   serviceVariantId?: string | null
   addonIds?: Prisma.BookingIntentCreateaddonIdsInput | string[]
   sessionCount: number
+  extraPicturesCount?: number
   bookingDate: Date | string
   notes?: string | null
   paystackReference: string
@@ -573,6 +594,7 @@ export type BookingIntentUpdateManyMutationInput = {
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   addonIds?: Prisma.BookingIntentUpdateaddonIdsInput | string[]
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paystackReference?: Prisma.StringFieldUpdateOperationsInput | string
@@ -596,6 +618,7 @@ export type BookingIntentUncheckedUpdateManyInput = {
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   addonIds?: Prisma.BookingIntentUpdateaddonIdsInput | string[]
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paystackReference?: Prisma.StringFieldUpdateOperationsInput | string
@@ -629,6 +652,7 @@ export type BookingIntentCountOrderByAggregateInput = {
   serviceVariantId?: Prisma.SortOrder
   addonIds?: Prisma.SortOrder
   sessionCount?: Prisma.SortOrder
+  extraPicturesCount?: Prisma.SortOrder
   bookingDate?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   paystackReference?: Prisma.SortOrder
@@ -643,6 +667,7 @@ export type BookingIntentCountOrderByAggregateInput = {
 
 export type BookingIntentAvgOrderByAggregateInput = {
   sessionCount?: Prisma.SortOrder
+  extraPicturesCount?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   amount?: Prisma.SortOrder
 }
@@ -657,6 +682,7 @@ export type BookingIntentMaxOrderByAggregateInput = {
   serviceId?: Prisma.SortOrder
   serviceVariantId?: Prisma.SortOrder
   sessionCount?: Prisma.SortOrder
+  extraPicturesCount?: Prisma.SortOrder
   bookingDate?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   paystackReference?: Prisma.SortOrder
@@ -679,6 +705,7 @@ export type BookingIntentMinOrderByAggregateInput = {
   serviceId?: Prisma.SortOrder
   serviceVariantId?: Prisma.SortOrder
   sessionCount?: Prisma.SortOrder
+  extraPicturesCount?: Prisma.SortOrder
   bookingDate?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   paystackReference?: Prisma.SortOrder
@@ -693,6 +720,7 @@ export type BookingIntentMinOrderByAggregateInput = {
 
 export type BookingIntentSumOrderByAggregateInput = {
   sessionCount?: Prisma.SortOrder
+  extraPicturesCount?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   amount?: Prisma.SortOrder
 }
@@ -766,6 +794,7 @@ export type BookingIntentCreateWithoutStudioInput = {
   serviceVariantId?: string | null
   addonIds?: Prisma.BookingIntentCreateaddonIdsInput | string[]
   sessionCount: number
+  extraPicturesCount?: number
   bookingDate: Date | string
   notes?: string | null
   paystackReference: string
@@ -788,6 +817,7 @@ export type BookingIntentUncheckedCreateWithoutStudioInput = {
   serviceVariantId?: string | null
   addonIds?: Prisma.BookingIntentCreateaddonIdsInput | string[]
   sessionCount: number
+  extraPicturesCount?: number
   bookingDate: Date | string
   notes?: string | null
   paystackReference: string
@@ -840,6 +870,7 @@ export type BookingIntentScalarWhereInput = {
   serviceVariantId?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
   addonIds?: Prisma.StringNullableListFilter<"BookingIntent">
   sessionCount?: Prisma.IntFilter<"BookingIntent"> | number
+  extraPicturesCount?: Prisma.IntFilter<"BookingIntent"> | number
   bookingDate?: Prisma.DateTimeFilter<"BookingIntent"> | Date | string
   notes?: Prisma.StringNullableFilter<"BookingIntent"> | string | null
   paystackReference?: Prisma.StringFilter<"BookingIntent"> | string
@@ -862,6 +893,7 @@ export type BookingIntentCreateManyStudioInput = {
   serviceVariantId?: string | null
   addonIds?: Prisma.BookingIntentCreateaddonIdsInput | string[]
   sessionCount: number
+  extraPicturesCount?: number
   bookingDate: Date | string
   notes?: string | null
   paystackReference: string
@@ -884,6 +916,7 @@ export type BookingIntentUpdateWithoutStudioInput = {
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   addonIds?: Prisma.BookingIntentUpdateaddonIdsInput | string[]
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paystackReference?: Prisma.StringFieldUpdateOperationsInput | string
@@ -906,6 +939,7 @@ export type BookingIntentUncheckedUpdateWithoutStudioInput = {
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   addonIds?: Prisma.BookingIntentUpdateaddonIdsInput | string[]
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paystackReference?: Prisma.StringFieldUpdateOperationsInput | string
@@ -928,6 +962,7 @@ export type BookingIntentUncheckedUpdateManyWithoutStudioInput = {
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   addonIds?: Prisma.BookingIntentUpdateaddonIdsInput | string[]
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paystackReference?: Prisma.StringFieldUpdateOperationsInput | string
@@ -953,6 +988,7 @@ export type BookingIntentSelect<ExtArgs extends runtime.Types.Extensions.Interna
   serviceVariantId?: boolean
   addonIds?: boolean
   sessionCount?: boolean
+  extraPicturesCount?: boolean
   bookingDate?: boolean
   notes?: boolean
   paystackReference?: boolean
@@ -977,6 +1013,7 @@ export type BookingIntentSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   serviceVariantId?: boolean
   addonIds?: boolean
   sessionCount?: boolean
+  extraPicturesCount?: boolean
   bookingDate?: boolean
   notes?: boolean
   paystackReference?: boolean
@@ -1001,6 +1038,7 @@ export type BookingIntentSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   serviceVariantId?: boolean
   addonIds?: boolean
   sessionCount?: boolean
+  extraPicturesCount?: boolean
   bookingDate?: boolean
   notes?: boolean
   paystackReference?: boolean
@@ -1025,6 +1063,7 @@ export type BookingIntentSelectScalar = {
   serviceVariantId?: boolean
   addonIds?: boolean
   sessionCount?: boolean
+  extraPicturesCount?: boolean
   bookingDate?: boolean
   notes?: boolean
   paystackReference?: boolean
@@ -1037,7 +1076,7 @@ export type BookingIntentSelectScalar = {
   createdAt?: boolean
 }
 
-export type BookingIntentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studioId" | "clientName" | "clientEmail" | "clientPhone" | "existingClientId" | "serviceId" | "serviceVariantId" | "addonIds" | "sessionCount" | "bookingDate" | "notes" | "paystackReference" | "totalAmount" | "amount" | "paymentPlan" | "status" | "expiresAt" | "resolvedBookingId" | "createdAt", ExtArgs["result"]["bookingIntent"]>
+export type BookingIntentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "studioId" | "clientName" | "clientEmail" | "clientPhone" | "existingClientId" | "serviceId" | "serviceVariantId" | "addonIds" | "sessionCount" | "extraPicturesCount" | "bookingDate" | "notes" | "paystackReference" | "totalAmount" | "amount" | "paymentPlan" | "status" | "expiresAt" | "resolvedBookingId" | "createdAt", ExtArgs["result"]["bookingIntent"]>
 export type BookingIntentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
 }
@@ -1064,6 +1103,7 @@ export type $BookingIntentPayload<ExtArgs extends runtime.Types.Extensions.Inter
     serviceVariantId: string | null
     addonIds: string[]
     sessionCount: number
+    extraPicturesCount: number
     bookingDate: Date
     notes: string | null
     paystackReference: string
@@ -1508,6 +1548,7 @@ export interface BookingIntentFieldRefs {
   readonly serviceVariantId: Prisma.FieldRef<"BookingIntent", 'String'>
   readonly addonIds: Prisma.FieldRef<"BookingIntent", 'String[]'>
   readonly sessionCount: Prisma.FieldRef<"BookingIntent", 'Int'>
+  readonly extraPicturesCount: Prisma.FieldRef<"BookingIntent", 'Int'>
   readonly bookingDate: Prisma.FieldRef<"BookingIntent", 'DateTime'>
   readonly notes: Prisma.FieldRef<"BookingIntent", 'String'>
   readonly paystackReference: Prisma.FieldRef<"BookingIntent", 'String'>

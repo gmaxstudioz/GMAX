@@ -79,9 +79,17 @@ import {
     bulkApprovePhotosContract,
     ClientPhotoAccessContract,
     ClientDownloadPhotoContract,
+    ClientSubmitReviewContract,
+    ClientUpdateDatesContract,
 } from "./photo.contract";
 import { CreateProductContract, DeleteProductContract, GetAllProductsContract, GetProductContract, PurchaseProductContract, RequestAccessLinkContract, RequestDownloadContract, UpdateProductContract, VerifyAccessTokenContract } from "./product.contract";
 import { GetPublicPortfolioContract } from "./portfolio.contract";
+import {
+    getPublicCoursesContract,
+    getPublicCourseContract,
+    registerForCourseContract,
+    verifyPaymentContract,
+} from "./academy.contract";
 
 
 // ─── Unified Contract Tree ────────────────────────────────────────────────────
@@ -190,6 +198,8 @@ export const contract = {
         bulkApprove: bulkApprovePhotosContract,
         clientAccess: ClientPhotoAccessContract,
         clientDownload: ClientDownloadPhotoContract,
+        clientUpdateDates: ClientUpdateDatesContract,
+        clientSubmitReview: ClientSubmitReviewContract,
     },
 
     product: {
@@ -207,6 +217,14 @@ export const contract = {
     // ── Portfolio ─────────────────────────────────────────────────────────────
     portfolio: {
         getPublic: GetPublicPortfolioContract,
+    },
+
+    // ── Academy ───────────────────────────────────────────────────────────────
+    academy: {
+        getPublicCourses: getPublicCoursesContract,
+        getPublicCourse: getPublicCourseContract,
+        register: registerForCourseContract,
+        verifyPayment: verifyPaymentContract,
     },
 } as const;
 

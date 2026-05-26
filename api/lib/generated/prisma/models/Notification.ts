@@ -36,6 +36,7 @@ export type NotificationMinAggregateOutputType = {
   deliveredAt: Date | null
   errorMessage: string | null
   bookingId: string | null
+  providerId: string | null
   createdAt: Date | null
 }
 
@@ -51,6 +52,7 @@ export type NotificationMaxAggregateOutputType = {
   deliveredAt: Date | null
   errorMessage: string | null
   bookingId: string | null
+  providerId: string | null
   createdAt: Date | null
 }
 
@@ -67,6 +69,7 @@ export type NotificationCountAggregateOutputType = {
   deliveredAt: number
   errorMessage: number
   bookingId: number
+  providerId: number
   createdAt: number
   _all: number
 }
@@ -84,6 +87,7 @@ export type NotificationMinAggregateInputType = {
   deliveredAt?: true
   errorMessage?: true
   bookingId?: true
+  providerId?: true
   createdAt?: true
 }
 
@@ -99,6 +103,7 @@ export type NotificationMaxAggregateInputType = {
   deliveredAt?: true
   errorMessage?: true
   bookingId?: true
+  providerId?: true
   createdAt?: true
 }
 
@@ -115,6 +120,7 @@ export type NotificationCountAggregateInputType = {
   deliveredAt?: true
   errorMessage?: true
   bookingId?: true
+  providerId?: true
   createdAt?: true
   _all?: true
 }
@@ -204,6 +210,7 @@ export type NotificationGroupByOutputType = {
   deliveredAt: Date | null
   errorMessage: string | null
   bookingId: string | null
+  providerId: string | null
   createdAt: Date
   _count: NotificationCountAggregateOutputType | null
   _min: NotificationMinAggregateOutputType | null
@@ -241,6 +248,7 @@ export type NotificationWhereInput = {
   deliveredAt?: Prisma.DateTimeNullableFilter<"Notification"> | Date | string | null
   errorMessage?: Prisma.StringNullableFilter<"Notification"> | string | null
   bookingId?: Prisma.StringNullableFilter<"Notification"> | string | null
+  providerId?: Prisma.StringNullableFilter<"Notification"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Notification"> | Date | string
   booking?: Prisma.XOR<Prisma.BookingNullableScalarRelationFilter, Prisma.BookingWhereInput> | null
 }
@@ -258,12 +266,14 @@ export type NotificationOrderByWithRelationInput = {
   deliveredAt?: Prisma.SortOrderInput | Prisma.SortOrder
   errorMessage?: Prisma.SortOrderInput | Prisma.SortOrder
   bookingId?: Prisma.SortOrderInput | Prisma.SortOrder
+  providerId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   booking?: Prisma.BookingOrderByWithRelationInput
 }
 
 export type NotificationWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  providerId?: string
   AND?: Prisma.NotificationWhereInput | Prisma.NotificationWhereInput[]
   OR?: Prisma.NotificationWhereInput[]
   NOT?: Prisma.NotificationWhereInput | Prisma.NotificationWhereInput[]
@@ -280,7 +290,7 @@ export type NotificationWhereUniqueInput = Prisma.AtLeast<{
   bookingId?: Prisma.StringNullableFilter<"Notification"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Notification"> | Date | string
   booking?: Prisma.XOR<Prisma.BookingNullableScalarRelationFilter, Prisma.BookingWhereInput> | null
-}, "id">
+}, "id" | "providerId">
 
 export type NotificationOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -295,6 +305,7 @@ export type NotificationOrderByWithAggregationInput = {
   deliveredAt?: Prisma.SortOrderInput | Prisma.SortOrder
   errorMessage?: Prisma.SortOrderInput | Prisma.SortOrder
   bookingId?: Prisma.SortOrderInput | Prisma.SortOrder
+  providerId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.NotificationCountOrderByAggregateInput
   _max?: Prisma.NotificationMaxOrderByAggregateInput
@@ -317,6 +328,7 @@ export type NotificationScalarWhereWithAggregatesInput = {
   deliveredAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Notification"> | Date | string | null
   errorMessage?: Prisma.StringNullableWithAggregatesFilter<"Notification"> | string | null
   bookingId?: Prisma.StringNullableWithAggregatesFilter<"Notification"> | string | null
+  providerId?: Prisma.StringNullableWithAggregatesFilter<"Notification"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Notification"> | Date | string
 }
 
@@ -332,6 +344,7 @@ export type NotificationCreateInput = {
   sentAt?: Date | string | null
   deliveredAt?: Date | string | null
   errorMessage?: string | null
+  providerId?: string | null
   createdAt?: Date | string
   booking?: Prisma.BookingCreateNestedOneWithoutNotificationsInput
 }
@@ -349,6 +362,7 @@ export type NotificationUncheckedCreateInput = {
   deliveredAt?: Date | string | null
   errorMessage?: string | null
   bookingId?: string | null
+  providerId?: string | null
   createdAt?: Date | string
 }
 
@@ -364,6 +378,7 @@ export type NotificationUpdateInput = {
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   booking?: Prisma.BookingUpdateOneWithoutNotificationsNestedInput
 }
@@ -381,6 +396,7 @@ export type NotificationUncheckedUpdateInput = {
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bookingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -397,6 +413,7 @@ export type NotificationCreateManyInput = {
   deliveredAt?: Date | string | null
   errorMessage?: string | null
   bookingId?: string | null
+  providerId?: string | null
   createdAt?: Date | string
 }
 
@@ -412,6 +429,7 @@ export type NotificationUpdateManyMutationInput = {
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -428,6 +446,7 @@ export type NotificationUncheckedUpdateManyInput = {
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bookingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -462,6 +481,7 @@ export type NotificationCountOrderByAggregateInput = {
   deliveredAt?: Prisma.SortOrder
   errorMessage?: Prisma.SortOrder
   bookingId?: Prisma.SortOrder
+  providerId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -477,6 +497,7 @@ export type NotificationMaxOrderByAggregateInput = {
   deliveredAt?: Prisma.SortOrder
   errorMessage?: Prisma.SortOrder
   bookingId?: Prisma.SortOrder
+  providerId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -492,6 +513,7 @@ export type NotificationMinOrderByAggregateInput = {
   deliveredAt?: Prisma.SortOrder
   errorMessage?: Prisma.SortOrder
   bookingId?: Prisma.SortOrder
+  providerId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -566,6 +588,7 @@ export type NotificationCreateWithoutBookingInput = {
   sentAt?: Date | string | null
   deliveredAt?: Date | string | null
   errorMessage?: string | null
+  providerId?: string | null
   createdAt?: Date | string
 }
 
@@ -581,6 +604,7 @@ export type NotificationUncheckedCreateWithoutBookingInput = {
   sentAt?: Date | string | null
   deliveredAt?: Date | string | null
   errorMessage?: string | null
+  providerId?: string | null
   createdAt?: Date | string
 }
 
@@ -626,6 +650,7 @@ export type NotificationScalarWhereInput = {
   deliveredAt?: Prisma.DateTimeNullableFilter<"Notification"> | Date | string | null
   errorMessage?: Prisma.StringNullableFilter<"Notification"> | string | null
   bookingId?: Prisma.StringNullableFilter<"Notification"> | string | null
+  providerId?: Prisma.StringNullableFilter<"Notification"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Notification"> | Date | string
 }
 
@@ -641,6 +666,7 @@ export type NotificationCreateManyBookingInput = {
   sentAt?: Date | string | null
   deliveredAt?: Date | string | null
   errorMessage?: string | null
+  providerId?: string | null
   createdAt?: Date | string
 }
 
@@ -656,6 +682,7 @@ export type NotificationUpdateWithoutBookingInput = {
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -671,6 +698,7 @@ export type NotificationUncheckedUpdateWithoutBookingInput = {
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -686,6 +714,7 @@ export type NotificationUncheckedUpdateManyWithoutBookingInput = {
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -704,6 +733,7 @@ export type NotificationSelect<ExtArgs extends runtime.Types.Extensions.Internal
   deliveredAt?: boolean
   errorMessage?: boolean
   bookingId?: boolean
+  providerId?: boolean
   createdAt?: boolean
   booking?: boolean | Prisma.Notification$bookingArgs<ExtArgs>
 }, ExtArgs["result"]["notification"]>
@@ -721,6 +751,7 @@ export type NotificationSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   deliveredAt?: boolean
   errorMessage?: boolean
   bookingId?: boolean
+  providerId?: boolean
   createdAt?: boolean
   booking?: boolean | Prisma.Notification$bookingArgs<ExtArgs>
 }, ExtArgs["result"]["notification"]>
@@ -738,6 +769,7 @@ export type NotificationSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   deliveredAt?: boolean
   errorMessage?: boolean
   bookingId?: boolean
+  providerId?: boolean
   createdAt?: boolean
   booking?: boolean | Prisma.Notification$bookingArgs<ExtArgs>
 }, ExtArgs["result"]["notification"]>
@@ -755,10 +787,11 @@ export type NotificationSelectScalar = {
   deliveredAt?: boolean
   errorMessage?: boolean
   bookingId?: boolean
+  providerId?: boolean
   createdAt?: boolean
 }
 
-export type NotificationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "clientPhone" | "clientEmail" | "clientName" | "type" | "message" | "channel" | "status" | "sentAt" | "deliveredAt" | "errorMessage" | "bookingId" | "createdAt", ExtArgs["result"]["notification"]>
+export type NotificationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "clientPhone" | "clientEmail" | "clientName" | "type" | "message" | "channel" | "status" | "sentAt" | "deliveredAt" | "errorMessage" | "bookingId" | "providerId" | "createdAt", ExtArgs["result"]["notification"]>
 export type NotificationInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   booking?: boolean | Prisma.Notification$bookingArgs<ExtArgs>
 }
@@ -787,6 +820,7 @@ export type $NotificationPayload<ExtArgs extends runtime.Types.Extensions.Intern
     deliveredAt: Date | null
     errorMessage: string | null
     bookingId: string | null
+    providerId: string | null
     createdAt: Date
   }, ExtArgs["result"]["notification"]>
   composites: {}
@@ -1224,6 +1258,7 @@ export interface NotificationFieldRefs {
   readonly deliveredAt: Prisma.FieldRef<"Notification", 'DateTime'>
   readonly errorMessage: Prisma.FieldRef<"Notification", 'String'>
   readonly bookingId: Prisma.FieldRef<"Notification", 'String'>
+  readonly providerId: Prisma.FieldRef<"Notification", 'String'>
   readonly createdAt: Prisma.FieldRef<"Notification", 'DateTime'>
 }
     

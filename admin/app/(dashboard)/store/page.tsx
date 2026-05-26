@@ -38,6 +38,12 @@ export default async function Page() {
       }
   });
 
+  const totalSold = products.reduce((acc, p) => acc + p._count.purchases, 0);
+  const totalRevenue = products.reduce((acc, p) => {
+      const price = p.salePrice ?? p.price;
+      return acc + (p._count.purchases * price.toNumber());
+  }, 0);
+
   // Serialize Prisma Decimal objects to plain numbers for Client Components
   const serializedProducts = JSON.parse(JSON.stringify(products, (_key, value) =>
       value !== null && typeof value === "object" && typeof value.toNumber === "function"
@@ -47,7 +53,11 @@ export default async function Page() {
 
   return (
     <div className="flex flex-col gap-4 py-4 px-4 md:gap-6 md:py-6 md:px-6">
-      <StoreView initialProducts={serializedProducts} />
+      <StoreView 
+          initialProducts={serializedProducts} 
+          totalSold={totalSold}
+          totalRevenue={totalRevenue}
+      />
     </div>
   )
 }

@@ -20,6 +20,7 @@ export interface ServiceVariantOutput {
 export interface PublicServiceOutput {
     id: string;
     name: string;
+    categoryId?: string;
     isAddon: boolean;
     description: string;
     features: string[];

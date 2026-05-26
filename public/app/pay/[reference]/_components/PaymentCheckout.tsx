@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { verifyPurchase } from "@/lib/api";
+import { verifyPurchase, verifyBookingPayment } from "@/lib/api";
 import { tryCatch } from "@/hooks/try-catch";
 import { toast } from "sonner";
 import { Loader2, CheckCircle2, PartyPopperIcon, XCircleIcon, Download, ArrowRight } from "lucide-react";
@@ -91,13 +91,25 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
                 currency: "NGN",
                 onSuccess: async () => {
                     setStatus("processing");
-                    const { data: result, error } = await tryCatch(verifyPurchase(reference));
-                    if (error || !result?.verified) {
-                        setStatus("failed");
-                        toast.error("Payment verification failed. Please contact support.");
+                    
+                    if (purchaseType === "booking") {
+                        const { data: result, error } = await tryCatch(verifyBookingPayment(reference));
+                        if (error || result?.status === "FAILED") {
+                            setStatus("failed");
+                            toast.error("Payment verification failed. Please contact support.");
+                        } else {
+                            setStatus("success");
+                            toast.success("Payment successful!");
+                        }
                     } else {
-                        setStatus("success");
-                        toast.success("Payment successful!");
+                        const { data: result, error } = await tryCatch(verifyPurchase(reference));
+                        if (error || !result?.verified) {
+                            setStatus("failed");
+                            toast.error("Payment verification failed. Please contact support.");
+                        } else {
+                            setStatus("success");
+                            toast.success("Payment successful!");
+                        }
                     }
                 },
                 onCancel: () => {

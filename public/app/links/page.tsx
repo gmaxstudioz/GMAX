@@ -44,6 +44,7 @@ export default function LinksPage() {
   const [isShareOpen, setIsShareOpen] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line
     setMounted(true);
   }, []);
 

@@ -8,6 +8,8 @@ import {
     ClientPhotoAccessOutputSchema,
     ClientDownloadPhotoSchema,
     ClientDownloadOutputSchema,
+    ClientSubmitReviewSchema,
+    ClientUpdateDatesSchema,
 } from "@/schema/photo.schema";
 import {
     PhotoOutputSchema,
@@ -93,3 +95,27 @@ export const bulkApprovePhotosContract = baseContract
         approved: z.number().int(),
         failed: z.number().int(),
     }));
+
+export const ClientSubmitReviewContract = baseContract
+    .route({
+        method: "POST",
+        path: "/photos/{bookingId}/client-review",
+        successStatus: 200,
+        summary: "Submit a client review / revision request",
+        description: "Submit a client review / revision request",
+        tags: ["Photos"],
+    })
+    .input(ClientSubmitReviewSchema)
+    .output(z.object({ success: z.boolean(), message: z.string() }));
+
+export const ClientUpdateDatesContract = baseContract
+    .route({
+        method: "POST",
+        path: "/photos/{bookingId}/client-dates",
+        successStatus: 200,
+        summary: "Update client event dates",
+        description: "Update client birth date and wedding date",
+        tags: ["Photos"],
+    })
+    .input(ClientUpdateDatesSchema)
+    .output(z.object({ success: z.boolean(), message: z.string() }));

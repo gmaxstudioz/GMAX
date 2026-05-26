@@ -322,14 +322,14 @@ export default function Home() {
                       "md:translate-y-4 md:group-hover:translate-y-0",
                       isActive ? "translate-y-0" : "translate-y-4"
                     )}>
-                      {work.title || work.category}
+                      {work.category}
                     </span>
                   </div>
                 </div>
               );
             })}
           </div>
-          <div className="flex flex-col items-center gap-6 justify-center mt-16 bg-[#1f1f1f]/50 py-4 md:py-10 px-4 rounded-2xl">
+          <div className="flex flex-col items-center gap-6 justify-center mt-16 bg-primary/20 py-4 md:py-10 px-4 rounded-2xl">
             <p ref={worksTextRef} className="text-2xl md:text-4xl max-w-4xl text-center font-heading leading-snug">
               {footerWords.map((word, i) => (
                 <span key={i} className="inline-block overflow-hidden relative mr-[0.25em] pb-2 -mb-2">

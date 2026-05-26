@@ -134,6 +134,21 @@ export async function initializePayment(bookingId: string) {
 
         revalidatePath("/studios", "layout");
 
+        if (booking.client?.phone) {
+            try {
+                const { sendPaymentLinkSMS } = await import("../termii");
+                await sendPaymentLinkSMS({
+                    phone: booking.client.phone,
+                    clientName: booking.client.name,
+                    studioName: booking.studio?.name ?? "GMAX Studioz",
+                    amount: balanceDue,
+                    paymentLink: paystackRes.data.authorization_url,
+                });
+            } catch (notifyErr) {
+                console.error("[Payment] Failed to send payment link SMS", notifyErr);
+            }
+        }
+
         return {
             status: "success",
             data: {

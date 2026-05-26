@@ -26,10 +26,11 @@ export const CalendarBookingSchema = BookingSchema.pick({
 
 // ── toDateKey ────────────────────────────────────────────────────────────────
 
-export function toDateKey(date: Date): string {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
+export function toDateKey(date: Date | string): string {
+    const dObj = new Date(date);
+    const y = dObj.getFullYear();
+    const m = String(dObj.getMonth() + 1).padStart(2, "0");
+    const d = String(dObj.getDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
 }
 

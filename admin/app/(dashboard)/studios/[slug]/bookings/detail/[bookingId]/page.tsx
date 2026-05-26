@@ -21,7 +21,7 @@ import { PaymentLinkCard } from "./_components/PaymentLinkCard";
 import { DeleteBookingButton } from "./_components/DeleteBookingButton";
 import { DeliverAssetsButton } from "./_components/DeliverAssetsButton";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Camera, Download, Upload } from "@hugeicons/core-free-icons";
 
@@ -225,8 +225,13 @@ export default async function BookingDetailPage({ params }: Props) {
                     <p className="text-muted-foreground text-sm">{studio.name}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    {serializedBooking.photos.length > 0 && serializedBooking.deliveryStatus !== "DELIVERED" && (
-                        <DeliverAssetsButton bookingId={serializedBooking.id} />
+                    {serializedBooking.photos.length > 0 && (
+                        <DeliverAssetsButton 
+                            bookingId={serializedBooking.id} 
+                            isDelivered={serializedBooking.deliveryStatus === "DELIVERED"} 
+                            hasOutstandingBalance={balanceDue > 0}
+                            balanceDue={balanceDue}
+                        />
                     )}
                     <UpdateBookingDialog
                         bookingId={serializedBooking.id}
@@ -247,6 +252,7 @@ export default async function BookingDetailPage({ params }: Props) {
                             addonIds: serializedBooking.addons.map((addon: { id: string; variants?: { id: string }[] }) => `${addon.id}:${addon.variants?.[0]?.id}`),
                             totalAmount: Number(serializedBooking.totalAmount),
                             paymentPlan: serializedBooking.paymentPlan,
+                            extraPicturesCount: serializedBooking.extraPicturesCount,
                         }}
                     />
                     {isManager && <DeleteBookingButton bookingId={serializedBooking.id} slug={studio.slug} />}
@@ -289,8 +295,11 @@ export default async function BookingDetailPage({ params }: Props) {
                             </InfoRow>
                             <InfoRow icon={ClockIcon} label="Time">
                                 <span className="break-words">
-                                    {format(new Date(serializedBooking.bookingDate), "hh:mm a")} · {totalDuration}min ({serializedBooking.sessionCount} {serializedBooking.sessionCount > 1 ? "sessions" : "session"} × {sessionDuration}m)
+                                    {format(new Date(serializedBooking.bookingDate), "hh:mm a")} · {totalDuration}min
                                 </span>
+                            </InfoRow>
+                            <InfoRow icon={PackageIcon} label="Outfits">
+                                <span>{serializedBooking.sessionCount} {serializedBooking.sessionCount > 1 ? "outfits" : "outfit"}</span>
                             </InfoRow>
                             <InfoRow icon={PackageIcon} label="Service">
                                 <div className="flex flex-col gap-1">
@@ -307,6 +316,11 @@ export default async function BookingDetailPage({ params }: Props) {
                                             <span key={addon.id}>{addon.name}</span>
                                         ))}
                                     </div>
+                                </InfoRow>
+                            )}
+                            {serializedBooking.extraPicturesCount > 0 && (
+                                <InfoRow icon={PackageIcon} label="Extra Pictures">
+                                    <span>{serializedBooking.extraPicturesCount}</span>
                                 </InfoRow>
                             )}
                             <InfoRow icon={UserIcon} label="Client">
@@ -354,6 +368,7 @@ export default async function BookingDetailPage({ params }: Props) {
                                                 <DialogContent>
                                                     <DialogHeader>
                                                         <DialogTitle className="font-heading">Upload Photos & Media</DialogTitle>
+                                                        <DialogDescription>Upload files for this booking.</DialogDescription>
                                                     </DialogHeader>
                                                     <MediaUploader bookingId={serializedBooking.id} />
                                                 </DialogContent>

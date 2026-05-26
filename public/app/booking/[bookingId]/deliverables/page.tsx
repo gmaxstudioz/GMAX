@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { getClientPhotos, downloadPhoto } from "@/lib/api";
+import { getClientPhotos, downloadPhoto, clientSubmitReview, clientUpdateDates } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, DownloadIcon, Image as ImageIcon, LockIcon } from "lucide-react";
+import { Loader2, DownloadIcon, Image as ImageIcon, LockIcon, AlertCircle, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 
@@ -20,8 +21,17 @@ export default function DeliverablesPage() {
 
     const [accessCode, setAccessCode] = useState(initialCode);
     const [isVerifying, setIsVerifying] = useState(false);
-    const [data, setData] = useState<{ clientName: string; serviceName: string; bookingDate: string; totalPhotos: number; photos: Array<{ id: string; fileName: string; thumbnailUrl: string; approvalStatus: string; uploadedAt: string; downloadCount: number }> } | null>(null);
+    const [data, setData] = useState<{ clientName: string; serviceName: string; bookingDate: string; deliveredAt: string | null; birthDate?: string | null; weddingDate?: string | null; totalPhotos: number; photos: Array<{ id: string; fileName: string; thumbnailUrl: string; approvalStatus: string; uploadedAt: string; downloadCount: number }> } | null>(null);
     const [error, setError] = useState<string | null>(null);
+
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [reviewText, setReviewText] = useState("");
+    const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
+    const [isDatesModalOpen, setIsDatesModalOpen] = useState(false);
+    const [eventType, setEventType] = useState<"birthday" | "wedding">("birthday");
+    const [eventDate, setEventDate] = useState("");
+    const [isSubmittingDates, setIsSubmittingDates] = useState(false);
 
     // If code is in URL, verify automatically
     useEffect(() => {
@@ -48,6 +58,10 @@ export default function DeliverablesPage() {
             if (!initialCode) {
                 router.replace(`/booking/${bookingId}/deliverables?code=${codeToVerify}`);
             }
+
+            if (res.birthDate === null && res.weddingDate === null) {
+                setTimeout(() => setIsDatesModalOpen(true), 1500);
+            }
         } catch (err) {
             console.error(err);
             const errorMessage = err instanceof Error ? err.message : "Invalid access code or booking not found.";
@@ -55,6 +69,49 @@ export default function DeliverablesPage() {
             setData(null);
         } finally {
             setIsVerifying(false);
+        }
+    }
+
+    async function handleReviewSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        if (!reviewText.trim()) return;
+        
+        setIsSubmittingReview(true);
+        try {
+            await clientSubmitReview({ bookingId, accessCode, description: reviewText });
+            toast.success("Review submitted successfully! Our team has been notified.");
+            setIsReviewModalOpen(false);
+            setReviewText("");
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Failed to submit review.");
+        } finally {
+            setIsSubmittingReview(false);
+        }
+    }
+
+    async function handleDatesSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        setIsSubmittingDates(true);
+        try {
+            await clientUpdateDates({ 
+                bookingId, 
+                accessCode, 
+                eventType,
+                eventDate: eventDate || undefined
+            });
+            toast.success("Dates saved successfully!");
+            setIsDatesModalOpen(false);
+            if (data) {
+                setData({ 
+                    ...data, 
+                    birthDate: eventType === "birthday" && eventDate ? eventDate : data.birthDate, 
+                    weddingDate: eventType === "wedding" && eventDate ? eventDate : data.weddingDate 
+                });
+            }
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Failed to save dates.");
+        } finally {
+            setIsSubmittingDates(false);
         }
     }
 
@@ -81,7 +138,7 @@ export default function DeliverablesPage() {
 
     if (!data) {
         return (
-            <div className="min-h-[80vh] flex items-center justify-center p-4 bg-zinc-50 dark:bg-zinc-950">
+            <div className="min-h-[80vh] flex items-center justify-center p-4">
                 <Card className="w-full max-w-md shadow-xl border-zinc-200 dark:border-zinc-800">
                     <CardHeader className="text-center pb-2">
                         <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
@@ -128,12 +185,29 @@ export default function DeliverablesPage() {
                         <p className="text-muted-foreground">
                             Here are your photos for the <span className="font-semibold text-foreground">{data.serviceName}</span> session on {new Date(data.bookingDate).toLocaleDateString()}.
                         </p>
+                        <Button 
+                            variant="link" 
+                            className="p-0 h-auto text-primary mt-2"
+                            onClick={() => setIsDatesModalOpen(true)}
+                        >
+                            Update Event Date
+                        </Button>
                     </div>
                     <div className="flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full font-medium">
                         <ImageIcon className="w-4 h-4" />
                         {data.totalPhotos} Photos
                     </div>
                 </div>
+
+                {/* Expiration Warning */}
+                {data.photos.length > 0 && (
+                    <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                        <div className="text-sm">
+                            <strong>Notice:</strong> Your photos will be permanently deleted 5 days after delivery. Please download all your photos before they expire.
+                        </div>
+                    </div>
+                )}
 
                 {/* Gallery Grid */}
                 {data.photos.length === 0 ? (
@@ -183,7 +257,136 @@ export default function DeliverablesPage() {
                         ))}
                     </div>
                 )}
+
+                {/* Delivery Errors Warning */}
+                {data.photos.length > 0 && (
+                    <div className="mt-12 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800/50 rounded-2xl p-6">
+                        <h4 className="font-semibold text-orange-800 dark:text-orange-300 flex items-center gap-2 mb-2">
+                            <AlertCircle className="w-5 h-5" /> Delivery Errors
+                        </h4>
+                        <p className="text-orange-700 dark:text-orange-400 text-sm">
+                            You have 24 hours from the time of delivery to report any errors or issues with the images to allow us address and rectify them promptly.
+                        </p>
+                        {(() => {
+                            const deliveredAt = data.deliveredAt ? new Date(data.deliveredAt) : new Date(data.photos[0]?.uploadedAt || Date.now());
+                            const hoursSinceDelivery = (Date.now() - deliveredAt.getTime()) / (1000 * 60 * 60);
+                            const canReportIssue = hoursSinceDelivery <= 24;
+                            
+                            return (
+                                <Button 
+                                    variant="outline" 
+                                    className="mt-4 border-orange-200 hover:bg-orange-100 text-orange-800 dark:border-orange-800 dark:hover:bg-orange-900 dark:text-orange-300"
+                                    onClick={() => setIsReviewModalOpen(true)}
+                                    disabled={!canReportIssue}
+                                    title={!canReportIssue ? "The 24-hour reporting window has expired." : ""}
+                                >
+                                    Report an Issue
+                                </Button>
+                            );
+                        })()}
+                    </div>
+                )}
             </div>
+
+            {/* Floating WhatsApp Button */}
+            <a 
+                href="https://wa.me/2348122223353" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="fixed bottom-6 right-6 bg-[#25D366] text-white p-4 rounded-full shadow-lg hover:scale-105 transition-transform z-40 flex items-center justify-center group"
+            >
+                <MessageCircle className="w-6 h-6" />
+                <span className="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-[120px] group-hover:ml-2 transition-all duration-300 font-medium text-sm">
+                    Chat with us
+                </span>
+            </a>
+
+            {/* Review Modal */}
+            {isReviewModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <Card className="w-full max-w-lg shadow-2xl animate-in fade-in zoom-in-95 duration-200 border-0">
+                        <CardHeader>
+                            <CardTitle>Request a Revision</CardTitle>
+                            <CardDescription>Describe the errors or changes you need in the delivered photos.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <form onSubmit={handleReviewSubmit} className="space-y-4">
+                                <Textarea 
+                                    placeholder="E.g., Please fix the lighting on photo IMG_001..." 
+                                    value={reviewText}
+                                    onChange={(e) => setReviewText(e.target.value)}
+                                    className="min-h-[120px] resize-none"
+                                    required
+                                />
+                                <div className="flex justify-end gap-2">
+                                    <Button type="button" variant="ghost" onClick={() => setIsReviewModalOpen(false)}>Cancel</Button>
+                                    <Button type="submit" disabled={isSubmittingReview || !reviewText.trim()}>
+                                        {isSubmittingReview ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                        Submit Request
+                                    </Button>
+                                </div>
+                            </form>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {/* Dates Collection Modal */}
+            {isDatesModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <Card className="w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200 border-0">
+                        <CardHeader>
+                            <CardTitle>Let&apos;s Celebrate You!</CardTitle>
+                            <CardDescription>Add your special dates so we can celebrate with you and send you special offers.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <form onSubmit={handleDatesSubmit} className="space-y-4">
+                                <div>
+                                    <label className="text-sm font-medium mb-3 block">What are we celebrating?</label>
+                                    <div className="flex items-center gap-4 mb-4">
+                                        <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                            <input 
+                                                type="radio" 
+                                                name="eventType" 
+                                                value="birthday"
+                                                checked={eventType === "birthday"}
+                                                onChange={() => setEventType("birthday")}
+                                                className="w-4 h-4 text-primary"
+                                            />
+                                            Birthday
+                                        </label>
+                                        <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                            <input 
+                                                type="radio" 
+                                                name="eventType" 
+                                                value="wedding"
+                                                checked={eventType === "wedding"}
+                                                onChange={() => setEventType("wedding")}
+                                                className="w-4 h-4 text-primary"
+                                            />
+                                            Wedding / Anniversary
+                                        </label>
+                                    </div>
+                                    <label className="text-sm font-medium mb-1 block">Date</label>
+                                    <Input 
+                                        type="date" 
+                                        value={eventDate}
+                                        onChange={(e) => setEventDate(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <div className="flex justify-end gap-2 pt-2">
+                                    <Button type="button" variant="ghost" onClick={() => setIsDatesModalOpen(false)}>Skip for now</Button>
+                                    <Button type="submit" disabled={isSubmittingDates}>
+                                        {isSubmittingDates ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                        Save Dates
+                                    </Button>
+                                </div>
+                            </form>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
         </div>
     );
 }

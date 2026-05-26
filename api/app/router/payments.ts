@@ -245,7 +245,52 @@ export const getPublicPaymentDetails = os.payment.getPublicPaymentDetails
         });
 
         if (!payment) {
-            throw new Error("Payment not found");
+            // Check if it's a pending booking intent
+            const intent = await prisma.bookingIntent.findUnique({
+                where: { paystackReference: input.reference },
+                include: { studio: true }
+            });
+
+            if (!intent) {
+                throw new Error("Payment not found");
+            }
+
+            const service = await prisma.service.findUnique({
+                where: { id: intent.serviceId },
+                include: { studioSession: true }
+            });
+
+            const uniqueAddonIds = [...new Set(intent.addonIds.map(id => id.split(":")[0]))];
+            const addons = uniqueAddonIds.length > 0 ? await prisma.service.findMany({
+                where: { id: { in: uniqueAddonIds } }
+            }) : [];
+
+            return {
+                amount: intent.amount.toString(),
+                status: intent.status === "COMPLETED" ? "PAID" : "PENDING",
+                isAlreadyPaid: intent.status === "COMPLETED",
+                booking: {
+                    sessionCount: intent.sessionCount,
+                    bookingDate: intent.bookingDate.toISOString(),
+                    client: {
+                        name: intent.clientName,
+                        email: intent.clientEmail || "",
+                    },
+                    service: service ? {
+                        name: service.name,
+                        duration: service.studioSession?.duration || 45,
+                    } : null,
+                    studio: intent.studio ? {
+                        name: intent.studio.name,
+                        logo: intent.studio.logo,
+                    } : null,
+                    addons: addons.map(a => ({
+                        id: a.id,
+                        name: a.name,
+                    })),
+                },
+                productAccess: null,
+            };
         }
 
         const isAlreadyPaid = payment.status === "PAID";

@@ -85,8 +85,6 @@ export async function POST(req: Request) {
             return Response.json({ received: true });
         }
 
-        let bookingId = "";
-
         await prisma.$transaction(async (tx) => {
             // 1. Resolve client
             let clientId = intent.existingClientId;
@@ -131,6 +129,7 @@ export async function POST(req: Request) {
                 data: {
                     bookingDate:   intent.bookingDate,
                     sessionCount:  intent.sessionCount,
+                    extraPicturesCount: intent.extraPicturesCount,
                     notes:         intent.notes,
                     totalAmount:   intent.totalAmount,
                     paymentPlan:   intent.paymentPlan,
@@ -148,8 +147,6 @@ export async function POST(req: Request) {
                     }),
                 },
             });
-
-            bookingId = booking.id;
 
             // 3. Create payment record
             const installmentType = intent.paymentPlan === "FULL" ? "FULL" : "DEPOSIT";

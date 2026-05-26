@@ -138,7 +138,16 @@ export type NotificationChannel = (typeof NotificationChannel)[keyof typeof Noti
 export const NotificationStatus = {
   PENDING: 'PENDING',
   SENT: 'SENT',
+  DELIVERED: 'DELIVERED',
   FAILED: 'FAILED'
 } as const
 
 export type NotificationStatus = (typeof NotificationStatus)[keyof typeof NotificationStatus]
+
+
+export const RevisionStatus = {
+  PENDING: 'PENDING',
+  RESOLVED: 'RESOLVED'
+} as const
+
+export type RevisionStatus = (typeof RevisionStatus)[keyof typeof RevisionStatus]

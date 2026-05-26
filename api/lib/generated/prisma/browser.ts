@@ -157,3 +157,28 @@ export type ProductAccess = Prisma.ProductAccessModel
  * 
  */
 export type PortfolioItem = Prisma.PortfolioItemModel
+/**
+ * Model RevisionRequest
+ * 
+ */
+export type RevisionRequest = Prisma.RevisionRequestModel
+/**
+ * Model AcademyCourse
+ * 
+ */
+export type AcademyCourse = Prisma.AcademyCourseModel
+/**
+ * Model AcademyBatch
+ * 
+ */
+export type AcademyBatch = Prisma.AcademyBatchModel
+/**
+ * Model AcademyModule
+ * 
+ */
+export type AcademyModule = Prisma.AcademyModuleModel
+/**
+ * Model AcademyStudent
+ * 
+ */
+export type AcademyStudent = Prisma.AcademyStudentModel

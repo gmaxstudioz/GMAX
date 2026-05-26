@@ -18,7 +18,6 @@ import Link from "next/link";
 import { ArrowRightIcon, BadgeCheck, MailIcon, Phone, SearchIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
-import { ClientWithBookings } from "@/lib/schemas/client";
 import { useRouter } from "next/navigation";
 
 

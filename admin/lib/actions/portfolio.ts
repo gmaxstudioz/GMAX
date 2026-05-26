@@ -38,11 +38,12 @@ export async function createPortfolioItem(data: {
 
     try {
         const item = await prisma.$transaction(async (tx) => {
-            const [sequenceRow] = await tx.$queryRaw<{ nextval: string }[]>`
-                SELECT nextval('portfolio_item_sort_order_seq') AS nextval;
-            `;
+            const lastItem = await tx.portfolioItem.findFirst({
+                orderBy: { sortOrder: 'desc' },
+                select: { sortOrder: true }
+            });
 
-            const sortOrder = Number(sequenceRow?.nextval ?? 1);
+            const sortOrder = (lastItem?.sortOrder ?? 0) + 1;
 
             return await tx.portfolioItem.create({
                 data: {

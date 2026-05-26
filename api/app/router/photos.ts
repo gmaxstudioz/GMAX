@@ -3,6 +3,7 @@ import { getPresignedUrl } from "@/lib/r2";
 import { BaseContext, optionalAuthMiddleware } from "./middleware";
 import { implement } from "@orpc/server";
 import { contract } from "@/app/contract";
+import { sendReviewNotificationEmail } from "@/lib/termii";
 
 const os = implement(contract).$context<BaseContext>();
 
@@ -52,6 +53,9 @@ export const clientPhotoAccess = os.photo.clientAccess
             clientName: booking.client.name,
             serviceName: booking.service.name,
             bookingDate: booking.bookingDate.toISOString(),
+            deliveredAt: booking.deliveredAt?.toISOString() ?? null,
+            birthDate: booking.client.birthDate?.toISOString() ?? null,
+            weddingDate: booking.client.weddingDate?.toISOString() ?? null,
             photos,
             totalPhotos: photos.length,
         };
@@ -104,4 +108,99 @@ export const clientDownloadPhoto = os.photo.clientDownload
             fileName: photo.fileName,
             expiresAt: expiresAt.toISOString(),
         };
+    });
+
+export const clientSubmitReview = os.photo.clientSubmitReview
+    .use(optionalAuthMiddleware)
+    .handler(async ({ input, errors }) => {
+        const booking = await prisma.booking.findUnique({
+            where: { id: input.bookingId },
+            include: {
+                client: true,
+                service: true,
+                studio: {
+                    include: { members: { include: { user: true } } },
+                },
+                member: { include: { user: true } },
+            },
+        });
+
+        if (!booking) throw errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: input.bookingId } });
+        if (!booking.accessCode || booking.accessCode !== input.accessCode) {
+            throw errors.FORBIDDEN({ message: "Invalid access code." });
+        }
+
+        // Save review/revision request to the database
+        await prisma.revisionRequest.create({
+            data: {
+                bookingId: booking.id,
+                description: input.description,
+            },
+        });
+
+        // Try to send email notifications to manager/admin and the assigned staff
+        const dashboardLink = `${process.env.PORTAL_URL || "http://localhost:3000"}/studios/${booking.studio.slug}/reviews`;
+        const sentEmails = new Set<string>();
+
+        const sendTo = async (email: string, name: string) => {
+            if (!email || sentEmails.has(email)) return;
+            sentEmails.add(email);
+            try {
+                await sendReviewNotificationEmail({
+                    email,
+                    recipientName: name,
+                    clientName: booking.client.name,
+                    serviceName: booking.service.name,
+                    reviewContent: input.description,
+                    dashboardLink,
+                });
+            } catch (err) {
+                console.error(`Failed to send review notification to ${email}:`, err);
+            }
+        };
+
+        // Notify assigned staff
+        if (booking.member?.user?.email) {
+            await sendTo(booking.member.user.email, booking.member.user.name || "Staff");
+        }
+
+        // Notify admins/owners
+        for (const m of booking.studio.members) {
+            if (m.role === "admin" || m.role === "owner") {
+                if (m.user?.email) {
+                    await sendTo(m.user.email, m.user.name || "Admin");
+                }
+            }
+        }
+
+        return { success: true, message: "Review submitted successfully" };
+    });
+
+export const clientUpdateDates = os.photo.clientUpdateDates
+    .use(optionalAuthMiddleware)
+    .handler(async ({ input, errors }) => {
+        const booking = await prisma.booking.findUnique({
+            where: { id: input.bookingId },
+            include: { client: true },
+        });
+
+        if (!booking) throw errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: input.bookingId } });
+        if (!booking.accessCode || booking.accessCode !== input.accessCode) {
+            throw errors.FORBIDDEN({ message: "Invalid access code." });
+        }
+
+        const dataToUpdate: Record<string, unknown> = {};
+        if (input.eventDate && input.eventType) {
+            if (input.eventType === "birthday") dataToUpdate.birthDate = new Date(input.eventDate);
+            if (input.eventType === "wedding") dataToUpdate.weddingDate = new Date(input.eventDate);
+        }
+
+        if (Object.keys(dataToUpdate).length > 0) {
+            await prisma.client.update({
+                where: { id: booking.clientId },
+                data: dataToUpdate,
+            });
+        }
+
+        return { success: true, message: "Dates updated successfully" };
     });

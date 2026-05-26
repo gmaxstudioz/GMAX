@@ -5,6 +5,9 @@ export interface ClientPhotoAccessOutput {
     clientName: string;
     serviceName: string;
     bookingDate: string;
+    deliveredAt: string | null;
+    birthDate?: string | null;
+    weddingDate?: string | null;
     photos: {
         id: string;
         fileName: string;

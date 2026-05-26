@@ -28,11 +28,13 @@ export type AggregateBooking = {
 
 export type BookingAvgAggregateOutputType = {
   sessionCount: number | null
+  extraPicturesCount: number | null
   totalAmount: runtime.Decimal | null
 }
 
 export type BookingSumAggregateOutputType = {
   sessionCount: number | null
+  extraPicturesCount: number | null
   totalAmount: runtime.Decimal | null
 }
 
@@ -40,6 +42,7 @@ export type BookingMinAggregateOutputType = {
   id: string | null
   bookingDate: Date | null
   sessionCount: number | null
+  extraPicturesCount: number | null
   notes: string | null
   totalAmount: runtime.Decimal | null
   paymentPlan: $Enums.PaymentPlan | null
@@ -55,12 +58,14 @@ export type BookingMinAggregateOutputType = {
   updatedAt: Date | null
   serviceVariantId: string | null
   accessCode: string | null
+  deliveredAt: Date | null
 }
 
 export type BookingMaxAggregateOutputType = {
   id: string | null
   bookingDate: Date | null
   sessionCount: number | null
+  extraPicturesCount: number | null
   notes: string | null
   totalAmount: runtime.Decimal | null
   paymentPlan: $Enums.PaymentPlan | null
@@ -76,12 +81,14 @@ export type BookingMaxAggregateOutputType = {
   updatedAt: Date | null
   serviceVariantId: string | null
   accessCode: string | null
+  deliveredAt: Date | null
 }
 
 export type BookingCountAggregateOutputType = {
   id: number
   bookingDate: number
   sessionCount: number
+  extraPicturesCount: number
   notes: number
   totalAmount: number
   paymentPlan: number
@@ -97,17 +104,20 @@ export type BookingCountAggregateOutputType = {
   updatedAt: number
   serviceVariantId: number
   accessCode: number
+  deliveredAt: number
   _all: number
 }
 
 
 export type BookingAvgAggregateInputType = {
   sessionCount?: true
+  extraPicturesCount?: true
   totalAmount?: true
 }
 
 export type BookingSumAggregateInputType = {
   sessionCount?: true
+  extraPicturesCount?: true
   totalAmount?: true
 }
 
@@ -115,6 +125,7 @@ export type BookingMinAggregateInputType = {
   id?: true
   bookingDate?: true
   sessionCount?: true
+  extraPicturesCount?: true
   notes?: true
   totalAmount?: true
   paymentPlan?: true
@@ -130,12 +141,14 @@ export type BookingMinAggregateInputType = {
   updatedAt?: true
   serviceVariantId?: true
   accessCode?: true
+  deliveredAt?: true
 }
 
 export type BookingMaxAggregateInputType = {
   id?: true
   bookingDate?: true
   sessionCount?: true
+  extraPicturesCount?: true
   notes?: true
   totalAmount?: true
   paymentPlan?: true
@@ -151,12 +164,14 @@ export type BookingMaxAggregateInputType = {
   updatedAt?: true
   serviceVariantId?: true
   accessCode?: true
+  deliveredAt?: true
 }
 
 export type BookingCountAggregateInputType = {
   id?: true
   bookingDate?: true
   sessionCount?: true
+  extraPicturesCount?: true
   notes?: true
   totalAmount?: true
   paymentPlan?: true
@@ -172,6 +187,7 @@ export type BookingCountAggregateInputType = {
   updatedAt?: true
   serviceVariantId?: true
   accessCode?: true
+  deliveredAt?: true
   _all?: true
 }
 
@@ -265,6 +281,7 @@ export type BookingGroupByOutputType = {
   id: string
   bookingDate: Date
   sessionCount: number
+  extraPicturesCount: number
   notes: string | null
   totalAmount: runtime.Decimal
   paymentPlan: $Enums.PaymentPlan
@@ -280,6 +297,7 @@ export type BookingGroupByOutputType = {
   updatedAt: Date
   serviceVariantId: string | null
   accessCode: string | null
+  deliveredAt: Date | null
   _count: BookingCountAggregateOutputType | null
   _avg: BookingAvgAggregateOutputType | null
   _sum: BookingSumAggregateOutputType | null
@@ -309,6 +327,7 @@ export type BookingWhereInput = {
   id?: Prisma.StringFilter<"Booking"> | string
   bookingDate?: Prisma.DateTimeFilter<"Booking"> | Date | string
   sessionCount?: Prisma.IntFilter<"Booking"> | number
+  extraPicturesCount?: Prisma.IntFilter<"Booking"> | number
   notes?: Prisma.StringNullableFilter<"Booking"> | string | null
   totalAmount?: Prisma.DecimalFilter<"Booking"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFilter<"Booking"> | $Enums.PaymentPlan
@@ -324,6 +343,7 @@ export type BookingWhereInput = {
   updatedAt?: Prisma.DateTimeFilter<"Booking"> | Date | string
   serviceVariantId?: Prisma.StringNullableFilter<"Booking"> | string | null
   accessCode?: Prisma.StringNullableFilter<"Booking"> | string | null
+  deliveredAt?: Prisma.DateTimeNullableFilter<"Booking"> | Date | string | null
   payments?: Prisma.PaymentListRelationFilter
   photos?: Prisma.PhotoListRelationFilter
   addons?: Prisma.ServiceListRelationFilter
@@ -334,12 +354,14 @@ export type BookingWhereInput = {
   member?: Prisma.XOR<Prisma.MemberNullableScalarRelationFilter, Prisma.MemberWhereInput> | null
   serviceVariant?: Prisma.XOR<Prisma.ServiceVariantNullableScalarRelationFilter, Prisma.ServiceVariantWhereInput> | null
   notifications?: Prisma.NotificationListRelationFilter
+  revisionRequests?: Prisma.RevisionRequestListRelationFilter
 }
 
 export type BookingOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   bookingDate?: Prisma.SortOrder
   sessionCount?: Prisma.SortOrder
+  extraPicturesCount?: Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paymentPlan?: Prisma.SortOrder
@@ -355,6 +377,7 @@ export type BookingOrderByWithRelationInput = {
   updatedAt?: Prisma.SortOrder
   serviceVariantId?: Prisma.SortOrderInput | Prisma.SortOrder
   accessCode?: Prisma.SortOrderInput | Prisma.SortOrder
+  deliveredAt?: Prisma.SortOrderInput | Prisma.SortOrder
   payments?: Prisma.PaymentOrderByRelationAggregateInput
   photos?: Prisma.PhotoOrderByRelationAggregateInput
   addons?: Prisma.ServiceOrderByRelationAggregateInput
@@ -365,6 +388,7 @@ export type BookingOrderByWithRelationInput = {
   member?: Prisma.MemberOrderByWithRelationInput
   serviceVariant?: Prisma.ServiceVariantOrderByWithRelationInput
   notifications?: Prisma.NotificationOrderByRelationAggregateInput
+  revisionRequests?: Prisma.RevisionRequestOrderByRelationAggregateInput
 }
 
 export type BookingWhereUniqueInput = Prisma.AtLeast<{
@@ -375,6 +399,7 @@ export type BookingWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.BookingWhereInput | Prisma.BookingWhereInput[]
   bookingDate?: Prisma.DateTimeFilter<"Booking"> | Date | string
   sessionCount?: Prisma.IntFilter<"Booking"> | number
+  extraPicturesCount?: Prisma.IntFilter<"Booking"> | number
   notes?: Prisma.StringNullableFilter<"Booking"> | string | null
   totalAmount?: Prisma.DecimalFilter<"Booking"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFilter<"Booking"> | $Enums.PaymentPlan
@@ -389,6 +414,7 @@ export type BookingWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"Booking"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Booking"> | Date | string
   serviceVariantId?: Prisma.StringNullableFilter<"Booking"> | string | null
+  deliveredAt?: Prisma.DateTimeNullableFilter<"Booking"> | Date | string | null
   payments?: Prisma.PaymentListRelationFilter
   photos?: Prisma.PhotoListRelationFilter
   addons?: Prisma.ServiceListRelationFilter
@@ -399,12 +425,14 @@ export type BookingWhereUniqueInput = Prisma.AtLeast<{
   member?: Prisma.XOR<Prisma.MemberNullableScalarRelationFilter, Prisma.MemberWhereInput> | null
   serviceVariant?: Prisma.XOR<Prisma.ServiceVariantNullableScalarRelationFilter, Prisma.ServiceVariantWhereInput> | null
   notifications?: Prisma.NotificationListRelationFilter
+  revisionRequests?: Prisma.RevisionRequestListRelationFilter
 }, "id" | "accessCode">
 
 export type BookingOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   bookingDate?: Prisma.SortOrder
   sessionCount?: Prisma.SortOrder
+  extraPicturesCount?: Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paymentPlan?: Prisma.SortOrder
@@ -420,6 +448,7 @@ export type BookingOrderByWithAggregationInput = {
   updatedAt?: Prisma.SortOrder
   serviceVariantId?: Prisma.SortOrderInput | Prisma.SortOrder
   accessCode?: Prisma.SortOrderInput | Prisma.SortOrder
+  deliveredAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.BookingCountOrderByAggregateInput
   _avg?: Prisma.BookingAvgOrderByAggregateInput
   _max?: Prisma.BookingMaxOrderByAggregateInput
@@ -434,6 +463,7 @@ export type BookingScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"Booking"> | string
   bookingDate?: Prisma.DateTimeWithAggregatesFilter<"Booking"> | Date | string
   sessionCount?: Prisma.IntWithAggregatesFilter<"Booking"> | number
+  extraPicturesCount?: Prisma.IntWithAggregatesFilter<"Booking"> | number
   notes?: Prisma.StringNullableWithAggregatesFilter<"Booking"> | string | null
   totalAmount?: Prisma.DecimalWithAggregatesFilter<"Booking"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanWithAggregatesFilter<"Booking"> | $Enums.PaymentPlan
@@ -449,12 +479,14 @@ export type BookingScalarWhereWithAggregatesInput = {
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Booking"> | Date | string
   serviceVariantId?: Prisma.StringNullableWithAggregatesFilter<"Booking"> | string | null
   accessCode?: Prisma.StringNullableWithAggregatesFilter<"Booking"> | string | null
+  deliveredAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Booking"> | Date | string | null
 }
 
 export type BookingCreateInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -464,6 +496,7 @@ export type BookingCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   payments?: Prisma.PaymentCreateNestedManyWithoutBookingInput
   photos?: Prisma.PhotoCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceCreateNestedManyWithoutAddonBookingsInput
@@ -474,12 +507,14 @@ export type BookingCreateInput = {
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
 export type BookingUncheckedCreateInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -495,16 +530,19 @@ export type BookingUncheckedCreateInput = {
   updatedAt?: Date | string
   serviceVariantId?: string | null
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
 export type BookingUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -514,6 +552,7 @@ export type BookingUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUpdateManyWithoutBookingNestedInput
   photos?: Prisma.PhotoUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUpdateManyWithoutAddonBookingsNestedInput
@@ -524,12 +563,14 @@ export type BookingUpdateInput = {
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -545,16 +586,19 @@ export type BookingUncheckedUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingCreateManyInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -570,12 +614,14 @@ export type BookingCreateManyInput = {
   updatedAt?: Date | string
   serviceVariantId?: string | null
   accessCode?: string | null
+  deliveredAt?: Date | string | null
 }
 
 export type BookingUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -585,12 +631,14 @@ export type BookingUpdateManyMutationInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type BookingUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -606,6 +654,7 @@ export type BookingUncheckedUpdateManyInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type BookingListRelationFilter = {
@@ -622,6 +671,7 @@ export type BookingCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   bookingDate?: Prisma.SortOrder
   sessionCount?: Prisma.SortOrder
+  extraPicturesCount?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paymentPlan?: Prisma.SortOrder
@@ -637,10 +687,12 @@ export type BookingCountOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
   serviceVariantId?: Prisma.SortOrder
   accessCode?: Prisma.SortOrder
+  deliveredAt?: Prisma.SortOrder
 }
 
 export type BookingAvgOrderByAggregateInput = {
   sessionCount?: Prisma.SortOrder
+  extraPicturesCount?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
 }
 
@@ -648,6 +700,7 @@ export type BookingMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   bookingDate?: Prisma.SortOrder
   sessionCount?: Prisma.SortOrder
+  extraPicturesCount?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paymentPlan?: Prisma.SortOrder
@@ -663,12 +716,14 @@ export type BookingMaxOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
   serviceVariantId?: Prisma.SortOrder
   accessCode?: Prisma.SortOrder
+  deliveredAt?: Prisma.SortOrder
 }
 
 export type BookingMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   bookingDate?: Prisma.SortOrder
   sessionCount?: Prisma.SortOrder
+  extraPicturesCount?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paymentPlan?: Prisma.SortOrder
@@ -684,10 +739,12 @@ export type BookingMinOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
   serviceVariantId?: Prisma.SortOrder
   accessCode?: Prisma.SortOrder
+  deliveredAt?: Prisma.SortOrder
 }
 
 export type BookingSumOrderByAggregateInput = {
   sessionCount?: Prisma.SortOrder
+  extraPicturesCount?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
 }
 
@@ -1045,10 +1102,25 @@ export type BookingUpdateOneWithoutNotificationsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.BookingUpdateToOneWithWhereWithoutNotificationsInput, Prisma.BookingUpdateWithoutNotificationsInput>, Prisma.BookingUncheckedUpdateWithoutNotificationsInput>
 }
 
+export type BookingCreateNestedOneWithoutRevisionRequestsInput = {
+  create?: Prisma.XOR<Prisma.BookingCreateWithoutRevisionRequestsInput, Prisma.BookingUncheckedCreateWithoutRevisionRequestsInput>
+  connectOrCreate?: Prisma.BookingCreateOrConnectWithoutRevisionRequestsInput
+  connect?: Prisma.BookingWhereUniqueInput
+}
+
+export type BookingUpdateOneRequiredWithoutRevisionRequestsNestedInput = {
+  create?: Prisma.XOR<Prisma.BookingCreateWithoutRevisionRequestsInput, Prisma.BookingUncheckedCreateWithoutRevisionRequestsInput>
+  connectOrCreate?: Prisma.BookingCreateOrConnectWithoutRevisionRequestsInput
+  upsert?: Prisma.BookingUpsertWithoutRevisionRequestsInput
+  connect?: Prisma.BookingWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.BookingUpdateToOneWithWhereWithoutRevisionRequestsInput, Prisma.BookingUpdateWithoutRevisionRequestsInput>, Prisma.BookingUncheckedUpdateWithoutRevisionRequestsInput>
+}
+
 export type BookingCreateWithoutCreatorInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1058,6 +1130,7 @@ export type BookingCreateWithoutCreatorInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   payments?: Prisma.PaymentCreateNestedManyWithoutBookingInput
   photos?: Prisma.PhotoCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceCreateNestedManyWithoutAddonBookingsInput
@@ -1067,12 +1140,14 @@ export type BookingCreateWithoutCreatorInput = {
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
 export type BookingUncheckedCreateWithoutCreatorInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1087,10 +1162,12 @@ export type BookingUncheckedCreateWithoutCreatorInput = {
   updatedAt?: Date | string
   serviceVariantId?: string | null
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
 export type BookingCreateOrConnectWithoutCreatorInput = {
@@ -1126,6 +1203,7 @@ export type BookingScalarWhereInput = {
   id?: Prisma.StringFilter<"Booking"> | string
   bookingDate?: Prisma.DateTimeFilter<"Booking"> | Date | string
   sessionCount?: Prisma.IntFilter<"Booking"> | number
+  extraPicturesCount?: Prisma.IntFilter<"Booking"> | number
   notes?: Prisma.StringNullableFilter<"Booking"> | string | null
   totalAmount?: Prisma.DecimalFilter<"Booking"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFilter<"Booking"> | $Enums.PaymentPlan
@@ -1141,12 +1219,14 @@ export type BookingScalarWhereInput = {
   updatedAt?: Prisma.DateTimeFilter<"Booking"> | Date | string
   serviceVariantId?: Prisma.StringNullableFilter<"Booking"> | string | null
   accessCode?: Prisma.StringNullableFilter<"Booking"> | string | null
+  deliveredAt?: Prisma.DateTimeNullableFilter<"Booking"> | Date | string | null
 }
 
 export type BookingCreateWithoutStudioInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1156,6 +1236,7 @@ export type BookingCreateWithoutStudioInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   payments?: Prisma.PaymentCreateNestedManyWithoutBookingInput
   photos?: Prisma.PhotoCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceCreateNestedManyWithoutAddonBookingsInput
@@ -1165,12 +1246,14 @@ export type BookingCreateWithoutStudioInput = {
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
 export type BookingUncheckedCreateWithoutStudioInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1185,10 +1268,12 @@ export type BookingUncheckedCreateWithoutStudioInput = {
   updatedAt?: Date | string
   serviceVariantId?: string | null
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
 export type BookingCreateOrConnectWithoutStudioInput = {
@@ -1221,6 +1306,7 @@ export type BookingCreateWithoutMemberInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1230,6 +1316,7 @@ export type BookingCreateWithoutMemberInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   payments?: Prisma.PaymentCreateNestedManyWithoutBookingInput
   photos?: Prisma.PhotoCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceCreateNestedManyWithoutAddonBookingsInput
@@ -1239,12 +1326,14 @@ export type BookingCreateWithoutMemberInput = {
   creator: Prisma.UserCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
 export type BookingUncheckedCreateWithoutMemberInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1259,10 +1348,12 @@ export type BookingUncheckedCreateWithoutMemberInput = {
   updatedAt?: Date | string
   serviceVariantId?: string | null
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
 export type BookingCreateOrConnectWithoutMemberInput = {
@@ -1295,6 +1386,7 @@ export type BookingCreateWithoutServiceInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1304,6 +1396,7 @@ export type BookingCreateWithoutServiceInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   payments?: Prisma.PaymentCreateNestedManyWithoutBookingInput
   photos?: Prisma.PhotoCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceCreateNestedManyWithoutAddonBookingsInput
@@ -1313,12 +1406,14 @@ export type BookingCreateWithoutServiceInput = {
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
 export type BookingUncheckedCreateWithoutServiceInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1333,10 +1428,12 @@ export type BookingUncheckedCreateWithoutServiceInput = {
   updatedAt?: Date | string
   serviceVariantId?: string | null
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
 export type BookingCreateOrConnectWithoutServiceInput = {
@@ -1353,6 +1450,7 @@ export type BookingCreateWithoutAddonsInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1362,6 +1460,7 @@ export type BookingCreateWithoutAddonsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   payments?: Prisma.PaymentCreateNestedManyWithoutBookingInput
   photos?: Prisma.PhotoCreateNestedManyWithoutBookingInput
   service: Prisma.ServiceCreateNestedOneWithoutBookingsInput
@@ -1371,12 +1470,14 @@ export type BookingCreateWithoutAddonsInput = {
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
 export type BookingUncheckedCreateWithoutAddonsInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1392,9 +1493,11 @@ export type BookingUncheckedCreateWithoutAddonsInput = {
   updatedAt?: Date | string
   serviceVariantId?: string | null
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
 export type BookingCreateOrConnectWithoutAddonsInput = {
@@ -1438,6 +1541,7 @@ export type BookingCreateWithoutServiceVariantInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1447,6 +1551,7 @@ export type BookingCreateWithoutServiceVariantInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   payments?: Prisma.PaymentCreateNestedManyWithoutBookingInput
   photos?: Prisma.PhotoCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceCreateNestedManyWithoutAddonBookingsInput
@@ -1456,12 +1561,14 @@ export type BookingCreateWithoutServiceVariantInput = {
   creator: Prisma.UserCreateNestedOneWithoutBookingsInput
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
 export type BookingUncheckedCreateWithoutServiceVariantInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1476,10 +1583,12 @@ export type BookingUncheckedCreateWithoutServiceVariantInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
 export type BookingCreateOrConnectWithoutServiceVariantInput = {
@@ -1512,6 +1621,7 @@ export type BookingCreateWithoutClientInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1521,6 +1631,7 @@ export type BookingCreateWithoutClientInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   payments?: Prisma.PaymentCreateNestedManyWithoutBookingInput
   photos?: Prisma.PhotoCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceCreateNestedManyWithoutAddonBookingsInput
@@ -1530,12 +1641,14 @@ export type BookingCreateWithoutClientInput = {
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
 export type BookingUncheckedCreateWithoutClientInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1550,10 +1663,12 @@ export type BookingUncheckedCreateWithoutClientInput = {
   updatedAt?: Date | string
   serviceVariantId?: string | null
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
 export type BookingCreateOrConnectWithoutClientInput = {
@@ -1586,6 +1701,7 @@ export type BookingCreateWithoutPaymentsInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1595,6 +1711,7 @@ export type BookingCreateWithoutPaymentsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   photos?: Prisma.PhotoCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceCreateNestedManyWithoutAddonBookingsInput
   service: Prisma.ServiceCreateNestedOneWithoutBookingsInput
@@ -1604,12 +1721,14 @@ export type BookingCreateWithoutPaymentsInput = {
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
 export type BookingUncheckedCreateWithoutPaymentsInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1625,9 +1744,11 @@ export type BookingUncheckedCreateWithoutPaymentsInput = {
   updatedAt?: Date | string
   serviceVariantId?: string | null
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
 export type BookingCreateOrConnectWithoutPaymentsInput = {
@@ -1650,6 +1771,7 @@ export type BookingUpdateWithoutPaymentsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -1659,6 +1781,7 @@ export type BookingUpdateWithoutPaymentsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   photos?: Prisma.PhotoUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUpdateManyWithoutAddonBookingsNestedInput
   service?: Prisma.ServiceUpdateOneRequiredWithoutBookingsNestedInput
@@ -1668,12 +1791,14 @@ export type BookingUpdateWithoutPaymentsInput = {
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutPaymentsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -1689,15 +1814,18 @@ export type BookingUncheckedUpdateWithoutPaymentsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingCreateWithoutPhotosInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1707,6 +1835,7 @@ export type BookingCreateWithoutPhotosInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   payments?: Prisma.PaymentCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceCreateNestedManyWithoutAddonBookingsInput
   service: Prisma.ServiceCreateNestedOneWithoutBookingsInput
@@ -1716,12 +1845,14 @@ export type BookingCreateWithoutPhotosInput = {
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
 export type BookingUncheckedCreateWithoutPhotosInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1737,9 +1868,11 @@ export type BookingUncheckedCreateWithoutPhotosInput = {
   updatedAt?: Date | string
   serviceVariantId?: string | null
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
 export type BookingCreateOrConnectWithoutPhotosInput = {
@@ -1762,6 +1895,7 @@ export type BookingUpdateWithoutPhotosInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -1771,6 +1905,7 @@ export type BookingUpdateWithoutPhotosInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUpdateManyWithoutAddonBookingsNestedInput
   service?: Prisma.ServiceUpdateOneRequiredWithoutBookingsNestedInput
@@ -1780,12 +1915,14 @@ export type BookingUpdateWithoutPhotosInput = {
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutPhotosInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -1801,15 +1938,18 @@ export type BookingUncheckedUpdateWithoutPhotosInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingCreateWithoutNotificationsInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1819,6 +1959,7 @@ export type BookingCreateWithoutNotificationsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   payments?: Prisma.PaymentCreateNestedManyWithoutBookingInput
   photos?: Prisma.PhotoCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceCreateNestedManyWithoutAddonBookingsInput
@@ -1828,12 +1969,14 @@ export type BookingCreateWithoutNotificationsInput = {
   creator: Prisma.UserCreateNestedOneWithoutBookingsInput
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
+  revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
 export type BookingUncheckedCreateWithoutNotificationsInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1849,9 +1992,11 @@ export type BookingUncheckedCreateWithoutNotificationsInput = {
   updatedAt?: Date | string
   serviceVariantId?: string | null
   accessCode?: string | null
+  deliveredAt?: Date | string | null
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
 export type BookingCreateOrConnectWithoutNotificationsInput = {
@@ -1874,6 +2019,7 @@ export type BookingUpdateWithoutNotificationsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -1883,6 +2029,7 @@ export type BookingUpdateWithoutNotificationsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUpdateManyWithoutBookingNestedInput
   photos?: Prisma.PhotoUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUpdateManyWithoutAddonBookingsNestedInput
@@ -1892,12 +2039,14 @@ export type BookingUpdateWithoutNotificationsInput = {
   creator?: Prisma.UserUpdateOneRequiredWithoutBookingsNestedInput
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
+  revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutNotificationsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -1913,15 +2062,142 @@ export type BookingUncheckedUpdateWithoutNotificationsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
+}
+
+export type BookingCreateWithoutRevisionRequestsInput = {
+  id?: string
+  bookingDate: Date | string
+  sessionCount?: number
+  extraPicturesCount?: number
+  notes?: string | null
+  totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: $Enums.PaymentPlan
+  bookingStatus?: $Enums.BookingStatus
+  paymentStatus?: $Enums.PaymentStatus
+  deliveryStatus?: $Enums.DeliveryStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  accessCode?: string | null
+  deliveredAt?: Date | string | null
+  payments?: Prisma.PaymentCreateNestedManyWithoutBookingInput
+  photos?: Prisma.PhotoCreateNestedManyWithoutBookingInput
+  addons?: Prisma.ServiceCreateNestedManyWithoutAddonBookingsInput
+  service: Prisma.ServiceCreateNestedOneWithoutBookingsInput
+  studio: Prisma.StudioCreateNestedOneWithoutBookingsInput
+  client: Prisma.ClientCreateNestedOneWithoutBookingsInput
+  creator: Prisma.UserCreateNestedOneWithoutBookingsInput
+  member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
+  serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+}
+
+export type BookingUncheckedCreateWithoutRevisionRequestsInput = {
+  id?: string
+  bookingDate: Date | string
+  sessionCount?: number
+  extraPicturesCount?: number
+  notes?: string | null
+  totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: $Enums.PaymentPlan
+  bookingStatus?: $Enums.BookingStatus
+  paymentStatus?: $Enums.PaymentStatus
+  deliveryStatus?: $Enums.DeliveryStatus
+  serviceId: string
+  studioId: string
+  clientId: string
+  createdBy: string
+  memberId?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  serviceVariantId?: string | null
+  accessCode?: string | null
+  deliveredAt?: Date | string | null
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
+  photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
+  addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+}
+
+export type BookingCreateOrConnectWithoutRevisionRequestsInput = {
+  where: Prisma.BookingWhereUniqueInput
+  create: Prisma.XOR<Prisma.BookingCreateWithoutRevisionRequestsInput, Prisma.BookingUncheckedCreateWithoutRevisionRequestsInput>
+}
+
+export type BookingUpsertWithoutRevisionRequestsInput = {
+  update: Prisma.XOR<Prisma.BookingUpdateWithoutRevisionRequestsInput, Prisma.BookingUncheckedUpdateWithoutRevisionRequestsInput>
+  create: Prisma.XOR<Prisma.BookingCreateWithoutRevisionRequestsInput, Prisma.BookingUncheckedCreateWithoutRevisionRequestsInput>
+  where?: Prisma.BookingWhereInput
+}
+
+export type BookingUpdateToOneWithWhereWithoutRevisionRequestsInput = {
+  where?: Prisma.BookingWhereInput
+  data: Prisma.XOR<Prisma.BookingUpdateWithoutRevisionRequestsInput, Prisma.BookingUncheckedUpdateWithoutRevisionRequestsInput>
+}
+
+export type BookingUpdateWithoutRevisionRequestsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
+  paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
+  deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  payments?: Prisma.PaymentUpdateManyWithoutBookingNestedInput
+  photos?: Prisma.PhotoUpdateManyWithoutBookingNestedInput
+  addons?: Prisma.ServiceUpdateManyWithoutAddonBookingsNestedInput
+  service?: Prisma.ServiceUpdateOneRequiredWithoutBookingsNestedInput
+  studio?: Prisma.StudioUpdateOneRequiredWithoutBookingsNestedInput
+  client?: Prisma.ClientUpdateOneRequiredWithoutBookingsNestedInput
+  creator?: Prisma.UserUpdateOneRequiredWithoutBookingsNestedInput
+  member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
+  serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+}
+
+export type BookingUncheckedUpdateWithoutRevisionRequestsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
+  paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
+  deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+  serviceId?: Prisma.StringFieldUpdateOperationsInput | string
+  studioId?: Prisma.StringFieldUpdateOperationsInput | string
+  clientId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
+  photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
+  addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingCreateManyCreatorInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -1936,12 +2212,14 @@ export type BookingCreateManyCreatorInput = {
   updatedAt?: Date | string
   serviceVariantId?: string | null
   accessCode?: string | null
+  deliveredAt?: Date | string | null
 }
 
 export type BookingUpdateWithoutCreatorInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -1951,6 +2229,7 @@ export type BookingUpdateWithoutCreatorInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUpdateManyWithoutBookingNestedInput
   photos?: Prisma.PhotoUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUpdateManyWithoutAddonBookingsNestedInput
@@ -1960,12 +2239,14 @@ export type BookingUpdateWithoutCreatorInput = {
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutCreatorInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -1980,16 +2261,19 @@ export type BookingUncheckedUpdateWithoutCreatorInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateManyWithoutCreatorInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -2004,12 +2288,14 @@ export type BookingUncheckedUpdateManyWithoutCreatorInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type BookingCreateManyStudioInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -2024,12 +2310,14 @@ export type BookingCreateManyStudioInput = {
   updatedAt?: Date | string
   serviceVariantId?: string | null
   accessCode?: string | null
+  deliveredAt?: Date | string | null
 }
 
 export type BookingUpdateWithoutStudioInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -2039,6 +2327,7 @@ export type BookingUpdateWithoutStudioInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUpdateManyWithoutBookingNestedInput
   photos?: Prisma.PhotoUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUpdateManyWithoutAddonBookingsNestedInput
@@ -2048,12 +2337,14 @@ export type BookingUpdateWithoutStudioInput = {
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutStudioInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -2068,16 +2359,19 @@ export type BookingUncheckedUpdateWithoutStudioInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateManyWithoutStudioInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -2092,12 +2386,14 @@ export type BookingUncheckedUpdateManyWithoutStudioInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type BookingCreateManyMemberInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -2112,12 +2408,14 @@ export type BookingCreateManyMemberInput = {
   updatedAt?: Date | string
   serviceVariantId?: string | null
   accessCode?: string | null
+  deliveredAt?: Date | string | null
 }
 
 export type BookingUpdateWithoutMemberInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -2127,6 +2425,7 @@ export type BookingUpdateWithoutMemberInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUpdateManyWithoutBookingNestedInput
   photos?: Prisma.PhotoUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUpdateManyWithoutAddonBookingsNestedInput
@@ -2136,12 +2435,14 @@ export type BookingUpdateWithoutMemberInput = {
   creator?: Prisma.UserUpdateOneRequiredWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutMemberInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -2156,16 +2457,19 @@ export type BookingUncheckedUpdateWithoutMemberInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateManyWithoutMemberInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -2180,12 +2484,14 @@ export type BookingUncheckedUpdateManyWithoutMemberInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type BookingCreateManyServiceInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -2200,12 +2506,14 @@ export type BookingCreateManyServiceInput = {
   updatedAt?: Date | string
   serviceVariantId?: string | null
   accessCode?: string | null
+  deliveredAt?: Date | string | null
 }
 
 export type BookingUpdateWithoutServiceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -2215,6 +2523,7 @@ export type BookingUpdateWithoutServiceInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUpdateManyWithoutBookingNestedInput
   photos?: Prisma.PhotoUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUpdateManyWithoutAddonBookingsNestedInput
@@ -2224,12 +2533,14 @@ export type BookingUpdateWithoutServiceInput = {
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutServiceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -2244,16 +2555,19 @@ export type BookingUncheckedUpdateWithoutServiceInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateManyWithoutServiceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -2268,12 +2582,14 @@ export type BookingUncheckedUpdateManyWithoutServiceInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type BookingUpdateWithoutAddonsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -2283,6 +2599,7 @@ export type BookingUpdateWithoutAddonsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUpdateManyWithoutBookingNestedInput
   photos?: Prisma.PhotoUpdateManyWithoutBookingNestedInput
   service?: Prisma.ServiceUpdateOneRequiredWithoutBookingsNestedInput
@@ -2292,12 +2609,14 @@ export type BookingUpdateWithoutAddonsInput = {
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutAddonsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -2313,15 +2632,18 @@ export type BookingUncheckedUpdateWithoutAddonsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateManyWithoutAddonsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -2337,12 +2659,14 @@ export type BookingUncheckedUpdateManyWithoutAddonsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type BookingCreateManyServiceVariantInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -2357,12 +2681,14 @@ export type BookingCreateManyServiceVariantInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   accessCode?: string | null
+  deliveredAt?: Date | string | null
 }
 
 export type BookingUpdateWithoutServiceVariantInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -2372,6 +2698,7 @@ export type BookingUpdateWithoutServiceVariantInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUpdateManyWithoutBookingNestedInput
   photos?: Prisma.PhotoUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUpdateManyWithoutAddonBookingsNestedInput
@@ -2381,12 +2708,14 @@ export type BookingUpdateWithoutServiceVariantInput = {
   creator?: Prisma.UserUpdateOneRequiredWithoutBookingsNestedInput
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutServiceVariantInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -2401,16 +2730,19 @@ export type BookingUncheckedUpdateWithoutServiceVariantInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateManyWithoutServiceVariantInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -2425,12 +2757,14 @@ export type BookingUncheckedUpdateManyWithoutServiceVariantInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type BookingCreateManyClientInput = {
   id?: string
   bookingDate: Date | string
   sessionCount?: number
+  extraPicturesCount?: number
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
@@ -2445,12 +2779,14 @@ export type BookingCreateManyClientInput = {
   updatedAt?: Date | string
   serviceVariantId?: string | null
   accessCode?: string | null
+  deliveredAt?: Date | string | null
 }
 
 export type BookingUpdateWithoutClientInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -2460,6 +2796,7 @@ export type BookingUpdateWithoutClientInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUpdateManyWithoutBookingNestedInput
   photos?: Prisma.PhotoUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUpdateManyWithoutAddonBookingsNestedInput
@@ -2469,12 +2806,14 @@ export type BookingUpdateWithoutClientInput = {
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutClientInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -2489,16 +2828,19 @@ export type BookingUncheckedUpdateWithoutClientInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateManyWithoutClientInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
@@ -2513,6 +2855,7 @@ export type BookingUncheckedUpdateManyWithoutClientInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 
@@ -2525,6 +2868,7 @@ export type BookingCountOutputType = {
   photos: number
   addons: number
   notifications: number
+  revisionRequests: number
 }
 
 export type BookingCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2532,6 +2876,7 @@ export type BookingCountOutputTypeSelect<ExtArgs extends runtime.Types.Extension
   photos?: boolean | BookingCountOutputTypeCountPhotosArgs
   addons?: boolean | BookingCountOutputTypeCountAddonsArgs
   notifications?: boolean | BookingCountOutputTypeCountNotificationsArgs
+  revisionRequests?: boolean | BookingCountOutputTypeCountRevisionRequestsArgs
 }
 
 /**
@@ -2572,11 +2917,19 @@ export type BookingCountOutputTypeCountNotificationsArgs<ExtArgs extends runtime
   where?: Prisma.NotificationWhereInput
 }
 
+/**
+ * BookingCountOutputType without action
+ */
+export type BookingCountOutputTypeCountRevisionRequestsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.RevisionRequestWhereInput
+}
+
 
 export type BookingSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   bookingDate?: boolean
   sessionCount?: boolean
+  extraPicturesCount?: boolean
   notes?: boolean
   totalAmount?: boolean
   paymentPlan?: boolean
@@ -2592,6 +2945,7 @@ export type BookingSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   updatedAt?: boolean
   serviceVariantId?: boolean
   accessCode?: boolean
+  deliveredAt?: boolean
   payments?: boolean | Prisma.Booking$paymentsArgs<ExtArgs>
   photos?: boolean | Prisma.Booking$photosArgs<ExtArgs>
   addons?: boolean | Prisma.Booking$addonsArgs<ExtArgs>
@@ -2602,6 +2956,7 @@ export type BookingSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   member?: boolean | Prisma.Booking$memberArgs<ExtArgs>
   serviceVariant?: boolean | Prisma.Booking$serviceVariantArgs<ExtArgs>
   notifications?: boolean | Prisma.Booking$notificationsArgs<ExtArgs>
+  revisionRequests?: boolean | Prisma.Booking$revisionRequestsArgs<ExtArgs>
   _count?: boolean | Prisma.BookingCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["booking"]>
 
@@ -2609,6 +2964,7 @@ export type BookingSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   id?: boolean
   bookingDate?: boolean
   sessionCount?: boolean
+  extraPicturesCount?: boolean
   notes?: boolean
   totalAmount?: boolean
   paymentPlan?: boolean
@@ -2624,6 +2980,7 @@ export type BookingSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   updatedAt?: boolean
   serviceVariantId?: boolean
   accessCode?: boolean
+  deliveredAt?: boolean
   service?: boolean | Prisma.ServiceDefaultArgs<ExtArgs>
   studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
   client?: boolean | Prisma.ClientDefaultArgs<ExtArgs>
@@ -2636,6 +2993,7 @@ export type BookingSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   id?: boolean
   bookingDate?: boolean
   sessionCount?: boolean
+  extraPicturesCount?: boolean
   notes?: boolean
   totalAmount?: boolean
   paymentPlan?: boolean
@@ -2651,6 +3009,7 @@ export type BookingSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   updatedAt?: boolean
   serviceVariantId?: boolean
   accessCode?: boolean
+  deliveredAt?: boolean
   service?: boolean | Prisma.ServiceDefaultArgs<ExtArgs>
   studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
   client?: boolean | Prisma.ClientDefaultArgs<ExtArgs>
@@ -2663,6 +3022,7 @@ export type BookingSelectScalar = {
   id?: boolean
   bookingDate?: boolean
   sessionCount?: boolean
+  extraPicturesCount?: boolean
   notes?: boolean
   totalAmount?: boolean
   paymentPlan?: boolean
@@ -2678,9 +3038,10 @@ export type BookingSelectScalar = {
   updatedAt?: boolean
   serviceVariantId?: boolean
   accessCode?: boolean
+  deliveredAt?: boolean
 }
 
-export type BookingOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "bookingDate" | "sessionCount" | "notes" | "totalAmount" | "paymentPlan" | "bookingStatus" | "paymentStatus" | "deliveryStatus" | "serviceId" | "studioId" | "clientId" | "createdBy" | "memberId" | "createdAt" | "updatedAt" | "serviceVariantId" | "accessCode", ExtArgs["result"]["booking"]>
+export type BookingOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "bookingDate" | "sessionCount" | "extraPicturesCount" | "notes" | "totalAmount" | "paymentPlan" | "bookingStatus" | "paymentStatus" | "deliveryStatus" | "serviceId" | "studioId" | "clientId" | "createdBy" | "memberId" | "createdAt" | "updatedAt" | "serviceVariantId" | "accessCode" | "deliveredAt", ExtArgs["result"]["booking"]>
 export type BookingInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   payments?: boolean | Prisma.Booking$paymentsArgs<ExtArgs>
   photos?: boolean | Prisma.Booking$photosArgs<ExtArgs>
@@ -2692,6 +3053,7 @@ export type BookingInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   member?: boolean | Prisma.Booking$memberArgs<ExtArgs>
   serviceVariant?: boolean | Prisma.Booking$serviceVariantArgs<ExtArgs>
   notifications?: boolean | Prisma.Booking$notificationsArgs<ExtArgs>
+  revisionRequests?: boolean | Prisma.Booking$revisionRequestsArgs<ExtArgs>
   _count?: boolean | Prisma.BookingCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type BookingIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2724,11 +3086,13 @@ export type $BookingPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     member: Prisma.$MemberPayload<ExtArgs> | null
     serviceVariant: Prisma.$ServiceVariantPayload<ExtArgs> | null
     notifications: Prisma.$NotificationPayload<ExtArgs>[]
+    revisionRequests: Prisma.$RevisionRequestPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     bookingDate: Date
     sessionCount: number
+    extraPicturesCount: number
     notes: string | null
     totalAmount: runtime.Decimal
     paymentPlan: $Enums.PaymentPlan
@@ -2744,6 +3108,7 @@ export type $BookingPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     updatedAt: Date
     serviceVariantId: string | null
     accessCode: string | null
+    deliveredAt: Date | null
   }, ExtArgs["result"]["booking"]>
   composites: {}
 }
@@ -3148,6 +3513,7 @@ export interface Prisma__BookingClient<T, Null = never, ExtArgs extends runtime.
   member<T extends Prisma.Booking$memberArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Booking$memberArgs<ExtArgs>>): Prisma.Prisma__MemberClient<runtime.Types.Result.GetResult<Prisma.$MemberPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   serviceVariant<T extends Prisma.Booking$serviceVariantArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Booking$serviceVariantArgs<ExtArgs>>): Prisma.Prisma__ServiceVariantClient<runtime.Types.Result.GetResult<Prisma.$ServiceVariantPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   notifications<T extends Prisma.Booking$notificationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Booking$notificationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$NotificationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  revisionRequests<T extends Prisma.Booking$revisionRequestsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Booking$revisionRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RevisionRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3180,6 +3546,7 @@ export interface BookingFieldRefs {
   readonly id: Prisma.FieldRef<"Booking", 'String'>
   readonly bookingDate: Prisma.FieldRef<"Booking", 'DateTime'>
   readonly sessionCount: Prisma.FieldRef<"Booking", 'Int'>
+  readonly extraPicturesCount: Prisma.FieldRef<"Booking", 'Int'>
   readonly notes: Prisma.FieldRef<"Booking", 'String'>
   readonly totalAmount: Prisma.FieldRef<"Booking", 'Decimal'>
   readonly paymentPlan: Prisma.FieldRef<"Booking", 'PaymentPlan'>
@@ -3195,6 +3562,7 @@ export interface BookingFieldRefs {
   readonly updatedAt: Prisma.FieldRef<"Booking", 'DateTime'>
   readonly serviceVariantId: Prisma.FieldRef<"Booking", 'String'>
   readonly accessCode: Prisma.FieldRef<"Booking", 'String'>
+  readonly deliveredAt: Prisma.FieldRef<"Booking", 'DateTime'>
 }
     
 
@@ -3727,6 +4095,30 @@ export type Booking$notificationsArgs<ExtArgs extends runtime.Types.Extensions.I
   take?: number
   skip?: number
   distinct?: Prisma.NotificationScalarFieldEnum | Prisma.NotificationScalarFieldEnum[]
+}
+
+/**
+ * Booking.revisionRequests
+ */
+export type Booking$revisionRequestsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the RevisionRequest
+   */
+  select?: Prisma.RevisionRequestSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the RevisionRequest
+   */
+  omit?: Prisma.RevisionRequestOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RevisionRequestInclude<ExtArgs> | null
+  where?: Prisma.RevisionRequestWhereInput
+  orderBy?: Prisma.RevisionRequestOrderByWithRelationInput | Prisma.RevisionRequestOrderByWithRelationInput[]
+  cursor?: Prisma.RevisionRequestWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.RevisionRequestScalarFieldEnum | Prisma.RevisionRequestScalarFieldEnum[]
 }
 
 /**

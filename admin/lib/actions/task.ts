@@ -87,7 +87,10 @@ export async function getMemberTasks(
         take: ITEMS_PER_PAGE,
     });
 
-    return tasks;
+    return tasks.map(task => ({
+        ...task,
+        totalAmount: Number(task.totalAmount)
+    }));
 }
 
 // ── Get Client Tasks ─────────────────────────────────────────────────────────
@@ -141,5 +144,8 @@ export async function getClientTasks(
         take: ITEMS_PER_PAGE,
     });
 
-    return tasks;
+    return tasks.map(task => ({
+        ...task,
+        totalAmount: Number(task.totalAmount)
+    }));
 }

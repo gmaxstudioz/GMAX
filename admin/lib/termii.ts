@@ -16,9 +16,15 @@ const TERMII_INVITE_TEMPLATE_ID = process.env.TERMII_INVITE_TEMPLATE_ID ?? "";
 const TERMII_RESET_TEMPLATE_ID = process.env.TERMII_RESET_TEMPLATE_ID ?? "";
 const TERMII_WHATSAPP_SENDER = process.env.TERMII_WHATSAPP_SENDER_ID ?? "";
 
-// ── Helpers ─────────────────────────────────────────────────────────
+export interface TermiiResponse {
+    message_id?: string;
+    message?: string;
+    balance?: number;
+    user?: string;
+    [key: string]: unknown;
+}
 
-async function termiiPost<T = unknown>(
+async function termiiPost<T = TermiiResponse>(
     path: string,
     body: Record<string, unknown>,
 ): Promise<T> {
@@ -40,15 +46,31 @@ async function termiiPost<T = unknown>(
 // ── SMS ─────────────────────────────────────────────────────────────
 
 /**
- * Send a transactional SMS (DND route — bypasses Do-Not-Disturb).
+ * Normalize a phone number to international format.
+ * Converts Nigerian local numbers (0801...) to 234801...
+ */
+function normalizePhone(phone: string): string {
+    let cleaned = phone.replace(/[\s\-()]/g, "");
+    if (cleaned.startsWith("0") && cleaned.length === 11) {
+        cleaned = "234" + cleaned.slice(1);
+    }
+    if (cleaned.startsWith("+")) {
+        cleaned = cleaned.slice(1);
+    }
+    return cleaned;
+}
+
+/**
+ * Send a transactional SMS (DND route for Nigeria, generic for international).
  */
 export async function sendSMS(to: string, message: string) {
+    const phone = normalizePhone(to);
     return termiiPost("/api/sms/send", {
-        to,
+        to: phone,
         from: TERMII_SMS_SENDER,
         sms: message,
         type: "plain",
-        channel: "dnd",
+        channel: "generic",
     });
 }
 
@@ -58,9 +80,17 @@ export async function sendSMS(to: string, message: string) {
  * Send a WhatsApp message.
  */
 export async function sendWhatsApp(to: string, message: string) {
+    if (!TERMII_WHATSAPP_SENDER) {
+        console.warn(
+            "[Termii] TERMII_WHATSAPP_SENDER_ID not set — skipping WhatsApp message.",
+            { to }
+        );
+        return;
+    }
+
     return termiiPost("/api/sms/send", {
-        to,
-        from: TERMII_WHATSAPP_SENDER || TERMII_SMS_SENDER,
+        to: normalizePhone(to),
+        from: TERMII_WHATSAPP_SENDER,
         sms: message,
         type: "plain",
         channel: "whatsapp",
@@ -218,4 +248,54 @@ export async function sendDeliveryWhatsApp(params: {
     const codeText = params.accessCode ? `\n*Access Code:* ${params.accessCode}` : "";
     const message = `Hi ${params.clientName}! 👋\n\nYour photos from *${params.studioName}* are ready for download.\n\nAccess your gallery here: ${params.downloadLink}${codeText}\n\nThank you for choosing us!`;
     return sendWhatsApp(params.phone, message).catch(e => console.error("Termii Delivery WhatsApp failed", e));
+}
+
+// ── Payment Link Notifications ──────────────────────────────────────
+
+export async function sendPaymentLinkEmail(params: {
+    email: string;
+    clientName: string;
+    studioName: string;
+    amount: number;
+    paymentLink: string;
+}) {
+    const templateId = process.env.TERMII_PAYMENT_LINK_TEMPLATE_ID;
+    if (!templateId) {
+        console.info("[Termii] Skipping payment link email: TERMII_PAYMENT_LINK_TEMPLATE_ID is not set.");
+        return Promise.resolve();
+    }
+
+    return sendTemplateEmail({
+        email: params.email,
+        subject: `Payment Request from ${params.studioName}`,
+        templateId,
+        variables: {
+            client_name: params.clientName,
+            studio_name: params.studioName,
+            amount: params.amount.toLocaleString(),
+            payment_link: params.paymentLink,
+        },
+    }).catch(e => console.error("Termii Payment Link Email failed", e));
+}
+
+export async function sendPaymentLinkSMS(params: {
+    phone: string;
+    clientName: string;
+    studioName: string;
+    amount: number;
+    paymentLink: string;
+}) {
+    const message = `Hi ${params.clientName}, ${params.studioName} has sent a payment request for ₦${params.amount.toLocaleString()}. Pay here: ${params.paymentLink}`;
+    return sendSMS(params.phone, message).catch(e => console.error("Termii Payment Link SMS failed", e));
+}
+
+export async function sendPaymentLinkWhatsApp(params: {
+    phone: string;
+    clientName: string;
+    studioName: string;
+    amount: number;
+    paymentLink: string;
+}) {
+    const message = `Hi ${params.clientName}! 👋\n\n*${params.studioName}* has sent a payment request for *₦${params.amount.toLocaleString()}*.\n\nPlease complete your payment using this link: ${params.paymentLink}\n\nThank you!`;
+    return sendWhatsApp(params.phone, message).catch(e => console.error("Termii Payment Link WhatsApp failed", e));
 }

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <meta name="supported-color-schemes" content="light dark">
+    <title>Your Photos Are Ready</title>
+    <!--[if mso]>
+    <style type="text/css">
+        table {border-collapse:collapse;}
+    </style>
+    <![endif]-->
+    <style>
+        /* Base (Light Mode) */
+        body, .bg-body { background-color: #f9fafb !important; }
+        .bg-card { background-color: #ffffff !important; border-color: #e5e7eb !important; }
+        .text-main { color: #111827 !important; }
+        .text-muted { color: #6b7280 !important; }
+        .bg-box { background-color: #f3f4f6 !important; border-color: #e5e7eb !important; }
+        
+        /* Dark Mode overrides */
+        @media (prefers-color-scheme: dark) {
+            body, .bg-body { background-color: #111111 !important; }
+            .bg-card { background-color: #1a1a1a !important; border-color: #333333 !important; }
+            .text-main { color: #ffffff !important; }
+            .text-muted { color: #a3a3a3 !important; }
+            .bg-box { background-color: #222222 !important; border-color: #333333 !important; }
+        }
+    </style>
+</head>
+<body class="bg-body" style="margin: 0; padding: 0; background-color: #f9fafb; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+    
+    <table width="100%" border="0" cellspacing="0" cellpadding="0" class="bg-body" style="background-color: #f9fafb; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                
+                <!-- Logo Outside Container -->
+                <a href="https://gmaxstudioz.com" style="display: inline-block; margin-bottom: 24px;">
+                    <img src="https://pub-0f577ec0429b4890b78265bc3e7eab92.r2.dev/gmax-logo.png" alt="GMAX Studioz" width="60" style="display: block; border: 0; outline: none; text-decoration: none; max-width: 60px; height: auto;" onerror="this.style.display='none'">
+                </a>
+
+                <!-- Main Container -->
+                <table width="100%" max-width="600" border="0" cellspacing="0" cellpadding="0" class="bg-card" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e5e7eb; overflow: hidden;">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td align="center" style="padding: 40px 30px 20px 30px;">
+                            <h1 class="text-main" style="color: #111827; font-size: 28px; font-weight: bold; margin: 0; letter-spacing: -0.5px;">Your Photos are Ready! 🎉</h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- Body Content -->
+                    <tr>
+                        <td align="left" style="padding: 20px 40px 30px 40px;">
+                            <p class="text-main" style="color: #111827; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">
+                                Hi <strong>{{client_name}}</strong>,
+                            </p>
+                            <p class="text-muted" style="color: #6b7280; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+                                Great news! Your stunning photos from <strong>{{studio_name}}</strong> are completely ready for you to view, download, and share.
+                            </p>
+                            
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 24px;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{download_link}}" style="display: inline-block; background-color: #D4A017; color: #ffffff; font-size: 16px; font-weight: bold; text-decoration: none; padding: 14px 28px; border-radius: 8px;">
+                                            View Your Gallery
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Access Code Box -->
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0" class="bg-box" style="background-color: #f3f4f6; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 24px;">
+                                <tr>
+                                    <td align="center" style="padding: 20px;">
+                                        <p class="text-muted" style="color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px 0;">
+                                            Your Secure Access Code
+                                        </p>
+                                        <p class="text-main" style="color: #111827; font-size: 24px; font-weight: bold; font-family: monospace; letter-spacing: 2px; margin: 0;">
+                                            {{access_code}}
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p class="text-muted" style="color: #6b7280; font-size: 16px; line-height: 1.6; margin: 0;">
+                                Thank you for trusting us to capture your moments. If you have any issues accessing your photos, just let us know!
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td align="center" style="padding: 30px 40px 40px 40px; border-top: 1px solid #e5e7eb;" class="bg-card">
+                            <p class="text-muted" style="color: #6b7280; font-size: 12px; line-height: 1.5; margin: 0;">
+                                © 2026 GMAX Studioz. All rights reserved.<br>
+                                Stunning visuals and creative solutions.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+                
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

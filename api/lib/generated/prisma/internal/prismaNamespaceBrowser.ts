@@ -78,7 +78,12 @@ export const ModelName = {
   Buyer: 'Buyer',
   BuyerAccessToken: 'BuyerAccessToken',
   ProductAccess: 'ProductAccess',
-  PortfolioItem: 'PortfolioItem'
+  PortfolioItem: 'PortfolioItem',
+  RevisionRequest: 'RevisionRequest',
+  AcademyCourse: 'AcademyCourse',
+  AcademyBatch: 'AcademyBatch',
+  AcademyModule: 'AcademyModule',
+  AcademyStudent: 'AcademyStudent'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -328,6 +333,8 @@ export const ClientScalarFieldEnum = {
   image: 'image',
   notes: 'notes',
   type: 'type',
+  birthDate: 'birthDate',
+  weddingDate: 'weddingDate',
   studioId: 'studioId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -347,6 +354,7 @@ export const BookingIntentScalarFieldEnum = {
   serviceVariantId: 'serviceVariantId',
   addonIds: 'addonIds',
   sessionCount: 'sessionCount',
+  extraPicturesCount: 'extraPicturesCount',
   bookingDate: 'bookingDate',
   notes: 'notes',
   paystackReference: 'paystackReference',
@@ -366,6 +374,7 @@ export const BookingScalarFieldEnum = {
   id: 'id',
   bookingDate: 'bookingDate',
   sessionCount: 'sessionCount',
+  extraPicturesCount: 'extraPicturesCount',
   notes: 'notes',
   totalAmount: 'totalAmount',
   paymentPlan: 'paymentPlan',
@@ -380,7 +389,8 @@ export const BookingScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   serviceVariantId: 'serviceVariantId',
-  accessCode: 'accessCode'
+  accessCode: 'accessCode',
+  deliveredAt: 'deliveredAt'
 } as const
 
 export type BookingScalarFieldEnum = (typeof BookingScalarFieldEnum)[keyof typeof BookingScalarFieldEnum]
@@ -443,6 +453,7 @@ export const NotificationScalarFieldEnum = {
   deliveredAt: 'deliveredAt',
   errorMessage: 'errorMessage',
   bookingId: 'bookingId',
+  providerId: 'providerId',
   createdAt: 'createdAt'
 } as const
 
@@ -534,6 +545,80 @@ export const PortfolioItemScalarFieldEnum = {
 } as const
 
 export type PortfolioItemScalarFieldEnum = (typeof PortfolioItemScalarFieldEnum)[keyof typeof PortfolioItemScalarFieldEnum]
+
+
+export const RevisionRequestScalarFieldEnum = {
+  id: 'id',
+  bookingId: 'bookingId',
+  description: 'description',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type RevisionRequestScalarFieldEnum = (typeof RevisionRequestScalarFieldEnum)[keyof typeof RevisionRequestScalarFieldEnum]
+
+
+export const AcademyCourseScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  description: 'description',
+  price: 'price',
+  duration: 'duration',
+  location: 'location',
+  isPublished: 'isPublished',
+  thumbnail: 'thumbnail',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AcademyCourseScalarFieldEnum = (typeof AcademyCourseScalarFieldEnum)[keyof typeof AcademyCourseScalarFieldEnum]
+
+
+export const AcademyBatchScalarFieldEnum = {
+  id: 'id',
+  courseId: 'courseId',
+  name: 'name',
+  startDate: 'startDate',
+  endDate: 'endDate',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AcademyBatchScalarFieldEnum = (typeof AcademyBatchScalarFieldEnum)[keyof typeof AcademyBatchScalarFieldEnum]
+
+
+export const AcademyModuleScalarFieldEnum = {
+  id: 'id',
+  courseId: 'courseId',
+  title: 'title',
+  description: 'description',
+  sortOrder: 'sortOrder',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AcademyModuleScalarFieldEnum = (typeof AcademyModuleScalarFieldEnum)[keyof typeof AcademyModuleScalarFieldEnum]
+
+
+export const AcademyStudentScalarFieldEnum = {
+  id: 'id',
+  courseId: 'courseId',
+  batchId: 'batchId',
+  firstName: 'firstName',
+  lastName: 'lastName',
+  email: 'email',
+  phone: 'phone',
+  amountPaid: 'amountPaid',
+  paymentPlan: 'paymentPlan',
+  howDidYouHear: 'howDidYouHear',
+  paymentReference: 'paymentReference',
+  paymentStatus: 'paymentStatus',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AcademyStudentScalarFieldEnum = (typeof AcademyStudentScalarFieldEnum)[keyof typeof AcademyStudentScalarFieldEnum]
 
 
 export const SortOrder = {

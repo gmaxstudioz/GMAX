@@ -48,7 +48,7 @@ export default async function StudioDetails({ params }: StudioDetailsProps) {
                 include: { bookings: true }
             },
             bookings: {
-                include: { client: true, service: { include: { variants: { include: { deliverables: true } } } } }
+                include: { client: true, service: { include: { variants: { include: { deliverables: true } } } }, revisionRequests: true }
             },
             bookingIntents: {
                 orderBy: { createdAt: 'desc' as const },

@@ -34,6 +34,8 @@ export type ClientMinAggregateOutputType = {
   image: string | null
   notes: string | null
   type: string | null
+  birthDate: Date | null
+  weddingDate: Date | null
   studioId: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -49,6 +51,8 @@ export type ClientMaxAggregateOutputType = {
   image: string | null
   notes: string | null
   type: string | null
+  birthDate: Date | null
+  weddingDate: Date | null
   studioId: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -64,6 +68,8 @@ export type ClientCountAggregateOutputType = {
   image: number
   notes: number
   type: number
+  birthDate: number
+  weddingDate: number
   studioId: number
   createdAt: number
   updatedAt: number
@@ -81,6 +87,8 @@ export type ClientMinAggregateInputType = {
   image?: true
   notes?: true
   type?: true
+  birthDate?: true
+  weddingDate?: true
   studioId?: true
   createdAt?: true
   updatedAt?: true
@@ -96,6 +104,8 @@ export type ClientMaxAggregateInputType = {
   image?: true
   notes?: true
   type?: true
+  birthDate?: true
+  weddingDate?: true
   studioId?: true
   createdAt?: true
   updatedAt?: true
@@ -111,6 +121,8 @@ export type ClientCountAggregateInputType = {
   image?: true
   notes?: true
   type?: true
+  birthDate?: true
+  weddingDate?: true
   studioId?: true
   createdAt?: true
   updatedAt?: true
@@ -199,6 +211,8 @@ export type ClientGroupByOutputType = {
   image: string | null
   notes: string | null
   type: string
+  birthDate: Date | null
+  weddingDate: Date | null
   studioId: string
   createdAt: Date
   updatedAt: Date
@@ -235,6 +249,8 @@ export type ClientWhereInput = {
   image?: Prisma.StringNullableFilter<"Client"> | string | null
   notes?: Prisma.StringNullableFilter<"Client"> | string | null
   type?: Prisma.StringFilter<"Client"> | string
+  birthDate?: Prisma.DateTimeNullableFilter<"Client"> | Date | string | null
+  weddingDate?: Prisma.DateTimeNullableFilter<"Client"> | Date | string | null
   studioId?: Prisma.StringFilter<"Client"> | string
   createdAt?: Prisma.DateTimeFilter<"Client"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Client"> | Date | string
@@ -253,6 +269,8 @@ export type ClientOrderByWithRelationInput = {
   image?: Prisma.SortOrderInput | Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   type?: Prisma.SortOrder
+  birthDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  weddingDate?: Prisma.SortOrderInput | Prisma.SortOrder
   studioId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -276,6 +294,8 @@ export type ClientWhereUniqueInput = Prisma.AtLeast<{
   image?: Prisma.StringNullableFilter<"Client"> | string | null
   notes?: Prisma.StringNullableFilter<"Client"> | string | null
   type?: Prisma.StringFilter<"Client"> | string
+  birthDate?: Prisma.DateTimeNullableFilter<"Client"> | Date | string | null
+  weddingDate?: Prisma.DateTimeNullableFilter<"Client"> | Date | string | null
   studioId?: Prisma.StringFilter<"Client"> | string
   createdAt?: Prisma.DateTimeFilter<"Client"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Client"> | Date | string
@@ -294,6 +314,8 @@ export type ClientOrderByWithAggregationInput = {
   image?: Prisma.SortOrderInput | Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   type?: Prisma.SortOrder
+  birthDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  weddingDate?: Prisma.SortOrderInput | Prisma.SortOrder
   studioId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -315,6 +337,8 @@ export type ClientScalarWhereWithAggregatesInput = {
   image?: Prisma.StringNullableWithAggregatesFilter<"Client"> | string | null
   notes?: Prisma.StringNullableWithAggregatesFilter<"Client"> | string | null
   type?: Prisma.StringWithAggregatesFilter<"Client"> | string
+  birthDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Client"> | Date | string | null
+  weddingDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Client"> | Date | string | null
   studioId?: Prisma.StringWithAggregatesFilter<"Client"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Client"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Client"> | Date | string
@@ -330,6 +354,8 @@ export type ClientCreateInput = {
   image?: string | null
   notes?: string | null
   type: string
+  birthDate?: Date | string | null
+  weddingDate?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   bookings?: Prisma.BookingCreateNestedManyWithoutClientInput
@@ -347,6 +373,8 @@ export type ClientUncheckedCreateInput = {
   image?: string | null
   notes?: string | null
   type: string
+  birthDate?: Date | string | null
+  weddingDate?: Date | string | null
   studioId: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -364,6 +392,8 @@ export type ClientUpdateInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
+  birthDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  weddingDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   bookings?: Prisma.BookingUpdateManyWithoutClientNestedInput
@@ -381,6 +411,8 @@ export type ClientUncheckedUpdateInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
+  birthDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  weddingDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   studioId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -398,6 +430,8 @@ export type ClientCreateManyInput = {
   image?: string | null
   notes?: string | null
   type: string
+  birthDate?: Date | string | null
+  weddingDate?: Date | string | null
   studioId: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -413,6 +447,8 @@ export type ClientUpdateManyMutationInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
+  birthDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  weddingDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -427,6 +463,8 @@ export type ClientUncheckedUpdateManyInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
+  birthDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  weddingDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   studioId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -467,6 +505,8 @@ export type ClientCountOrderByAggregateInput = {
   image?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   type?: Prisma.SortOrder
+  birthDate?: Prisma.SortOrder
+  weddingDate?: Prisma.SortOrder
   studioId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -482,6 +522,8 @@ export type ClientMaxOrderByAggregateInput = {
   image?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   type?: Prisma.SortOrder
+  birthDate?: Prisma.SortOrder
+  weddingDate?: Prisma.SortOrder
   studioId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -497,6 +539,8 @@ export type ClientMinOrderByAggregateInput = {
   image?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   type?: Prisma.SortOrder
+  birthDate?: Prisma.SortOrder
+  weddingDate?: Prisma.SortOrder
   studioId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -582,6 +626,8 @@ export type ClientCreateWithoutStudioInput = {
   image?: string | null
   notes?: string | null
   type: string
+  birthDate?: Date | string | null
+  weddingDate?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   bookings?: Prisma.BookingCreateNestedManyWithoutClientInput
@@ -598,6 +644,8 @@ export type ClientUncheckedCreateWithoutStudioInput = {
   image?: string | null
   notes?: string | null
   type: string
+  birthDate?: Date | string | null
+  weddingDate?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutClientInput
@@ -643,6 +691,8 @@ export type ClientScalarWhereInput = {
   image?: Prisma.StringNullableFilter<"Client"> | string | null
   notes?: Prisma.StringNullableFilter<"Client"> | string | null
   type?: Prisma.StringFilter<"Client"> | string
+  birthDate?: Prisma.DateTimeNullableFilter<"Client"> | Date | string | null
+  weddingDate?: Prisma.DateTimeNullableFilter<"Client"> | Date | string | null
   studioId?: Prisma.StringFilter<"Client"> | string
   createdAt?: Prisma.DateTimeFilter<"Client"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Client"> | Date | string
@@ -658,6 +708,8 @@ export type ClientCreateWithoutEnrollmentsInput = {
   image?: string | null
   notes?: string | null
   type: string
+  birthDate?: Date | string | null
+  weddingDate?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   bookings?: Prisma.BookingCreateNestedManyWithoutClientInput
@@ -674,6 +726,8 @@ export type ClientUncheckedCreateWithoutEnrollmentsInput = {
   image?: string | null
   notes?: string | null
   type: string
+  birthDate?: Date | string | null
+  weddingDate?: Date | string | null
   studioId: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -706,6 +760,8 @@ export type ClientUpdateWithoutEnrollmentsInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
+  birthDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  weddingDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   bookings?: Prisma.BookingUpdateManyWithoutClientNestedInput
@@ -722,6 +778,8 @@ export type ClientUncheckedUpdateWithoutEnrollmentsInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
+  birthDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  weddingDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   studioId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -738,6 +796,8 @@ export type ClientCreateWithoutBookingsInput = {
   image?: string | null
   notes?: string | null
   type: string
+  birthDate?: Date | string | null
+  weddingDate?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   studio: Prisma.StudioCreateNestedOneWithoutClientsInput
@@ -754,6 +814,8 @@ export type ClientUncheckedCreateWithoutBookingsInput = {
   image?: string | null
   notes?: string | null
   type: string
+  birthDate?: Date | string | null
+  weddingDate?: Date | string | null
   studioId: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -786,6 +848,8 @@ export type ClientUpdateWithoutBookingsInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
+  birthDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  weddingDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   studio?: Prisma.StudioUpdateOneRequiredWithoutClientsNestedInput
@@ -802,6 +866,8 @@ export type ClientUncheckedUpdateWithoutBookingsInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
+  birthDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  weddingDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   studioId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -818,6 +884,8 @@ export type ClientCreateManyStudioInput = {
   image?: string | null
   notes?: string | null
   type: string
+  birthDate?: Date | string | null
+  weddingDate?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -832,6 +900,8 @@ export type ClientUpdateWithoutStudioInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
+  birthDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  weddingDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   bookings?: Prisma.BookingUpdateManyWithoutClientNestedInput
@@ -848,6 +918,8 @@ export type ClientUncheckedUpdateWithoutStudioInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
+  birthDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  weddingDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutClientNestedInput
@@ -864,6 +936,8 @@ export type ClientUncheckedUpdateManyWithoutStudioInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
+  birthDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  weddingDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -918,6 +992,8 @@ export type ClientSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   image?: boolean
   notes?: boolean
   type?: boolean
+  birthDate?: boolean
+  weddingDate?: boolean
   studioId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -937,6 +1013,8 @@ export type ClientSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   image?: boolean
   notes?: boolean
   type?: boolean
+  birthDate?: boolean
+  weddingDate?: boolean
   studioId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -953,6 +1031,8 @@ export type ClientSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   image?: boolean
   notes?: boolean
   type?: boolean
+  birthDate?: boolean
+  weddingDate?: boolean
   studioId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -969,12 +1049,14 @@ export type ClientSelectScalar = {
   image?: boolean
   notes?: boolean
   type?: boolean
+  birthDate?: boolean
+  weddingDate?: boolean
   studioId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ClientOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "phone" | "altPhone" | "email" | "address" | "image" | "notes" | "type" | "studioId" | "createdAt" | "updatedAt", ExtArgs["result"]["client"]>
+export type ClientOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "phone" | "altPhone" | "email" | "address" | "image" | "notes" | "type" | "birthDate" | "weddingDate" | "studioId" | "createdAt" | "updatedAt", ExtArgs["result"]["client"]>
 export type ClientInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   bookings?: boolean | Prisma.Client$bookingsArgs<ExtArgs>
   studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
@@ -1005,6 +1087,8 @@ export type $ClientPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     image: string | null
     notes: string | null
     type: string
+    birthDate: Date | null
+    weddingDate: Date | null
     studioId: string
     createdAt: Date
     updatedAt: Date
@@ -1443,6 +1527,8 @@ export interface ClientFieldRefs {
   readonly image: Prisma.FieldRef<"Client", 'String'>
   readonly notes: Prisma.FieldRef<"Client", 'String'>
   readonly type: Prisma.FieldRef<"Client", 'String'>
+  readonly birthDate: Prisma.FieldRef<"Client", 'DateTime'>
+  readonly weddingDate: Prisma.FieldRef<"Client", 'DateTime'>
   readonly studioId: Prisma.FieldRef<"Client", 'String'>
   readonly createdAt: Prisma.FieldRef<"Client", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Client", 'DateTime'>

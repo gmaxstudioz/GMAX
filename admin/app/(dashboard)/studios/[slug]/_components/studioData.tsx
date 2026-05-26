@@ -44,6 +44,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { CalendarBooking } from "@/lib/schemas/calendar";
 import { ClientType } from "@/lib/schemas/client";
+import { Reviews } from "./Reviews";
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapPrismaBookingToBooking(b: any): Booking {
     return {
@@ -664,6 +666,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
         resolver: zodResolver(CreateBookingSchema),
         defaultValues: {
             sessionCount: 1,
+            extraPicturesCount: 0,
             bookingStatus: "PENDING",
             paymentStatus: "PENDING",
             deliveryStatus: "PENDING",
@@ -678,6 +681,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
 
     useEffect(() => {
         if (searchParams.get("action") === "add-booking") {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setOpen(true);
             const dateStr = searchParams.get("date");
             if (dateStr && !isNaN(new Date(dateStr).getTime())) {
@@ -1259,7 +1263,7 @@ function BookingIntents({ data }: { data: StudioWithRelations }) {
                                                 {intent.amount != null ? `₦${Number(intent.amount).toLocaleString()}` : "—"}
                                             </p>
                                         {(() => {
-                                            const totalAmount = (intent as any).totalAmount;
+                                            const totalAmount = (intent as Record<string, unknown>).totalAmount;
                                             if (totalAmount != null && intent.amount != null && Number(totalAmount) !== Number(intent.amount)) {
                                                 return (
                                                     <p className="text-xs text-muted-foreground">
@@ -1273,7 +1277,7 @@ function BookingIntents({ data }: { data: StudioWithRelations }) {
                                 </td>
                                 <td className="py-3 px-2">
                                     {(() => {
-                                        const paymentPlan = (intent as any).paymentPlan;
+                                        const paymentPlan = (intent as unknown as Record<string, string>).paymentPlan;
                                         if (!paymentPlan) return null;
                                         const label = planLabels[paymentPlan as keyof typeof planLabels];
                                         return (
@@ -1376,6 +1380,10 @@ function StudioData({ studioData, userRole }: { studioData: StudioWithRelations,
                             className="inline-flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-4 py-2 text-sm font-medium transition-all hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
                         >Bookings</TabsTrigger>
                         <TabsTrigger 
+                            value="reviews" 
+                            className="inline-flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-4 py-2 text-sm font-medium transition-all hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                        >Reviews</TabsTrigger>
+                        <TabsTrigger 
                             value="intents" 
                             className="inline-flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-4 py-2 text-sm font-medium transition-all hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
                         >Intents</TabsTrigger>
@@ -1407,6 +1415,9 @@ function StudioData({ studioData, userRole }: { studioData: StudioWithRelations,
                     </TabsContent>
                     <TabsContent value="bookings">
                         <Bookings studioData={studioData} />
+                    </TabsContent>
+                    <TabsContent value="reviews">
+                        <Reviews studioData={studioData} />
                     </TabsContent>
                     <TabsContent value="intents">
                         <BookingIntents data={studioData} />

@@ -536,6 +536,7 @@ export async function updateBookingFull(
         addonIds?: string[];
         totalAmount?: number;
         paymentPlan?: PaymentPlan;
+        extraPicturesCount?: number;
     }
 ) {
     try {
@@ -559,12 +560,13 @@ export async function updateBookingFull(
         // Build update data
         const updateData: Record<string, unknown> = {};
 
-        if (data.clientId) updateData.clientId = data.clientId;
-        if (data.serviceId) updateData.serviceId = data.serviceId;
-        if (data.serviceVariantId) updateData.serviceVariantId = data.serviceVariantId;
-        if (data.memberId) updateData.memberId = data.memberId;
+        if (data.clientId) updateData.client = { connect: { id: data.clientId } };
+        if (data.serviceId) updateData.service = { connect: { id: data.serviceId } };
+        if (data.serviceVariantId) updateData.serviceVariant = { connect: { id: data.serviceVariantId } };
+        if (data.memberId) updateData.member = { connect: { id: data.memberId } };
         if (data.notes !== undefined) updateData.notes = data.notes;
         if (data.sessionCount !== undefined) updateData.sessionCount = Math.max(1, data.sessionCount);
+        if (data.extraPicturesCount !== undefined) updateData.extraPicturesCount = Math.max(0, data.extraPicturesCount);
         if (data.bookingStatus) updateData.bookingStatus = data.bookingStatus;
         if (data.paymentStatus) updateData.paymentStatus = data.paymentStatus;
         if (data.deliveryStatus) updateData.deliveryStatus = data.deliveryStatus;

@@ -33,13 +33,15 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
         select: { role: true, studioId: true }
     });
     
-    const adminRoles = ["owner", "developer", "manager"];
+    const adminRoles = ["owner", "admin", "developer", "manager"];
     const hasAdminRole = members.some(m => adminRoles.includes(m.role));
 
     const baseWhere = hasAdminRole 
         ? { 
-            memberId: null,
-            studioId: { in: members.filter(m => adminRoles.includes(m.role)).map(m => m.studioId) }
+            OR: [
+                { memberId: null, studioId: { in: members.filter(m => adminRoles.includes(m.role)).map(m => m.studioId) } },
+                { member: { userId: session.user.id } }
+            ]
           }
         : { member: { userId: session.user.id } };
 
@@ -65,8 +67,8 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
         }
     });
 
-    const title = hasAdminRole ? "Unassigned Tasks" : "My Tasks";
-    const desc = hasAdminRole ? "Manage unassigned bookings across your studios." : "Manage and view your assigned bookings.";
+    const title = hasAdminRole ? "Studio Tasks" : "My Tasks";
+    const desc = hasAdminRole ? "Manage unassigned bookings and your own assigned tasks." : "Manage and view your assigned bookings.";
 
     return (
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">

@@ -54,6 +54,7 @@ export const getStudioBySlug = os.studio.getBySlug
                 services: cat.services.map((s) => ({
                     id: s.id,
                     name: s.name,
+                    categoryId: s.categoryId,
                     isAddon: s.isAddon, // Updated mapping
                     description: s.description,
                     features: s.features,
@@ -82,6 +83,7 @@ export const getStudioBySlug = os.studio.getBySlug
             addons: addons.map((a) => ({
                 id: a.id,
                 name: a.name,
+                categoryId: a.categoryId,
                 isAddon: a.isAddon, // Updated mapping
                 description: a.description,
                 features: a.features,

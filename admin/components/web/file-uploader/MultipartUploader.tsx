@@ -90,9 +90,11 @@ export function MultipartUploader({
     async function uploadFile(file: File) {
         setState((prev) => ({ ...prev, status: "uploading", progress: 0 }));
         try {
-            file.size <= MULTIPART_THRESHOLD
-                ? await uploadSingle(file)
-                : await uploadMultipart(file);
+            if (file.size <= MULTIPART_THRESHOLD) {
+                await uploadSingle(file);
+            } else {
+                await uploadMultipart(file);
+            }
         } catch (err) {
             console.error("[MultipartUploader]", err);
             setState((prev) => ({ ...prev, status: "error", progress: 0 }));

@@ -55,7 +55,15 @@ function formatPrice(value: number): string {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function StoreView({ initialProducts }: { initialProducts: ProductWithCount[] }) {
+export function StoreView({ 
+    initialProducts,
+    totalSold,
+    totalRevenue
+}: { 
+    initialProducts: ProductWithCount[],
+    totalSold: number,
+    totalRevenue: number
+}) {
     const [isPending, startTransition] = useTransition();
     const [search, setSearch] = useState("");
     const debouncedSearch = useDebounce(search, 300);
@@ -141,6 +149,28 @@ export function StoreView({ initialProducts }: { initialProducts: ProductWithCou
 
     return (
         <div className="flex flex-col gap-6">
+
+            {/* Stats Header */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <Card>
+                    <CardContent className="p-6">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
+                        <p className="text-emerald-500 font-bold text-3xl mt-2">{formatPrice(totalRevenue)}</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="p-6">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Products Sold</CardTitle>
+                        <p className="text-primary font-bold text-3xl mt-2">{totalSold}</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="p-6">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Active Products</CardTitle>
+                        <p className="text-primary font-bold text-3xl mt-2">{products.filter(p => p.isPublished).length}</p>
+                    </CardContent>
+                </Card>
+            </div>
 
             {/* Header */}
             <Card>

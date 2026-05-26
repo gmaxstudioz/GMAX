@@ -167,6 +167,14 @@ export const getClientPhotos = (input: ClientPhotoAccessInput) =>
 export const downloadPhoto = (input: ClientDownloadPhotoInput) =>
     post<ClientDownloadOutput>(`/photos/${input.bookingId}/client-download`, input);
 
+/** POST /photos/{bookingId}/client-review — contract: ClientSubmitReviewContract */
+export const clientSubmitReview = (input: { bookingId: string; accessCode: string; description: string }) =>
+    post<{ success: boolean; message: string }>(`/photos/${input.bookingId}/client-review`, input);
+
+/** POST /photos/{bookingId}/client-dates — contract: ClientUpdateDatesContract */
+export const clientUpdateDates = (input: { bookingId: string; accessCode: string; eventType?: "birthday" | "wedding"; eventDate?: string }) =>
+    post<{ success: boolean; message: string }>(`/photos/${input.bookingId}/client-dates`, input);
+
 // ── Portfolio ─────────────────────────────────────────────────────────────────
 
 export type PortfolioItem = {
@@ -190,3 +198,34 @@ export type PortfolioResponse = {
 /** GET /portfolio — contract: GetPublicPortfolioContract */
 export const getPortfolio = (category?: string) =>
     get<PortfolioResponse>("/portfolio", category ? { category } : {});
+
+// ── Academy ─────────────────────────────────────────────────────────────
+
+export async function getPublicCourses() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return request<{ items: any[] }>("GET", "/academy");
+}
+
+export async function getPublicCourse(courseId: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return request<any>("GET", `/academy/${courseId}`);
+}
+
+export async function registerForCourse(input: {
+    courseId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+}) {
+    return request<{
+        reference: string;
+        amount: number;
+        email: string;
+        courseName: string;
+    }>("POST", "/academy/register", input);
+}
+
+export async function verifyAcademyPayment(reference: string) {
+    return request<{ verified: boolean }>("GET", `/academy/verify`, undefined, { reference });
+}

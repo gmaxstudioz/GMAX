@@ -4,13 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import gsap from "gsap";
 import { buttonVariants } from "@/components/ui/button";
-import { ArrowRight, ArrowLeft, CheckCircle2, Calendar, User, CreditCard, Loader2, Building2, Clock, Sparkles, Camera, MapPin } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle2, User, CreditCard, Loader2, Building2, Clock, Sparkles, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 import { publicBookingSchema, type PublicBookingInput } from "@/lib/schemas/booking.schema";
 import { getStudioBySlug, getStudios, createPublicBooking } from "@/lib/api";
-import type { PublicStudioOutput, PublicServiceOutput } from "@/lib/types/studio";
+import type { PublicStudioOutput, PublicServiceOutput, PublicCategoryOutput, ServiceVariantOutput, ServiceDeliverableOutput } from "@/lib/types/studio";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -34,20 +36,21 @@ export default function BookingPage() {
   const [studiosList, setStudiosList] = useState<{ id: string; name: string; slug: string; logo?: string | null; metadata?: Record<string, unknown> | null }[]>([]);
   const [studio, setStudio] = useState<PublicStudioOutput | null>(null);
   const [services, setServices] = useState<PublicServiceOutput[]>([]);
-  const [isLoadingStudios, setIsLoadingStudios] = useState(true);
+
   const [isLoadingServices, setIsLoadingServices] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("");
   
-  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
+
 
   const {
     register,
     handleSubmit,
     watch,
     setValue,
+    control,
     trigger,
     formState: { errors },
   } = useForm<PublicBookingInput>({
@@ -128,7 +131,7 @@ export default function BookingPage() {
         console.error(err);
         toast.error("Failed to load studios.");
       })
-      .finally(() => setIsLoadingStudios(false));
+      .finally();
   }, []);
 
   useEffect(() => {
@@ -255,7 +258,8 @@ export default function BookingPage() {
   const renderStepContent = () => {
     switch (currentStep) {
                   case 1: {
-        const categoryAddons = studio?.addons?.filter((s: any) => s.isActive !== false) || [];
+        const selectedCategory = studio?.categories?.find(c => c.services.some(s => s.id === selectedServiceId));
+        const categoryAddons = studio?.addons?.filter((s: PublicServiceOutput & { isActive?: boolean }) => s.categoryId === selectedCategory?.id && s.isActive !== false) || [];
 
         const occasionAnswers = [
           { label: "Birthday", mappedCategory: "Photography", icon: "🎂" },
@@ -281,7 +285,7 @@ export default function BookingPage() {
                   <p className="text-muted-foreground">No studios available at the moment.</p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {studiosList.map((s: any) => (
+                    {studiosList.map((s: typeof studiosList[number]) => (
                       <div
                         key={s.id}
                         onClick={() => {
@@ -308,7 +312,15 @@ export default function BookingPage() {
                           )}
                           <div className="flex-1">
                             <h4 className="font-bold text-lg font-heading">{s.name}</h4>
-                            <p className="text-sm text-muted-foreground line-clamp-1">{(s.metadata?.description as string) || "Select this location"}</p>
+                            <p className="text-sm text-muted-foreground line-clamp-1 mt-0.5">
+                              {s.metadata?.address ? (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" /> {(s.metadata.address as string)}
+                                </span>
+                              ) : (
+                                (s.metadata?.description as string) || "Select this location"
+                              )}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -326,7 +338,7 @@ export default function BookingPage() {
                   <Label className="text-2xl font-bold font-heading text-foreground">
                     What is the occasion?
                   </Label>
-                  <p className="text-sm text-muted-foreground mt-2">Let us know what you're celebrating so we can tailor the experience.</p>
+                  <p className="text-sm text-muted-foreground mt-2">Let us know what you&apos;re celebrating so we can tailor the experience.</p>
                 </div>
                 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -369,17 +381,17 @@ export default function BookingPage() {
                     {(() => {
                       const filteredCategories = selectedOccasionType === "Other"
                         ? studio?.categories
-                        : studio?.categories?.filter((c: any) => c.name.toLowerCase().includes(selectedOccasionType.toLowerCase()));
+                        : studio?.categories?.filter((c: PublicCategoryOutput) => c.name.toLowerCase().includes(selectedOccasionType.toLowerCase()));
 
                       const categoriesToDisplay = filteredCategories?.length ? filteredCategories : studio?.categories;
                       
-                      const allServices = categoriesToDisplay?.flatMap((c: any) => c.services.filter((s: any) => !s.isAddon && s.isActive !== false)) || [];
+                      const allServices = categoriesToDisplay?.flatMap((c: PublicCategoryOutput) => c.services.filter((s: PublicServiceOutput & { isActive?: boolean }) => !s.isAddon && s.isActive !== false)) || [];
                       
                       if (allServices.length === 0) return <p className="text-muted-foreground">No services found for this selection.</p>;
                       
                       return (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {allServices.map((service: any) => {
+                          {allServices.map((service: PublicServiceOutput & { isActive?: boolean }) => {
                             const isSelected = selectedServiceId === service.id;
                             return (
                               <div
@@ -440,7 +452,7 @@ export default function BookingPage() {
                   <p className="text-sm text-muted-foreground mt-2">Select your preferred location type for this session.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  {selectedService.variants.map((variant: any) => {
+                  {selectedService.variants.map((variant: ServiceVariantOutput) => {
                     const isSelectedV = selectedVariantId === variant.id;
                     const locationMeta: Record<string, { label: string; icon: string }> = {
                       STUDIO:   { label: "Studio",          icon: "🏢" },
@@ -458,7 +470,7 @@ export default function BookingPage() {
                           setConfigStep(5);
                         }}
                         className={cn(
-                          "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 group hover:shadow-md",
+                          "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 group hover:shadow-md flex flex-col",
                           isSelectedV ? "border-primary bg-primary/10 ring-1 ring-primary" : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5"
                         )}
                       >
@@ -466,6 +478,23 @@ export default function BookingPage() {
                         <div className="text-3xl mb-3">{meta.icon}</div>
                         <p className="font-semibold text-base">{meta.label}</p>
                         <p className="text-primary font-bold mt-1 text-sm">₦{Number(variant.basePrice).toLocaleString("en-NG")}</p>
+                        
+                        {variant.deliverables && variant.deliverables.length > 0 && (
+                          <div className="mt-4 pt-4 border-t border-border/50">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2">Deliverables</p>
+                            <ul className="space-y-1.5">
+                              {variant.deliverables.map((d: ServiceDeliverableOutput, idx: number) => (
+                                <li key={idx} className="text-sm flex items-start gap-1.5 text-muted-foreground/80">
+                                  <div className="w-1 h-1 rounded-full bg-primary/50 shrink-0 mt-1.5" />
+                                  <span className="line-clamp-2">
+                                    {d.quantity ? `${d.quantity}x ` : ""}{d.label}
+                                    {d.detail ? ` (${d.detail})` : ""}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -484,20 +513,38 @@ export default function BookingPage() {
                   <p className="text-sm text-muted-foreground mt-2">Personalize your outfits, add-ons, and choose a date.</p>
                 </div>
 
-                <div className="flex items-center justify-between p-5 rounded-2xl bg-primary/5 border border-primary/20">
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Price per session</p>
-                    <p className="text-2xl font-bold text-primary mt-1">
-                      ₦{Number(selectedVariant.basePrice).toLocaleString("en-NG")}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Duration</p>
-                    <div className="flex items-center gap-1.5 justify-end mt-1">
-                      <Clock className="w-5 h-5 text-primary" />
-                      <span className="font-semibold text-lg">{selectedVariant.sessionDurationMins}min</span>
+                <div className="p-5 rounded-2xl bg-primary/5 border border-primary/20 flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Price per session</p>
+                      <p className="text-2xl font-bold text-primary mt-1">
+                        ₦{Number(selectedVariant.basePrice).toLocaleString("en-NG")}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Duration</p>
+                      <div className="flex items-center gap-1.5 justify-end mt-1">
+                        <Clock className="w-5 h-5 text-primary" />
+                        <span className="font-semibold text-lg">{selectedVariant.sessionDurationMins}min</span>
+                      </div>
                     </div>
                   </div>
+                  {selectedVariant.deliverables && selectedVariant.deliverables.length > 0 && (
+                    <div className="pt-4 border-t border-primary/10">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-3">What&apos;s Included</p>
+                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {selectedVariant.deliverables.map((d: ServiceDeliverableOutput) => (
+                          <li key={d.id} className="text-sm flex items-start gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <span className="font-medium text-foreground">{d.quantity ? `${d.quantity}x ` : ""}{d.label}</span>
+                              {d.detail && <span className="text-muted-foreground ml-1">({d.detail})</span>}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
 
                 {/* Date & Time */}
@@ -526,32 +573,57 @@ export default function BookingPage() {
                   </div>
                 </div>
 
-                {/* Outfits Stepper */}
-                <div className="space-y-4 pt-6 border-t border-border/50">
-                  <div className="flex justify-between items-center">
-                    <Label className="text-sm font-medium text-foreground uppercase tracking-wider">
-                      How many outfits?
-                    </Label>
-                    {selectedTime && (
-                      <span className="text-xs text-primary font-medium bg-primary/10 px-3 py-1 rounded-full">
-                        Max: {maxAvailableSessions}
-                      </span>
-                    )}
+                {/* Extras Grid (Outfits & Extra Pictures) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-border/50">
+                  {/* Outfits Stepper */}
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-sm font-medium text-foreground uppercase tracking-wider">
+                        How many outfits?
+                      </Label>
+                      {selectedTime && (
+                        <span className="text-xs text-primary font-medium bg-primary/10 px-3 py-1 rounded-full">
+                          Max: {maxAvailableSessions}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-6">
+                      <div className="flex items-center border border-border rounded-xl overflow-hidden bg-card shadow-sm">
+                        <button type="button" onClick={() => { const cur = watch("sessionCount") || 1; if (cur > 1) setValue("sessionCount", cur - 1, { shouldValidate: true }); }} className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors">−</button>
+                        <div className="w-14 h-12 flex items-center justify-center font-bold text-lg border-x border-border">{watch("sessionCount") || 1}</div>
+                        <button type="button" onClick={() => { const cur = watch("sessionCount") || 1; if (cur < maxAvailableSessions) setValue("sessionCount", cur + 1, { shouldValidate: true }); }} className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors">+</button>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-primary">₦{(Number(selectedVariant.basePrice) * (watch("sessionCount") || 1)).toLocaleString("en-NG")}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{watch("sessionCount") || 1} outfit{(watch("sessionCount") || 1) !== 1 ? "s" : ""} · subtotal</p>
+                      </div>
+                    </div>
+                    {!selectedTime && <p className="text-xs text-muted-foreground/70">Select a time slot above to unlock the maximum available outfits.</p>}
+                    {errors.sessionCount && <p className="text-destructive text-sm">{errors.sessionCount.message}</p>}
                   </div>
 
-                  <div className="flex items-center gap-6">
-                    <div className="flex items-center border border-border rounded-xl overflow-hidden bg-card shadow-sm">
-                      <button type="button" onClick={() => { const cur = watch("sessionCount") || 1; if (cur > 1) setValue("sessionCount", cur - 1, { shouldValidate: true }); }} className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors">−</button>
-                      <div className="w-14 h-12 flex items-center justify-center font-bold text-lg border-x border-border">{watch("sessionCount") || 1}</div>
-                      <button type="button" onClick={() => { const cur = watch("sessionCount") || 1; if (cur < maxAvailableSessions) setValue("sessionCount", cur + 1, { shouldValidate: true }); }} className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors">+</button>
+                  {/* Extra Pictures Stepper */}
+                  {selectedService?.variants?.find((v: ServiceVariantOutput) => v.locationType.toUpperCase() === "BOTH") && (
+                    <div className="space-y-4">
+                      <Label className="text-sm font-medium text-foreground uppercase tracking-wider block mb-4">
+                        How many extra pictures? <span className="ml-2 text-xs normal-case font-normal text-muted-foreground/60">(optional)</span>
+                      </Label>
+
+                      <div className="flex items-center gap-6">
+                        <div className="flex items-center border border-border rounded-xl overflow-hidden bg-card shadow-sm">
+                          <button type="button" onClick={() => { const cur = watch("extraPicturesCount") || 0; if (cur > 0) setValue("extraPicturesCount", cur - 1, { shouldValidate: true }); }} className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors">−</button>
+                          <div className="w-14 h-12 flex items-center justify-center font-bold text-lg border-x border-border">{watch("extraPicturesCount") || 0}</div>
+                          <button type="button" onClick={() => { const cur = watch("extraPicturesCount") || 0; setValue("extraPicturesCount", cur + 1, { shouldValidate: true }); }} className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors">+</button>
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold text-primary">₦{(Number(selectedService?.variants?.find((v: ServiceVariantOutput) => v.locationType.toUpperCase() === "BOTH")?.basePrice || 0) * (watch("extraPicturesCount") || 0)).toLocaleString("en-NG")}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{watch("extraPicturesCount") || 0} extra picture{(watch("extraPicturesCount") || 0) !== 1 ? "s" : ""} · subtotal</p>
+                        </div>
+                      </div>
+                      {errors.extraPicturesCount && <p className="text-destructive text-sm">{errors.extraPicturesCount.message}</p>}
                     </div>
-                    <div>
-                      <p className="text-2xl font-bold text-primary">₦{(Number(selectedVariant.basePrice) * (watch("sessionCount") || 1)).toLocaleString("en-NG")}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{watch("sessionCount") || 1} outfit{(watch("sessionCount") || 1) !== 1 ? "s" : ""} · subtotal</p>
-                    </div>
-                  </div>
-                  {!selectedTime && <p className="text-xs text-muted-foreground/70">Select a time slot above to unlock the maximum available outfits.</p>}
-                  {errors.sessionCount && <p className="text-destructive text-sm">{errors.sessionCount.message}</p>}
+                  )}
                 </div>
 
                 {/* Add-ons */}
@@ -561,15 +633,9 @@ export default function BookingPage() {
                       Enhance Your Session <span className="ml-2 text-xs normal-case font-normal text-muted-foreground/60">(optional)</span>
                     </Label>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {categoryAddons.flatMap((addon: any) =>
+                      {categoryAddons.flatMap((addon: PublicServiceOutput) =>
                         addon.variants
-                          .filter((variant: any) => {
-                            if (!selectedVariant) return true;
-                            const mainLoc = selectedVariant.locationType.toLowerCase();
-                            const addonLoc = variant.locationType.toLowerCase();
-                            return addonLoc === mainLoc || addonLoc === "both" || mainLoc === "both";
-                          })
-                          .map((variant: any) => {
+                          .map((variant: ServiceVariantOutput) => {
                             const compositeId = `${addon.id}:${variant.id}`;
                             const count = selectedAddonIds.filter(id => id === compositeId).length;
                             return (
@@ -591,7 +657,8 @@ export default function BookingPage() {
                                       type="button" 
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        setValue("selectedAddonIds", [...selectedAddonIds, compositeId]);
+                                        const newArr = selectedAddonIds.filter(id => !id.startsWith(`${addon.id}:`));
+                                        setValue("selectedAddonIds", [...newArr, compositeId]);
                                       }} 
                                       className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
                                     >
@@ -674,11 +741,18 @@ export default function BookingPage() {
             </div>
             <div className="space-y-2">
               <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Phone Number</Label>
-              <Input
-                type="tel"
-                placeholder="+1 (555) 000-0000"
-                {...register("clientPhone")}
-                className="rounded-xl bg-card/50 h-12"
+              <Controller
+                control={control}
+                name="clientPhone"
+                render={({ field }) => (
+                  <PhoneInput
+                    defaultCountry="NG"
+                    placeholder="Enter phone number"
+                    value={field.value}
+                    onChange={field.onChange}
+                    className="flex h-12 w-full rounded-xl border border-input bg-card/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                )}
               />
               {errors.clientPhone && <p className="text-destructive text-sm">{errors.clientPhone.message}</p>}
             </div>
@@ -708,7 +782,11 @@ export default function BookingPage() {
               return sum + Number(variant?.basePrice || 0);
             }, 0)
           : 0;
-        const grandTotal = serviceTotal + addonsTotal;
+        
+        const extraPicturesCount = watch("extraPicturesCount") || 0;
+        const bothVariant = selectedService?.variants?.find((v: ServiceVariantOutput) => v.locationType.toUpperCase() === "BOTH");
+        const extraPicturesTotal = bothVariant ? Number(bothVariant.basePrice) * extraPicturesCount : 0;
+        const grandTotal = serviceTotal + addonsTotal + extraPicturesTotal;
         const currentPlan = watch("paymentPlan") || "FULL";
         const planMultiplier = currentPlan === "QUARTER" ? 0.25 : currentPlan === "HALF" ? 0.5 : 1;
         const chargeAmount = Math.round(grandTotal * planMultiplier * 100) / 100;
@@ -747,6 +825,12 @@ export default function BookingPage() {
                   <span className="text-muted-foreground">Sessions</span>
                   <span className="font-medium text-right">{sessionCount}</span>
                 </div>
+                {extraPicturesCount > 0 && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Extra Pictures ({extraPicturesCount})</span>
+                    <span className="text-right font-medium text-foreground">₦{extraPicturesTotal.toLocaleString("en-NG")}</span>
+                  </div>
+                )}
                 {selectedAddonIds.length > 0 && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Add-ons</span>
@@ -828,6 +912,7 @@ export default function BookingPage() {
               </div>
             </div>
             
+
             <div className="bg-primary/5 rounded-2xl p-6 border border-primary/20 text-center">
               <CreditCard className="w-8 h-8 text-primary mx-auto mb-3" />
               <h4 className="font-semibold mb-2">Secure Payment Gateway</h4>
@@ -851,8 +936,49 @@ export default function BookingPage() {
             <div className="w-2 h-2 rounded-full bg-primary"></div>
           </div>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Reserve your spot at {studio?.name || "GMAX Studioz"}. Follow the steps below to customize your experience and secure your session.
+            Reserve your spot at {studio?.name || "GMAX Studioz"}{studio?.metadata && typeof studio.metadata === 'object' && 'address' in studio.metadata && typeof studio.metadata.address === 'string' ? `, located at ${studio.metadata.address}` : ""}. Follow the steps below to customize your experience and secure your session.
           </p>
+        </div>
+
+        {/* Booking Rules and Guidelines */}
+        <div className="bg-muted/30 rounded-2xl p-6 border border-border/50 text-sm space-y-4 mb-12">
+        <div className="mb-5">
+          <h4 className="font-semibold text-2xl text-primary flex items-center gap-2 font-heading">Booking Rules and Guidelines</h4>
+          <p className="text-muted-foreground">
+            By booking our services, you acknowledge and accept these terms and conditions. If you have any questions or concerns, please feel free to discuss them with us before confirming the booking.
+          </p>
+        </div>
+          
+          <div className="space-y-3 mt-4">
+            <div>
+              <span className="font-semibold text-foreground block md:inline">BOOKING AND PAYMENT:</span>
+              <span className="text-muted-foreground md:ml-2 block md:inline">Secure your booking by paying a non-refundable deposit, and make sure the full payment is settled by the date of your photo session or event.</span>
+            </div>
+            <div>
+              <span className="font-semibold text-foreground block md:inline">CANCELLATIONS AND RESCHEDULING:</span>
+              <span className="text-muted-foreground md:ml-2 block md:inline">Notify us in advance about any cancellations or rescheduling and be aware that cancellations within 48 hours might result in the forfeiture of your deposit.</span>
+            </div>
+            <div>
+              <span className="font-semibold text-foreground block md:inline">IMAGE DELIVERY:</span>
+              <span className="text-muted-foreground md:ml-2 block md:inline">Expect your professionally edited images within the agreed-upon timeframe, and we’ll provide you with a download link for your high-resolution pictures.</span>
+            </div>
+            <div>
+              <span className="font-semibold text-foreground block md:inline">CLIENT COOPERATION:</span>
+              <span className="text-muted-foreground md:ml-2 block md:inline">Ensure a smooth photo session by providing necessary information and cooperating during the shoot. Notify us in advance if there are any delays or changes to the schedule.</span>
+            </div>
+            <div>
+              <span className="font-semibold text-foreground block md:inline">DELIVERY ERRORS:</span>
+              <span className="text-muted-foreground md:ml-2 block md:inline">Report any errors or issues with the delivered images within a specified timeframe to allow us address and rectify them promptly.</span>
+            </div>
+            <div>
+              <span className="font-semibold text-foreground block md:inline">ADDITIONAL SERVICES:</span>
+              <span className="text-muted-foreground md:ml-2 block md:inline">Any additional services beyond our initial agreement may incur extra charges.</span>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-border/50 mt-4">
+            <p className="font-medium italic text-muted-foreground">Be rest assure that Gmax studioz renders the best service as long as these terms are being adhered to. Reach us at any time as we’re always available to be of service to you.</p>
+          </div>
         </div>
 
         {/* Stepper (Desktop) */}
@@ -934,17 +1060,17 @@ export default function BookingPage() {
               <button
                 type="button"
                 onClick={() => navigateStep("prev")}
-                disabled={currentStep === 1 || isSubmitting}
+                disabled={(currentStep === 1 && configStep === 1) || isSubmitting}
                 className={cn(
                   "inline-flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all",
-                  currentStep === 1 ? "opacity-0 pointer-events-none" : "hover:bg-secondary/50 text-foreground"
+                  (currentStep === 1 && configStep === 1) ? "opacity-0 pointer-events-none" : "hover:bg-secondary/50 text-foreground"
                 )}
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back
               </button>
               
-              {currentStep < 4 ? (
+              {currentStep < 3 ? (
                 <button
                   type="button"
                   onClick={() => navigateStep("next")}

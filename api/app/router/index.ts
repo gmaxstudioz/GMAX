@@ -8,10 +8,11 @@ import {
     rescheduleBooking, updateBooking, updateBookingStatus,
 } from "./bookings";
 import { createProduct, deleteProduct, getAllProducts, getProductById, purchaseProduct, requestAccessLink, requestDownload, updateProduct, verifyAccessToken } from "./products";
-import { clientDownloadPhoto, clientPhotoAccess } from "./photos";
+import { clientDownloadPhoto, clientPhotoAccess, clientSubmitReview, clientUpdateDates } from "./photos";
 import { verifyPurchase, getPublicPaymentDetails } from "./payments";
 import { getStudioBySlug, getAllStudios } from "./studio";
 import { getPublicPortfolio } from "./portfolio";
+import { getPublicCourses, getPublicCourse, registerForCourse, verifyPayment } from "./academy";
 
 const os = implement(contract).$context<BaseContext>();
 
@@ -125,9 +126,18 @@ export const router = os.router({
         bulkApprove: os.photo.bulkApprove.handler(notImplemented),
         clientAccess: clientPhotoAccess,
         clientDownload: clientDownloadPhoto,
+        clientSubmitReview: clientSubmitReview,
+        clientUpdateDates: clientUpdateDates,
     },
 
     portfolio: {
         getPublic: getPublicPortfolio,
+    },
+    // ── Academy ─────────────────────────────────────────────────────────────────
+    academy: {
+        getPublicCourses,
+        getPublicCourse,
+        register: registerForCourse,
+        verifyPayment,
     },
 });

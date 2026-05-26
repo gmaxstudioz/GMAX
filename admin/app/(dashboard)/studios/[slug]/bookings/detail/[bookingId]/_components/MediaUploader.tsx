@@ -8,6 +8,7 @@ import { uploadBookingPhoto } from "@/lib/actions/booking";
 import { tryCatch } from "@/hooks/try-catch";
 import { toast } from "sonner";
 import { useDropzone } from "react-dropzone";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
     UploadCloudIcon,
@@ -141,6 +142,7 @@ async function uploadLargeFile(
 // ---------------------------------------------------------------------------
 
 export function MediaUploader({ bookingId }: MediaUploaderProps) {
+    const router = useRouter();
     const [uploads, setUploads] = useState<UploadItem[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const abortRef = useRef(false);
@@ -210,9 +212,10 @@ export function MediaUploader({ bookingId }: MediaUploaderProps) {
                         ? `All ${successCount} file${successCount > 1 ? "s" : ""} uploaded`
                         : `${successCount} of ${items.length} files uploaded`
                 );
+                router.refresh();
             }
         },
-        [bookingId, updateUpload]
+        [bookingId, updateUpload, router]
     );
 
     const onDrop = useCallback(

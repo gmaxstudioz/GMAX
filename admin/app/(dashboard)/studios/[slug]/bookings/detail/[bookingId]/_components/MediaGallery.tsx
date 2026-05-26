@@ -137,6 +137,7 @@ export function MediaGallery({ photos, isManager, r2PublicUrl }: MediaGalleryPro
                                     width={500}
                                     height={500}
                                     loading="lazy"
+                                    unoptimized
                                 />
                             )}
                             <div className="absolute top-2 right-2 flex items-center gap-2">
@@ -285,7 +286,7 @@ export function MediaGallery({ photos, isManager, r2PublicUrl }: MediaGalleryPro
                             <video src={previewUrl} controls className="w-full max-h-[80vh] rounded-lg" />
                         ) : (
                             <div className="relative w-full h-[80vh]">
-                                <Image src={previewUrl} alt="Preview" fill className="object-contain rounded-lg" />
+                                <Image src={previewUrl} alt="Preview" fill className="object-contain rounded-lg" unoptimized />
                             </div>
                         )}
                     </DialogContent>

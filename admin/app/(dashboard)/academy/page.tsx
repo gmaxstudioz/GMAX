@@ -1,20 +1,102 @@
-import type { Metadata } from "next";
+import { Metadata } from "next";
+import { prisma } from "@/lib/prisma";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AcademyCoursesTable } from "./_components/AcademyCoursesTable";
+import { AcademyStudentsTable } from "./_components/AcademyStudentsTable";
+import { BookOpen, Users, DollarSign } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Academy",
-  description:
-    "Explore courses, learning resources, and training programs to grow your studio skills.",
+    title: "Academy",
+    description: "Manage your Academy courses, modules, and students.",
 };
 
+export default async function AcademyPage() {
+    // Fetch courses with their module count and student count
+    const courses = await prisma.academyCourse.findMany({
+        include: {
+            _count: {
+                select: { modules: true, students: true }
+            },
+            modules: {
+                orderBy: { sortOrder: "asc" }
+            },
+            batches: {
+                orderBy: { startDate: "asc" }
+            }
+        },
+        orderBy: { createdAt: "desc" },
+    });
 
-export default function Page() {
-  return (
-    <div className="flex flex-col items-center justify-center p-8 text-center border-2 border-dashed rounded-lg bg-muted/10 h-64 mt-8">
-      <h1 className="text-2xl font-bold text-muted-foreground mb-4 opacity-70">Academy Data Hub</h1>
-      <p className="font-semibold text-xl">Coming Soon</p>
-      <p className="text-sm text-muted-foreground mt-2 max-w-sm">
-        We are building the Academy section for courses, resources, and training. Stay tuned!
-      </p>
-    </div>
-  )
+    const students = await prisma.academyStudent.findMany({
+        include: { course: true, batch: true },
+        orderBy: { createdAt: "desc" },
+    });
+
+    // Calculate metrics
+    const totalStudents = students.filter(s => s.paymentStatus === "SUCCESS").length;
+    const totalRevenue = students
+        .filter(s => s.paymentStatus === "SUCCESS")
+        .reduce((sum, s) => sum + Number(s.amountPaid), 0);
+
+    return (
+        <div className="space-y-6 md:py-6 px-4 lg:px-6">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">Academy</h1>
+                <p className="text-muted-foreground">
+                    Manage your courses, curriculum, and students.
+                </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Active Courses</CardTitle>
+                        <BookOpen className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{courses.filter(c => c.isPublished).length}</div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                            {courses.length} total courses
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Enrolled Students</CardTitle>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{totalStudents}</div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                            Paid enrollments
+                        </p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <Tabs defaultValue="courses" className="space-y-4">
+                <TabsList>
+                    <TabsTrigger value="courses">Courses & Modules</TabsTrigger>
+                    <TabsTrigger value="students">Students ({students.length})</TabsTrigger>
+                </TabsList>
+                <TabsContent value="courses" className="space-y-4">
+                    <AcademyCoursesTable courses={courses.map(c => ({...c, price: Number(c.price)}))} />
+                </TabsContent>
+                <TabsContent value="students" className="space-y-4">
+                    <AcademyStudentsTable students={students.map(s => ({...s, amountPaid: Number(s.amountPaid), course: { ...s.course, price: Number(s.course.price) }}))} />
+                </TabsContent>
+            </Tabs>
+        </div>
+    );
 }

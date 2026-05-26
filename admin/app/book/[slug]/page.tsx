@@ -38,15 +38,6 @@ export default async function StudioBookPage({ params }: Props) {
                 },
             },
             studioSessions: true,
-            bookings: {
-                where: {
-                    bookingDate: { gte: new Date() },
-                    bookingStatus: { not: "CANCELLED" },
-                },
-                include: {
-                    service: { include: { studioSession: true } },
-                },
-            },
         },
     });
 
@@ -59,19 +50,6 @@ export default async function StudioBookPage({ params }: Props) {
     });
 
     const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
-    const paystackPublicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "";
-
-    // Serialize dates for client
-    const serializedBookings = studio.bookings.map(b => ({
-        id: b.id,
-        bookingDate: b.bookingDate.toISOString(),
-        sessionCount: b.sessionCount,
-        service: b.service ? {
-            studioSession: b.service.studioSession ? {
-                duration: b.service.studioSession.duration,
-            } : null,
-        } : null,
-    }));
 
     return (
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
@@ -104,6 +82,7 @@ export default async function StudioBookPage({ params }: Props) {
                             name: s.name,
                             isAddon: s.isAddon,
                             basePrice: Number(s.variants[0].basePrice),
+                            bothVariantPrice: s.variants.find(v => v.locationType.toUpperCase() === "BOTH") ? Number(s.variants.find(v => v.locationType.toUpperCase() === "BOTH")!.basePrice) : null,
                             studioSession: s.studioSession ? { duration: s.studioSession.duration } : null,
                         })),
                 }))}
@@ -114,8 +93,6 @@ export default async function StudioBookPage({ params }: Props) {
                         name: a.name,
                         basePrice: Number(a.variants[0].basePrice),
                     }))}
-                existingBookings={serializedBookings}
-                paystackPublicKey={paystackPublicKey}
             />
         </div>
     );

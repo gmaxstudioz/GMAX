@@ -102,6 +102,7 @@ const columns: ColumnDef<RecentBooking>[] = [
 ];
 
 export function DataTable({ data }: { data: RecentBooking[] }) {
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,

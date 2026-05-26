@@ -138,9 +138,6 @@ export default function WorksPage() {
                     "md:translate-y-4 md:group-hover:translate-y-0",
                     isActive ? "translate-y-0" : "translate-y-4"
                   )}>
-                    {work.title || work.category}
-                  </span>
-                  <span className="text-white/60 text-sm mt-1">
                     {work.category}
                   </span>
                 </div>

@@ -56,9 +56,10 @@ interface UpdateBookingDialogProps {
         serviceVariantId?: string;
         memberId: string;
         bookingDate: string;
-        addonIds: string[];
+        addonIds?: string[];
         totalAmount?: number;
         paymentPlan?: string;
+        extraPicturesCount?: number;
     };
     clients: ClientOption[];
     services: ServiceOption[];
@@ -126,9 +127,10 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
             addonIds: normalizeAddonIds(currentData.addonIds || []),
             totalAmount: currentData.totalAmount ?? 0,
             paymentPlan: (currentData.paymentPlan as "FULL" | "HALF" | "QUARTER" | undefined) ?? "FULL",
+            extraPicturesCount: currentData.extraPicturesCount ?? 0,
         }
     });
-
+    // eslint-disable-next-line react-hooks/incompatible-library
     const watchedClientId = form.watch("clientId");
     const watchedServiceId = form.watch("serviceId");
     const watchedServiceVariantId = form.watch("serviceVariantId");
@@ -172,6 +174,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                 addonIds: data.addonIds,
                 totalAmount: data.totalAmount,
                 paymentPlan: data.paymentPlan as "FULL" | "HALF" | "QUARTER",
+                extraPicturesCount: data.extraPicturesCount,
             }));
             
             if (error) {
@@ -204,6 +207,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                 addonIds: normalizeAddonIds(currentData.addonIds || []),
                 totalAmount: currentData.totalAmount ?? 0,
                 paymentPlan: (currentData.paymentPlan as "FULL" | "HALF" | "QUARTER" | undefined) ?? "FULL",
+                extraPicturesCount: currentData.extraPicturesCount ?? 0,
             });
             setClientSearch("");
             setServiceSearch("");
@@ -380,6 +384,22 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                                             )}
                                         </div>
                                     )}
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Extra Pictures</label>
+                                        <Controller
+                                            name="extraPicturesCount"
+                                            control={form.control}
+                                            render={({ field: { value, onChange, ...f } }) => (
+                                                <Input
+                                                    {...f}
+                                                    type="number"
+                                                    value={value ?? 0}
+                                                    onChange={(e) => onChange(Number(e.target.value))}
+                                                    min={0}
+                                                />
+                                            )}
+                                        />
+                                    </div>
                                 </div>
                             )}
                         />

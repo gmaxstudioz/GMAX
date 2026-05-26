@@ -242,7 +242,7 @@ model ServiceVariant {
 
   locationType        LocationType
   basePrice           Decimal      @db.Decimal(12, 2)
-  maxPrice            Decimal?     @db.Decimal(12, 2) // for range-priced services
+  maxPrice            Decimal?     @db.Decimal(12, 2)
   sessionDurationMins Int
   logisticsIncluded   Boolean      @default(true)
 
@@ -252,7 +252,7 @@ model ServiceVariant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([serviceId, locationType]) // one variant per location type per service
+  @@unique([serviceId, locationType])
   @@index([serviceId])
   @@map("service_variant")
 }
@@ -340,6 +340,9 @@ model Client {
   image    String?
   notes    String?   @db.Text
   type     String
+  birthDate   DateTime?
+  weddingDate DateTime?
+  
   bookings Booking[]
 
   studioId    String       @map("studioId")
@@ -383,6 +386,7 @@ model BookingIntent {
   serviceVariantId String?
   addonIds         String[]
   sessionCount     Int
+  extraPicturesCount Int @default(0)
   bookingDate      DateTime
   notes            String?
 
@@ -410,6 +414,7 @@ model Booking {
 
   bookingDate  DateTime
   sessionCount Int      @default(1)
+  extraPicturesCount Int @default(0)
   notes        String?  @db.Text
 
   totalAmount Decimal     @db.Decimal(12, 2)
@@ -441,7 +446,10 @@ model Booking {
 
   accessCode       String?         @unique
 
+  deliveredAt      DateTime?       // When the photos were delivered to the client
+
   notifications Notification[]
+  revisionRequests RevisionRequest[]
 
   @@index([studioId])
   @@index([clientId])
@@ -575,6 +583,8 @@ model Notification {
   bookingId String?
   booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
 
+  providerId String? @unique // Used to store Termii message_id for webhook tracking
+
   createdAt DateTime @default(now())
 
   @@index([status])
@@ -599,6 +609,7 @@ enum NotificationChannel {
 enum NotificationStatus {
   PENDING
   SENT
+  DELIVERED
   FAILED
 }
 
@@ -717,4 +728,98 @@ model PortfolioItem {
   @@index([category])
   @@index([sortOrder])
   @@map("portfolio_item")
+}
+
+model RevisionRequest {
+  id        String   @id @default(cuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  
+  description String   @db.Text
+  status      RevisionStatus @default(PENDING)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookingId])
+  @@map("revision_request")
+}
+
+enum RevisionStatus {
+  PENDING
+  RESOLVED
+}
+
+// ── Academy Models ──────────────────────────────────────────────────
+
+model AcademyCourse {
+  id          String   @id @default(uuid())
+  title       String
+  description String   @db.Text
+  price       Decimal
+  duration    String?
+  location    String?
+  isPublished Boolean  @default(false)
+  thumbnail   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  modules     AcademyModule[]
+  batches     AcademyBatch[]
+  students    AcademyStudent[]
+
+  @@map("academy_course")
+}
+
+model AcademyBatch {
+  id          String   @id @default(uuid())
+  courseId    String
+  course      AcademyCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  name        String
+  startDate   DateTime
+  endDate     DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  students    AcademyStudent[]
+
+  @@index([courseId])
+  @@map("academy_batch")
+}
+
+model AcademyModule {
+  id          String   @id @default(uuid())
+  courseId    String
+  course      AcademyCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title       String
+  description String?  @db.Text
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([courseId])
+  @@map("academy_module")
+}
+
+model AcademyStudent {
+  id               String   @id @default(uuid())
+  courseId         String
+  course           AcademyCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  batchId          String
+  batch            AcademyBatch  @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  firstName        String
+  lastName         String
+  email            String
+  phone            String
+  amountPaid       Decimal
+  paymentPlan      String   @default("FULL") // QUARTER, HALF, FULL
+  howDidYouHear    String   @default("")
+  paymentReference String?  @unique
+  paymentStatus    String   @default("PENDING") // PENDING, SUCCESS, FAILED
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([courseId])
+  @@index([batchId])
+  @@map("academy_student")
 }

@@ -62,7 +62,7 @@ export default function ServicesSection() {
               key={service.id}
               className={cn(
                 "group relative flex flex-col w-full overflow-hidden transition-all duration-500 ease-out cursor-pointer p-4 md:p-6",
-                isActive ? "bg-[#1f1f1f] rounded-xl" : isHovered ? "bg-[#1f1f1f] rounded-xl" : "bg-transparent rounded-xl"
+                isActive ? "bg-primary/20 rounded-xl" : isHovered ? "bg-primary/20 rounded-xl" : "bg-transparent rounded-xl"
               )}
               onMouseEnter={() => setHoveredService(service.id)}
               onMouseLeave={() => setHoveredService(null)}
@@ -73,7 +73,7 @@ export default function ServicesSection() {
                   {/* Inline Thumbnail */}
                   <div
                     className={cn(
-                      "relative overflow-hidden transition-all duration-500 ease-out flex-shrink-0",
+                      "relative overflow-hidden transition-all duration-500 ease-out shrink-0",
                       isActive
                         ? "w-16 h-16 rounded-xl md:w-20 md:h-20"
                         : "w-20 h-10 rounded-full md:w-24 md:h-12"
@@ -97,10 +97,10 @@ export default function ServicesSection() {
                       />
                     )}
                   </div>
-                  <h3 className="text-3xl md:text-7xl font-medium tracking-tight text-white">{service.title}</h3>
+                  <h3 className="text-3xl md:text-7xl font-medium tracking-tight">{service.title}</h3>
                 </div>
 
-                <div className="text-white flex-shrink-0 flex items-center justify-center w-10 h-10">
+                <div className="flex-shrink-0 flex items-center justify-center w-10 h-10">
                   {isActive ? <Minus size={44} /> : <Plus size={44} />}
                 </div>
               </div>
@@ -115,7 +115,7 @@ export default function ServicesSection() {
                 <div className="overflow-hidden">
                   <div className="flex flex-col md:flex-row gap-6 items-start">
                     {/* Mobile Media (hidden on desktop because desktop uses cursor tracker) */}
-                    <p className="text-gray-300 text-lg md:text-xl max-w-2xl leading-relaxed">
+                    <p className="text-lg md:text-xl max-w-2xl leading-relaxed">
                       {service.description}
                     </p>
                     <div className="w-full h-48 relative rounded-xl overflow-hidden md:hidden">

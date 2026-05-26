@@ -110,6 +110,9 @@ export const ClientPhotoAccessOutputSchema = z.object({
     clientName: z.string(),
     serviceName: z.string(),
     bookingDate: z.iso.datetime(),
+    deliveredAt: z.iso.datetime().nullable().optional(),
+    birthDate: z.iso.datetime().nullable().optional(),
+    weddingDate: z.iso.datetime().nullable().optional(),
     photos: z.array(z.object({
         id: z.string(),
         fileName: z.string(),
@@ -131,6 +134,19 @@ export const ClientDownloadOutputSchema = z.object({
     downloadUrl: z.string(),
     fileName: z.string(),
     expiresAt: z.iso.datetime(),
+});
+
+export const ClientSubmitReviewSchema = z.object({
+    bookingId: z.string().min(1),
+    accessCode: z.string().trim().min(1),
+    description: z.string().min(1, "Please provide the details of your review or the errors to fix."),
+});
+
+export const ClientUpdateDatesSchema = z.object({
+    bookingId: z.string().min(1),
+    accessCode: z.string().trim().min(1),
+    eventType: z.enum(["birthday", "wedding"]).optional(),
+    eventDate: z.string().optional(),
 });
 
 

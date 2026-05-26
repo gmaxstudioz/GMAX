@@ -34,6 +34,7 @@ interface Category {
         name: string;
         isAddon: boolean;
         basePrice: number;
+        bothVariantPrice: number | null;
         studioSession: { duration: number } | null;
     }[];
 }
@@ -48,8 +49,6 @@ interface BookingWizardProps {
     studioId: string;
     categories: Category[];
     addons: Addon[];
-    existingBookings: Record<string, unknown>[];
-    paystackPublicKey: string;
 }
 
 const STEPS = [
@@ -59,7 +58,7 @@ const STEPS = [
     { id: 4, label: "Review & Pay", icon: CreditCardIcon },
 ];
 
-export function BookingWizard({ studioId, categories, addons, existingBookings, paystackPublicKey }: BookingWizardProps) {
+export function BookingWizard({ studioId, categories, addons }: BookingWizardProps) {
     const [step, setStep] = useState(1);
     const [isPending, startTransition] = useTransition();
 
@@ -74,6 +73,7 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
             selectedServiceId: "",
             selectedAddonIds: [],
             sessionCount: 1,
+            extraPicturesCount: 0,
             bookingDate: "",
             bookingTime: "",
             paymentPlan: "FULL",
@@ -90,8 +90,10 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
     const clientEmail       = useWatch({ control, name: "clientEmail" }) ?? "";
     const useExisting       = useWatch({ control, name: "useExisting" }) ?? false;
     const selectedServiceId = useWatch({ control, name: "selectedServiceId" }) ?? "";
-    const selectedAddonIds  = useWatch({ control, name: "selectedAddonIds" }) ?? [];
+    const watchedAddonIds   = useWatch({ control, name: "selectedAddonIds" });
+    const selectedAddonIds  = useMemo(() => watchedAddonIds ?? [], [watchedAddonIds]);
     const sessionCount      = useWatch({ control, name: "sessionCount" }) ?? 1;
+    const extraPicturesCount = useWatch({ control, name: "extraPicturesCount" }) ?? 0;
     const bookingDate       = useWatch({ control, name: "bookingDate" }) ?? "";
     const bookingTime       = useWatch({ control, name: "bookingTime" }) ?? "";
     const notes             = useWatch({ control, name: "notes" }) ?? "";
@@ -114,9 +116,11 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
     const selectedAddons = useMemo(() => addons.filter(a => selectedAddonIds.includes(a.id)), [addons, selectedAddonIds]);
 
     const servicePrice = selectedService?.basePrice ?? 0;
+    const bothVariantPrice = selectedService?.bothVariantPrice ?? 0;
     const sessionTotal = servicePrice * sessionCount;
     const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.basePrice, 0);
-    const grandTotal = sessionTotal + addonsTotal;
+    const extraPicturesTotal = bothVariantPrice * extraPicturesCount;
+    const grandTotal = sessionTotal + addonsTotal + extraPicturesTotal;
 
     useEffect(() => {
         if (!clientName || clientName.trim().length < 2) {
@@ -513,6 +517,36 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                                     )}
                                 />
                             </div>
+
+                            {(() => {
+                                const selectedServiceObj = categories.flatMap(c => c.services).find(s => s.id === selectedServiceId);
+                                const bothVariantPrice = selectedServiceObj?.bothVariantPrice;
+                                if (bothVariantPrice == null) return null;
+                                return (
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Extra Pictures</label>
+                                        <div className="flex items-center gap-4">
+                                            <Controller
+                                                name="extraPicturesCount"
+                                                control={control}
+                                                render={({ field: { value, onChange, ...f } }) => (
+                                                    <Input
+                                                        {...f}
+                                                        type="number"
+                                                        value={value ?? 0}
+                                                        onChange={(e) => onChange(Number(e.target.value))}
+                                                        min={0}
+                                                        className="max-w-[120px]"
+                                                    />
+                                                )}
+                                            />
+                                            <span className="text-xs text-muted-foreground">
+                                                (₦{bothVariantPrice.toLocaleString()} each)
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         {/* ── STEP 3: Date & Time ── */}
@@ -610,6 +644,12 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                                     <div className="flex justify-between text-sm">
                                         <span className="text-muted-foreground">Add-ons</span>
                                         <span>{selectedAddons.map(a => a.name).join(", ")}</span>
+                                    </div>
+                                )}
+                                {extraPicturesCount > 0 && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">Extra Pictures</span>
+                                        <span>{extraPicturesCount}</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between text-sm">

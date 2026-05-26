@@ -495,11 +495,17 @@ export const createPublicBooking = os.booking.createPublic
             };
         });
 
+        // Calculate extra pictures cost based on the 'BOTH' variant of the selected service
+        const bothVariant = service.variants.find(v => v.locationType === "BOTH");
+        const extraPicturesCost = bothVariant && input.extraPicturesCount
+            ? Number(bothVariant.basePrice) * input.extraPicturesCount
+            : 0;
+
         const grandTotal = calculateGrandTotal(
             servicePricingObj,
             addonPricingObjs,
             input.sessionCount,
-        );
+        ) + extraPicturesCost;
 
         // Calculate the amount to charge based on payment plan
         const paymentPlan = input.paymentPlan ?? "FULL";
@@ -520,6 +526,7 @@ export const createPublicBooking = os.booking.createPublic
                 serviceVariantId: input.selectedVariantId,
                 addonIds:        input.selectedAddonIds ?? [],
                 sessionCount:    input.sessionCount,
+                extraPicturesCount: input.extraPicturesCount ?? 0,
                 bookingDate:     new Date(input.bookingDate),
                 notes:           input.notes ?? null,
                 paystackReference: reference,
@@ -703,6 +710,7 @@ export const verifyBooking = os.booking.verifyBooking
                                         data: {
                                             bookingDate: intent!.bookingDate,
                                             sessionCount: intent!.sessionCount,
+                                            extraPicturesCount: intent!.extraPicturesCount,
                                             notes: intent!.notes,
                                             totalAmount: intent!.totalAmount,
                                             paymentPlan: intent!.paymentPlan,
