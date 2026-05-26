@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
-import { sendBookingPaymentSMS, sendBookingPaymentWhatsApp, sendBookingPaymentEmail } from "@/lib/termii";
+import { sendBookingPaymentSMS, sendBookingPaymentWhatsApp, sendBookingPaymentEmail, sendAcademyRegistrationEmail, sendAcademyRegistrationSMS, sendAcademyRegistrationWhatsApp } from "@/lib/termii";
 
 function generateReceiptNumber(): string {
     return `RCP-${Date.now()}-${uuidv4().slice(0, 8).toUpperCase()}`;
@@ -279,6 +279,77 @@ export async function POST(req: Request) {
                 update: {},
             });
         });
+
+        return Response.json({ received: true });
+    }
+
+    // ── Academy Flow ──────────────────────────────────────────────────────────
+    if (reference.startsWith("gmax-academy-")) {
+        const registration = await prisma.academyStudent.findUnique({
+            where: { paymentReference: reference },
+            include: { course: true, batch: true },
+        });
+
+        if (!registration) {
+            console.warn(`[Webhook] No registration for academy reference: ${reference}`);
+            return Response.json({ received: true });
+        }
+
+        if (registration.paymentStatus === "SUCCESS") {
+            console.info(`[Webhook] Academy payment ${reference} already processed`);
+            return Response.json({ received: true });
+        }
+
+        const paidAmount = Number(payload.data.amount ?? 0);
+        const paidCurrency = String(payload.data.currency ?? "").toUpperCase();
+        const expectedAmount = Math.round(Number(registration.amountPaid) * 100);
+
+        if (paidAmount !== expectedAmount || paidCurrency !== "NGN") {
+            console.error(
+                `[Webhook] Academy payment mismatch for ${reference}. expected ${expectedAmount} NGN, got ${paidAmount} ${paidCurrency}`
+            );
+            await prisma.academyStudent.update({
+                where: { id: registration.id },
+                data: { paymentStatus: "FAILED" },
+            });
+            return Response.json({ received: true });
+        }
+
+        await prisma.academyStudent.update({
+            where: { id: registration.id },
+            data: { paymentStatus: "SUCCESS" },
+        });
+
+        const startDateStr = registration.batch?.startDate 
+            ? new Date(registration.batch.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+            : "a date to be announced";
+
+        try {
+            await sendAcademyRegistrationEmail({
+                email: registration.email,
+                studentName: registration.firstName,
+                courseName: registration.course.title,
+                startDate: startDateStr,
+                amountPaid: new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(Number(registration.amountPaid)),
+            }).catch(err => console.error(`[Webhook] Academy Email failed for ${reference}:`, err));
+
+            if (registration.phone) {
+                await sendAcademyRegistrationSMS({
+                    phone: registration.phone,
+                    courseName: registration.course.title,
+                    startDate: startDateStr,
+                }).catch(err => console.error(`[Webhook] Academy SMS failed for ${reference}:`, err));
+                
+                await sendAcademyRegistrationWhatsApp({
+                    phone: registration.phone,
+                    courseName: registration.course.title,
+                    startDate: startDateStr,
+                }).catch(err => console.error(`[Webhook] Academy WhatsApp failed for ${reference}:`, err));
+            }
+            console.info(`[Webhook] Academy notifications dispatched for ${reference}`);
+        } catch (notifErr) {
+            console.error(`[Webhook] Academy notification dispatch failed for ${reference}:`, notifErr);
+        }
 
         return Response.json({ received: true });
     }
