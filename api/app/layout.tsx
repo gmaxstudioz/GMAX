@@ -1,3 +1,4 @@
+import { APP_NAME } from "@/lib/constants";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -13,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GMAX Studioz API",
-  description: "Official API for GMAX Studioz platform",
+  title: `${APP_NAME} API`,
+  description: `Official API for ${APP_NAME} platform`,
 };
 
 export default function RootLayout({

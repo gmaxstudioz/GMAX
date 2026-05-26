@@ -1,4 +1,5 @@
 "use client";
+import { APP_NAME } from "@/lib/constants";
 
 import React from 'react';
 import Link from 'next/link';
@@ -58,7 +59,7 @@ export default function Footer() {
 
         {/* Bottom Section */}
         <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-white/10 text-xs md:text-sm text-gray-500">
-          <p>© {new Date().getFullYear()} GMAX Studioz. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {APP_NAME}. All rights reserved.</p>
           <div className="flex gap-6 mt-4 md:mt-0">
             <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>

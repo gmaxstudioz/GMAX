@@ -1,4 +1,5 @@
 "use client";
+import { APP_NAME } from "@/lib/constants";
 
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
@@ -239,7 +240,7 @@ export default function Home() {
           <div className="w-full md:w-1/2 flex flex-col gap-6">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-primary"></div>
-              <h2 className="text-xl md:text-2xl uppercase tracking-widest text-gray-400 font-medium">GMAX Studioz</h2>
+              <h2 className="text-xl md:text-2xl uppercase tracking-widest text-gray-400 font-medium"> {APP_NAME} </h2>
             </div>
             <h3 className="text-4xl md:text-6xl font-heading font-bold leading-tight">
               We craft cinematic legacies.

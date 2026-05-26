@@ -1,4 +1,4 @@
-# GMAX Studioz Deployment Guide (Vercel)
+# Gmax Studioz Deployment Guide (Vercel)
 
 This workspace consists of three distinct Next.js applications: `api`, `admin`, and `public`. The recommended way to deploy this structure is as **three separate projects** on Vercel, all linked to the same GitHub repository.
 

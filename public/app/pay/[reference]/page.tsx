@@ -1,3 +1,4 @@
+import { APP_NAME } from "@/lib/constants";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,7 +17,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-    title: "Pay — GMAX Studioz",
+    title: `Pay — ${APP_NAME}`,
     description: "Complete your payment securely",
 };
 
@@ -94,7 +95,7 @@ export default async function PaymentPage({ params }: Props) {
                         </div>
                     )}
                     <div>
-                        <h1 className="text-2xl sm:text-3xl font-bold">{studio?.name || "GMAX Studioz Shop"}</h1>
+                        <h1 className="text-2xl sm:text-3xl font-bold">{studio?.name || `${APP_NAME} Shop`}</h1>
                         <p className="text-muted-foreground text-sm mt-1">Complete your payment</p>
                     </div>
                 </div>
@@ -225,7 +226,7 @@ export default async function PaymentPage({ params }: Props) {
 
                 {/* Footer */}
                 <p className="text-center text-xs text-muted-foreground">
-                    © {new Date().getFullYear()} GMAX Studioz. All rights reserved.
+                    © {new Date().getFullYear()} {APP_NAME}. All rights reserved.
                 </p>
             </div>
         </div>

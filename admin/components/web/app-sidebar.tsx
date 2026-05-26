@@ -1,3 +1,4 @@
+import { APP_NAME } from "@/lib/constants";
 import * as React from "react"
 import { NavMain } from "@/components/web/nav-main"
 import { NavUser } from "@/components/web/nav-user"
@@ -162,7 +163,7 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
             >
               <Link href="/">
                 <Image src={Logo} alt="Logo" className="size-5!" />
-                <span className="text-base font-semibold">GMAX Studioz</span>
+                <span className="text-base font-semibold"> {APP_NAME} </span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

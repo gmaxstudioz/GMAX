@@ -1,3 +1,4 @@
+import { APP_NAME } from "@/lib/constants";
 import { GalleryVerticalEndIcon } from "lucide-react"
 import { AcceptInvitationCard } from "./_components/accept-invitation-card"
 
@@ -13,9 +14,7 @@ export default async function AcceptInvitationPage({
         <a href="#" className="flex items-center gap-2 self-center font-medium">
           <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <GalleryVerticalEndIcon className="size-4" />
-          </div>
-          GMAX Studioz
-        </a>
+          </div> {APP_NAME} </a>
         <AcceptInvitationCard invitationId={resolvedParams.id} />
       </div>
     </div>

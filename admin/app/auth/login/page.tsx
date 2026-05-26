@@ -1,3 +1,4 @@
+import { APP_NAME } from "@/lib/constants";
 "use client"
 
 import { LoginForm } from "@/app/auth/login/_components/login-form"
@@ -10,9 +11,7 @@ export default function LoginPage() {
         <a href="#" className="flex items-center gap-2 self-center font-medium">
           <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <GalleryVerticalEndIcon className="size-4" />
-          </div>
-          GMAX Studioz
-        </a>
+          </div> {APP_NAME} </a>
         <LoginForm />
       </div>
     </div>

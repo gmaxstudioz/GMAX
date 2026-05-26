@@ -1,3 +1,4 @@
+import { APP_NAME } from "@/lib/constants";
 import { baseContract } from "./errors";
 import {
     CreateBookingSchema,
@@ -40,7 +41,7 @@ export const CreatePublicBookingContract = baseContract
         path: "/bookings/public",
         successStatus: 201,       
         summary: "Add a new public booking",
-        description: "Create an appointment with GMAX studioz",
+        description: `Create an appointment with ${APP_NAME}`,
         tags: ["Bookings"], 
     })
     .input(PublicBookingSchema)

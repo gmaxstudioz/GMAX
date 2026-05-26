@@ -1,3 +1,4 @@
+import { APP_NAME } from "@/lib/constants";
 "use server";
 
 import { prisma } from "../prisma";
@@ -140,7 +141,7 @@ export async function initializePayment(bookingId: string) {
                 await sendPaymentLinkSMS({
                     phone: booking.client.phone,
                     clientName: booking.client.name,
-                    studioName: booking.studio?.name ?? "GMAX Studioz",
+                    studioName: booking.studio?.name ?? APP_NAME,
                     amount: balanceDue,
                     paymentLink: paystackRes.data.authorization_url,
                 });

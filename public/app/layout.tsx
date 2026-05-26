@@ -1,3 +1,4 @@
+import { APP_NAME } from "@/lib/constants";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
@@ -23,7 +24,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GMAX Studioz",
+  title: APP_NAME,
   description: "We bring your ideas to life with stunning visuals and creative solutions.",
 };
 

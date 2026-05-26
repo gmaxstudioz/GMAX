@@ -1,3 +1,4 @@
+import { APP_NAME } from "@/lib/constants";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
@@ -22,31 +23,31 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "GMAX Studioz — Studio Management Platform",
-    template: "%s | GMAX Studioz",
+    default: `${APP_NAME} — Studio Management Platform`,
+    template: `%s | ${APP_NAME}`,
   },
   description:
-    "GMAX Studioz is a professional studio management platform for booking sessions, managing clients, and growing your creative business.",
+    `${APP_NAME} is a professional studio management platform for booking sessions, managing clients, and growing your creative business.`,
   keywords: [
     "studio management",
     "booking platform",
     "creative studio",
     "session booking",
-    "GMAX Studioz",
+    APP_NAME,
   ],
-  authors: [{ name: "GMAX Studioz" }],
-  creator: "GMAX Studioz",
+  authors: [{ name: APP_NAME }],
+  creator: APP_NAME,
   openGraph: {
     type: "website",
     locale: "en_US",
-    siteName: "GMAX Studioz",
-    title: "GMAX Studioz — Studio Management Platform",
+    siteName: APP_NAME,
+    title: `${APP_NAME} — Studio Management Platform`,
     description:
       "Professional studio management platform for booking sessions, managing clients, and growing your creative business.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "GMAX Studioz — Studio Management Platform",
+    title: `${APP_NAME} — Studio Management Platform`,
     description:
       "Professional studio management platform for booking sessions, managing clients, and growing your creative business.",
   },

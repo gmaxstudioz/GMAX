@@ -1,4 +1,5 @@
 "use client";
+import { APP_NAME } from "@/lib/constants";
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
@@ -966,7 +967,7 @@ export default function BookingPage() {
             <div className="w-2 h-2 rounded-full bg-primary"></div>
           </div>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Reserve your spot at {studio?.name || "GMAX Studioz"}{studio?.metadata && typeof studio.metadata === 'object' && 'address' in studio.metadata && typeof studio.metadata.address === 'string' ? `, located at ${studio.metadata.address}` : ""}. Follow the steps below to customize your experience and secure your session.
+            Reserve your spot at {studio?.name || APP_NAME}{studio?.metadata && typeof studio.metadata === 'object' && 'address' in studio.metadata && typeof studio.metadata.address === 'string' ? `, located at ${studio.metadata.address}` : ""}. Follow the steps below to customize your experience and secure your session.
           </p>
         </div>
 

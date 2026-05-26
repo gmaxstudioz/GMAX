@@ -1,8 +1,9 @@
+import { APP_NAME } from "@/lib/constants";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Terms of Service — GMAX Studioz",
-    description: "Terms and conditions of using GMAX Studioz services.",
+    title: `Terms of Service — ${APP_NAME}`,
+    description: `Terms and conditions of using ${APP_NAME} services.`,
 };
 
 export default function TermsPage() {

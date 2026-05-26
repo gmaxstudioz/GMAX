@@ -1,8 +1,9 @@
+import { APP_NAME } from "@/lib/constants";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Privacy Policy — GMAX Studioz",
-    description: "Privacy policy and data handling practices for GMAX Studioz.",
+    title: `Privacy Policy — ${APP_NAME}`,
+    description: `Privacy policy and data handling practices for ${APP_NAME}.`,
 };
 
 export default function PrivacyPage() {

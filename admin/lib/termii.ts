@@ -1,3 +1,4 @@
+import { APP_NAME } from "@/lib/constants";
 /**
  * Termii Notification Service
  * Handles Email, SMS, and WhatsApp messaging via the Termii API.
@@ -165,7 +166,7 @@ export async function sendPasswordResetEmail(params: {
 
     return sendTemplateEmail({
         email: params.email,
-        subject: "Reset Your Password — GMAX Studioz",
+        subject: `Reset Your Password — ${APP_NAME}`,
         templateId: TERMII_RESET_TEMPLATE_ID,
         variables: {
             user_name: params.userName,
@@ -182,7 +183,7 @@ export async function sendInvitationSMS(params: {
     studioName: string;
     inviteLink: string;
 }) {
-    const message = `${params.inviterName} invited you to join ${params.studioName} on GMAX Studioz. Accept here: ${params.inviteLink}`;
+    const message = `${params.inviterName} invited you to join ${params.studioName} on ${APP_NAME}. Accept here: ${params.inviteLink}`;
     return sendSMS(params.phone, message);
 }
 
@@ -194,7 +195,7 @@ export async function sendInvitationWhatsApp(params: {
     studioName: string;
     inviteLink: string;
 }) {
-    const message = `Hi! 👋\n\n*${params.inviterName}* has invited you to join *${params.studioName}* on GMAX Studioz.\n\nAccept the invitation: ${params.inviteLink}`;
+    const message = `Hi! 👋\n\n*${params.inviterName}* has invited you to join *${params.studioName}* on ${APP_NAME}.\n\nAccept the invitation: ${params.inviteLink}`;
     return sendWhatsApp(params.phone, message);
 }
 

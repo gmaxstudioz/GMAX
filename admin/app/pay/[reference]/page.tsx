@@ -1,3 +1,4 @@
+import { APP_NAME } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
@@ -15,7 +16,7 @@ import {
 import Image from "next/image";
 
 export const metadata: Metadata = {
-    title: "Pay — GMAX Studioz",
+    title: `Pay — ${APP_NAME}`,
     description: "Complete your payment securely",
 };
 
@@ -168,7 +169,7 @@ export default async function PaymentPage({ params }: Props) {
 
                 {/* Footer */}
                 <p className="text-center text-xs text-muted-foreground">
-                    © {new Date().getFullYear()} GMAX Studioz. All rights reserved.
+                    © {new Date().getFullYear()} {APP_NAME}. All rights reserved.
                 </p>
             </div>
         </div>

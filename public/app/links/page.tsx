@@ -1,5 +1,5 @@
 "use client";
-
+import { APP_NAME } from "@/lib/constants";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -104,13 +104,13 @@ export default function LinksPage() {
           <div className="relative w-[100px] h-[100px] md:w-[120px] md:h-[120px] rounded-full overflow-hidden mb-4 border-2 border-transparent">
              <Image
               src="/gmax-logo.png"
-              alt="GMAX STUDIOZ"
+              alt={APP_NAME}
               fill
               className="object-cover"
             />
           </div>
           <h1 className="text-2xl md:text-3xl font-black uppercase tracking-widest text-foreground mt-2 mb-6">
-            GMAX Studioz
+            {APP_NAME}
           </h1>
 
           {/* Social Icons */}

@@ -1,3 +1,4 @@
+import { APP_NAME } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -18,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
         title: studio ? `Book at ${studio.name}` : "Book a Session",
         description: studio
-            ? `Book a photography session at ${studio.name} — GMAX Studioz`
+            ? `Book a photography session at ${studio.name} — ${APP_NAME}`
             : "Book your session online",
     };
 }
