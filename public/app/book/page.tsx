@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import gsap from "gsap";
 import { buttonVariants } from "@/components/ui/button";
-import { ArrowRight, ArrowLeft, CheckCircle2, User, CreditCard, Loader2, Building2, Clock, Sparkles, MapPin } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle2, User, CreditCard, Loader2, Building2, Clock, Sparkles, MapPin, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,6 +42,15 @@ export default function BookingPage() {
   
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("");
+  const [rulesExpanded, setRulesExpanded] = useState(true);
+
+  useEffect(() => {
+    if (currentStep === 1 || currentStep === 3) {
+      setRulesExpanded(true);
+    } else {
+      setRulesExpanded(false);
+    }
+  }, [currentStep]);
   
 
 
@@ -941,43 +950,57 @@ export default function BookingPage() {
         </div>
 
         {/* Booking Rules and Guidelines */}
-        <div className="bg-muted/30 rounded-2xl p-6 border border-border/50 text-sm space-y-4 mb-12">
-        <div className="mb-5">
-          <h4 className="font-semibold text-2xl text-primary flex items-center gap-2 font-heading">Booking Rules and Guidelines</h4>
-          <p className="text-muted-foreground">
-            By booking our services, you acknowledge and accept these terms and conditions. If you have any questions or concerns, please feel free to discuss them with us before confirming the booking.
-          </p>
-        </div>
-          
-          <div className="space-y-3 mt-4">
+        <div className="bg-muted/30 rounded-2xl p-6 border border-border/50 text-sm mb-12 transition-all duration-300">
+          <div 
+            className={cn("flex flex-col sm:flex-row sm:items-start justify-between gap-4 cursor-pointer", rulesExpanded ? "mb-5" : "mb-0")}
+            onClick={() => setRulesExpanded(!rulesExpanded)}
+          >
             <div>
-              <span className="font-semibold text-foreground block md:inline">BOOKING AND PAYMENT:</span>
-              <span className="text-muted-foreground md:ml-2 block md:inline">Secure your booking by paying a non-refundable deposit, and make sure the full payment is settled by the date of your photo session or event.</span>
+              <h4 className="font-semibold text-xl md:text-2xl text-primary flex items-center gap-2 font-heading">
+                Booking Rules and Guidelines
+              </h4>
+              <p className="text-muted-foreground mt-1">
+                By booking our services, you acknowledge and accept these terms and conditions.
+              </p>
             </div>
-            <div>
-              <span className="font-semibold text-foreground block md:inline">CANCELLATIONS AND RESCHEDULING:</span>
-              <span className="text-muted-foreground md:ml-2 block md:inline">Notify us in advance about any cancellations or rescheduling and be aware that cancellations within 48 hours might result in the forfeiture of your deposit.</span>
-            </div>
-            <div>
-              <span className="font-semibold text-foreground block md:inline">IMAGE DELIVERY:</span>
-              <span className="text-muted-foreground md:ml-2 block md:inline">Expect your professionally edited images within the agreed-upon timeframe, and we’ll provide you with a download link for your high-resolution pictures.</span>
-            </div>
-            <div>
-              <span className="font-semibold text-foreground block md:inline">CLIENT COOPERATION:</span>
-              <span className="text-muted-foreground md:ml-2 block md:inline">Ensure a smooth photo session by providing necessary information and cooperating during the shoot. Notify us in advance if there are any delays or changes to the schedule.</span>
-            </div>
-            <div>
-              <span className="font-semibold text-foreground block md:inline">DELIVERY ERRORS:</span>
-              <span className="text-muted-foreground md:ml-2 block md:inline">Report any errors or issues with the delivered images within a specified timeframe to allow us address and rectify them promptly.</span>
-            </div>
-            <div>
-              <span className="font-semibold text-foreground block md:inline">ADDITIONAL SERVICES:</span>
-              <span className="text-muted-foreground md:ml-2 block md:inline">Any additional services beyond our initial agreement may incur extra charges.</span>
+            <div className="shrink-0 self-end sm:self-center">
+              <button type="button" className="p-2 rounded-full hover:bg-muted bg-background border shadow-sm transition-colors">
+                {rulesExpanded ? <ChevronUp className="w-5 h-5 text-primary" /> : <ChevronDown className="w-5 h-5 text-primary" />}
+              </button>
             </div>
           </div>
+          
+          <div className={cn("overflow-hidden transition-all duration-500", rulesExpanded ? "opacity-100 max-h-[1500px]" : "opacity-0 max-h-0")}>
+            <div className="space-y-3 mt-4 pt-4 border-t border-border/50">
+              <div>
+                <span className="font-semibold text-foreground block md:inline">BOOKING AND PAYMENT:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Secure your booking by paying a non-refundable deposit, and make sure the full payment is settled by the date of your photo session or event.</span>
+              </div>
+              <div>
+                <span className="font-semibold text-foreground block md:inline">CANCELLATIONS AND RESCHEDULING:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Notify us in advance about any cancellations or rescheduling and be aware that cancellations within 48 hours might result in the forfeiture of your deposit.</span>
+              </div>
+              <div>
+                <span className="font-semibold text-foreground block md:inline">IMAGE DELIVERY:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Expect your professionally edited images within the agreed-upon timeframe, and we’ll provide you with a download link for your high-resolution pictures.</span>
+              </div>
+              <div>
+                <span className="font-semibold text-foreground block md:inline">CLIENT COOPERATION:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Ensure a smooth photo session by providing necessary information and cooperating during the shoot. Notify us in advance if there are any delays or changes to the schedule.</span>
+              </div>
+              <div>
+                <span className="font-semibold text-foreground block md:inline">DELIVERY ERRORS:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Report any errors or issues with the delivered images within a specified timeframe to allow us address and rectify them promptly.</span>
+              </div>
+              <div>
+                <span className="font-semibold text-foreground block md:inline">ADDITIONAL SERVICES:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Any additional services beyond our initial agreement may incur extra charges.</span>
+              </div>
+            </div>
 
-          <div className="pt-4 border-t border-border/50 mt-4">
-            <p className="font-medium italic text-muted-foreground">Be rest assure that Gmax studioz renders the best service as long as these terms are being adhered to. Reach us at any time as we’re always available to be of service to you.</p>
+            <div className="pt-4 border-t border-border/50 mt-4">
+              <p className="font-medium italic text-muted-foreground">Be rest assure that Gmax studioz renders the best service as long as these terms are being adhered to. Reach us at any time as we’re always available to be of service to you.</p>
+            </div>
           </div>
         </div>
 
@@ -1071,17 +1094,19 @@ export default function BookingPage() {
               </button>
               
               {currentStep < 3 ? (
-                <button
-                  type="button"
-                  onClick={() => navigateStep("next")}
-                  className={cn(
-                    buttonVariants({ variant: "default", size: "lg" }),
-                    "rounded-full px-8 gap-2 group shadow-lg shadow-primary/20"
-                  )}
-                >
-                  Continue
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </button>
+                ((currentStep === 2) || (currentStep === 1 && configStep === 5)) && (
+                  <button
+                    type="button"
+                    onClick={() => navigateStep("next")}
+                    className={cn(
+                      buttonVariants({ variant: "default", size: "lg" }),
+                      "rounded-full px-8 gap-2 group shadow-lg shadow-primary/20"
+                    )}
+                  >
+                    Continue
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                )
               ) : (
                 <button
                   type="submit"
