@@ -373,6 +373,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                             
                                                                             const mappedVariants = (svc.variants && svc.variants.length > 0) 
                                                                                 ? svc.variants.map((v) => ({
+                                                                                    id: v.id,
                                                                                     locationType: v.locationType as "STUDIO" | "OUTDOOR" | "BOTH" | "MULTIPLE",
                                                                                     basePrice: Number(v.basePrice),
                                                                                     maxPrice: v.maxPrice ? Number(v.maxPrice) : undefined,
@@ -471,6 +472,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                     
                                                                     const mappedVariants = (svc.variants && svc.variants.length > 0) 
                                                                         ? svc.variants.map((v) => ({
+                                                                            id: v.id,
                                                                             locationType: v.locationType as "STUDIO" | "OUTDOOR" | "BOTH" | "MULTIPLE",
                                                                             basePrice: Number(v.basePrice),
                                                                             maxPrice: v.maxPrice ? Number(v.maxPrice) : undefined,

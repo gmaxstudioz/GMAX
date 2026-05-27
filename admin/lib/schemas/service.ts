@@ -21,6 +21,7 @@ export const ServiceDeliverableSchema = z.object({
 });
 
 export const ServiceVariantSchema = z.object({
+    id:                     z.string().optional(),
     locationType:           LocationTypeEnum,
     basePrice:              z.number().min(0, "Base price cannot be negative"),
     maxPrice:               z.number().min(0, "Max price cannot be negative").optional(),

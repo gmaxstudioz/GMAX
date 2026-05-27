@@ -93,8 +93,8 @@ export async function updateService(id: string, data: ServicePayload) {
             include: { _count: { select: { bookings: true } } },
         });
 
-        const inputLocationTypes = parsed.data.variants.map(v => v.locationType);
-        const variantsToRemove = existingVariants.filter(variant => !inputLocationTypes.includes(variant.locationType));
+        const inputVariantIds = parsed.data.variants.map(v => v.id).filter(Boolean) as string[];
+        const variantsToRemove = existingVariants.filter(variant => !inputVariantIds.includes(variant.id));
         const variantIdsToRemove = variantsToRemove.map(variant => variant.id);
 
         if (variantIdsToRemove.length > 0) {
@@ -110,7 +110,7 @@ export async function updateService(id: string, data: ServicePayload) {
             }
         }
 
-        const existingVariantByLocation = new Map(existingVariants.map(variant => [variant.locationType, variant]));
+        const existingVariantById = new Map(existingVariants.map(variant => [variant.id, variant]));
 
         const updatedService = await prisma.$transaction(async tx => {
             const serviceUpdate = tx.service.update({
@@ -146,7 +146,7 @@ export async function updateService(id: string, data: ServicePayload) {
                     } : {}),
                 };
 
-                const existingVariant = existingVariantByLocation.get(variant.locationType);
+                const existingVariant = variant.id ? existingVariantById.get(variant.id) : null;
                 if (existingVariant) {
                     return tx.serviceVariant.update({
                         where: { id: existingVariant.id },
