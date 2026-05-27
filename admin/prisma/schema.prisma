@@ -247,7 +247,6 @@ model ServiceVariant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([serviceId, locationType])
   @@index([serviceId])
   @@map("service_variant")
 }
