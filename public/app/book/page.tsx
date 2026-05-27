@@ -188,7 +188,8 @@ export default function BookingPage() {
           return;
         } else if (configStep === 3) {
           if (!selectedServiceId) { toast.error("Please select a package."); return; }
-          if (selectedService?.variants.length === 1) setConfigStep(5);
+          const visibleVariants = selectedService?.variants.filter((v: ServiceVariantOutput) => v.locationType.toUpperCase() !== "BOTH") || [];
+          if (visibleVariants.length <= 1) setConfigStep(5);
           else setConfigStep(4);
           return;
         } else if (configStep === 4) {
@@ -420,9 +421,10 @@ export default function BookingPage() {
                                   setValue("selectedAddonIds", []);
                                   setSelectedDate("");
                                   setSelectedTime("");
+                                  const visibleVariants = service.variants.filter(v => v.locationType.toUpperCase() !== "BOTH");
                                   
-                                  if (service.variants.length === 1) {
-                                    setValue("selectedVariantId", service.variants[0].id, { shouldValidate: true });
+                                  if (visibleVariants.length === 1) {
+                                    setValue("selectedVariantId", visibleVariants[0].id, { shouldValidate: true });
                                     setConfigStep(5);
                                   } else {
                                     setValue("selectedVariantId", "", { shouldValidate: false });
@@ -465,7 +467,7 @@ export default function BookingPage() {
             )}
 
             {/* ─── CONFIG STEP 4: LOCATION TOGGLE ─── */}
-            {configStep === 4 && selectedService && selectedService.variants.length > 1 && (
+            {configStep === 4 && selectedService && selectedService.variants.filter((v: ServiceVariantOutput) => v.locationType.toUpperCase() !== "BOTH").length > 1 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-300">
                 <div className="mb-8">
                   <Label className="text-2xl font-bold font-heading text-foreground">
@@ -474,7 +476,7 @@ export default function BookingPage() {
                   <p className="text-sm text-muted-foreground mt-2">Select your preferred location type for this session.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  {selectedService.variants.map((variant: ServiceVariantOutput) => {
+                  {selectedService.variants.filter((v: ServiceVariantOutput) => v.locationType.toUpperCase() !== "BOTH").map((variant: ServiceVariantOutput) => {
                     const isSelectedV = selectedVariantId === variant.id;
                     const locationMeta: Record<string, { label: string; icon: string }> = {
                       STUDIO:   { label: "Studio",          icon: "🏢" },
@@ -801,7 +803,7 @@ export default function BookingPage() {
         );
       case 3: {
         const sessionCount = watch("sessionCount") || 1;
-        const servicePrice = Number(selectedVariant?.basePrice || selectedService?.variants[0]?.basePrice || 0);
+        const servicePrice = Number(selectedVariant?.basePrice || selectedService?.variants.find((v: ServiceVariantOutput) => v.locationType.toUpperCase() !== "BOTH")?.basePrice || 0);
         const serviceTotal = servicePrice * sessionCount;
         const addonsTotal = selectedAddonIds.length > 0 && studio?.addons
           ? selectedAddonIds.reduce((sum, compositeId) => {

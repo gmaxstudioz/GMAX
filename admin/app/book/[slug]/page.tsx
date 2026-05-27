@@ -78,7 +78,7 @@ export default async function StudioBookPage({ params }: Props) {
                             id: s.id,
                             name: s.name,
                             isAddon: s.isAddon,
-                            basePrice: Number(s.variants[0].basePrice),
+                            basePrice: Number(s.variants.find(v => v.locationType.toUpperCase() !== "BOTH")?.basePrice ?? s.variants[0].basePrice),
                             bothVariantPrice: s.variants.find(v => v.locationType.toUpperCase() === "BOTH") ? Number(s.variants.find(v => v.locationType.toUpperCase() === "BOTH")!.basePrice) : null,
                             sessionDurationMins: s.variants[0]?.sessionDurationMins ?? 45,
                         })),
@@ -88,7 +88,7 @@ export default async function StudioBookPage({ params }: Props) {
                     .map(a => ({
                         id: a.id,
                         name: a.name,
-                        basePrice: Number(a.variants[0].basePrice),
+                        basePrice: Number(a.variants.find(v => v.locationType.toUpperCase() !== "BOTH")?.basePrice ?? a.variants[0].basePrice),
                     }))}
             />
         </div>
