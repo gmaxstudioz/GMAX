@@ -11,13 +11,9 @@ export const getStudioBySlug = os.studio.getBySlug
         const studio = await prisma.studio.findUnique({
             where: { slug: input.slug },
             include: {
-                categories: {
-                    include: {
-                        services: {
-                            where: { isAddon: false }, // Updated query
-                            include: { studioSession: true, variants: { include: { deliverables: true } } }, // Include variants & deliverables
-                        },
-                    },
+                services: {
+                    where: { isAddon: false }, // Updated query
+                    include: { studioSession: true, variants: { include: { deliverables: true } } }, // Include variants & deliverables
                 },
                 studioSessions: true,
             },
@@ -28,7 +24,7 @@ export const getStudioBySlug = os.studio.getBySlug
         });
 
         const addons = await prisma.service.findMany({
-            where: { isAddon: true, category: { studioId: studio.id } }, // Updated query
+            where: { isAddon: true, studioId: studio.id }, // Updated query
             include: { studioSession: true, variants: { include: { deliverables: true } } }, // Include variants & deliverables
         });
 
@@ -47,14 +43,14 @@ export const getStudioBySlug = os.studio.getBySlug
             })(),
             createdAt: studio.createdAt.toISOString(),
             updatedAt: studio.updatedAt.toISOString(),
-            categories: studio.categories.map((cat) => ({
-                id: cat.id,
-                name: cat.name,
-                type: cat.type,
-                services: cat.services.map((s) => ({
+            categories: (["PHOTOGRAPHY", "VIDEOGRAPHY", "OTHERS"] as const).map((cat) => ({
+                id: cat,
+                name: cat.charAt(0) + cat.slice(1).toLowerCase(),
+                type: cat,
+                services: studio.services.filter(s => s.category === cat).map((s) => ({
                     id: s.id,
                     name: s.name,
-                    categoryId: s.categoryId,
+                    category: s.category,
                     isAddon: s.isAddon, // Updated mapping
                     description: s.description,
                     features: s.features,
@@ -74,7 +70,7 @@ export const getStudioBySlug = os.studio.getBySlug
                         }))
                     }))
                 })),
-            })),
+            })).filter(c => c.services.length > 0),
             studioSessions: studio.studioSessions.map((ss) => ({
                 id: ss.id,
                 name: ss.name,
@@ -83,7 +79,7 @@ export const getStudioBySlug = os.studio.getBySlug
             addons: addons.map((a) => ({
                 id: a.id,
                 name: a.name,
-                categoryId: a.categoryId,
+                category: a.category,
                 isAddon: a.isAddon, // Updated mapping
                 description: a.description,
                 features: a.features,

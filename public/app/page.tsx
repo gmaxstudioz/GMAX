@@ -206,6 +206,7 @@ export default function Home() {
                   src={image.src}
                   alt={`Hero Image ${index + 1}`}
                   fill
+                  sizes="(max-width: 768px) 90px, 150px"
                   className="rounded-xl object-cover shadow-2xl"
                   priority={index < 4}
                 />
@@ -225,9 +226,9 @@ export default function Home() {
                             href="/book"
                             className={cn("inline-flex items-center gap-2")}
                         >
-                            <span className={buttonVariants({ variant: "default", size: "lg" })}>Book Us</span>
-                            <span className={buttonVariants({ variant: "default", size: "icon-lg" })}>
-                                <ArrowUpRight size={20} />
+                            <span className={cn(buttonVariants({ variant: "default", size: "lg" }), "px-10 py-6 text-xl")}>Book Us</span>
+                            <span className={cn(buttonVariants({ variant: "default", size: "icon-lg" }), "p-6")}>
+                                <ArrowUpRight className="size-6" />
                             </span>
                         </Link>
                     </Magnetic>
@@ -267,6 +268,7 @@ export default function Home() {
               src="/works/image-10.jpg"
               alt="About GMAX"
               fill
+              sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover transition-transform duration-700 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors duration-700"></div>
@@ -308,6 +310,7 @@ export default function Home() {
                     src={imgSrc}
                     alt={work.title || work.category}
                     fill
+                    sizes="(max-width: 768px) 50vw, 25vw"
                     className={cn(
                       "object-cover rounded-xl transition-transform duration-700 md:group-hover:scale-105",
                       isActive && "scale-105"

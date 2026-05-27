@@ -35,7 +35,7 @@ interface Category {
         isAddon: boolean;
         basePrice: number;
         bothVariantPrice: number | null;
-        studioSession: { duration: number } | null;
+        sessionDurationMins: number | null;
     }[];
 }
 
@@ -450,8 +450,8 @@ export function BookingWizard({ studioId, categories, addons }: BookingWizardPro
                                                         <div>
                                                             <p className="font-medium text-sm">{service.name}</p>
                                                             <div className="flex items-center gap-2 mt-1">
-                                                                {service.studioSession && (
-                                                                    <span className="text-[10px] text-muted-foreground">{service.studioSession.duration}min</span>
+                                                                {service.sessionDurationMins && (
+                                                                    <span className="text-[10px] text-muted-foreground">{service.sessionDurationMins}min</span>
                                                                 )}
                                                             </div>
                                                         </div>

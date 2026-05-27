@@ -141,9 +141,9 @@ export default function NavBar() {
                             href="/book"
                             className={cn("inline-flex items-center gap-2")}
                         >
-                            <span className={buttonVariants({ variant: "default", size: "lg" })}>Book Us</span>
-                            <span className={buttonVariants({ variant: "default", size: "icon-lg" })}>
-                                <ArrowUpRight size={20} />
+                            <span className={cn(buttonVariants({ variant: "default", size: "lg" }), "px-10 py-6 text-xl")}>Book Us</span>
+                            <span className={cn(buttonVariants({ variant: "default", size: "icon-lg" }), "p-6")}>
+                                <ArrowUpRight className="size-6" />
                             </span>
                         </Link>
                     </Magnetic>
@@ -195,9 +195,9 @@ export default function NavBar() {
                             className={cn("mobile-nav-link inline-flex items-center gap-2 mt-2")}
                             onClick={handleLinkClick}
                         >
-                            <span className={buttonVariants({ variant: "default", size: "lg" })}>Book Us</span>
-                            <span className={buttonVariants({ variant: "default", size: "icon-lg" })}>
-                                <ArrowUpRight size={20} />
+                            <span className={cn(buttonVariants({ variant: "default", size: "lg" }), "px-10 py-6 text-xl font-bold")}>Book Us</span>
+                            <span className={cn(buttonVariants({ variant: "default", size: "icon-lg" }), "w-16 h-[52px]")}>
+                                <ArrowUpRight size={28} />
                             </span>
                         </Link>
                     </Magnetic>

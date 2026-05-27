@@ -13,6 +13,11 @@ import { GenericEmptyState } from "@/components/web/generic-empty-state";
 import { Calendar01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Input } from "@/components/ui/input";
+import { ReassignMemberDropdown } from "../studios/[slug]/bookings/[date]/ReassignMemberDropdown";
+import { MemberRole } from "@/lib/schemas/studio";
+
+import { ViewToggle } from "@/components/web/ViewToggle";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export const metadata: Metadata = {
     title: "My Tasks",
@@ -20,11 +25,12 @@ export const metadata: Metadata = {
 };
 
 interface MyTasksProps {
-    searchParams: Promise<{ q?: string }>;
+    searchParams: Promise<{ q?: string; view?: string }>;
 }
 
 export default async function MyTasksPage({ searchParams }: MyTasksProps) {
-    const { q } = await searchParams;
+    const { q, view } = await searchParams;
+    const isListView = view === "list";
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) redirect("/auth/login");
 
@@ -60,7 +66,13 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
         include: {
             client: true,
             service: true,
-            studio: true
+            studio: {
+                include: {
+                    members: {
+                        include: { user: true }
+                    }
+                }
+            }
         },
         orderBy: {
             bookingDate: "asc"
@@ -77,19 +89,22 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
                     <h1 className="text-2xl font-bold">{title}</h1>
                     <p className="text-muted-foreground">{desc}</p>
                 </div>
-                <form method="GET" action="/my-tasks" className="flex items-center gap-2 w-full sm:w-auto">
-                    <div className="relative w-full sm:w-64">
-                        <HugeiconsIcon icon={Search01Icon} className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            name="q"
-                            type="search"
-                            defaultValue={q}
-                            placeholder="Search client or service..."
-                            className="pl-8 bg-background"
-                        />
-                    </div>
-                    <Button type="submit" variant="secondary">Search</Button>
-                </form>
+                <div className="flex items-center gap-4 w-full sm:w-auto">
+                    <form method="GET" action="/my-tasks" className="flex items-center gap-2 w-full sm:w-auto">
+                        <div className="relative w-full sm:w-64">
+                            <HugeiconsIcon icon={Search01Icon} className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                name="q"
+                                type="search"
+                                defaultValue={q}
+                                placeholder="Search client or service..."
+                                className="pl-8 bg-background"
+                            />
+                        </div>
+                        <Button type="submit" variant="secondary">Search</Button>
+                    </form>
+                    <ViewToggle defaultView="grid" />
+                </div>
             </div>
 
             {myBookings.length === 0 ? (
@@ -100,37 +115,125 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
                     description="You have no tasks assigned at the moment."
                 />
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-4">
-                    {myBookings.map(booking => (
-                        <Card key={booking.id} className="@container/card h-fit">
-                            <CardHeader>
-                                <div className="flex justify-between items-start">
-                                    <CardTitle className="text-lg">{booking.client?.name}</CardTitle>
-                                    <div className="flex flex-col gap-1 items-end">
-                                        <Badge>{String(booking.bookingStatus).replace(/_/g, " ")}</Badge>
-                                        <Badge variant="secondary">{booking.sessionCount} {booking.sessionCount > 1 ? "Sessions" : "Session"}</Badge>
-                                    </div>
-                                </div>
-                                <CardDescription className="flex flex-col gap-1 mt-2">
-                                    <span className="font-semibold text-primary">
-                                        {format(new Date(booking.bookingDate), "MMM do, yyyy 'at' hh:mm a")}
-                                    </span>
-                                    <span>{booking.service?.name}</span>
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex flex-col gap-3">
-                                {booking.studio && (
-                                    <p className="text-sm font-medium text-muted-foreground">Studio: {booking.studio.name}</p>
-                                )}
-                                <Button variant="outline" size="sm" className="w-full gap-1.5 mt-1" asChild>
-                                    <Link href={`/studios/${booking.studio?.slug}/bookings/detail/${booking.id}`}>
-                                        <ExternalLinkIcon className="h-3.5 w-3.5" />
-                                        View Details
-                                    </Link>
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    ))}
+                <div className="mt-4">
+                    {isListView ? (
+                        <div className="border rounded-lg overflow-hidden bg-card">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date & Time</TableHead>
+                                        <TableHead>Client</TableHead>
+                                        <TableHead>Service</TableHead>
+                                        <TableHead>Studio</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        {hasAdminRole && <TableHead className="w-[200px]">Assign To</TableHead>}
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {myBookings.map((booking) => (
+                                        <TableRow key={booking.id}>
+                                            <TableCell className="font-medium whitespace-nowrap">
+                                                {format(new Date(booking.bookingDate), "MMM do, yyyy")}
+                                                <br />
+                                                <span className="text-muted-foreground text-xs">{format(new Date(booking.bookingDate), "hh:mm a")}</span>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="font-semibold">{booking.client?.name}</div>
+                                                {booking.client?.phone && <div className="text-xs text-muted-foreground">{booking.client.phone}</div>}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div>{booking.service?.name}</div>
+                                                <div className="text-xs text-muted-foreground">{booking.sessionCount} {booking.sessionCount > 1 ? "Sessions" : "Session"}</div>
+                                            </TableCell>
+                                            <TableCell>
+                                                {booking.studio?.name}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="secondary">{String(booking.bookingStatus).replace(/_/g, " ")}</Badge>
+                                            </TableCell>
+                                            {hasAdminRole && (
+                                                <TableCell>
+                                                    <ReassignMemberDropdown 
+                                                        bookingId={booking.id} 
+                                                        currentMemberId={booking.memberId} 
+                                                        members={booking.studio?.members.map((m: any) => ({
+                                                            id: m.id,
+                                                            name: m.user.name,
+                                                            email: m.user.email,
+                                                            role: m.role as MemberRole,
+                                                            studioId: m.studioId,
+                                                            createdAt: m.createdAt.toISOString(),
+                                                            updatedAt: m.createdAt.toISOString()
+                                                        })) || []} 
+                                                        disabled={!hasAdminRole}
+                                                    />
+                                                </TableCell>
+                                            )}
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="sm" asChild>
+                                                    <Link href={`/studios/${booking.studio?.slug}/bookings/detail/${booking.id}`}>
+                                                        View
+                                                    </Link>
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {myBookings.map(booking => (
+                                <Card key={booking.id} className="@container/card h-fit">
+                                    <CardHeader>
+                                        <div className="flex justify-between items-start">
+                                            <CardTitle className="text-lg">{booking.client?.name}</CardTitle>
+                                            <div className="flex flex-col gap-1 items-end">
+                                                <Badge>{String(booking.bookingStatus).replace(/_/g, " ")}</Badge>
+                                                <Badge variant="secondary">{booking.sessionCount} {booking.sessionCount > 1 ? "Sessions" : "Session"}</Badge>
+                                            </div>
+                                        </div>
+                                        <CardDescription className="flex flex-col gap-1 mt-2">
+                                            <span className="font-semibold text-primary">
+                                                {format(new Date(booking.bookingDate), "MMM do, yyyy 'at' hh:mm a")}
+                                            </span>
+                                            <span>{booking.service?.name}</span>
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="flex flex-col gap-3">
+                                        {booking.studio && (
+                                            <p className="text-sm font-medium text-muted-foreground">Studio: {booking.studio.name}</p>
+                                        )}
+                                        {hasAdminRole && (
+                                            <div>
+                                                <ReassignMemberDropdown 
+                                                    bookingId={booking.id} 
+                                                    currentMemberId={booking.memberId} 
+                                                    members={booking.studio?.members.map((m: any) => ({
+                                                        id: m.id,
+                                                        name: m.user.name,
+                                                        email: m.user.email,
+                                                        role: m.role as MemberRole,
+                                                        studioId: m.studioId,
+                                                        createdAt: m.createdAt.toISOString(),
+                                                        updatedAt: m.createdAt.toISOString()
+                                                    })) || []} 
+                                                    disabled={!hasAdminRole}
+                                                />
+                                            </div>
+                                        )}
+                                        <Button variant="outline" size="sm" className="w-full gap-1.5 mt-1" asChild>
+                                            <Link href={`/studios/${booking.studio?.slug}/bookings/detail/${booking.id}`}>
+                                                <ExternalLinkIcon className="h-3.5 w-3.5" />
+                                                View Details
+                                            </Link>
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
         </div>

@@ -40,8 +40,8 @@ export default async function StudioDetails({ params }: StudioDetailsProps) {
                 include: { user: true }
             },
             invitations: true,
-            categories: {
-                include: { services: { include: { studioSession: true, variants: { include: { deliverables: true } } } } }
+            services: {
+                include: { studioSession: true, variants: { include: { deliverables: true } } }
             },
             studioSessions: true,
             clients: {

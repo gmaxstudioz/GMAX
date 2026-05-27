@@ -196,7 +196,7 @@ export type StudioWhereInput = {
   metadata?: Prisma.JsonNullableFilter<"Studio">
   members?: Prisma.MemberListRelationFilter
   invitations?: Prisma.InvitationListRelationFilter
-  categories?: Prisma.CategoryListRelationFilter
+  services?: Prisma.ServiceListRelationFilter
   studioSessions?: Prisma.StudioSessionListRelationFilter
   clients?: Prisma.ClientListRelationFilter
   bookings?: Prisma.BookingListRelationFilter
@@ -216,7 +216,7 @@ export type StudioOrderByWithRelationInput = {
   metadata?: Prisma.SortOrderInput | Prisma.SortOrder
   members?: Prisma.MemberOrderByRelationAggregateInput
   invitations?: Prisma.InvitationOrderByRelationAggregateInput
-  categories?: Prisma.CategoryOrderByRelationAggregateInput
+  services?: Prisma.ServiceOrderByRelationAggregateInput
   studioSessions?: Prisma.StudioSessionOrderByRelationAggregateInput
   clients?: Prisma.ClientOrderByRelationAggregateInput
   bookings?: Prisma.BookingOrderByRelationAggregateInput
@@ -239,7 +239,7 @@ export type StudioWhereUniqueInput = Prisma.AtLeast<{
   metadata?: Prisma.JsonNullableFilter<"Studio">
   members?: Prisma.MemberListRelationFilter
   invitations?: Prisma.InvitationListRelationFilter
-  categories?: Prisma.CategoryListRelationFilter
+  services?: Prisma.ServiceListRelationFilter
   studioSessions?: Prisma.StudioSessionListRelationFilter
   clients?: Prisma.ClientListRelationFilter
   bookings?: Prisma.BookingListRelationFilter
@@ -285,7 +285,7 @@ export type StudioCreateInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberCreateNestedManyWithoutStudioInput
   invitations?: Prisma.InvitationCreateNestedManyWithoutStudioInput
-  categories?: Prisma.CategoryCreateNestedManyWithoutStudioInput
+  services?: Prisma.ServiceCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
@@ -305,7 +305,7 @@ export type StudioUncheckedCreateInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUncheckedCreateNestedManyWithoutStudioInput
   invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutStudioInput
-  categories?: Prisma.CategoryUncheckedCreateNestedManyWithoutStudioInput
+  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
@@ -325,7 +325,7 @@ export type StudioUpdateInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUpdateManyWithoutStudioNestedInput
   invitations?: Prisma.InvitationUpdateManyWithoutStudioNestedInput
-  categories?: Prisma.CategoryUpdateManyWithoutStudioNestedInput
+  services?: Prisma.ServiceUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
@@ -345,7 +345,7 @@ export type StudioUncheckedUpdateInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUncheckedUpdateManyWithoutStudioNestedInput
   invitations?: Prisma.InvitationUncheckedUpdateManyWithoutStudioNestedInput
-  categories?: Prisma.CategoryUncheckedUpdateManyWithoutStudioNestedInput
+  services?: Prisma.ServiceUncheckedUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
@@ -474,18 +474,18 @@ export type StudioUpdateOneRequiredWithoutInvitationsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.StudioUpdateToOneWithWhereWithoutInvitationsInput, Prisma.StudioUpdateWithoutInvitationsInput>, Prisma.StudioUncheckedUpdateWithoutInvitationsInput>
 }
 
-export type StudioCreateNestedOneWithoutCategoriesInput = {
-  create?: Prisma.XOR<Prisma.StudioCreateWithoutCategoriesInput, Prisma.StudioUncheckedCreateWithoutCategoriesInput>
-  connectOrCreate?: Prisma.StudioCreateOrConnectWithoutCategoriesInput
+export type StudioCreateNestedOneWithoutServicesInput = {
+  create?: Prisma.XOR<Prisma.StudioCreateWithoutServicesInput, Prisma.StudioUncheckedCreateWithoutServicesInput>
+  connectOrCreate?: Prisma.StudioCreateOrConnectWithoutServicesInput
   connect?: Prisma.StudioWhereUniqueInput
 }
 
-export type StudioUpdateOneRequiredWithoutCategoriesNestedInput = {
-  create?: Prisma.XOR<Prisma.StudioCreateWithoutCategoriesInput, Prisma.StudioUncheckedCreateWithoutCategoriesInput>
-  connectOrCreate?: Prisma.StudioCreateOrConnectWithoutCategoriesInput
-  upsert?: Prisma.StudioUpsertWithoutCategoriesInput
+export type StudioUpdateOneRequiredWithoutServicesNestedInput = {
+  create?: Prisma.XOR<Prisma.StudioCreateWithoutServicesInput, Prisma.StudioUncheckedCreateWithoutServicesInput>
+  connectOrCreate?: Prisma.StudioCreateOrConnectWithoutServicesInput
+  upsert?: Prisma.StudioUpsertWithoutServicesInput
   connect?: Prisma.StudioWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.StudioUpdateToOneWithWhereWithoutCategoriesInput, Prisma.StudioUpdateWithoutCategoriesInput>, Prisma.StudioUncheckedUpdateWithoutCategoriesInput>
+  update?: Prisma.XOR<Prisma.XOR<Prisma.StudioUpdateToOneWithWhereWithoutServicesInput, Prisma.StudioUpdateWithoutServicesInput>, Prisma.StudioUncheckedUpdateWithoutServicesInput>
 }
 
 export type StudioCreateNestedOneWithoutCoursesInput = {
@@ -568,7 +568,7 @@ export type StudioCreateWithoutRolesInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberCreateNestedManyWithoutStudioInput
   invitations?: Prisma.InvitationCreateNestedManyWithoutStudioInput
-  categories?: Prisma.CategoryCreateNestedManyWithoutStudioInput
+  services?: Prisma.ServiceCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
@@ -587,7 +587,7 @@ export type StudioUncheckedCreateWithoutRolesInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUncheckedCreateNestedManyWithoutStudioInput
   invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutStudioInput
-  categories?: Prisma.CategoryUncheckedCreateNestedManyWithoutStudioInput
+  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
@@ -622,7 +622,7 @@ export type StudioUpdateWithoutRolesInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUpdateManyWithoutStudioNestedInput
   invitations?: Prisma.InvitationUpdateManyWithoutStudioNestedInput
-  categories?: Prisma.CategoryUpdateManyWithoutStudioNestedInput
+  services?: Prisma.ServiceUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
@@ -641,7 +641,7 @@ export type StudioUncheckedUpdateWithoutRolesInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUncheckedUpdateManyWithoutStudioNestedInput
   invitations?: Prisma.InvitationUncheckedUpdateManyWithoutStudioNestedInput
-  categories?: Prisma.CategoryUncheckedUpdateManyWithoutStudioNestedInput
+  services?: Prisma.ServiceUncheckedUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
@@ -660,7 +660,7 @@ export type StudioCreateWithoutStudioSessionsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberCreateNestedManyWithoutStudioInput
   invitations?: Prisma.InvitationCreateNestedManyWithoutStudioInput
-  categories?: Prisma.CategoryCreateNestedManyWithoutStudioInput
+  services?: Prisma.ServiceCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
   roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
@@ -679,7 +679,7 @@ export type StudioUncheckedCreateWithoutStudioSessionsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUncheckedCreateNestedManyWithoutStudioInput
   invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutStudioInput
-  categories?: Prisma.CategoryUncheckedCreateNestedManyWithoutStudioInput
+  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
   roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
@@ -714,7 +714,7 @@ export type StudioUpdateWithoutStudioSessionsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUpdateManyWithoutStudioNestedInput
   invitations?: Prisma.InvitationUpdateManyWithoutStudioNestedInput
-  categories?: Prisma.CategoryUpdateManyWithoutStudioNestedInput
+  services?: Prisma.ServiceUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
   roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
@@ -733,7 +733,7 @@ export type StudioUncheckedUpdateWithoutStudioSessionsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUncheckedUpdateManyWithoutStudioNestedInput
   invitations?: Prisma.InvitationUncheckedUpdateManyWithoutStudioNestedInput
-  categories?: Prisma.CategoryUncheckedUpdateManyWithoutStudioNestedInput
+  services?: Prisma.ServiceUncheckedUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
   roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
@@ -751,7 +751,7 @@ export type StudioCreateWithoutMembersInput = {
   updatedAt?: Date | string
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   invitations?: Prisma.InvitationCreateNestedManyWithoutStudioInput
-  categories?: Prisma.CategoryCreateNestedManyWithoutStudioInput
+  services?: Prisma.ServiceCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
@@ -770,7 +770,7 @@ export type StudioUncheckedCreateWithoutMembersInput = {
   updatedAt?: Date | string
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutStudioInput
-  categories?: Prisma.CategoryUncheckedCreateNestedManyWithoutStudioInput
+  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
@@ -805,7 +805,7 @@ export type StudioUpdateWithoutMembersInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   invitations?: Prisma.InvitationUpdateManyWithoutStudioNestedInput
-  categories?: Prisma.CategoryUpdateManyWithoutStudioNestedInput
+  services?: Prisma.ServiceUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
@@ -824,7 +824,7 @@ export type StudioUncheckedUpdateWithoutMembersInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   invitations?: Prisma.InvitationUncheckedUpdateManyWithoutStudioNestedInput
-  categories?: Prisma.CategoryUncheckedUpdateManyWithoutStudioNestedInput
+  services?: Prisma.ServiceUncheckedUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
@@ -843,7 +843,7 @@ export type StudioCreateWithoutInvitationsInput = {
   updatedAt?: Date | string
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberCreateNestedManyWithoutStudioInput
-  categories?: Prisma.CategoryCreateNestedManyWithoutStudioInput
+  services?: Prisma.ServiceCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
@@ -862,7 +862,7 @@ export type StudioUncheckedCreateWithoutInvitationsInput = {
   updatedAt?: Date | string
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUncheckedCreateNestedManyWithoutStudioInput
-  categories?: Prisma.CategoryUncheckedCreateNestedManyWithoutStudioInput
+  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
@@ -897,7 +897,7 @@ export type StudioUpdateWithoutInvitationsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUpdateManyWithoutStudioNestedInput
-  categories?: Prisma.CategoryUpdateManyWithoutStudioNestedInput
+  services?: Prisma.ServiceUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
@@ -916,7 +916,7 @@ export type StudioUncheckedUpdateWithoutInvitationsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUncheckedUpdateManyWithoutStudioNestedInput
-  categories?: Prisma.CategoryUncheckedUpdateManyWithoutStudioNestedInput
+  services?: Prisma.ServiceUncheckedUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
@@ -926,7 +926,7 @@ export type StudioUncheckedUpdateWithoutInvitationsInput = {
   bookingIntents?: Prisma.BookingIntentUncheckedUpdateManyWithoutStudioNestedInput
 }
 
-export type StudioCreateWithoutCategoriesInput = {
+export type StudioCreateWithoutServicesInput = {
   id?: string
   name: string
   slug: string
@@ -945,7 +945,7 @@ export type StudioCreateWithoutCategoriesInput = {
   bookingIntents?: Prisma.BookingIntentCreateNestedManyWithoutStudioInput
 }
 
-export type StudioUncheckedCreateWithoutCategoriesInput = {
+export type StudioUncheckedCreateWithoutServicesInput = {
   id?: string
   name: string
   slug: string
@@ -964,23 +964,23 @@ export type StudioUncheckedCreateWithoutCategoriesInput = {
   bookingIntents?: Prisma.BookingIntentUncheckedCreateNestedManyWithoutStudioInput
 }
 
-export type StudioCreateOrConnectWithoutCategoriesInput = {
+export type StudioCreateOrConnectWithoutServicesInput = {
   where: Prisma.StudioWhereUniqueInput
-  create: Prisma.XOR<Prisma.StudioCreateWithoutCategoriesInput, Prisma.StudioUncheckedCreateWithoutCategoriesInput>
+  create: Prisma.XOR<Prisma.StudioCreateWithoutServicesInput, Prisma.StudioUncheckedCreateWithoutServicesInput>
 }
 
-export type StudioUpsertWithoutCategoriesInput = {
-  update: Prisma.XOR<Prisma.StudioUpdateWithoutCategoriesInput, Prisma.StudioUncheckedUpdateWithoutCategoriesInput>
-  create: Prisma.XOR<Prisma.StudioCreateWithoutCategoriesInput, Prisma.StudioUncheckedCreateWithoutCategoriesInput>
+export type StudioUpsertWithoutServicesInput = {
+  update: Prisma.XOR<Prisma.StudioUpdateWithoutServicesInput, Prisma.StudioUncheckedUpdateWithoutServicesInput>
+  create: Prisma.XOR<Prisma.StudioCreateWithoutServicesInput, Prisma.StudioUncheckedCreateWithoutServicesInput>
   where?: Prisma.StudioWhereInput
 }
 
-export type StudioUpdateToOneWithWhereWithoutCategoriesInput = {
+export type StudioUpdateToOneWithWhereWithoutServicesInput = {
   where?: Prisma.StudioWhereInput
-  data: Prisma.XOR<Prisma.StudioUpdateWithoutCategoriesInput, Prisma.StudioUncheckedUpdateWithoutCategoriesInput>
+  data: Prisma.XOR<Prisma.StudioUpdateWithoutServicesInput, Prisma.StudioUncheckedUpdateWithoutServicesInput>
 }
 
-export type StudioUpdateWithoutCategoriesInput = {
+export type StudioUpdateWithoutServicesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
@@ -999,7 +999,7 @@ export type StudioUpdateWithoutCategoriesInput = {
   bookingIntents?: Prisma.BookingIntentUpdateManyWithoutStudioNestedInput
 }
 
-export type StudioUncheckedUpdateWithoutCategoriesInput = {
+export type StudioUncheckedUpdateWithoutServicesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1028,7 +1028,7 @@ export type StudioCreateWithoutCoursesInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberCreateNestedManyWithoutStudioInput
   invitations?: Prisma.InvitationCreateNestedManyWithoutStudioInput
-  categories?: Prisma.CategoryCreateNestedManyWithoutStudioInput
+  services?: Prisma.ServiceCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
@@ -1047,7 +1047,7 @@ export type StudioUncheckedCreateWithoutCoursesInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUncheckedCreateNestedManyWithoutStudioInput
   invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutStudioInput
-  categories?: Prisma.CategoryUncheckedCreateNestedManyWithoutStudioInput
+  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
@@ -1082,7 +1082,7 @@ export type StudioUpdateWithoutCoursesInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUpdateManyWithoutStudioNestedInput
   invitations?: Prisma.InvitationUpdateManyWithoutStudioNestedInput
-  categories?: Prisma.CategoryUpdateManyWithoutStudioNestedInput
+  services?: Prisma.ServiceUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
@@ -1101,7 +1101,7 @@ export type StudioUncheckedUpdateWithoutCoursesInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUncheckedUpdateManyWithoutStudioNestedInput
   invitations?: Prisma.InvitationUncheckedUpdateManyWithoutStudioNestedInput
-  categories?: Prisma.CategoryUncheckedUpdateManyWithoutStudioNestedInput
+  services?: Prisma.ServiceUncheckedUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
@@ -1120,7 +1120,7 @@ export type StudioCreateWithoutEnrollmentsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberCreateNestedManyWithoutStudioInput
   invitations?: Prisma.InvitationCreateNestedManyWithoutStudioInput
-  categories?: Prisma.CategoryCreateNestedManyWithoutStudioInput
+  services?: Prisma.ServiceCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
@@ -1139,7 +1139,7 @@ export type StudioUncheckedCreateWithoutEnrollmentsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUncheckedCreateNestedManyWithoutStudioInput
   invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutStudioInput
-  categories?: Prisma.CategoryUncheckedCreateNestedManyWithoutStudioInput
+  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
@@ -1174,7 +1174,7 @@ export type StudioUpdateWithoutEnrollmentsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUpdateManyWithoutStudioNestedInput
   invitations?: Prisma.InvitationUpdateManyWithoutStudioNestedInput
-  categories?: Prisma.CategoryUpdateManyWithoutStudioNestedInput
+  services?: Prisma.ServiceUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
@@ -1193,7 +1193,7 @@ export type StudioUncheckedUpdateWithoutEnrollmentsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUncheckedUpdateManyWithoutStudioNestedInput
   invitations?: Prisma.InvitationUncheckedUpdateManyWithoutStudioNestedInput
-  categories?: Prisma.CategoryUncheckedUpdateManyWithoutStudioNestedInput
+  services?: Prisma.ServiceUncheckedUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
@@ -1212,7 +1212,7 @@ export type StudioCreateWithoutClientsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberCreateNestedManyWithoutStudioInput
   invitations?: Prisma.InvitationCreateNestedManyWithoutStudioInput
-  categories?: Prisma.CategoryCreateNestedManyWithoutStudioInput
+  services?: Prisma.ServiceCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
   roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
@@ -1231,7 +1231,7 @@ export type StudioUncheckedCreateWithoutClientsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUncheckedCreateNestedManyWithoutStudioInput
   invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutStudioInput
-  categories?: Prisma.CategoryUncheckedCreateNestedManyWithoutStudioInput
+  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
   roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
@@ -1266,7 +1266,7 @@ export type StudioUpdateWithoutClientsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUpdateManyWithoutStudioNestedInput
   invitations?: Prisma.InvitationUpdateManyWithoutStudioNestedInput
-  categories?: Prisma.CategoryUpdateManyWithoutStudioNestedInput
+  services?: Prisma.ServiceUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
   roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
@@ -1285,7 +1285,7 @@ export type StudioUncheckedUpdateWithoutClientsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUncheckedUpdateManyWithoutStudioNestedInput
   invitations?: Prisma.InvitationUncheckedUpdateManyWithoutStudioNestedInput
-  categories?: Prisma.CategoryUncheckedUpdateManyWithoutStudioNestedInput
+  services?: Prisma.ServiceUncheckedUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
   roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
@@ -1304,7 +1304,7 @@ export type StudioCreateWithoutBookingIntentsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberCreateNestedManyWithoutStudioInput
   invitations?: Prisma.InvitationCreateNestedManyWithoutStudioInput
-  categories?: Prisma.CategoryCreateNestedManyWithoutStudioInput
+  services?: Prisma.ServiceCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingCreateNestedManyWithoutStudioInput
@@ -1323,7 +1323,7 @@ export type StudioUncheckedCreateWithoutBookingIntentsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUncheckedCreateNestedManyWithoutStudioInput
   invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutStudioInput
-  categories?: Prisma.CategoryUncheckedCreateNestedManyWithoutStudioInput
+  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutStudioInput
@@ -1358,7 +1358,7 @@ export type StudioUpdateWithoutBookingIntentsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUpdateManyWithoutStudioNestedInput
   invitations?: Prisma.InvitationUpdateManyWithoutStudioNestedInput
-  categories?: Prisma.CategoryUpdateManyWithoutStudioNestedInput
+  services?: Prisma.ServiceUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutStudioNestedInput
@@ -1377,7 +1377,7 @@ export type StudioUncheckedUpdateWithoutBookingIntentsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUncheckedUpdateManyWithoutStudioNestedInput
   invitations?: Prisma.InvitationUncheckedUpdateManyWithoutStudioNestedInput
-  categories?: Prisma.CategoryUncheckedUpdateManyWithoutStudioNestedInput
+  services?: Prisma.ServiceUncheckedUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutStudioNestedInput
@@ -1396,7 +1396,7 @@ export type StudioCreateWithoutBookingsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberCreateNestedManyWithoutStudioInput
   invitations?: Prisma.InvitationCreateNestedManyWithoutStudioInput
-  categories?: Prisma.CategoryCreateNestedManyWithoutStudioInput
+  services?: Prisma.ServiceCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientCreateNestedManyWithoutStudioInput
   roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
@@ -1415,7 +1415,7 @@ export type StudioUncheckedCreateWithoutBookingsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUncheckedCreateNestedManyWithoutStudioInput
   invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutStudioInput
-  categories?: Prisma.CategoryUncheckedCreateNestedManyWithoutStudioInput
+  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutStudioInput
   studioSessions?: Prisma.StudioSessionUncheckedCreateNestedManyWithoutStudioInput
   clients?: Prisma.ClientUncheckedCreateNestedManyWithoutStudioInput
   roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
@@ -1450,7 +1450,7 @@ export type StudioUpdateWithoutBookingsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUpdateManyWithoutStudioNestedInput
   invitations?: Prisma.InvitationUpdateManyWithoutStudioNestedInput
-  categories?: Prisma.CategoryUpdateManyWithoutStudioNestedInput
+  services?: Prisma.ServiceUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUpdateManyWithoutStudioNestedInput
   roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
@@ -1469,7 +1469,7 @@ export type StudioUncheckedUpdateWithoutBookingsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   members?: Prisma.MemberUncheckedUpdateManyWithoutStudioNestedInput
   invitations?: Prisma.InvitationUncheckedUpdateManyWithoutStudioNestedInput
-  categories?: Prisma.CategoryUncheckedUpdateManyWithoutStudioNestedInput
+  services?: Prisma.ServiceUncheckedUpdateManyWithoutStudioNestedInput
   studioSessions?: Prisma.StudioSessionUncheckedUpdateManyWithoutStudioNestedInput
   clients?: Prisma.ClientUncheckedUpdateManyWithoutStudioNestedInput
   roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
@@ -1486,7 +1486,7 @@ export type StudioUncheckedUpdateWithoutBookingsInput = {
 export type StudioCountOutputType = {
   members: number
   invitations: number
-  categories: number
+  services: number
   studioSessions: number
   clients: number
   bookings: number
@@ -1499,7 +1499,7 @@ export type StudioCountOutputType = {
 export type StudioCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   members?: boolean | StudioCountOutputTypeCountMembersArgs
   invitations?: boolean | StudioCountOutputTypeCountInvitationsArgs
-  categories?: boolean | StudioCountOutputTypeCountCategoriesArgs
+  services?: boolean | StudioCountOutputTypeCountServicesArgs
   studioSessions?: boolean | StudioCountOutputTypeCountStudioSessionsArgs
   clients?: boolean | StudioCountOutputTypeCountClientsArgs
   bookings?: boolean | StudioCountOutputTypeCountBookingsArgs
@@ -1536,8 +1536,8 @@ export type StudioCountOutputTypeCountInvitationsArgs<ExtArgs extends runtime.Ty
 /**
  * StudioCountOutputType without action
  */
-export type StudioCountOutputTypeCountCategoriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.CategoryWhereInput
+export type StudioCountOutputTypeCountServicesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ServiceWhereInput
 }
 
 /**
@@ -1600,7 +1600,7 @@ export type StudioSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   metadata?: boolean
   members?: boolean | Prisma.Studio$membersArgs<ExtArgs>
   invitations?: boolean | Prisma.Studio$invitationsArgs<ExtArgs>
-  categories?: boolean | Prisma.Studio$categoriesArgs<ExtArgs>
+  services?: boolean | Prisma.Studio$servicesArgs<ExtArgs>
   studioSessions?: boolean | Prisma.Studio$studioSessionsArgs<ExtArgs>
   clients?: boolean | Prisma.Studio$clientsArgs<ExtArgs>
   bookings?: boolean | Prisma.Studio$bookingsArgs<ExtArgs>
@@ -1645,7 +1645,7 @@ export type StudioOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
 export type StudioInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   members?: boolean | Prisma.Studio$membersArgs<ExtArgs>
   invitations?: boolean | Prisma.Studio$invitationsArgs<ExtArgs>
-  categories?: boolean | Prisma.Studio$categoriesArgs<ExtArgs>
+  services?: boolean | Prisma.Studio$servicesArgs<ExtArgs>
   studioSessions?: boolean | Prisma.Studio$studioSessionsArgs<ExtArgs>
   clients?: boolean | Prisma.Studio$clientsArgs<ExtArgs>
   bookings?: boolean | Prisma.Studio$bookingsArgs<ExtArgs>
@@ -1663,7 +1663,7 @@ export type $StudioPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
   objects: {
     members: Prisma.$MemberPayload<ExtArgs>[]
     invitations: Prisma.$InvitationPayload<ExtArgs>[]
-    categories: Prisma.$CategoryPayload<ExtArgs>[]
+    services: Prisma.$ServicePayload<ExtArgs>[]
     studioSessions: Prisma.$StudioSessionPayload<ExtArgs>[]
     clients: Prisma.$ClientPayload<ExtArgs>[]
     bookings: Prisma.$BookingPayload<ExtArgs>[]
@@ -2076,7 +2076,7 @@ export interface Prisma__StudioClient<T, Null = never, ExtArgs extends runtime.T
   readonly [Symbol.toStringTag]: "PrismaPromise"
   members<T extends Prisma.Studio$membersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Studio$membersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   invitations<T extends Prisma.Studio$invitationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Studio$invitationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InvitationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  categories<T extends Prisma.Studio$categoriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Studio$categoriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CategoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  services<T extends Prisma.Studio$servicesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Studio$servicesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ServicePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   studioSessions<T extends Prisma.Studio$studioSessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Studio$studioSessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$StudioSessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   clients<T extends Prisma.Studio$clientsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Studio$clientsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ClientPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   bookings<T extends Prisma.Studio$bookingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Studio$bookingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BookingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -2561,27 +2561,27 @@ export type Studio$invitationsArgs<ExtArgs extends runtime.Types.Extensions.Inte
 }
 
 /**
- * Studio.categories
+ * Studio.services
  */
-export type Studio$categoriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Studio$servicesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the Category
+   * Select specific fields to fetch from the Service
    */
-  select?: Prisma.CategorySelect<ExtArgs> | null
+  select?: Prisma.ServiceSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the Category
+   * Omit specific fields from the Service
    */
-  omit?: Prisma.CategoryOmit<ExtArgs> | null
+  omit?: Prisma.ServiceOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.CategoryInclude<ExtArgs> | null
-  where?: Prisma.CategoryWhereInput
-  orderBy?: Prisma.CategoryOrderByWithRelationInput | Prisma.CategoryOrderByWithRelationInput[]
-  cursor?: Prisma.CategoryWhereUniqueInput
+  include?: Prisma.ServiceInclude<ExtArgs> | null
+  where?: Prisma.ServiceWhereInput
+  orderBy?: Prisma.ServiceOrderByWithRelationInput | Prisma.ServiceOrderByWithRelationInput[]
+  cursor?: Prisma.ServiceWhereUniqueInput
   take?: number
   skip?: number
-  distinct?: Prisma.CategoryScalarFieldEnum | Prisma.CategoryScalarFieldEnum[]
+  distinct?: Prisma.ServiceScalarFieldEnum | Prisma.ServiceScalarFieldEnum[]
 }
 
 /**

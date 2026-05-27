@@ -72,8 +72,8 @@ export default function AcademyPage() {
                 <div ref={containerRef} className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
                     {courses.map(course => (
                         <Link key={course.id} href={`/academy/${course.id}`} className="course-card group block">
-                            <div className="bg-neutral-900/50 border border-neutral-800 rounded-2xl overflow-hidden hover:border-neutral-700 transition-colors">
-                                <div className="aspect-video bg-neutral-900 relative overflow-hidden">
+                            <div className="bg-primary/20 border border-primary/30 rounded-2xl overflow-hidden hover:border-primary/60 transition-colors">
+                                <div className="aspect-video bg-primary/10 relative overflow-hidden">
                                     {course.thumbnail ? (
                                         <Image 
                                             src={`${process.env.NEXT_PUBLIC_R2_PUBLIC_URL?.startsWith('http') ? '' : 'https://'}${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${course.thumbnail}`} 
@@ -82,22 +82,22 @@ export default function AcademyPage() {
                                             className="object-cover group-hover:scale-105 transition-transform duration-700"
                                         />
                                     ) : (
-                                        <div className="absolute inset-0 flex items-center justify-center text-neutral-700">
-                                            <BookOpen className="w-16 h-16 opacity-50" />
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <BookOpen className="w-16 h-16 opacity-50 text-primary" />
                                         </div>
                                     )}
                                 </div>
                                 <div className="p-8">
                                     <div className="flex justify-between items-start mb-4">
-                                        <h2 className="text-2xl md:text-3xl font-semibold line-clamp-2 pr-4">{course.title}</h2>
-                                        <span className="text-white font-medium bg-neutral-800 px-4 py-2 rounded-full text-base whitespace-nowrap">
+                                        <h2 className="text-2xl md:text-3xl font-semibold line-clamp-2 pr-4 text-foreground">{course.title}</h2>
+                                        <span className="text-primary-foreground font-medium bg-primary px-4 py-2 rounded-full text-base whitespace-nowrap">
                                             {formatCurrency(Number(course.price))}
                                         </span>
                                     </div>
-                                    <p className="text-neutral-400 text-base md:text-lg line-clamp-2 mb-8">
+                                    <p className="text-foreground/80 text-base md:text-lg line-clamp-2 mb-8">
                                         {course.description}
                                     </p>
-                                    <div className="flex items-center justify-between text-base text-neutral-500">
+                                    <div className="flex items-center justify-between text-base text-primary/80 font-medium">
                                         <div className="flex items-center gap-2">
                                             <Calendar className="w-5 h-5" />
                                             <span>{course.duration || "Self-paced"}</span>

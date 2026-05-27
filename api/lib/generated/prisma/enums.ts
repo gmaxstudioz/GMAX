@@ -39,6 +39,15 @@ export const EnrollmentStatus = {
 export type EnrollmentStatus = (typeof EnrollmentStatus)[keyof typeof EnrollmentStatus]
 
 
+export const ServiceCategoryType = {
+  PHOTOGRAPHY: 'PHOTOGRAPHY',
+  VIDEOGRAPHY: 'VIDEOGRAPHY',
+  OTHERS: 'OTHERS'
+} as const
+
+export type ServiceCategoryType = (typeof ServiceCategoryType)[keyof typeof ServiceCategoryType]
+
+
 export const PaymentPlan = {
   QUARTER: 'QUARTER',
   HALF: 'HALF',

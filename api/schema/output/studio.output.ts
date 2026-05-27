@@ -38,7 +38,7 @@ export const StudioListOutputSchema = PaginatedOutput(StudioSummaryOutputSchema)
 export const PublicServiceOutputSchema = z.object({
     id: z.string(),
     name: z.string(),
-    categoryId: z.string().optional(),
+    category: z.enum(["PHOTOGRAPHY", "VIDEOGRAPHY", "OTHERS"]),
     isAddon: z.boolean(),
     description: z.string(),
     features: z.array(z.string()),

@@ -186,6 +186,8 @@ export async function rescheduleBooking(bookingId: string, newDate: string) {
         const booking = await prisma.booking.findUnique({
             where: { id: bookingId },
             include: {
+                client: true,
+                studio: true,
                 service: {
                     include: { studioSession: true }
                 }
@@ -242,6 +244,36 @@ export async function rescheduleBooking(bookingId: string, newDate: string) {
             where: { id: bookingId },
             data: { bookingDate: targetDate }
         });
+
+        if (booking.client?.phone) {
+            try {
+                const { sendSMS } = await import("../termii");
+                const formattedDate = new Intl.DateTimeFormat("en-NG", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit"
+                }).format(targetDate);
+
+                const message = `Hi ${booking.client.name}, your booking for ${booking.service.name} at ${booking.studio.name} has been rescheduled to ${formattedDate}.`;
+                await sendSMS(booking.client.phone, message);
+
+                await prisma.notification.create({
+                    data: {
+                        clientPhone: booking.client.phone,
+                        clientName: booking.client.name,
+                        type: "BOOKING_CONFIRMATION",
+                        message: message,
+                        channel: ["SMS"],
+                        status: "SENT",
+                        bookingId: bookingId
+                    }
+                });
+            } catch (smsError) {
+                console.error("Failed to send reschedule SMS:", smsError);
+            }
+        }
 
         revalidatePath("/studios", "layout");
         return { status: "success", message: "Booking rescheduled successfully" };

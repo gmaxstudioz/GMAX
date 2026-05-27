@@ -15,7 +15,7 @@ export default async function BookPage() {
             logo: true,
             metadata: true,
             _count: {
-                select: { categories: true, members: true },
+                select: { services: true, members: true },
             },
         },
         orderBy: { createdAt: "desc" },
@@ -87,7 +87,7 @@ export default async function BookPage() {
                                     <CardContent>
                                         <div className="flex gap-2">
                                             <Badge variant="secondary" className="text-xs">
-                                                {studio._count.categories} {studio._count.categories === 1 ? "category" : "categories"}
+                                                {studio._count.services} {studio._count.services === 1 ? "service" : "services"}
                                             </Badge>
                                             <Badge variant="outline" className="text-xs">
                                                 {studio._count.members} staff

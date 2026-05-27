@@ -30,13 +30,9 @@ export default async function StudioBookPage({ params }: Props) {
     const studio = await prisma.studio.findUnique({
         where: { slug },
         include: {
-            categories: {
-                include: {
-                    services: {
-                        include: { studioSession: true, variants: true },
-                        where: { isAddon: false },
-                    },
-                },
+            services: {
+                include: { studioSession: true, variants: true },
+                where: { isAddon: false },
             },
             studioSessions: true,
         },
@@ -46,7 +42,7 @@ export default async function StudioBookPage({ params }: Props) {
 
     // Get addons separately
     const addons = await prisma.service.findMany({
-        where: { category: { studioId: studio.id }, isAddon: true },
+        where: { studioId: studio.id, isAddon: true },
         include: { variants: true },
     });
 
@@ -73,18 +69,18 @@ export default async function StudioBookPage({ params }: Props) {
 
             <BookingWizard
                 studioId={studio.id}
-                categories={studio.categories.map(c => ({
-                    id: c.id,
-                    name: c.name,
-                    services: c.services
-                        .filter(s => s.variants && s.variants.length > 0)
+                categories={["PHOTOGRAPHY", "VIDEOGRAPHY", "OTHERS"].map(cat => ({
+                    id: cat,
+                    name: cat,
+                    services: studio.services
+                        .filter(s => s.category === cat && s.variants && s.variants.length > 0)
                         .map(s => ({
                             id: s.id,
                             name: s.name,
                             isAddon: s.isAddon,
                             basePrice: Number(s.variants[0].basePrice),
                             bothVariantPrice: s.variants.find(v => v.locationType.toUpperCase() === "BOTH") ? Number(s.variants.find(v => v.locationType.toUpperCase() === "BOTH")!.basePrice) : null,
-                            studioSession: s.studioSession ? { duration: s.studioSession.duration } : null,
+                            sessionDurationMins: s.variants[0]?.sessionDurationMins ?? 45,
                         })),
                 }))}
                 addons={addons

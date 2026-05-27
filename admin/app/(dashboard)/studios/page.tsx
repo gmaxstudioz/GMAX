@@ -10,7 +10,9 @@ export const metadata: Metadata = {
   description: "Browse and manage all your studios.",
 };
 
-export default async function StudiosPage() {
+export default async function StudiosPage(props: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
+    const searchParams = await props.searchParams;
+    const isListView = searchParams.view === "list";
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) redirect("/auth/login");
 
@@ -32,7 +34,7 @@ export default async function StudiosPage() {
         orderBy: { createdAt: "desc" },
         include: {
             members: true,
-            categories: { include: { services: { include: { variants: true } } } },
+            services: { include: { variants: true } },
             studioSessions: true,
             clients: true,
             bookings: { include: { creator: true, service: { include: { variants: true } } } } // Explicitly include the 'creator' and 'service' relation for revenue calculation
@@ -49,7 +51,7 @@ export default async function StudiosPage() {
             {studioData.length === 0 ? (
                 <RenderEmptyState hasAdminRole={hasAdminRole} />
             ) : (
-                <RenderStudios studioData={studioData} hasAdminRole={hasAdminRole} />
+                <RenderStudios studioData={studioData} hasAdminRole={hasAdminRole} isListView={isListView} />
             )}
         </div>
     );

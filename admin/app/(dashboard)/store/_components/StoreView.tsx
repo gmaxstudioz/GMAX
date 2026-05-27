@@ -25,6 +25,9 @@ import { toast } from "sonner";
 import Link from "next/link";
 import Image from "next/image";
 import { SearchIcon, ShoppingCart, Tag, ArrowRight, Pencil, Trash2 } from "lucide-react";
+import { ViewToggle } from "@/components/web/ViewToggle";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useSearchParams } from "next/navigation";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -70,6 +73,8 @@ export function StoreView({
     const [filterType, setFilterType] = useState<FilterType>("ALL");
     const [products, setProducts] = useState<ProductWithCount[]>(initialProducts);
     const [page, setPage] = useState(1);
+    const searchParamsHooks = useSearchParams();
+    const isListView = searchParamsHooks.get("view") === "list";
 
     const ITEMS_PER_PAGE = 6;
 
@@ -231,6 +236,7 @@ export function StoreView({
                                 : <HugeiconsIcon icon={Refresh01Icon} />}
                         </Button>
 
+                        <ViewToggle defaultView="grid" />
                         <Link
                             href="/store/create"
                             className={buttonVariants({ variant: "default", className: "h-10 ml-auto xl:ml-0" })}
@@ -253,16 +259,102 @@ export function StoreView({
                 <EmptyState hasFilters={!!(search || filterType !== "ALL")} />
             ) : (
                 <div className="flex flex-col gap-6">
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {paginatedProducts.map((product) => (
-                            <ProductCard
-                                key={product.id}
-                                product={product}
-                                onDelete={handleDelete}
-                                isPending={isPending}
-                            />
-                        ))}
-                    </div>
+                    {isListView ? (
+                        <div className="border rounded-md">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[80px]">Image</TableHead>
+                                        <TableHead>Product</TableHead>
+                                        <TableHead>Price</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Sales</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {paginatedProducts.map((product) => {
+                                        const hasDiscount = product.salePrice !== null && product.salePrice < product.price;
+                                        return (
+                                            <TableRow key={product.id}>
+                                                <TableCell>
+                                                    <div className="w-12 h-12 rounded-md bg-muted overflow-hidden relative">
+                                                        {product.thumbnailKey ? (
+                                                            <Image 
+                                                                src={getThumbnailUrl(product.thumbnailKey)} 
+                                                                alt={product.title} 
+                                                                fill 
+                                                                className="object-cover" 
+                                                            />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground"><ShoppingCart className="size-4" /></div>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="font-medium">{product.title}</div>
+                                                    <div className="text-xs text-muted-foreground line-clamp-1 max-w-[200px]">{product.description}</div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {hasDiscount ? (
+                                                        <div className="flex flex-col">
+                                                            <span className="font-medium text-primary">{formatPrice(product.salePrice!)}</span>
+                                                            <span className="text-xs line-through text-muted-foreground">{formatPrice(product.price)}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="font-medium text-primary">{formatPrice(product.price)}</span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge
+                                                        variant="outline"
+                                                        className={
+                                                            product.isPublished
+                                                                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                                                : "bg-muted text-muted-foreground"
+                                                        }
+                                                    >
+                                                        {product.isPublished ? "Published" : "Draft"}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="text-sm font-medium">{product._count.purchases}</div>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button variant="outline" size="icon" asChild>
+                                                            <Link href={`/store/${product.id}/edit`}>
+                                                                <Pencil className="h-4 w-4" />
+                                                            </Link>
+                                                        </Button>
+                                                        <Button variant="outline" size="icon" asChild>
+                                                            <Link href={`/store/${product.id}`}>
+                                                                <ArrowRight className="h-4 w-4" />
+                                                            </Link>
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(product.id)} disabled={isPending}>
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {paginatedProducts.map((product) => (
+                                <ProductCard
+                                    key={product.id}
+                                    product={product}
+                                    onDelete={handleDelete}
+                                    isPending={isPending}
+                                />
+                            ))}
+                        </div>
+                    )}
 
                     {totalPages > 1 && (
                         <Pagination className="mt-2">

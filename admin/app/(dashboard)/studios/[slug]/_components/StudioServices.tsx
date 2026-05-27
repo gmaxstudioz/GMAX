@@ -5,27 +5,32 @@ import { Prisma } from "@/lib/generated/prisma/client";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, Trash, ChevronDownIcon, HardDriveIcon, ClockIcon, PencilIcon, MinusIcon, Loader2Icon } from "lucide-react";
+import { PlusIcon, Trash, ChevronDownIcon, HardDriveIcon, ClockIcon, PencilIcon, MinusIcon, Loader2Icon, CopyIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { createCategory, deleteCategory, createService, deleteService, updateCategory, updateService } from "@/lib/actions/service";
+import { createService, deleteService, updateService, cloneService } from "@/lib/actions/service";
+import { ViewToggle } from "@/components/web/ViewToggle";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useSearchParams } from "next/navigation";
 import { Controller, useForm, useFieldArray, Control, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CategorySchema, CategoryPayload, ServiceSchema, ServicePayload } from "@/lib/schemas/service";
+import { ServiceSchema, ServicePayload } from "@/lib/schemas/service";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { z } from "zod";
 
-// ✅ Ensure variants are included in the expected type
 type StudioWithRelations = Prisma.StudioGetPayload<{
     include: {
-        categories: { include: { services: { include: { variants: { include: { deliverables: true } } } } } },
+        services: { include: { variants: { include: { deliverables: true } } } },
         studioSessions: true,
     }
 }>;
 
-function VariantDeliverables({ control, variantIndex, isPending }: { control: Control<ServicePayload>, variantIndex: number, isPending: boolean }) {
+const CATEGORIES = ["PHOTOGRAPHY", "VIDEOGRAPHY", "OTHERS"];
+
+function VariantDeliverables({ control, variantIndex, isPending }: { control: Control<z.input<typeof ServiceSchema>>, variantIndex: number, isPending: boolean }) {
     const { fields, append, remove } = useFieldArray({
         control,
         name: `variants.${variantIndex}.deliverables` as const
@@ -113,19 +118,13 @@ function VariantDeliverables({ control, variantIndex, isPending }: { control: Co
 
 export default function StudioServices({ studioData }: { studioData: StudioWithRelations }) {
     const [isPending, startTransition] = useTransition();
-
-    const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
-    const [editModeCategory, setEditModeCategory] = useState<string | null>(null);
+    const searchParamsHooks = useSearchParams();
+    const isListView = searchParamsHooks.get("view") === "list";
 
     const [serviceDialogOpenForCategory, setServiceDialogOpenForCategory] = useState<string | null>(null);
     const [editModeService, setEditModeService] = useState<string | null>(null);
 
-    const categoryForm = useForm<CategoryPayload>({
-        resolver: zodResolver(CategorySchema),
-        defaultValues: { name: "", type: "standard" }
-    });
-
-    const serviceForm = useForm<ServicePayload>({
+    const serviceForm = useForm<z.input<typeof ServiceSchema>>({
         resolver: zodResolver(ServiceSchema),
         defaultValues: {
             name: "",
@@ -145,7 +144,6 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
         }
     });
 
-    // At the top of StudioServices, after your hooks
     const watchedFeatures = useWatch({ control: serviceForm.control, name: "features" }) ?? [];
     const watchedVariants = useWatch({ control: serviceForm.control, name: "variants" });
     const watchedSessionId = useWatch({ control: serviceForm.control, name: "studioSessionId" });
@@ -154,11 +152,6 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
         control: serviceForm.control,
         name: "variants"
     });
-
-    const resetCategoryState = () => {
-        categoryForm.reset();
-        setEditModeCategory(null);
-    };
 
     const resetServiceState = () => {
         serviceForm.reset({
@@ -197,35 +190,8 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
         serviceForm.setValue("features", newFeatures, { shouldDirty: true });
     };
 
-    const handleCategorySubmit = (data: CategoryPayload) => {
-        startTransition(async () => {
-            if (editModeCategory) {
-                const result = await updateCategory(editModeCategory, data);
-                if (result.status === "success") {
-                    toast.success("Category updated!");
-                    resetCategoryState();
-                    setIsCategoryDialogOpen(false);
-                } else toast.error(result.message);
-            } else {
-                const result = await createCategory({ ...data, studioId: studioData.id });
-                if (result.status === "success") {
-                    toast.success("Category created!");
-                    resetCategoryState();
-                    setIsCategoryDialogOpen(false);
-                } else toast.error(result.message);
-            }
-        });
-    };
-
-    const handleDeleteCategory = (categoryId: string) => {
-        startTransition(async () => {
-            const result = await deleteCategory(categoryId);
-            if (result.status === "success") toast.success("Category deleted!");
-            else toast.error(result.message);
-        });
-    };
-
-    const handleServiceSubmit = (data: ServicePayload) => {
+    const handleServiceSubmit = (dataInput: z.input<typeof ServiceSchema>) => {
+        const data = ServiceSchema.parse(dataInput);
         if (!data.studioSessionId) {
             toast.error("Please select a Studio Session.");
             return;
@@ -234,7 +200,12 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
             const filteredFeatures = data.features?.filter(f => f.trim().length > 0) || [];
             
             if (editModeService) {
-                const result = await updateService(editModeService, { ...data, features: filteredFeatures });
+                const result = await updateService(editModeService, { 
+                    ...data, 
+                    features: filteredFeatures,
+                    category: serviceDialogOpenForCategory as any,
+                    studioId: studioData.id 
+                });
                 if (result.status === "success") {
                     toast.success("Service updated!");
                     resetServiceState();
@@ -245,7 +216,8 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                 const result = await createService({
                     ...data,
                     features: filteredFeatures,
-                    categoryId: serviceDialogOpenForCategory
+                    category: serviceDialogOpenForCategory as any,
+                    studioId: studioData.id
                 });
                 if (result.status === "success") {
                     toast.success("Service added!");
@@ -264,6 +236,17 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
         });
     };
 
+    const handleCloneService = (serviceId: string) => {
+        const targetStudioId = prompt("Enter target Studio ID to clone this service to:");
+        if (!targetStudioId) return;
+        
+        startTransition(async () => {
+            const result = await cloneService(serviceId, targetStudioId);
+            if (result.status === "success") toast.success("Service cloned successfully!");
+            else toast.error(result.message);
+        });
+    };
+
     return (
         <Card>
             <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -274,155 +257,170 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                     </CardDescription>
                 </div>
 
-                <Button 
-                    variant="default" 
-                    size="sm" 
-                    className="gap-2 shrink-0 w-max"
-                    onClick={() => {
-                        resetCategoryState();
-                        setIsCategoryDialogOpen(true);
-                    }}
-                >
-                    <PlusIcon className="size-4" />
-                    New Category
-                </Button>
-
-                <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>{editModeCategory ? "Edit Category" : "Add Category"}</DialogTitle>
-                            <DialogDescription>
-                                {editModeCategory ? "Update the name of this container." : "Create a top level service container."}
-                            </DialogDescription>
-                        </DialogHeader>
-                        <form onSubmit={categoryForm.handleSubmit(handleCategorySubmit)}>
-                            <div className="space-y-4 py-4">
-                                <Controller
-                                    name="name"
-                                    control={categoryForm.control}
-                                    render={({ field }) => (
-                                        <Field>
-                                            <FieldLabel>Category Name</FieldLabel>
-                                            <Input {...field} placeholder="e.g. Pre-Wedding Shoot" disabled={isPending} />
-                                        </Field>
-                                    )}
-                                />
-                                <Controller
-                                    name="type"
-                                    control={categoryForm.control}
-                                    render={({ field }) => (
-                                        <Field>
-                                            <FieldLabel>Category Type</FieldLabel>
-                                            <Select value={field.value} onValueChange={field.onChange} disabled={isPending}>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select type..." />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="standard">Standard</SelectItem>
-                                                    <SelectItem value="addon">Add-on Container</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </Field>
-                                    )}
-                                />
-                            </div>
-                            <DialogFooter>
-                                <Button type="button" variant="outline" onClick={() => setIsCategoryDialogOpen(false)} disabled={isPending}>
-                                    Cancel
-                                </Button>
-                                {/* eslint-disable-next-line react-hooks/incompatible-library */}
-                                <Button type="submit" disabled={isPending || !categoryForm.watch("name")}>
-                                    {isPending ? <Loader2Icon className="animate-spin size-4 mr-2" /> : null}
-                                    {editModeCategory ? "Update" : "Create"} Category
-                                </Button>
-                            </DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
+                <div className="flex items-center gap-2">
+                    <ViewToggle defaultView="grid" />
+                </div>
             </CardHeader>
 
             <CardContent>
-                {studioData.categories.length === 0 ? (
-                    <div className="text-center p-8 rounded-lg border-2 border-dashed bg-muted/20">
-                        <HardDriveIcon className="mx-auto size-8 text-muted-foreground mb-4" />
-                        <h3 className="font-semibold text-lg">No Service Categories Found</h3>
-                        <p className="text-sm text-muted-foreground max-w-sm mx-auto mt-2">
-                            You must create a parent &quot;Category&quot; before you can add individual services.
-                        </p>
-                    </div>
-                ) : (
-                    <Accordion type="multiple" className="space-y-4 w-full border-none rounded-lg p-2">
-                        {studioData.categories.map((category) => (
-                            <AccordionItem
-                                key={category.id}
-                                value={category.id}
-                                className="border-1 border-border bg-card shadow-sm rounded-lg overflow-hidden transition-all px-4"
-                            >
-                                <div className="flex items-center justify-between w-full group">
-                                    <AccordionTrigger className="hover:no-underline py-4 flex-2">
-                                        <div className="flex items-center gap-3 text-left">
-                                            <div className="size-8 rounded-md bg-secondary flex items-center justify-center shrink-0">
-                                                <ChevronDownIcon className="size-4 text-muted-foreground" />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-semibold text-base line-clamp-1 break-all">{category.name}</h4>
-                                                <p className="text-xs text-muted-foreground font-normal">
-                                                    {category.services?.length || 0} items
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </AccordionTrigger>
-                                    
-                                    <div className="flex items-center pl-2 gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Button 
-                                            variant="secondary" 
-                                            size="sm" 
-                                            className="h-8 gap-1.5 text-xs"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                e.preventDefault();
-                                                resetServiceState();
-                                                serviceForm.setValue("isAddon", category.type === "addon");
-                                                setServiceDialogOpenForCategory(category.id);
-                                            }}
-                                        >
-                                            <PlusIcon className="size-3.5" />
-                                            Add Service Here
-                                        </Button>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="size-7"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                categoryForm.setValue("name", category.name);
-                                                categoryForm.setValue("type", category.type || "standard");
-                                                setEditModeCategory(category.id);
-                                                setIsCategoryDialogOpen(true);
-                                            }}
-                                            disabled={isPending}
-                                        >
-                                            <PencilIcon className="size-3.5" />
-                                        </Button>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="size-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDeleteCategory(category.id);
-                                            }}
-                                            disabled={isPending}
-                                        >
-                                            <Trash className="size-3.5" />
-                                        </Button>
-                                    </div>
-                                </div>
+                <Accordion type="multiple" className="space-y-4 w-full border-none rounded-lg p-2" defaultValue={CATEGORIES}>
+                    {CATEGORIES.map((category) => {
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const services = studioData.services.filter(s => (s as any).category === category);
+                        const categoryName = category.charAt(0) + category.slice(1).toLowerCase();
 
-                                <AccordionContent className="pt-2 w-full">
-                                    {category.services && category.services.length > 0 ? (
+                        return (
+                        <AccordionItem
+                            key={category}
+                            value={category}
+                            className="border-1 border-border bg-card shadow-sm rounded-lg overflow-hidden transition-all px-4"
+                        >
+                            <div className="flex items-center justify-between w-full group">
+                                <AccordionTrigger className="hover:no-underline py-4 flex-2">
+                                    <div className="flex items-center gap-3 text-left">
+                                        <div className="size-8 rounded-md bg-secondary flex items-center justify-center shrink-0">
+                                            <ChevronDownIcon className="size-4 text-muted-foreground" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-semibold text-base line-clamp-1 break-all">{categoryName}</h4>
+                                            <p className="text-xs text-muted-foreground font-normal">
+                                                {services.length} items
+                                            </p>
+                                        </div>
+                                    </div>
+                                </AccordionTrigger>
+                                
+                                <div className="flex items-center pl-2 gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button 
+                                        variant="secondary" 
+                                        size="sm" 
+                                        className="h-8 gap-1.5 text-xs"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            e.preventDefault();
+                                            resetServiceState();
+                                            setServiceDialogOpenForCategory(category);
+                                        }}
+                                    >
+                                        <PlusIcon className="size-3.5" />
+                                        Add Service Here
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <AccordionContent className="pt-2 w-full">
+                                {services.length > 0 ? (
+                                    isListView ? (
+                                        <div className="border rounded-md mt-2">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Service</TableHead>
+                                                        <TableHead>Base Price</TableHead>
+                                                        <TableHead>Duration</TableHead>
+                                                        <TableHead>Features</TableHead>
+                                                        <TableHead className="text-right">Actions</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {services.map((svc) => {
+                                                        const sessionBinding = studioData.studioSessions.find(s => s.id === svc.studioSessionId);
+                                                        const basePrice = svc.variants?.[0]?.basePrice ? Number(svc.variants[0].basePrice) : 0;
+                                                        return (
+                                                            <TableRow key={svc.id}>
+                                                                <TableCell>
+                                                                    <div className="font-medium">{svc.name}</div>
+                                                                    <div className="text-xs text-muted-foreground line-clamp-1 max-w-[250px]">{svc.description}</div>
+                                                                </TableCell>
+                                                                <TableCell className="font-medium text-primary">
+                                                                    ₦{basePrice.toLocaleString()}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <div className="text-xs flex items-center gap-1">
+                                                                        <ClockIcon className="size-3" />
+                                                                        {sessionBinding ? `${sessionBinding.name} (${sessionBinding.duration}m)` : "Unmanaged"}
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                                                        {svc.features?.slice(0, 2).map((f, i) => (
+                                                                            <span key={i} className="bg-secondary text-secondary-foreground text-[10px] px-1.5 py-0.5 rounded-sm">
+                                                                                {f}
+                                                                            </span>
+                                                                        ))}
+                                                                        {(svc.features?.length || 0) > 2 && (
+                                                                            <span className="text-[10px] text-muted-foreground">+{svc.features!.length - 2} more</span>
+                                                                        )}
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell className="text-right flex items-center justify-end gap-1">
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="size-8 h-8 w-8 text-muted-foreground hover:text-primary"
+                                                                        onClick={() => handleCloneService(svc.id)}
+                                                                        title="Clone Service"
+                                                                    >
+                                                                        <CopyIcon className="size-4" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="size-8 h-8 w-8 text-muted-foreground hover:text-primary"
+                                                                        onClick={() => {
+                                                                            setEditModeService(svc.id);
+                                                                            const svcFeatures = (svc.features && svc.features.length > 0) ? svc.features : [""];
+                                                                            
+                                                                            const mappedVariants = (svc.variants && svc.variants.length > 0) 
+                                                                                ? svc.variants.map((v) => ({
+                                                                                    locationType: v.locationType as "STUDIO" | "OUTDOOR" | "BOTH" | "MULTIPLE",
+                                                                                    basePrice: Number(v.basePrice),
+                                                                                    maxPrice: v.maxPrice ? Number(v.maxPrice) : undefined,
+                                                                                    sessionDurationMins: v.sessionDurationMins,
+                                                                                    logisticsIncluded: v.logisticsIncluded,
+                                                                                    deliverables: v.deliverables?.map((d) => ({
+                                                                                        label: d.label,
+                                                                                        quantity: d.quantity ?? undefined,
+                                                                                        detail: d.detail ?? undefined,
+                                                                                        isFree: d.isFree
+                                                                                    })) || []
+                                                                                }))
+                                                                                : [];
+
+                                                                            serviceForm.reset({
+                                                                                name: svc.name,
+                                                                                description: svc.description || "",
+                                                                                isAddon: svc.isAddon,
+                                                                                isActive: svc.isActive,
+                                                                                studioSessionId: svc.studioSessionId || "",
+                                                                                features: svcFeatures,
+                                                                                variants: mappedVariants
+                                                                            });
+                                                                            setServiceDialogOpenForCategory(category);
+                                                                        }}
+                                                                        title="Edit Service"
+                                                                    >
+                                                                        <PencilIcon className="size-4" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="size-8 h-8 w-8 text-muted-foreground hover:text-destructive"
+                                                                        onClick={() => handleDeleteService(svc.id)}
+                                                                        title="Delete Service"
+                                                                    >
+                                                                        <Trash className="size-4" />
+                                                                    </Button>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        );
+                                                    })}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    ) : (
                                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                            {category.services.map((svc) => {
+                                            {services.map((svc) => {
                                                 const sessionBinding = studioData.studioSessions.find(s => s.id === svc.studioSessionId);
                                                 // ✅ Safely extract base price from variants
                                                 const basePrice = svc.variants?.[0]?.basePrice ? Number(svc.variants[0].basePrice) : 0;
@@ -458,6 +456,15 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 className="size-6 h-6 w-6 text-muted-foreground hover:text-primary"
+                                                                onClick={() => handleCloneService(svc.id)}
+                                                                title="Clone Service"
+                                                            >
+                                                                <CopyIcon className="size-3" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="size-6 h-6 w-6 text-muted-foreground hover:text-primary"
                                                                 onClick={() => {
                                                                     setEditModeService(svc.id);
                                                                     const svcFeatures = (svc.features && svc.features.length > 0) ? svc.features : [""];
@@ -487,7 +494,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                         features: svcFeatures,
                                                                         variants: mappedVariants
                                                                     });
-                                                                    setServiceDialogOpenForCategory(category.id);
+                                                                    setServiceDialogOpenForCategory(category);
                                                                 }}
                                                                 title="Edit Service"
                                                             >
@@ -507,16 +514,16 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                 )
                                             })}
                                         </div>
-                                    ) : (
-                                        <div className="text-xs text-muted-foreground py-4 text-center border border-dashed rounded-md bg-secondary/30 mt-2">
-                                            Zero active services.
-                                        </div>
-                                    )}
-                                </AccordionContent>
-                            </AccordionItem>
-                        ))}
-                    </Accordion>
-                )}
+                                    )
+                                ) : (
+                                    <div className="text-xs text-muted-foreground py-4 text-center border border-dashed rounded-md bg-secondary/30 mt-2">
+                                        Zero active services.
+                                    </div>
+                                )}
+                            </AccordionContent>
+                        </AccordionItem>
+                    )})}
+                </Accordion>
             </CardContent>
 
             <Dialog

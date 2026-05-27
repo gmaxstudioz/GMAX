@@ -152,9 +152,9 @@ export default function LinksPage() {
             <Magnetic>
               <Link 
                 href="/book"
-                className="flex items-center gap-2 bg-primary text-primary-foreground px-8 py-4 rounded-full font-bold shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:scale-105 transition-transform"
+                className="flex items-center gap-3 bg-primary text-primary-foreground px-12 py-6 rounded-full text-xl font-bold shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:scale-105 transition-transform"
               >
-                Book Us Now <ArrowUpRight size={18} />
+                Book Us Now <ArrowUpRight size={24} />
               </Link>
             </Magnetic>
           </div>

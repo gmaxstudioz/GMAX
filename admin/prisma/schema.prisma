@@ -99,7 +99,7 @@ model Studio {
   metadata       Json?
   members        Member[]
   invitations    Invitation[]
-  categories     Category[]
+  services       Service[]
   studioSessions StudioSession[]
   clients        Client[]
   bookings       Booking[]
@@ -197,18 +197,12 @@ enum EnrollmentStatus {
   DROPPED
 }
 
-model Category {
-  id        String    @id @default(uuid())
-  name      String
-  type      String
-  services  Service[]
-  studioId  String    @map("studioId")
-  studio    Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
 
-  @@index([studioId])
-  @@map("category")
+
+enum ServiceCategoryType {
+  PHOTOGRAPHY
+  VIDEOGRAPHY
+  OTHERS
 }
 
 model Service {
@@ -218,9 +212,10 @@ model Service {
   features    String[]
   isAddon     Boolean  @default(false)
   isActive    Boolean  @default(true)
+  category    ServiceCategoryType @default(OTHERS)
 
-  categoryId      String
-  category        Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  studioId        String
+  studio          Studio        @relation(fields: [studioId], references: [id], onDelete: Cascade)
   studioSessionId String
   studioSession   StudioSession @relation(fields: [studioSessionId], references: [id], onDelete: Cascade)
 
@@ -231,7 +226,7 @@ model Service {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([categoryId])
+  @@index([studioId])
   @@map("service")
 }
 

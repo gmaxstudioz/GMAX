@@ -60,7 +60,6 @@ export const ModelName = {
   StudioSession: 'StudioSession',
   Member: 'Member',
   Invitation: 'Invitation',
-  Category: 'Category',
   Service: 'Service',
   ServiceVariant: 'ServiceVariant',
   ServiceDeliverable: 'ServiceDeliverable',
@@ -226,18 +225,6 @@ export const InvitationScalarFieldEnum = {
 export type InvitationScalarFieldEnum = (typeof InvitationScalarFieldEnum)[keyof typeof InvitationScalarFieldEnum]
 
 
-export const CategoryScalarFieldEnum = {
-  id: 'id',
-  name: 'name',
-  type: 'type',
-  studioId: 'studioId',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-} as const
-
-export type CategoryScalarFieldEnum = (typeof CategoryScalarFieldEnum)[keyof typeof CategoryScalarFieldEnum]
-
-
 export const ServiceScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -245,7 +232,8 @@ export const ServiceScalarFieldEnum = {
   features: 'features',
   isAddon: 'isAddon',
   isActive: 'isActive',
-  categoryId: 'categoryId',
+  category: 'category',
+  studioId: 'studioId',
   studioSessionId: 'studioSessionId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'

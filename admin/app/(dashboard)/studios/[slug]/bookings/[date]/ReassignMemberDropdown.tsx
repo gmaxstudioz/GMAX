@@ -9,7 +9,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading01Icon } from "@hugeicons/core-free-icons";
 import { MembersOutput } from "@/lib/schemas/studio";
 
-export function ReassignMemberDropdown({ bookingId, currentMemberId, members }: { bookingId: string, currentMemberId?: string | null, members: MembersOutput[] }) {
+export function ReassignMemberDropdown({ bookingId, currentMemberId, members, disabled }: { bookingId: string, currentMemberId?: string | null, members: MembersOutput[], disabled?: boolean }) {
     const [isPending, startTransition] = useTransition();
 
     const handleReassign = (newMemberId: string) => {
@@ -26,7 +26,7 @@ export function ReassignMemberDropdown({ bookingId, currentMemberId, members }: 
     return (
         <div className="flex items-center gap-2">
             <span className="text-sm shrink-0">Assigned To:</span>
-            <Select value={currentMemberId || ""} onValueChange={handleReassign} disabled={isPending}>
+            <Select value={currentMemberId || ""} onValueChange={handleReassign} disabled={isPending || disabled}>
                 <SelectTrigger className="h-8 w-[140px] text-xs">
                     {isPending ? <HugeiconsIcon icon={Loading01Icon} className="animate-spin size-3 mr-2" /> : null}
                     <SelectValue placeholder="Unassigned" />

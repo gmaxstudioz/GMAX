@@ -275,15 +275,15 @@ export default function BookingPage() {
     switch (currentStep) {
                   case 1: {
         const selectedCategory = studio?.categories?.find(c => c.services.some(s => s.id === selectedServiceId));
-        const categoryAddons = studio?.addons?.filter((s: PublicServiceOutput & { isActive?: boolean }) => s.categoryId === selectedCategory?.id && s.isActive !== false) || [];
+        const categoryAddons = studio?.addons?.filter((s: PublicServiceOutput & { isActive?: boolean }) => s.category === selectedCategory?.id && s.isActive !== false) || [];
 
         const occasionAnswers = [
-          { label: "Birthday", mappedCategory: "Photography", icon: "🎂" },
-          { label: "Wedding", mappedCategory: "Wedding", icon: "💍" },
-          { label: "Event", mappedCategory: "Wedding", icon: "🎊" },
-          { label: "Graduation", mappedCategory: "Photography", icon: "🎓" },
-          { label: "Personal Shoot", mappedCategory: "Photography", icon: "📸" },
-          { label: "Other", mappedCategory: "Other", icon: "✨" }
+          { label: "Birthday", mappedCategory: "PHOTOGRAPHY", icon: "🎂" },
+          { label: "Wedding", mappedCategory: "PHOTOGRAPHY", icon: "💍" },
+          { label: "Event", mappedCategory: "PHOTOGRAPHY", icon: "🎊" },
+          { label: "Graduation", mappedCategory: "PHOTOGRAPHY", icon: "🎓" },
+          { label: "Personal Shoot", mappedCategory: "PHOTOGRAPHY", icon: "📸" },
+          { label: "Other", mappedCategory: "OTHERS", icon: "✨" }
         ];
 
         return (
@@ -339,7 +339,7 @@ export default function BookingPage() {
                             </p>
                           </div>
                           <div className="shrink-0 text-muted-foreground opacity-50 group-hover:opacity-100 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300">
-                            <ChevronRight className="w-6 h-6" />
+                            <ChevronRight className="w-10 h-10" />
                           </div>
                         </div>
                       </div>
@@ -1091,31 +1091,31 @@ export default function BookingPage() {
               
               {currentStep < 3 ? (
                 ((currentStep === 2) || (currentStep === 1 && configStep === 5)) && (
-                  <button
-                    type="button"
-                    onClick={() => navigateStep("next")}
-                    className={cn(
-                      buttonVariants({ variant: "default", size: "lg" }),
-                      "rounded-full px-8 gap-2 group shadow-lg shadow-primary/20"
-                    )}
-                  >
-                    Continue
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </button>
-                )
-              ) : (
                 <button
-                  type="submit"
-                  disabled={isSubmitting}
+                  type="button"
+                  onClick={() => navigateStep("next")}
                   className={cn(
-                    buttonVariants({ variant: "default", size: "lg" }),
-                    "rounded-full px-8 gap-2 group shadow-lg shadow-primary/20"
+                    buttonVariants({ variant: "default" }),
+                    "rounded-full px-10 py-6 text-lg font-semibold gap-2 group shadow-lg shadow-primary/20"
                   )}
                 >
-                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Proceed to Payment
+                  Continue
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </button>
-              )}
+              )
+            ) : (
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={cn(
+                  buttonVariants({ variant: "default" }),
+                  "rounded-full px-10 py-6 text-lg font-semibold gap-2 group shadow-lg shadow-primary/20"
+                )}
+              >
+                {isSubmitting && <Loader2 className="w-5 h-5 animate-spin" />}
+                Proceed to Payment
+              </button>
+            )}
             </div>
           </form>
         </div>

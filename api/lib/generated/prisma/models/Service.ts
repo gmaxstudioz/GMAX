@@ -30,7 +30,8 @@ export type ServiceMinAggregateOutputType = {
   description: string | null
   isAddon: boolean | null
   isActive: boolean | null
-  categoryId: string | null
+  category: $Enums.ServiceCategoryType | null
+  studioId: string | null
   studioSessionId: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -42,7 +43,8 @@ export type ServiceMaxAggregateOutputType = {
   description: string | null
   isAddon: boolean | null
   isActive: boolean | null
-  categoryId: string | null
+  category: $Enums.ServiceCategoryType | null
+  studioId: string | null
   studioSessionId: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -55,7 +57,8 @@ export type ServiceCountAggregateOutputType = {
   features: number
   isAddon: number
   isActive: number
-  categoryId: number
+  category: number
+  studioId: number
   studioSessionId: number
   createdAt: number
   updatedAt: number
@@ -69,7 +72,8 @@ export type ServiceMinAggregateInputType = {
   description?: true
   isAddon?: true
   isActive?: true
-  categoryId?: true
+  category?: true
+  studioId?: true
   studioSessionId?: true
   createdAt?: true
   updatedAt?: true
@@ -81,7 +85,8 @@ export type ServiceMaxAggregateInputType = {
   description?: true
   isAddon?: true
   isActive?: true
-  categoryId?: true
+  category?: true
+  studioId?: true
   studioSessionId?: true
   createdAt?: true
   updatedAt?: true
@@ -94,7 +99,8 @@ export type ServiceCountAggregateInputType = {
   features?: true
   isAddon?: true
   isActive?: true
-  categoryId?: true
+  category?: true
+  studioId?: true
   studioSessionId?: true
   createdAt?: true
   updatedAt?: true
@@ -180,7 +186,8 @@ export type ServiceGroupByOutputType = {
   features: string[]
   isAddon: boolean
   isActive: boolean
-  categoryId: string
+  category: $Enums.ServiceCategoryType
+  studioId: string
   studioSessionId: string
   createdAt: Date
   updatedAt: Date
@@ -214,11 +221,12 @@ export type ServiceWhereInput = {
   features?: Prisma.StringNullableListFilter<"Service">
   isAddon?: Prisma.BoolFilter<"Service"> | boolean
   isActive?: Prisma.BoolFilter<"Service"> | boolean
-  categoryId?: Prisma.StringFilter<"Service"> | string
+  category?: Prisma.EnumServiceCategoryTypeFilter<"Service"> | $Enums.ServiceCategoryType
+  studioId?: Prisma.StringFilter<"Service"> | string
   studioSessionId?: Prisma.StringFilter<"Service"> | string
   createdAt?: Prisma.DateTimeFilter<"Service"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Service"> | Date | string
-  category?: Prisma.XOR<Prisma.CategoryScalarRelationFilter, Prisma.CategoryWhereInput>
+  studio?: Prisma.XOR<Prisma.StudioScalarRelationFilter, Prisma.StudioWhereInput>
   studioSession?: Prisma.XOR<Prisma.StudioSessionScalarRelationFilter, Prisma.StudioSessionWhereInput>
   variants?: Prisma.ServiceVariantListRelationFilter
   bookings?: Prisma.BookingListRelationFilter
@@ -232,11 +240,12 @@ export type ServiceOrderByWithRelationInput = {
   features?: Prisma.SortOrder
   isAddon?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
-  categoryId?: Prisma.SortOrder
+  category?: Prisma.SortOrder
+  studioId?: Prisma.SortOrder
   studioSessionId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
-  category?: Prisma.CategoryOrderByWithRelationInput
+  studio?: Prisma.StudioOrderByWithRelationInput
   studioSession?: Prisma.StudioSessionOrderByWithRelationInput
   variants?: Prisma.ServiceVariantOrderByRelationAggregateInput
   bookings?: Prisma.BookingOrderByRelationAggregateInput
@@ -253,11 +262,12 @@ export type ServiceWhereUniqueInput = Prisma.AtLeast<{
   features?: Prisma.StringNullableListFilter<"Service">
   isAddon?: Prisma.BoolFilter<"Service"> | boolean
   isActive?: Prisma.BoolFilter<"Service"> | boolean
-  categoryId?: Prisma.StringFilter<"Service"> | string
+  category?: Prisma.EnumServiceCategoryTypeFilter<"Service"> | $Enums.ServiceCategoryType
+  studioId?: Prisma.StringFilter<"Service"> | string
   studioSessionId?: Prisma.StringFilter<"Service"> | string
   createdAt?: Prisma.DateTimeFilter<"Service"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Service"> | Date | string
-  category?: Prisma.XOR<Prisma.CategoryScalarRelationFilter, Prisma.CategoryWhereInput>
+  studio?: Prisma.XOR<Prisma.StudioScalarRelationFilter, Prisma.StudioWhereInput>
   studioSession?: Prisma.XOR<Prisma.StudioSessionScalarRelationFilter, Prisma.StudioSessionWhereInput>
   variants?: Prisma.ServiceVariantListRelationFilter
   bookings?: Prisma.BookingListRelationFilter
@@ -271,7 +281,8 @@ export type ServiceOrderByWithAggregationInput = {
   features?: Prisma.SortOrder
   isAddon?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
-  categoryId?: Prisma.SortOrder
+  category?: Prisma.SortOrder
+  studioId?: Prisma.SortOrder
   studioSessionId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -290,7 +301,8 @@ export type ServiceScalarWhereWithAggregatesInput = {
   features?: Prisma.StringNullableListFilter<"Service">
   isAddon?: Prisma.BoolWithAggregatesFilter<"Service"> | boolean
   isActive?: Prisma.BoolWithAggregatesFilter<"Service"> | boolean
-  categoryId?: Prisma.StringWithAggregatesFilter<"Service"> | string
+  category?: Prisma.EnumServiceCategoryTypeWithAggregatesFilter<"Service"> | $Enums.ServiceCategoryType
+  studioId?: Prisma.StringWithAggregatesFilter<"Service"> | string
   studioSessionId?: Prisma.StringWithAggregatesFilter<"Service"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Service"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Service"> | Date | string
@@ -303,9 +315,10 @@ export type ServiceCreateInput = {
   features?: Prisma.ServiceCreatefeaturesInput | string[]
   isAddon?: boolean
   isActive?: boolean
+  category?: $Enums.ServiceCategoryType
   createdAt?: Date | string
   updatedAt?: Date | string
-  category: Prisma.CategoryCreateNestedOneWithoutServicesInput
+  studio: Prisma.StudioCreateNestedOneWithoutServicesInput
   studioSession: Prisma.StudioSessionCreateNestedOneWithoutServicesInput
   variants?: Prisma.ServiceVariantCreateNestedManyWithoutServiceInput
   bookings?: Prisma.BookingCreateNestedManyWithoutServiceInput
@@ -319,7 +332,8 @@ export type ServiceUncheckedCreateInput = {
   features?: Prisma.ServiceCreatefeaturesInput | string[]
   isAddon?: boolean
   isActive?: boolean
-  categoryId: string
+  category?: $Enums.ServiceCategoryType
+  studioId: string
   studioSessionId: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -335,9 +349,10 @@ export type ServiceUpdateInput = {
   features?: Prisma.ServiceUpdatefeaturesInput | string[]
   isAddon?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  category?: Prisma.EnumServiceCategoryTypeFieldUpdateOperationsInput | $Enums.ServiceCategoryType
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  category?: Prisma.CategoryUpdateOneRequiredWithoutServicesNestedInput
+  studio?: Prisma.StudioUpdateOneRequiredWithoutServicesNestedInput
   studioSession?: Prisma.StudioSessionUpdateOneRequiredWithoutServicesNestedInput
   variants?: Prisma.ServiceVariantUpdateManyWithoutServiceNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutServiceNestedInput
@@ -351,7 +366,8 @@ export type ServiceUncheckedUpdateInput = {
   features?: Prisma.ServiceUpdatefeaturesInput | string[]
   isAddon?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  categoryId?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.EnumServiceCategoryTypeFieldUpdateOperationsInput | $Enums.ServiceCategoryType
+  studioId?: Prisma.StringFieldUpdateOperationsInput | string
   studioSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -367,7 +383,8 @@ export type ServiceCreateManyInput = {
   features?: Prisma.ServiceCreatefeaturesInput | string[]
   isAddon?: boolean
   isActive?: boolean
-  categoryId: string
+  category?: $Enums.ServiceCategoryType
+  studioId: string
   studioSessionId: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -380,6 +397,7 @@ export type ServiceUpdateManyMutationInput = {
   features?: Prisma.ServiceUpdatefeaturesInput | string[]
   isAddon?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  category?: Prisma.EnumServiceCategoryTypeFieldUpdateOperationsInput | $Enums.ServiceCategoryType
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -391,7 +409,8 @@ export type ServiceUncheckedUpdateManyInput = {
   features?: Prisma.ServiceUpdatefeaturesInput | string[]
   isAddon?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  categoryId?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.EnumServiceCategoryTypeFieldUpdateOperationsInput | $Enums.ServiceCategoryType
+  studioId?: Prisma.StringFieldUpdateOperationsInput | string
   studioSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -422,7 +441,8 @@ export type ServiceCountOrderByAggregateInput = {
   features?: Prisma.SortOrder
   isAddon?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
-  categoryId?: Prisma.SortOrder
+  category?: Prisma.SortOrder
+  studioId?: Prisma.SortOrder
   studioSessionId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -434,7 +454,8 @@ export type ServiceMaxOrderByAggregateInput = {
   description?: Prisma.SortOrder
   isAddon?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
-  categoryId?: Prisma.SortOrder
+  category?: Prisma.SortOrder
+  studioId?: Prisma.SortOrder
   studioSessionId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -446,7 +467,8 @@ export type ServiceMinOrderByAggregateInput = {
   description?: Prisma.SortOrder
   isAddon?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
-  categoryId?: Prisma.SortOrder
+  category?: Prisma.SortOrder
+  studioId?: Prisma.SortOrder
   studioSessionId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -455,6 +477,48 @@ export type ServiceMinOrderByAggregateInput = {
 export type ServiceScalarRelationFilter = {
   is?: Prisma.ServiceWhereInput
   isNot?: Prisma.ServiceWhereInput
+}
+
+export type ServiceCreateNestedManyWithoutStudioInput = {
+  create?: Prisma.XOR<Prisma.ServiceCreateWithoutStudioInput, Prisma.ServiceUncheckedCreateWithoutStudioInput> | Prisma.ServiceCreateWithoutStudioInput[] | Prisma.ServiceUncheckedCreateWithoutStudioInput[]
+  connectOrCreate?: Prisma.ServiceCreateOrConnectWithoutStudioInput | Prisma.ServiceCreateOrConnectWithoutStudioInput[]
+  createMany?: Prisma.ServiceCreateManyStudioInputEnvelope
+  connect?: Prisma.ServiceWhereUniqueInput | Prisma.ServiceWhereUniqueInput[]
+}
+
+export type ServiceUncheckedCreateNestedManyWithoutStudioInput = {
+  create?: Prisma.XOR<Prisma.ServiceCreateWithoutStudioInput, Prisma.ServiceUncheckedCreateWithoutStudioInput> | Prisma.ServiceCreateWithoutStudioInput[] | Prisma.ServiceUncheckedCreateWithoutStudioInput[]
+  connectOrCreate?: Prisma.ServiceCreateOrConnectWithoutStudioInput | Prisma.ServiceCreateOrConnectWithoutStudioInput[]
+  createMany?: Prisma.ServiceCreateManyStudioInputEnvelope
+  connect?: Prisma.ServiceWhereUniqueInput | Prisma.ServiceWhereUniqueInput[]
+}
+
+export type ServiceUpdateManyWithoutStudioNestedInput = {
+  create?: Prisma.XOR<Prisma.ServiceCreateWithoutStudioInput, Prisma.ServiceUncheckedCreateWithoutStudioInput> | Prisma.ServiceCreateWithoutStudioInput[] | Prisma.ServiceUncheckedCreateWithoutStudioInput[]
+  connectOrCreate?: Prisma.ServiceCreateOrConnectWithoutStudioInput | Prisma.ServiceCreateOrConnectWithoutStudioInput[]
+  upsert?: Prisma.ServiceUpsertWithWhereUniqueWithoutStudioInput | Prisma.ServiceUpsertWithWhereUniqueWithoutStudioInput[]
+  createMany?: Prisma.ServiceCreateManyStudioInputEnvelope
+  set?: Prisma.ServiceWhereUniqueInput | Prisma.ServiceWhereUniqueInput[]
+  disconnect?: Prisma.ServiceWhereUniqueInput | Prisma.ServiceWhereUniqueInput[]
+  delete?: Prisma.ServiceWhereUniqueInput | Prisma.ServiceWhereUniqueInput[]
+  connect?: Prisma.ServiceWhereUniqueInput | Prisma.ServiceWhereUniqueInput[]
+  update?: Prisma.ServiceUpdateWithWhereUniqueWithoutStudioInput | Prisma.ServiceUpdateWithWhereUniqueWithoutStudioInput[]
+  updateMany?: Prisma.ServiceUpdateManyWithWhereWithoutStudioInput | Prisma.ServiceUpdateManyWithWhereWithoutStudioInput[]
+  deleteMany?: Prisma.ServiceScalarWhereInput | Prisma.ServiceScalarWhereInput[]
+}
+
+export type ServiceUncheckedUpdateManyWithoutStudioNestedInput = {
+  create?: Prisma.XOR<Prisma.ServiceCreateWithoutStudioInput, Prisma.ServiceUncheckedCreateWithoutStudioInput> | Prisma.ServiceCreateWithoutStudioInput[] | Prisma.ServiceUncheckedCreateWithoutStudioInput[]
+  connectOrCreate?: Prisma.ServiceCreateOrConnectWithoutStudioInput | Prisma.ServiceCreateOrConnectWithoutStudioInput[]
+  upsert?: Prisma.ServiceUpsertWithWhereUniqueWithoutStudioInput | Prisma.ServiceUpsertWithWhereUniqueWithoutStudioInput[]
+  createMany?: Prisma.ServiceCreateManyStudioInputEnvelope
+  set?: Prisma.ServiceWhereUniqueInput | Prisma.ServiceWhereUniqueInput[]
+  disconnect?: Prisma.ServiceWhereUniqueInput | Prisma.ServiceWhereUniqueInput[]
+  delete?: Prisma.ServiceWhereUniqueInput | Prisma.ServiceWhereUniqueInput[]
+  connect?: Prisma.ServiceWhereUniqueInput | Prisma.ServiceWhereUniqueInput[]
+  update?: Prisma.ServiceUpdateWithWhereUniqueWithoutStudioInput | Prisma.ServiceUpdateWithWhereUniqueWithoutStudioInput[]
+  updateMany?: Prisma.ServiceUpdateManyWithWhereWithoutStudioInput | Prisma.ServiceUpdateManyWithWhereWithoutStudioInput[]
+  deleteMany?: Prisma.ServiceScalarWhereInput | Prisma.ServiceScalarWhereInput[]
 }
 
 export type ServiceCreateNestedManyWithoutStudioSessionInput = {
@@ -499,48 +563,6 @@ export type ServiceUncheckedUpdateManyWithoutStudioSessionNestedInput = {
   deleteMany?: Prisma.ServiceScalarWhereInput | Prisma.ServiceScalarWhereInput[]
 }
 
-export type ServiceCreateNestedManyWithoutCategoryInput = {
-  create?: Prisma.XOR<Prisma.ServiceCreateWithoutCategoryInput, Prisma.ServiceUncheckedCreateWithoutCategoryInput> | Prisma.ServiceCreateWithoutCategoryInput[] | Prisma.ServiceUncheckedCreateWithoutCategoryInput[]
-  connectOrCreate?: Prisma.ServiceCreateOrConnectWithoutCategoryInput | Prisma.ServiceCreateOrConnectWithoutCategoryInput[]
-  createMany?: Prisma.ServiceCreateManyCategoryInputEnvelope
-  connect?: Prisma.ServiceWhereUniqueInput | Prisma.ServiceWhereUniqueInput[]
-}
-
-export type ServiceUncheckedCreateNestedManyWithoutCategoryInput = {
-  create?: Prisma.XOR<Prisma.ServiceCreateWithoutCategoryInput, Prisma.ServiceUncheckedCreateWithoutCategoryInput> | Prisma.ServiceCreateWithoutCategoryInput[] | Prisma.ServiceUncheckedCreateWithoutCategoryInput[]
-  connectOrCreate?: Prisma.ServiceCreateOrConnectWithoutCategoryInput | Prisma.ServiceCreateOrConnectWithoutCategoryInput[]
-  createMany?: Prisma.ServiceCreateManyCategoryInputEnvelope
-  connect?: Prisma.ServiceWhereUniqueInput | Prisma.ServiceWhereUniqueInput[]
-}
-
-export type ServiceUpdateManyWithoutCategoryNestedInput = {
-  create?: Prisma.XOR<Prisma.ServiceCreateWithoutCategoryInput, Prisma.ServiceUncheckedCreateWithoutCategoryInput> | Prisma.ServiceCreateWithoutCategoryInput[] | Prisma.ServiceUncheckedCreateWithoutCategoryInput[]
-  connectOrCreate?: Prisma.ServiceCreateOrConnectWithoutCategoryInput | Prisma.ServiceCreateOrConnectWithoutCategoryInput[]
-  upsert?: Prisma.ServiceUpsertWithWhereUniqueWithoutCategoryInput | Prisma.ServiceUpsertWithWhereUniqueWithoutCategoryInput[]
-  createMany?: Prisma.ServiceCreateManyCategoryInputEnvelope
-  set?: Prisma.ServiceWhereUniqueInput | Prisma.ServiceWhereUniqueInput[]
-  disconnect?: Prisma.ServiceWhereUniqueInput | Prisma.ServiceWhereUniqueInput[]
-  delete?: Prisma.ServiceWhereUniqueInput | Prisma.ServiceWhereUniqueInput[]
-  connect?: Prisma.ServiceWhereUniqueInput | Prisma.ServiceWhereUniqueInput[]
-  update?: Prisma.ServiceUpdateWithWhereUniqueWithoutCategoryInput | Prisma.ServiceUpdateWithWhereUniqueWithoutCategoryInput[]
-  updateMany?: Prisma.ServiceUpdateManyWithWhereWithoutCategoryInput | Prisma.ServiceUpdateManyWithWhereWithoutCategoryInput[]
-  deleteMany?: Prisma.ServiceScalarWhereInput | Prisma.ServiceScalarWhereInput[]
-}
-
-export type ServiceUncheckedUpdateManyWithoutCategoryNestedInput = {
-  create?: Prisma.XOR<Prisma.ServiceCreateWithoutCategoryInput, Prisma.ServiceUncheckedCreateWithoutCategoryInput> | Prisma.ServiceCreateWithoutCategoryInput[] | Prisma.ServiceUncheckedCreateWithoutCategoryInput[]
-  connectOrCreate?: Prisma.ServiceCreateOrConnectWithoutCategoryInput | Prisma.ServiceCreateOrConnectWithoutCategoryInput[]
-  upsert?: Prisma.ServiceUpsertWithWhereUniqueWithoutCategoryInput | Prisma.ServiceUpsertWithWhereUniqueWithoutCategoryInput[]
-  createMany?: Prisma.ServiceCreateManyCategoryInputEnvelope
-  set?: Prisma.ServiceWhereUniqueInput | Prisma.ServiceWhereUniqueInput[]
-  disconnect?: Prisma.ServiceWhereUniqueInput | Prisma.ServiceWhereUniqueInput[]
-  delete?: Prisma.ServiceWhereUniqueInput | Prisma.ServiceWhereUniqueInput[]
-  connect?: Prisma.ServiceWhereUniqueInput | Prisma.ServiceWhereUniqueInput[]
-  update?: Prisma.ServiceUpdateWithWhereUniqueWithoutCategoryInput | Prisma.ServiceUpdateWithWhereUniqueWithoutCategoryInput[]
-  updateMany?: Prisma.ServiceUpdateManyWithWhereWithoutCategoryInput | Prisma.ServiceUpdateManyWithWhereWithoutCategoryInput[]
-  deleteMany?: Prisma.ServiceScalarWhereInput | Prisma.ServiceScalarWhereInput[]
-}
-
 export type ServiceCreatefeaturesInput = {
   set: string[]
 }
@@ -548,6 +570,10 @@ export type ServiceCreatefeaturesInput = {
 export type ServiceUpdatefeaturesInput = {
   set?: string[]
   push?: string | string[]
+}
+
+export type EnumServiceCategoryTypeFieldUpdateOperationsInput = {
+  set?: $Enums.ServiceCategoryType
 }
 
 export type ServiceCreateNestedOneWithoutVariantsInput = {
@@ -616,6 +642,81 @@ export type ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput = {
   deleteMany?: Prisma.ServiceScalarWhereInput | Prisma.ServiceScalarWhereInput[]
 }
 
+export type ServiceCreateWithoutStudioInput = {
+  id?: string
+  name: string
+  description: string
+  features?: Prisma.ServiceCreatefeaturesInput | string[]
+  isAddon?: boolean
+  isActive?: boolean
+  category?: $Enums.ServiceCategoryType
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  studioSession: Prisma.StudioSessionCreateNestedOneWithoutServicesInput
+  variants?: Prisma.ServiceVariantCreateNestedManyWithoutServiceInput
+  bookings?: Prisma.BookingCreateNestedManyWithoutServiceInput
+  addonBookings?: Prisma.BookingCreateNestedManyWithoutAddonsInput
+}
+
+export type ServiceUncheckedCreateWithoutStudioInput = {
+  id?: string
+  name: string
+  description: string
+  features?: Prisma.ServiceCreatefeaturesInput | string[]
+  isAddon?: boolean
+  isActive?: boolean
+  category?: $Enums.ServiceCategoryType
+  studioSessionId: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  variants?: Prisma.ServiceVariantUncheckedCreateNestedManyWithoutServiceInput
+  bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutServiceInput
+  addonBookings?: Prisma.BookingUncheckedCreateNestedManyWithoutAddonsInput
+}
+
+export type ServiceCreateOrConnectWithoutStudioInput = {
+  where: Prisma.ServiceWhereUniqueInput
+  create: Prisma.XOR<Prisma.ServiceCreateWithoutStudioInput, Prisma.ServiceUncheckedCreateWithoutStudioInput>
+}
+
+export type ServiceCreateManyStudioInputEnvelope = {
+  data: Prisma.ServiceCreateManyStudioInput | Prisma.ServiceCreateManyStudioInput[]
+  skipDuplicates?: boolean
+}
+
+export type ServiceUpsertWithWhereUniqueWithoutStudioInput = {
+  where: Prisma.ServiceWhereUniqueInput
+  update: Prisma.XOR<Prisma.ServiceUpdateWithoutStudioInput, Prisma.ServiceUncheckedUpdateWithoutStudioInput>
+  create: Prisma.XOR<Prisma.ServiceCreateWithoutStudioInput, Prisma.ServiceUncheckedCreateWithoutStudioInput>
+}
+
+export type ServiceUpdateWithWhereUniqueWithoutStudioInput = {
+  where: Prisma.ServiceWhereUniqueInput
+  data: Prisma.XOR<Prisma.ServiceUpdateWithoutStudioInput, Prisma.ServiceUncheckedUpdateWithoutStudioInput>
+}
+
+export type ServiceUpdateManyWithWhereWithoutStudioInput = {
+  where: Prisma.ServiceScalarWhereInput
+  data: Prisma.XOR<Prisma.ServiceUpdateManyMutationInput, Prisma.ServiceUncheckedUpdateManyWithoutStudioInput>
+}
+
+export type ServiceScalarWhereInput = {
+  AND?: Prisma.ServiceScalarWhereInput | Prisma.ServiceScalarWhereInput[]
+  OR?: Prisma.ServiceScalarWhereInput[]
+  NOT?: Prisma.ServiceScalarWhereInput | Prisma.ServiceScalarWhereInput[]
+  id?: Prisma.StringFilter<"Service"> | string
+  name?: Prisma.StringFilter<"Service"> | string
+  description?: Prisma.StringFilter<"Service"> | string
+  features?: Prisma.StringNullableListFilter<"Service">
+  isAddon?: Prisma.BoolFilter<"Service"> | boolean
+  isActive?: Prisma.BoolFilter<"Service"> | boolean
+  category?: Prisma.EnumServiceCategoryTypeFilter<"Service"> | $Enums.ServiceCategoryType
+  studioId?: Prisma.StringFilter<"Service"> | string
+  studioSessionId?: Prisma.StringFilter<"Service"> | string
+  createdAt?: Prisma.DateTimeFilter<"Service"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"Service"> | Date | string
+}
+
 export type ServiceCreateWithoutStudioSessionInput = {
   id?: string
   name: string
@@ -623,9 +724,10 @@ export type ServiceCreateWithoutStudioSessionInput = {
   features?: Prisma.ServiceCreatefeaturesInput | string[]
   isAddon?: boolean
   isActive?: boolean
+  category?: $Enums.ServiceCategoryType
   createdAt?: Date | string
   updatedAt?: Date | string
-  category: Prisma.CategoryCreateNestedOneWithoutServicesInput
+  studio: Prisma.StudioCreateNestedOneWithoutServicesInput
   variants?: Prisma.ServiceVariantCreateNestedManyWithoutServiceInput
   bookings?: Prisma.BookingCreateNestedManyWithoutServiceInput
   addonBookings?: Prisma.BookingCreateNestedManyWithoutAddonsInput
@@ -638,7 +740,8 @@ export type ServiceUncheckedCreateWithoutStudioSessionInput = {
   features?: Prisma.ServiceCreatefeaturesInput | string[]
   isAddon?: boolean
   isActive?: boolean
-  categoryId: string
+  category?: $Enums.ServiceCategoryType
+  studioId: string
   createdAt?: Date | string
   updatedAt?: Date | string
   variants?: Prisma.ServiceVariantUncheckedCreateNestedManyWithoutServiceInput
@@ -672,78 +775,6 @@ export type ServiceUpdateManyWithWhereWithoutStudioSessionInput = {
   data: Prisma.XOR<Prisma.ServiceUpdateManyMutationInput, Prisma.ServiceUncheckedUpdateManyWithoutStudioSessionInput>
 }
 
-export type ServiceScalarWhereInput = {
-  AND?: Prisma.ServiceScalarWhereInput | Prisma.ServiceScalarWhereInput[]
-  OR?: Prisma.ServiceScalarWhereInput[]
-  NOT?: Prisma.ServiceScalarWhereInput | Prisma.ServiceScalarWhereInput[]
-  id?: Prisma.StringFilter<"Service"> | string
-  name?: Prisma.StringFilter<"Service"> | string
-  description?: Prisma.StringFilter<"Service"> | string
-  features?: Prisma.StringNullableListFilter<"Service">
-  isAddon?: Prisma.BoolFilter<"Service"> | boolean
-  isActive?: Prisma.BoolFilter<"Service"> | boolean
-  categoryId?: Prisma.StringFilter<"Service"> | string
-  studioSessionId?: Prisma.StringFilter<"Service"> | string
-  createdAt?: Prisma.DateTimeFilter<"Service"> | Date | string
-  updatedAt?: Prisma.DateTimeFilter<"Service"> | Date | string
-}
-
-export type ServiceCreateWithoutCategoryInput = {
-  id?: string
-  name: string
-  description: string
-  features?: Prisma.ServiceCreatefeaturesInput | string[]
-  isAddon?: boolean
-  isActive?: boolean
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  studioSession: Prisma.StudioSessionCreateNestedOneWithoutServicesInput
-  variants?: Prisma.ServiceVariantCreateNestedManyWithoutServiceInput
-  bookings?: Prisma.BookingCreateNestedManyWithoutServiceInput
-  addonBookings?: Prisma.BookingCreateNestedManyWithoutAddonsInput
-}
-
-export type ServiceUncheckedCreateWithoutCategoryInput = {
-  id?: string
-  name: string
-  description: string
-  features?: Prisma.ServiceCreatefeaturesInput | string[]
-  isAddon?: boolean
-  isActive?: boolean
-  studioSessionId: string
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  variants?: Prisma.ServiceVariantUncheckedCreateNestedManyWithoutServiceInput
-  bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutServiceInput
-  addonBookings?: Prisma.BookingUncheckedCreateNestedManyWithoutAddonsInput
-}
-
-export type ServiceCreateOrConnectWithoutCategoryInput = {
-  where: Prisma.ServiceWhereUniqueInput
-  create: Prisma.XOR<Prisma.ServiceCreateWithoutCategoryInput, Prisma.ServiceUncheckedCreateWithoutCategoryInput>
-}
-
-export type ServiceCreateManyCategoryInputEnvelope = {
-  data: Prisma.ServiceCreateManyCategoryInput | Prisma.ServiceCreateManyCategoryInput[]
-  skipDuplicates?: boolean
-}
-
-export type ServiceUpsertWithWhereUniqueWithoutCategoryInput = {
-  where: Prisma.ServiceWhereUniqueInput
-  update: Prisma.XOR<Prisma.ServiceUpdateWithoutCategoryInput, Prisma.ServiceUncheckedUpdateWithoutCategoryInput>
-  create: Prisma.XOR<Prisma.ServiceCreateWithoutCategoryInput, Prisma.ServiceUncheckedCreateWithoutCategoryInput>
-}
-
-export type ServiceUpdateWithWhereUniqueWithoutCategoryInput = {
-  where: Prisma.ServiceWhereUniqueInput
-  data: Prisma.XOR<Prisma.ServiceUpdateWithoutCategoryInput, Prisma.ServiceUncheckedUpdateWithoutCategoryInput>
-}
-
-export type ServiceUpdateManyWithWhereWithoutCategoryInput = {
-  where: Prisma.ServiceScalarWhereInput
-  data: Prisma.XOR<Prisma.ServiceUpdateManyMutationInput, Prisma.ServiceUncheckedUpdateManyWithoutCategoryInput>
-}
-
 export type ServiceCreateWithoutVariantsInput = {
   id?: string
   name: string
@@ -751,9 +782,10 @@ export type ServiceCreateWithoutVariantsInput = {
   features?: Prisma.ServiceCreatefeaturesInput | string[]
   isAddon?: boolean
   isActive?: boolean
+  category?: $Enums.ServiceCategoryType
   createdAt?: Date | string
   updatedAt?: Date | string
-  category: Prisma.CategoryCreateNestedOneWithoutServicesInput
+  studio: Prisma.StudioCreateNestedOneWithoutServicesInput
   studioSession: Prisma.StudioSessionCreateNestedOneWithoutServicesInput
   bookings?: Prisma.BookingCreateNestedManyWithoutServiceInput
   addonBookings?: Prisma.BookingCreateNestedManyWithoutAddonsInput
@@ -766,7 +798,8 @@ export type ServiceUncheckedCreateWithoutVariantsInput = {
   features?: Prisma.ServiceCreatefeaturesInput | string[]
   isAddon?: boolean
   isActive?: boolean
-  categoryId: string
+  category?: $Enums.ServiceCategoryType
+  studioId: string
   studioSessionId: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -797,9 +830,10 @@ export type ServiceUpdateWithoutVariantsInput = {
   features?: Prisma.ServiceUpdatefeaturesInput | string[]
   isAddon?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  category?: Prisma.EnumServiceCategoryTypeFieldUpdateOperationsInput | $Enums.ServiceCategoryType
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  category?: Prisma.CategoryUpdateOneRequiredWithoutServicesNestedInput
+  studio?: Prisma.StudioUpdateOneRequiredWithoutServicesNestedInput
   studioSession?: Prisma.StudioSessionUpdateOneRequiredWithoutServicesNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutServiceNestedInput
   addonBookings?: Prisma.BookingUpdateManyWithoutAddonsNestedInput
@@ -812,7 +846,8 @@ export type ServiceUncheckedUpdateWithoutVariantsInput = {
   features?: Prisma.ServiceUpdatefeaturesInput | string[]
   isAddon?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  categoryId?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.EnumServiceCategoryTypeFieldUpdateOperationsInput | $Enums.ServiceCategoryType
+  studioId?: Prisma.StringFieldUpdateOperationsInput | string
   studioSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -827,9 +862,10 @@ export type ServiceCreateWithoutAddonBookingsInput = {
   features?: Prisma.ServiceCreatefeaturesInput | string[]
   isAddon?: boolean
   isActive?: boolean
+  category?: $Enums.ServiceCategoryType
   createdAt?: Date | string
   updatedAt?: Date | string
-  category: Prisma.CategoryCreateNestedOneWithoutServicesInput
+  studio: Prisma.StudioCreateNestedOneWithoutServicesInput
   studioSession: Prisma.StudioSessionCreateNestedOneWithoutServicesInput
   variants?: Prisma.ServiceVariantCreateNestedManyWithoutServiceInput
   bookings?: Prisma.BookingCreateNestedManyWithoutServiceInput
@@ -842,7 +878,8 @@ export type ServiceUncheckedCreateWithoutAddonBookingsInput = {
   features?: Prisma.ServiceCreatefeaturesInput | string[]
   isAddon?: boolean
   isActive?: boolean
-  categoryId: string
+  category?: $Enums.ServiceCategoryType
+  studioId: string
   studioSessionId: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -862,9 +899,10 @@ export type ServiceCreateWithoutBookingsInput = {
   features?: Prisma.ServiceCreatefeaturesInput | string[]
   isAddon?: boolean
   isActive?: boolean
+  category?: $Enums.ServiceCategoryType
   createdAt?: Date | string
   updatedAt?: Date | string
-  category: Prisma.CategoryCreateNestedOneWithoutServicesInput
+  studio: Prisma.StudioCreateNestedOneWithoutServicesInput
   studioSession: Prisma.StudioSessionCreateNestedOneWithoutServicesInput
   variants?: Prisma.ServiceVariantCreateNestedManyWithoutServiceInput
   addonBookings?: Prisma.BookingCreateNestedManyWithoutAddonsInput
@@ -877,7 +915,8 @@ export type ServiceUncheckedCreateWithoutBookingsInput = {
   features?: Prisma.ServiceCreatefeaturesInput | string[]
   isAddon?: boolean
   isActive?: boolean
-  categoryId: string
+  category?: $Enums.ServiceCategoryType
+  studioId: string
   studioSessionId: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -924,9 +963,10 @@ export type ServiceUpdateWithoutBookingsInput = {
   features?: Prisma.ServiceUpdatefeaturesInput | string[]
   isAddon?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  category?: Prisma.EnumServiceCategoryTypeFieldUpdateOperationsInput | $Enums.ServiceCategoryType
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  category?: Prisma.CategoryUpdateOneRequiredWithoutServicesNestedInput
+  studio?: Prisma.StudioUpdateOneRequiredWithoutServicesNestedInput
   studioSession?: Prisma.StudioSessionUpdateOneRequiredWithoutServicesNestedInput
   variants?: Prisma.ServiceVariantUpdateManyWithoutServiceNestedInput
   addonBookings?: Prisma.BookingUpdateManyWithoutAddonsNestedInput
@@ -939,12 +979,71 @@ export type ServiceUncheckedUpdateWithoutBookingsInput = {
   features?: Prisma.ServiceUpdatefeaturesInput | string[]
   isAddon?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  categoryId?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.EnumServiceCategoryTypeFieldUpdateOperationsInput | $Enums.ServiceCategoryType
+  studioId?: Prisma.StringFieldUpdateOperationsInput | string
   studioSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   variants?: Prisma.ServiceVariantUncheckedUpdateManyWithoutServiceNestedInput
   addonBookings?: Prisma.BookingUncheckedUpdateManyWithoutAddonsNestedInput
+}
+
+export type ServiceCreateManyStudioInput = {
+  id?: string
+  name: string
+  description: string
+  features?: Prisma.ServiceCreatefeaturesInput | string[]
+  isAddon?: boolean
+  isActive?: boolean
+  category?: $Enums.ServiceCategoryType
+  studioSessionId: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type ServiceUpdateWithoutStudioInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
+  features?: Prisma.ServiceUpdatefeaturesInput | string[]
+  isAddon?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  category?: Prisma.EnumServiceCategoryTypeFieldUpdateOperationsInput | $Enums.ServiceCategoryType
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  studioSession?: Prisma.StudioSessionUpdateOneRequiredWithoutServicesNestedInput
+  variants?: Prisma.ServiceVariantUpdateManyWithoutServiceNestedInput
+  bookings?: Prisma.BookingUpdateManyWithoutServiceNestedInput
+  addonBookings?: Prisma.BookingUpdateManyWithoutAddonsNestedInput
+}
+
+export type ServiceUncheckedUpdateWithoutStudioInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
+  features?: Prisma.ServiceUpdatefeaturesInput | string[]
+  isAddon?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  category?: Prisma.EnumServiceCategoryTypeFieldUpdateOperationsInput | $Enums.ServiceCategoryType
+  studioSessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  variants?: Prisma.ServiceVariantUncheckedUpdateManyWithoutServiceNestedInput
+  bookings?: Prisma.BookingUncheckedUpdateManyWithoutServiceNestedInput
+  addonBookings?: Prisma.BookingUncheckedUpdateManyWithoutAddonsNestedInput
+}
+
+export type ServiceUncheckedUpdateManyWithoutStudioInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
+  features?: Prisma.ServiceUpdatefeaturesInput | string[]
+  isAddon?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  category?: Prisma.EnumServiceCategoryTypeFieldUpdateOperationsInput | $Enums.ServiceCategoryType
+  studioSessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type ServiceCreateManyStudioSessionInput = {
@@ -954,7 +1053,8 @@ export type ServiceCreateManyStudioSessionInput = {
   features?: Prisma.ServiceCreatefeaturesInput | string[]
   isAddon?: boolean
   isActive?: boolean
-  categoryId: string
+  category?: $Enums.ServiceCategoryType
+  studioId: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -966,9 +1066,10 @@ export type ServiceUpdateWithoutStudioSessionInput = {
   features?: Prisma.ServiceUpdatefeaturesInput | string[]
   isAddon?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  category?: Prisma.EnumServiceCategoryTypeFieldUpdateOperationsInput | $Enums.ServiceCategoryType
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  category?: Prisma.CategoryUpdateOneRequiredWithoutServicesNestedInput
+  studio?: Prisma.StudioUpdateOneRequiredWithoutServicesNestedInput
   variants?: Prisma.ServiceVariantUpdateManyWithoutServiceNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutServiceNestedInput
   addonBookings?: Prisma.BookingUpdateManyWithoutAddonsNestedInput
@@ -981,7 +1082,8 @@ export type ServiceUncheckedUpdateWithoutStudioSessionInput = {
   features?: Prisma.ServiceUpdatefeaturesInput | string[]
   isAddon?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  categoryId?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.EnumServiceCategoryTypeFieldUpdateOperationsInput | $Enums.ServiceCategoryType
+  studioId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   variants?: Prisma.ServiceVariantUncheckedUpdateManyWithoutServiceNestedInput
@@ -996,61 +1098,8 @@ export type ServiceUncheckedUpdateManyWithoutStudioSessionInput = {
   features?: Prisma.ServiceUpdatefeaturesInput | string[]
   isAddon?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  categoryId?: Prisma.StringFieldUpdateOperationsInput | string
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-}
-
-export type ServiceCreateManyCategoryInput = {
-  id?: string
-  name: string
-  description: string
-  features?: Prisma.ServiceCreatefeaturesInput | string[]
-  isAddon?: boolean
-  isActive?: boolean
-  studioSessionId: string
-  createdAt?: Date | string
-  updatedAt?: Date | string
-}
-
-export type ServiceUpdateWithoutCategoryInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.StringFieldUpdateOperationsInput | string
-  features?: Prisma.ServiceUpdatefeaturesInput | string[]
-  isAddon?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  studioSession?: Prisma.StudioSessionUpdateOneRequiredWithoutServicesNestedInput
-  variants?: Prisma.ServiceVariantUpdateManyWithoutServiceNestedInput
-  bookings?: Prisma.BookingUpdateManyWithoutServiceNestedInput
-  addonBookings?: Prisma.BookingUpdateManyWithoutAddonsNestedInput
-}
-
-export type ServiceUncheckedUpdateWithoutCategoryInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.StringFieldUpdateOperationsInput | string
-  features?: Prisma.ServiceUpdatefeaturesInput | string[]
-  isAddon?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  studioSessionId?: Prisma.StringFieldUpdateOperationsInput | string
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  variants?: Prisma.ServiceVariantUncheckedUpdateManyWithoutServiceNestedInput
-  bookings?: Prisma.BookingUncheckedUpdateManyWithoutServiceNestedInput
-  addonBookings?: Prisma.BookingUncheckedUpdateManyWithoutAddonsNestedInput
-}
-
-export type ServiceUncheckedUpdateManyWithoutCategoryInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.StringFieldUpdateOperationsInput | string
-  features?: Prisma.ServiceUpdatefeaturesInput | string[]
-  isAddon?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  studioSessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.EnumServiceCategoryTypeFieldUpdateOperationsInput | $Enums.ServiceCategoryType
+  studioId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1062,9 +1111,10 @@ export type ServiceUpdateWithoutAddonBookingsInput = {
   features?: Prisma.ServiceUpdatefeaturesInput | string[]
   isAddon?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  category?: Prisma.EnumServiceCategoryTypeFieldUpdateOperationsInput | $Enums.ServiceCategoryType
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  category?: Prisma.CategoryUpdateOneRequiredWithoutServicesNestedInput
+  studio?: Prisma.StudioUpdateOneRequiredWithoutServicesNestedInput
   studioSession?: Prisma.StudioSessionUpdateOneRequiredWithoutServicesNestedInput
   variants?: Prisma.ServiceVariantUpdateManyWithoutServiceNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutServiceNestedInput
@@ -1077,7 +1127,8 @@ export type ServiceUncheckedUpdateWithoutAddonBookingsInput = {
   features?: Prisma.ServiceUpdatefeaturesInput | string[]
   isAddon?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  categoryId?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.EnumServiceCategoryTypeFieldUpdateOperationsInput | $Enums.ServiceCategoryType
+  studioId?: Prisma.StringFieldUpdateOperationsInput | string
   studioSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1092,7 +1143,8 @@ export type ServiceUncheckedUpdateManyWithoutAddonBookingsInput = {
   features?: Prisma.ServiceUpdatefeaturesInput | string[]
   isAddon?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  categoryId?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.EnumServiceCategoryTypeFieldUpdateOperationsInput | $Enums.ServiceCategoryType
+  studioId?: Prisma.StringFieldUpdateOperationsInput | string
   studioSessionId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1154,11 +1206,12 @@ export type ServiceSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   features?: boolean
   isAddon?: boolean
   isActive?: boolean
-  categoryId?: boolean
+  category?: boolean
+  studioId?: boolean
   studioSessionId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  category?: boolean | Prisma.CategoryDefaultArgs<ExtArgs>
+  studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
   studioSession?: boolean | Prisma.StudioSessionDefaultArgs<ExtArgs>
   variants?: boolean | Prisma.Service$variantsArgs<ExtArgs>
   bookings?: boolean | Prisma.Service$bookingsArgs<ExtArgs>
@@ -1173,11 +1226,12 @@ export type ServiceSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   features?: boolean
   isAddon?: boolean
   isActive?: boolean
-  categoryId?: boolean
+  category?: boolean
+  studioId?: boolean
   studioSessionId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  category?: boolean | Prisma.CategoryDefaultArgs<ExtArgs>
+  studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
   studioSession?: boolean | Prisma.StudioSessionDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["service"]>
 
@@ -1188,11 +1242,12 @@ export type ServiceSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   features?: boolean
   isAddon?: boolean
   isActive?: boolean
-  categoryId?: boolean
+  category?: boolean
+  studioId?: boolean
   studioSessionId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  category?: boolean | Prisma.CategoryDefaultArgs<ExtArgs>
+  studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
   studioSession?: boolean | Prisma.StudioSessionDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["service"]>
 
@@ -1203,15 +1258,16 @@ export type ServiceSelectScalar = {
   features?: boolean
   isAddon?: boolean
   isActive?: boolean
-  categoryId?: boolean
+  category?: boolean
+  studioId?: boolean
   studioSessionId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ServiceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "description" | "features" | "isAddon" | "isActive" | "categoryId" | "studioSessionId" | "createdAt" | "updatedAt", ExtArgs["result"]["service"]>
+export type ServiceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "description" | "features" | "isAddon" | "isActive" | "category" | "studioId" | "studioSessionId" | "createdAt" | "updatedAt", ExtArgs["result"]["service"]>
 export type ServiceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  category?: boolean | Prisma.CategoryDefaultArgs<ExtArgs>
+  studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
   studioSession?: boolean | Prisma.StudioSessionDefaultArgs<ExtArgs>
   variants?: boolean | Prisma.Service$variantsArgs<ExtArgs>
   bookings?: boolean | Prisma.Service$bookingsArgs<ExtArgs>
@@ -1219,18 +1275,18 @@ export type ServiceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   _count?: boolean | Prisma.ServiceCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ServiceIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  category?: boolean | Prisma.CategoryDefaultArgs<ExtArgs>
+  studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
   studioSession?: boolean | Prisma.StudioSessionDefaultArgs<ExtArgs>
 }
 export type ServiceIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  category?: boolean | Prisma.CategoryDefaultArgs<ExtArgs>
+  studio?: boolean | Prisma.StudioDefaultArgs<ExtArgs>
   studioSession?: boolean | Prisma.StudioSessionDefaultArgs<ExtArgs>
 }
 
 export type $ServicePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Service"
   objects: {
-    category: Prisma.$CategoryPayload<ExtArgs>
+    studio: Prisma.$StudioPayload<ExtArgs>
     studioSession: Prisma.$StudioSessionPayload<ExtArgs>
     variants: Prisma.$ServiceVariantPayload<ExtArgs>[]
     bookings: Prisma.$BookingPayload<ExtArgs>[]
@@ -1243,7 +1299,8 @@ export type $ServicePayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     features: string[]
     isAddon: boolean
     isActive: boolean
-    categoryId: string
+    category: $Enums.ServiceCategoryType
+    studioId: string
     studioSessionId: string
     createdAt: Date
     updatedAt: Date
@@ -1641,7 +1698,7 @@ readonly fields: ServiceFieldRefs;
  */
 export interface Prisma__ServiceClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  category<T extends Prisma.CategoryDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CategoryDefaultArgs<ExtArgs>>): Prisma.Prisma__CategoryClient<runtime.Types.Result.GetResult<Prisma.$CategoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  studio<T extends Prisma.StudioDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudioDefaultArgs<ExtArgs>>): Prisma.Prisma__StudioClient<runtime.Types.Result.GetResult<Prisma.$StudioPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   studioSession<T extends Prisma.StudioSessionDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudioSessionDefaultArgs<ExtArgs>>): Prisma.Prisma__StudioSessionClient<runtime.Types.Result.GetResult<Prisma.$StudioSessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   variants<T extends Prisma.Service$variantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Service$variantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ServiceVariantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   bookings<T extends Prisma.Service$bookingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Service$bookingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BookingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -1681,7 +1738,8 @@ export interface ServiceFieldRefs {
   readonly features: Prisma.FieldRef<"Service", 'String[]'>
   readonly isAddon: Prisma.FieldRef<"Service", 'Boolean'>
   readonly isActive: Prisma.FieldRef<"Service", 'Boolean'>
-  readonly categoryId: Prisma.FieldRef<"Service", 'String'>
+  readonly category: Prisma.FieldRef<"Service", 'ServiceCategoryType'>
+  readonly studioId: Prisma.FieldRef<"Service", 'String'>
   readonly studioSessionId: Prisma.FieldRef<"Service", 'String'>
   readonly createdAt: Prisma.FieldRef<"Service", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Service", 'DateTime'>

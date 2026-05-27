@@ -47,7 +47,6 @@ type StudioWithRelations = Prisma.StudioGetPayload<{
         include: { user: true }
     },
     invitations: true,
-    categories: true,
     studioSessions: true,
     clients: {
         include: {

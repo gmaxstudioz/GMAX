@@ -36,47 +36,51 @@ export default async function ServicesPage() {
             id: true,
             slug: true,
             name: true,
-            categories: {
+            services: {
                 include: {
-                    services: {
-                        include: {
-                            studioSession: {
-                                select: {
-                                    id: true,
-                                    name: true,
-                                    duration: true,
-                                }
-                            },
-                            variants: true,
-                            _count: {
-                                select: {
-                                    bookings: true,
-                                }
-                            }
+                    studioSession: {
+                        select: {
+                            id: true,
+                            name: true,
+                            duration: true,
+                        }
+                    },
+                    variants: true,
+                    _count: {
+                        select: {
+                            bookings: true,
                         }
                     }
-                },
-                orderBy: { name: "asc" }
-            },
+                }
+            }
         },
         orderBy: { name: "asc" }
     });
 
-    // Shape data grouped by studio
-    const studioGroups = studios.map(studio => ({
-        id: studio.id,
-        slug: studio.slug,
-        name: studio.name,
-        categories: studio.categories.map(category => ({
-            ...category,
-            services: category.services.map(service => ({
-                ...service,
-                studioId: studio.id,
-                studioSlug: studio.slug,
-                studioName: studio.name,
-            })),
-        })),
-    }));
+    const studioGroups = studios.map(studio => {
+        const groupedServices = {
+            PHOTOGRAPHY: studio.services.filter(s => s.category === "PHOTOGRAPHY"),
+            VIDEOGRAPHY: studio.services.filter(s => s.category === "VIDEOGRAPHY"),
+            OTHERS: studio.services.filter(s => s.category === "OTHERS"),
+        };
+        
+        return {
+            id: studio.id,
+            slug: studio.slug,
+            name: studio.name,
+            categories: ["PHOTOGRAPHY", "VIDEOGRAPHY", "OTHERS"].map(cat => ({
+                id: cat,
+                name: cat,
+                type: cat,
+                services: groupedServices[cat as keyof typeof groupedServices].map(service => ({
+                    ...service,
+                    studioId: studio.id,
+                    studioSlug: studio.slug,
+                    studioName: studio.name,
+                })),
+            })).filter(c => c.services.length > 0)
+        };
+    });
 
     // Serialize Prisma Decimal objects to plain numbers for Client Components
     const serialized = JSON.parse(JSON.stringify(studioGroups, (_key, value) =>

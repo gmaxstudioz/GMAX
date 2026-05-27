@@ -18,7 +18,9 @@ import Link from "next/link";
 import { ArrowRightIcon, BadgeCheck, MailIcon, Phone, SearchIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
-import { useRouter } from "next/navigation";
+import { ViewToggle } from "@/components/web/ViewToggle";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useSearchParams, useRouter } from "next/navigation";
 
 
 type StudioGroup = {
@@ -49,6 +51,8 @@ export function ClientsView({ studioGroups }: { studioGroups: StudioGroup[] }) {
     const debouncedSearch = useDebounce(search, 300);
     const [filterType, setFilterType] = useState<string>("ALL");
     const router = useRouter();
+    const searchParamsHooks = useSearchParams();
+    const isListView = searchParamsHooks.get("view") === "list";
 
     function handleDelete(clientId: string) {
         startTransition(async () => {
@@ -145,6 +149,7 @@ export function ClientsView({ studioGroups }: { studioGroups: StudioGroup[] }) {
                         <Button onClick={handleRefresh} type="button" variant="outline" size="icon" disabled={isPending} className="h-10 w-10 shrink-0">
                             {isPending ? <HugeiconsIcon icon={Loading} className="animate-spin" /> : <HugeiconsIcon icon={Refresh01Icon} />}
                         </Button>
+                        <ViewToggle defaultView="grid" />
                     </div>
                 </CardHeader>
             </Card>
@@ -178,61 +183,48 @@ export function ClientsView({ studioGroups }: { studioGroups: StudioGroup[] }) {
 
                             <Separator />
 
-                            {/* Client Cards Grid (max 6 per studio) */}
-                            <CardContent className="grid grid-cols-1 gap-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-3 mt-4">
-                                {group.clients.slice(0, 6).map((client) => (
-                                    <ContextMenu key={client.id}>
-                                        <ContextMenuTrigger>
-                                            <Card className="@container/card">
-                                                <CardHeader>
-                                                    <div className="w-full flex items-center justify-between">
-                                                        <CardTitle className="text-lg font-bold">{client.name}</CardTitle>
+                            {/* Client Grid/List */}
+                            {isListView ? (
+                                <div className="border-t">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Name</TableHead>
+                                                <TableHead>Type</TableHead>
+                                                <TableHead>Contact</TableHead>
+                                                <TableHead>Bookings</TableHead>
+                                                <TableHead className="text-right">Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {group.clients.map((client) => (
+                                                <TableRow key={client.id}>
+                                                    <TableCell className="font-medium">{client.name}</TableCell>
+                                                    <TableCell>
                                                         <Badge variant="outline">
-                                                            <BadgeCheck data-icon="inline-start" />
+                                                            <BadgeCheck data-icon="inline-start" className="mr-1 h-3 w-3" />
                                                             {client.type}
                                                         </Badge>
-                                                    </div>
-                                                </CardHeader>
-                                                <CardContent className="text-muted-foreground flex flex-col gap-2">
-                                                    <div className="flex flex-col gap-2 mb-2">
-                                                        <p className="text-foreground/80 font-semibold">Bookings</p>
-                                                        <div className="flex items-center justify-between gap-1 w-full">
-                                                            <div className="rounded w-full bg-accent p-2">
-                                                                <p className="text-xs">Total</p>
-                                                                <p className="font-bold text-primary">{client.bookings?.length || 0}</p>
-                                                            </div>
-                                                            <div className="rounded w-full bg-accent p-2">
-                                                                <p className="text-xs">Completed</p>
-                                                                <p className="font-bold text-primary">{client.bookings?.filter((booking) => booking.bookingStatus === "COMPLETED").length || 0}</p>
-                                                            </div>
-                                                            <div className="rounded w-full bg-accent p-2">
-                                                                <p className="text-xs">Cancelled</p>
-                                                                <p className="font-bold text-primary">{client.bookings?.filter((booking) => booking.bookingStatus === "CANCELLED").length || 0}</p>
-                                                            </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="text-sm">{client.phone}</div>
+                                                        {client.email && <div className="text-xs text-muted-foreground">{client.email}</div>}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-2 text-sm">
+                                                            <span>Total: {client.bookings?.length || 0}</span>
+                                                            <span className="text-muted-foreground">|</span>
+                                                            <span className="text-green-600">✓ {client.bookings?.filter(b => b.bookingStatus === "COMPLETED").length || 0}</span>
                                                         </div>
-                                                    </div>
-                                                    <div className="flex flex-col gap-2">
-                                                        <p className="text-foreground/80 font-semibold">Contact</p>
-                                                        <div className="flex items-center gap-1">
-                                                            <Phone size={16} className="text-foreground" />
-                                                            <p>{client.phone}</p>
-                                                        </div>
-                                                        {client.email && (
-                                                            <p className="flex gap-1.5">
-                                                                <MailIcon size={16} className="text-foreground" />
-                                                                {client.email}
-                                                            </p>
-                                                        )}
-                                                    </div>
-
-                                                    <div className="flex items-center gap-1 mt-4">
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger asChild>
-                                                                <Button variant="secondary" size="icon">
-                                                                    <HugeiconsIcon icon={MoreVerticalIcon} />
+                                                                <Button variant="ghost" size="sm">
+                                                                    <HugeiconsIcon icon={MoreVerticalIcon} className="h-4 w-4" />
                                                                 </Button>
                                                             </DropdownMenuTrigger>
-                                                            <DropdownMenuContent>
+                                                            <DropdownMenuContent align="end">
                                                                 <DropdownMenuLabel className="text-xs">Actions</DropdownMenuLabel>
                                                                 <EditClientDialog
                                                                     clientId={client.id}
@@ -246,38 +238,119 @@ export function ClientsView({ studioGroups }: { studioGroups: StudioGroup[] }) {
                                                                     }}
                                                                     triggerItem={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Edit</DropdownMenuItem>}
                                                                 />
+                                                                <DropdownMenuItem asChild>
+                                                                    <Link href={`/studios/${group.slug}/client/${client.id}`}>View Details</Link>
+                                                                </DropdownMenuItem>
                                                                 <DropdownMenuItem onClick={() => handleDelete(client.id)} className="text-red-500 font-medium">Delete</DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
-                                                        <Link
-                                                            className={buttonVariants({ variant: "default", className: "flex-1 cursor-pointer" })}
-                                                            href={`/studios/${group.slug}/client/${client.id}`}
-                                                        >
-                                                            View Details
-                                                        </Link>
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        </ContextMenuTrigger>
-                                        <ContextMenuContent>
-                                            <ContextMenuLabel className="text-xs">Actions</ContextMenuLabel>
-                                            <EditClientDialog
-                                                clientId={client.id}
-                                                initialData={{
-                                                    name: client.name,
-                                                    email: client.email || undefined,
-                                                    phone: client.phone || "",
-                                                    address: client.address || undefined,
-                                                    notes: client.notes || undefined,
-                                                    type: client.type as "vvip" | "vip" | "regular"
-                                                }}
-                                                triggerItem={<ContextMenuItem onSelect={(e) => e.preventDefault()}>Edit</ContextMenuItem>}
-                                            />
-                                            <ContextMenuItem onClick={() => handleDelete(client.id)} className="text-red-500 font-medium">Delete</ContextMenuItem>
-                                        </ContextMenuContent>
-                                    </ContextMenu>
-                                ))}
-                            </CardContent>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            ) : (
+                                <CardContent className="grid grid-cols-1 gap-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-3 mt-4">
+                                    {group.clients.slice(0, 6).map((client) => (
+                                        <ContextMenu key={client.id}>
+                                            <ContextMenuTrigger>
+                                                <Card className="@container/card">
+                                                    <CardHeader>
+                                                        <div className="w-full flex items-center justify-between">
+                                                            <CardTitle className="text-lg font-bold">{client.name}</CardTitle>
+                                                            <Badge variant="outline">
+                                                                <BadgeCheck data-icon="inline-start" />
+                                                                {client.type}
+                                                            </Badge>
+                                                        </div>
+                                                    </CardHeader>
+                                                    <CardContent className="text-muted-foreground flex flex-col gap-2">
+                                                        <div className="flex flex-col gap-2 mb-2">
+                                                            <p className="text-foreground/80 font-semibold">Bookings</p>
+                                                            <div className="flex items-center justify-between gap-1 w-full">
+                                                                <div className="rounded w-full bg-accent p-2">
+                                                                    <p className="text-xs">Total</p>
+                                                                    <p className="font-bold text-primary">{client.bookings?.length || 0}</p>
+                                                                </div>
+                                                                <div className="rounded w-full bg-accent p-2">
+                                                                    <p className="text-xs">Completed</p>
+                                                                    <p className="font-bold text-primary">{client.bookings?.filter((booking) => booking.bookingStatus === "COMPLETED").length || 0}</p>
+                                                                </div>
+                                                                <div className="rounded w-full bg-accent p-2">
+                                                                    <p className="text-xs">Cancelled</p>
+                                                                    <p className="font-bold text-primary">{client.bookings?.filter((booking) => booking.bookingStatus === "CANCELLED").length || 0}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex flex-col gap-2">
+                                                            <p className="text-foreground/80 font-semibold">Contact</p>
+                                                            <div className="flex items-center gap-1">
+                                                                <Phone size={16} className="text-foreground" />
+                                                                <p>{client.phone}</p>
+                                                            </div>
+                                                            {client.email && (
+                                                                <p className="flex gap-1.5">
+                                                                    <MailIcon size={16} className="text-foreground" />
+                                                                    {client.email}
+                                                                </p>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="flex items-center gap-1 mt-4">
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="secondary" size="icon">
+                                                                        <HugeiconsIcon icon={MoreVerticalIcon} />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent>
+                                                                    <DropdownMenuLabel className="text-xs">Actions</DropdownMenuLabel>
+                                                                    <EditClientDialog
+                                                                        clientId={client.id}
+                                                                        initialData={{
+                                                                            name: client.name,
+                                                                            email: client.email || undefined,
+                                                                            phone: client.phone || "",
+                                                                            address: client.address || undefined,
+                                                                            notes: client.notes || undefined,
+                                                                            type: client.type as "vvip" | "vip" | "regular"
+                                                                        }}
+                                                                        triggerItem={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Edit</DropdownMenuItem>}
+                                                                    />
+                                                                    <DropdownMenuItem onClick={() => handleDelete(client.id)} className="text-red-500 font-medium">Delete</DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                            <Link
+                                                                className={buttonVariants({ variant: "default", className: "flex-1 cursor-pointer" })}
+                                                                href={`/studios/${group.slug}/client/${client.id}`}
+                                                            >
+                                                                View Details
+                                                            </Link>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            </ContextMenuTrigger>
+                                            <ContextMenuContent>
+                                                <ContextMenuLabel className="text-xs">Actions</ContextMenuLabel>
+                                                <EditClientDialog
+                                                    clientId={client.id}
+                                                    initialData={{
+                                                        name: client.name,
+                                                        email: client.email || undefined,
+                                                        phone: client.phone || "",
+                                                        address: client.address || undefined,
+                                                        notes: client.notes || undefined,
+                                                        type: client.type as "vvip" | "vip" | "regular"
+                                                    }}
+                                                    triggerItem={<ContextMenuItem onSelect={(e) => e.preventDefault()}>Edit</ContextMenuItem>}
+                                                />
+                                                <ContextMenuItem onClick={() => handleDelete(client.id)} className="text-red-500 font-medium">Delete</ContextMenuItem>
+                                            </ContextMenuContent>
+                                        </ContextMenu>
+                                    ))}
+                                </CardContent>
+                            )}
                         </Card>
                     ))}
 

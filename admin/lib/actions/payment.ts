@@ -1,5 +1,5 @@
-import { APP_NAME } from "@/lib/constants";
 "use server";
+import { APP_NAME } from "@/lib/constants";
 
 import { prisma } from "../prisma";
 import { auth } from "../auth";

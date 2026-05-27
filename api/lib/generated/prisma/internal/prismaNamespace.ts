@@ -393,7 +393,6 @@ export const ModelName = {
   StudioSession: 'StudioSession',
   Member: 'Member',
   Invitation: 'Invitation',
-  Category: 'Category',
   Service: 'Service',
   ServiceVariant: 'ServiceVariant',
   ServiceDeliverable: 'ServiceDeliverable',
@@ -432,7 +431,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "session" | "account" | "verification" | "studio" | "role" | "studioSession" | "member" | "invitation" | "category" | "service" | "serviceVariant" | "serviceDeliverable" | "course" | "courseModule" | "enrollment" | "client" | "bookingIntent" | "booking" | "payment" | "photo" | "notification" | "productCategory" | "product" | "buyer" | "buyerAccessToken" | "productAccess" | "portfolioItem" | "revisionRequest" | "academyCourse" | "academyBatch" | "academyModule" | "academyStudent"
+    modelProps: "user" | "session" | "account" | "verification" | "studio" | "role" | "studioSession" | "member" | "invitation" | "service" | "serviceVariant" | "serviceDeliverable" | "course" | "courseModule" | "enrollment" | "client" | "bookingIntent" | "booking" | "payment" | "photo" | "notification" | "productCategory" | "product" | "buyer" | "buyerAccessToken" | "productAccess" | "portfolioItem" | "revisionRequest" | "academyCourse" | "academyBatch" | "academyModule" | "academyStudent"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1099,80 +1098,6 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.InvitationCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.InvitationCountAggregateOutputType> | number
-        }
-      }
-    }
-    Category: {
-      payload: Prisma.$CategoryPayload<ExtArgs>
-      fields: Prisma.CategoryFieldRefs
-      operations: {
-        findUnique: {
-          args: Prisma.CategoryFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload> | null
-        }
-        findUniqueOrThrow: {
-          args: Prisma.CategoryFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload>
-        }
-        findFirst: {
-          args: Prisma.CategoryFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload> | null
-        }
-        findFirstOrThrow: {
-          args: Prisma.CategoryFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload>
-        }
-        findMany: {
-          args: Prisma.CategoryFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload>[]
-        }
-        create: {
-          args: Prisma.CategoryCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload>
-        }
-        createMany: {
-          args: Prisma.CategoryCreateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        createManyAndReturn: {
-          args: Prisma.CategoryCreateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload>[]
-        }
-        delete: {
-          args: Prisma.CategoryDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload>
-        }
-        update: {
-          args: Prisma.CategoryUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload>
-        }
-        deleteMany: {
-          args: Prisma.CategoryDeleteManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateMany: {
-          args: Prisma.CategoryUpdateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateManyAndReturn: {
-          args: Prisma.CategoryUpdateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload>[]
-        }
-        upsert: {
-          args: Prisma.CategoryUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload>
-        }
-        aggregate: {
-          args: Prisma.CategoryAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateCategory>
-        }
-        groupBy: {
-          args: Prisma.CategoryGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.CategoryGroupByOutputType>[]
-        }
-        count: {
-          args: Prisma.CategoryCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.CategoryCountAggregateOutputType> | number
         }
       }
     }
@@ -3041,18 +2966,6 @@ export const InvitationScalarFieldEnum = {
 export type InvitationScalarFieldEnum = (typeof InvitationScalarFieldEnum)[keyof typeof InvitationScalarFieldEnum]
 
 
-export const CategoryScalarFieldEnum = {
-  id: 'id',
-  name: 'name',
-  type: 'type',
-  studioId: 'studioId',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-} as const
-
-export type CategoryScalarFieldEnum = (typeof CategoryScalarFieldEnum)[keyof typeof CategoryScalarFieldEnum]
-
-
 export const ServiceScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -3060,7 +2973,8 @@ export const ServiceScalarFieldEnum = {
   features: 'features',
   isAddon: 'isAddon',
   isActive: 'isActive',
-  categoryId: 'categoryId',
+  category: 'category',
+  studioId: 'studioId',
   studioSessionId: 'studioSessionId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -3547,6 +3461,20 @@ export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel,
 
 
 /**
+ * Reference to a field of type 'ServiceCategoryType'
+ */
+export type EnumServiceCategoryTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ServiceCategoryType'>
+    
+
+
+/**
+ * Reference to a field of type 'ServiceCategoryType[]'
+ */
+export type ListEnumServiceCategoryTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ServiceCategoryType[]'>
+    
+
+
+/**
  * Reference to a field of type 'LocationType'
  */
 export type EnumLocationTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LocationType'>
@@ -3887,7 +3815,6 @@ export type GlobalOmitConfig = {
   studioSession?: Prisma.StudioSessionOmit
   member?: Prisma.MemberOmit
   invitation?: Prisma.InvitationOmit
-  category?: Prisma.CategoryOmit
   service?: Prisma.ServiceOmit
   serviceVariant?: Prisma.ServiceVariantOmit
   serviceDeliverable?: Prisma.ServiceDeliverableOmit

@@ -110,7 +110,6 @@ export default async function BookingDetailPage({ params }: Props) {
             service: {
                 include: {
                     studioSession: true,
-                    category: true,
                     variants: true,
                 },
             },
@@ -171,7 +170,7 @@ export default async function BookingDetailPage({ params }: Props) {
     });
 
     const studioServicesRaw = await prisma.service.findMany({
-        where: { category: { studioId: studio.id } },
+        where: { studioId: studio.id },
         include: { variants: { include: { deliverables: true } } }
     });
 

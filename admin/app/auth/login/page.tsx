@@ -1,5 +1,5 @@
-import { APP_NAME } from "@/lib/constants";
 "use client"
+import { APP_NAME } from "@/lib/constants";
 
 import { LoginForm } from "@/app/auth/login/_components/login-form"
 import { GalleryVerticalEndIcon } from "lucide-react"

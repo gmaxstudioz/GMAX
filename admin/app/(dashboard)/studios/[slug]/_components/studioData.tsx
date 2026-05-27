@@ -95,15 +95,11 @@ type StudioWithRelations = Prisma.StudioGetPayload<{
         include: { user: true }
     },
     invitations: true,
-    categories: {
-      include: {
-        services: {
-            include: { 
-                studioSession: true,
-                variants: { include: { deliverables: true } }
-            }
+    services: {
+        include: { 
+            studioSession: true,
+            variants: { include: { deliverables: true } }
         }
-      }
     },
     studioSessions: true,
     clients: {
@@ -690,7 +686,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
         }
     }, [searchParams, form]);
 
-    const allServices = useMemo(() => studioData.categories.flatMap(c => c.services), [studioData.categories]);
+    const allServices = useMemo(() => studioData.services, [studioData.services]);
 
     // Split into main services and addons
     const mainServices = useMemo(() => allServices.filter(s => !s.isAddon), [allServices]);

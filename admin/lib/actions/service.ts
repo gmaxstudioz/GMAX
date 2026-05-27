@@ -2,73 +2,11 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { CategorySchema, CategoryPayload, ServiceSchema, ServicePayload } from "@/lib/schemas/service";
+import { ServiceSchema, ServicePayload } from "@/lib/schemas/service";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
-export async function createCategory(data: CategoryPayload) {
-    const parsed = CategorySchema.safeParse(data);
-    if (!parsed.success) {
-        return { status: "error", message: parsed.error.issues[0].message };
-    }
-
-    try {
-        const session = await auth.api.getSession({ headers: await headers() });
-        if (!session?.user) return { status: "error", message: "Unauthorized" };
-
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: parsed.data.studioId! },
-        });
-        if (!member) return { status: "error", message: "Unauthorized access to studio" };
-
-        const newCategory = await prisma.category.create({
-            data: {
-                name: parsed.data.name,
-                type: parsed.data.type || "standard",
-                studioId: parsed.data.studioId!,
-            },
-        });
-
-        revalidatePath(`/studios/[slug]`, "page");
-        return { status: "success", message: "Category created successfully", data: newCategory };
-    } catch (error) {
-        console.error("Failed to create category:", error);
-        return { status: "error", message: error instanceof Error ? error.message : "Failed to create category" };
-    }
-}
-
-export async function updateCategory(id: string, data: CategoryPayload) {
-    const parsed = CategorySchema.safeParse(data);
-    if (!parsed.success) {
-        return { status: "error", message: parsed.error.issues[0].message };
-    }
-
-    try {
-        const existing = await prisma.category.findUnique({ where: { id } });
-        if (!existing) return { status: "error", message: "Category not found" };
-
-        const session = await auth.api.getSession({ headers: await headers() });
-        if (!session?.user) return { status: "error", message: "Unauthorized" };
-
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: existing.studioId },
-        });
-        if (!member) return { status: "error", message: "Unauthorized access to studio" };
-
-        const updatedCategory = await prisma.category.update({
-            where: { id },
-            data: {
-                name: parsed.data.name,
-                ...(parsed.data.type ? { type: parsed.data.type } : {}),
-            },
-        });
-
-        revalidatePath(`/studios/[slug]`, "page");
-        return { status: "success", message: "Category updated", data: updatedCategory };
-    } catch {
-        return { status: "error", message: "Error updating category" };
-    }
-}
+import { ServiceCategoryType } from "@/lib/generated/prisma/client";
 
 export async function createService(data: ServicePayload) {
     // 1. Validate payload via Zod
@@ -79,16 +17,7 @@ export async function createService(data: ServicePayload) {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        let studioId: string | null = null;
-
-        if (parsed.data.categoryId) {
-            const category = await prisma.category.findUnique({
-                where: { id: parsed.data.categoryId },
-                select: { studioId: true }
-            });
-            if (!category) return { status: "error", message: "Category not found" };
-            studioId = category.studioId;
-        }
+        let studioId: string | null = parsed.data.studioId || null;
 
         if (!studioId && parsed.data.studioSessionId) {
             const studioSession = await prisma.studioSession.findUnique({
@@ -116,7 +45,8 @@ export async function createService(data: ServicePayload) {
                 isActive: parsed.data.isActive,
                 description: parsed.data.description,
                 features: parsed.data.features,
-                categoryId: parsed.data.categoryId!,
+                category: parsed.data.category as ServiceCategoryType,
+                studioId,
                 studioSessionId: parsed.data.studioSessionId,
                 variants: {
                     create: parsed.data.variants.map(v => ({
@@ -152,7 +82,7 @@ export async function updateService(id: string, data: ServicePayload) {
     if (!parsed.success) return { status: "error", message: parsed.error.issues[0].message };
 
     try {
-        const existing = await prisma.service.findUnique({ where: { id }, include: { category: true } });
+        const existing = await prisma.service.findUnique({ where: { id } });
         if (!existing) return { status: "error", message: "Service not found" };
 
         const session = await auth.api.getSession({ headers: await headers() });
@@ -191,6 +121,7 @@ export async function updateService(id: string, data: ServicePayload) {
                     isActive: parsed.data.isActive,
                     description: parsed.data.description,
                     features: parsed.data.features,
+                    category: parsed.data.category as ServiceCategoryType,
                     studioSessionId: parsed.data.studioSessionId,
                 },
             });
@@ -249,60 +180,17 @@ export async function updateService(id: string, data: ServicePayload) {
     }
 }
 
-export async function deleteCategory(id: string) {
-    try {
-        const existing = await prisma.category.findUnique({
-            where: { id },
-            select: { studioId: true }
-        });
-        if (!existing) return { status: "error", message: "Category not found" };
 
-        const session = await auth.api.getSession({ headers: await headers() });
-        if (!session?.user) return { status: "error", message: "Unauthorized" };
-
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: existing.studioId }
-        });
-        if (!member) return { status: "error", message: "Unauthorized access to studio" };
-
-        await prisma.category.delete({ where: { id } });
-        revalidatePath(`/studios/[slug]`, "page");
-        return { status: "success", message: "Category deleted" };
-    } catch {
-        return { status: "error", message: "Error deleting category" };
-    }
-}
 
 export async function deleteService(id: string) {
     try {
         const existing = await prisma.service.findUnique({
             where: { id },
-            select: { categoryId: true, studioSessionId: true }
+            select: { studioId: true }
         });
         if (!existing) return { status: "error", message: "Service not found" };
 
-        let studioId: string | null = null;
-        if (existing.categoryId) {
-            const category = await prisma.category.findUnique({
-                where: { id: existing.categoryId },
-                select: { studioId: true }
-            });
-            if (!category) return { status: "error", message: "Category not found" };
-            studioId = category.studioId;
-        }
-
-        if (!studioId && existing.studioSessionId) {
-            const studioSession = await prisma.studioSession.findUnique({
-                where: { id: existing.studioSessionId },
-                select: { studioId: true }
-            });
-            if (!studioSession) return { status: "error", message: "Studio session not found" };
-            studioId = studioSession.studioId;
-        }
-
-        if (!studioId) {
-            return { status: "error", message: "Unable to determine owning studio" };
-        }
+        const studioId = existing.studioId;
 
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
@@ -317,5 +205,87 @@ export async function deleteService(id: string) {
         return { status: "success", message: "Service deleted" };
     } catch {
         return { status: "error", message: "Error deleting service" };
+    }
+}
+
+export async function cloneService(serviceId: string, targetStudioId: string) {
+    try {
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (!session?.user) return { status: "error", message: "Unauthorized" };
+
+        const member = await prisma.member.findFirst({
+            where: { userId: session.user.id, studioId: targetStudioId }
+        });
+        if (!member) return { status: "error", message: "Unauthorized access to target studio" };
+
+        const existingService = await prisma.service.findUnique({
+            where: { id: serviceId },
+            include: {
+                studioSession: true,
+                variants: {
+                    include: { deliverables: true }
+                }
+            }
+        });
+
+        if (!existingService) return { status: "error", message: "Service not found" };
+
+        let targetSessionId = "";
+        const existingSession = await prisma.studioSession.findFirst({
+            where: {
+                studioId: targetStudioId,
+                name: existingService.studioSession.name,
+                duration: existingService.studioSession.duration
+            }
+        });
+
+        if (existingSession) {
+            targetSessionId = existingSession.id;
+        } else {
+            const newSession = await prisma.studioSession.create({
+                data: {
+                    name: existingService.studioSession.name,
+                    duration: existingService.studioSession.duration,
+                    studioId: targetStudioId
+                }
+            });
+            targetSessionId = newSession.id;
+        }
+
+        const newService = await prisma.service.create({
+            data: {
+                name: existingService.name,
+                description: existingService.description,
+                features: existingService.features,
+                isAddon: existingService.isAddon,
+                isActive: existingService.isActive,
+                category: existingService.category,
+                studioId: targetStudioId,
+                studioSessionId: targetSessionId,
+                variants: {
+                    create: existingService.variants.map(v => ({
+                        locationType: v.locationType,
+                        basePrice: v.basePrice,
+                        maxPrice: v.maxPrice,
+                        sessionDurationMins: v.sessionDurationMins,
+                        logisticsIncluded: v.logisticsIncluded,
+                        deliverables: {
+                            create: v.deliverables.map(d => ({
+                                label: d.label,
+                                quantity: d.quantity,
+                                detail: d.detail,
+                                isFree: d.isFree
+                            }))
+                        }
+                    }))
+                }
+            }
+        });
+
+        revalidatePath(`/studios/[slug]`, "page");
+        return { status: "success", message: "Service cloned successfully", data: newService };
+    } catch (e) {
+        console.error("Failed to clone service:", e);
+        return { status: "error", message: "Failed to clone service" };
     }
 }
