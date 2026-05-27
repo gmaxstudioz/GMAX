@@ -612,15 +612,13 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                 deliverables: [] 
                                             });
                                         }}
-                                        disabled={isPending || variantFields.length >= 4}
+                                        disabled={isPending}
                                     >
                                         <PlusIcon className="size-3.5" /> Add Variant
                                     </Button>
                                 </div>
                                 
                                 {variantFields.map((field, index) => {
-                                    const usedLocationTypes = watchedVariants.map(v => v.locationType);
-                                    
                                     return (
                                         <div key={field.id} className="p-4 border rounded-md bg-muted/10 relative flex flex-col gap-3">
                                             {variantFields.length > 1 && (
@@ -652,7 +650,6 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                         <SelectItem 
                                                                             key={loc} 
                                                                             value={loc} 
-                                                                            disabled={usedLocationTypes.includes(loc as "STUDIO" | "OUTDOOR" | "BOTH" | "MULTIPLE") && loc !== field.value}
                                                                         >
                                                                             {loc}
                                                                         </SelectItem>

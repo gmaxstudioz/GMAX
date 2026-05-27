@@ -69,7 +69,7 @@ export function AcceptInvitationCard({
         }
       } else {
         toast.success("Successfully joined the studio!");
-        router.push("/dashboard");
+        router.push("/");
       }
     });
   }

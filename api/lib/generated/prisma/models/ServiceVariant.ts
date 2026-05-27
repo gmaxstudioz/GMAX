@@ -278,7 +278,6 @@ export type ServiceVariantOrderByWithRelationInput = {
 
 export type ServiceVariantWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  serviceId_locationType?: Prisma.ServiceVariantServiceIdLocationTypeCompoundUniqueInput
   AND?: Prisma.ServiceVariantWhereInput | Prisma.ServiceVariantWhereInput[]
   OR?: Prisma.ServiceVariantWhereInput[]
   NOT?: Prisma.ServiceVariantWhereInput | Prisma.ServiceVariantWhereInput[]
@@ -293,7 +292,7 @@ export type ServiceVariantWhereUniqueInput = Prisma.AtLeast<{
   service?: Prisma.XOR<Prisma.ServiceScalarRelationFilter, Prisma.ServiceWhereInput>
   deliverables?: Prisma.ServiceDeliverableListRelationFilter
   bookings?: Prisma.BookingListRelationFilter
-}, "id" | "serviceId_locationType">
+}, "id">
 
 export type ServiceVariantOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -426,11 +425,6 @@ export type ServiceVariantListRelationFilter = {
 
 export type ServiceVariantOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
-}
-
-export type ServiceVariantServiceIdLocationTypeCompoundUniqueInput = {
-  serviceId: string
-  locationType: $Enums.LocationType
 }
 
 export type ServiceVariantCountOrderByAggregateInput = {
