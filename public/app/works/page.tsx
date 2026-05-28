@@ -5,7 +5,9 @@ import Image from "next/image";
 import gsap from "gsap";
 import { cn } from "@/lib/utils";
 import { getPortfolio, type PortfolioItem } from "@/lib/api";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronDown } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
 
@@ -19,6 +21,7 @@ export default function WorksPage() {
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Fetch portfolio items from API
@@ -27,8 +30,10 @@ export default function WorksPage() {
       try {
         setLoading(true);
         const data = await getPortfolio();
-        setItems(data.items);
-        setCategories(data.categories);
+        const filteredItems = data.items.filter(item => item.category.toLowerCase() !== "general");
+        const filteredCategories = data.categories.filter(cat => cat.toLowerCase() !== "general");
+        setItems(filteredItems);
+        setCategories(filteredCategories);
       } catch (err) {
         console.error("Failed to load portfolio:", err);
       } finally {
@@ -66,32 +71,34 @@ export default function WorksPage() {
       </div>
 
       {/* Category Filters */}
-      <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4 mb-16">
-        <button
-          onClick={() => setActiveCategory("All")}
-          className={cn(
-            "px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 border border-white/10",
-            activeCategory === "All"
-              ? "bg-primary text-primary-foreground border-primary scale-105"
-              : "bg-transparent text-gray-300 hover:bg-white/5"
-          )}
-        >
-          All
-        </button>
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setActiveCategory(cat)}
-            className={cn(
-              "px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 border border-white/10",
-              activeCategory === cat
-                ? "bg-primary text-primary-foreground border-primary scale-105"
-                : "bg-transparent text-gray-300 hover:bg-white/5"
-            )}
-          >
-            {cat}
-          </button>
-        ))}
+      <div className="flex items-center justify-center mb-16">
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+          <PopoverTrigger asChild>
+            <Button size="lg" className="gap-2 rounded-full px-8 shadow-xl">
+              {activeCategory === "All" ? "Filter by Category" : activeCategory}
+              <ChevronDown className="w-4 h-4 ml-2" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[240px] p-2 flex flex-col gap-1 rounded-xl bg-card border border-border shadow-2xl">
+            <Button
+              variant={activeCategory === "All" ? "default" : "ghost"}
+              className="justify-start w-full rounded-lg"
+              onClick={() => { setActiveCategory("All"); setIsOpen(false); }}
+            >
+              All Categories
+            </Button>
+            {categories.map((cat) => (
+              <Button
+                key={cat}
+                variant={activeCategory === cat ? "default" : "ghost"}
+                className="justify-start w-full rounded-lg"
+                onClick={() => { setActiveCategory(cat); setIsOpen(false); }}
+              >
+                {cat}
+              </Button>
+            ))}
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Loading state */}
