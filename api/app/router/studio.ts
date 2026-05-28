@@ -112,7 +112,7 @@ export const getAllStudios = os.studio.getAll
             prisma.studio.findMany({
                 skip: (page - 1) * perPage,
                 take: perPage,
-                orderBy: { createdAt: "desc" },
+                orderBy: { createdAt: "asc" },
                 include: {
                     _count: {
                         select: { members: true, bookings: true }

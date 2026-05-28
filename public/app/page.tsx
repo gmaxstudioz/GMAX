@@ -216,10 +216,10 @@ export default function Home() {
             <div className="relative z-10 flex flex-col items-center justify-center h-screen text-center mt-[-20vh]">
                 <div className="flex items-center justify-center gap-6 md:gap-12">
                     <div className="w-4 h-4 md:w-8 md:h-8 rounded-full bg-primary"></div>
-                    <h1 className="font-extrabold font-heading text-9xl text-center">GMAX</h1>
+                    <h1 className="font-extrabold font-heading text-7xl md:text-9xl text-center">GMAX</h1>
                     <div className="w-4 h-4 md:w-8 md:h-8 rounded-full bg-primary"></div>
                 </div>
-                <p ref={textRef} className="text-7xl font-heading text-center">CREATIVE</p>
+                <p ref={textRef} className="text-5xl md:text-7xl font-heading text-center">CREATIVE</p>
                 <div className="flex flex-wrap items-center gap-2 md:flex-row mt-12">
                     <Magnetic>
                         <Link
