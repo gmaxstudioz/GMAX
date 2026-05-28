@@ -133,24 +133,26 @@ export async function updateService(id: string, data: ServicePayload) {
                     maxPrice: variant.maxPrice,
                     sessionDurationMins: variant.sessionDurationMins,
                     logisticsIncluded: variant.logisticsIncluded,
-                    ...(variant.deliverables ? {
-                        deliverables: {
-                            deleteMany: {},
-                            create: variant.deliverables.map(d => ({
-                                label: d.label,
-                                quantity: d.quantity,
-                                detail: d.detail,
-                                isFree: d.isFree,
-                            })),
-                        },
-                    } : {}),
                 };
 
                 const existingVariant = variant.id ? existingVariantById.get(variant.id) : null;
                 if (existingVariant) {
                     return tx.serviceVariant.update({
                         where: { id: existingVariant.id },
-                        data,
+                        data: {
+                            ...data,
+                            ...(variant.deliverables ? {
+                                deliverables: {
+                                    deleteMany: {},
+                                    create: variant.deliverables.map(d => ({
+                                        label: d.label,
+                                        quantity: d.quantity,
+                                        detail: d.detail,
+                                        isFree: d.isFree,
+                                    })),
+                                },
+                            } : {}),
+                        },
                     });
                 }
 
@@ -158,6 +160,16 @@ export async function updateService(id: string, data: ServicePayload) {
                     data: {
                         serviceId: id,
                         ...data,
+                        ...(variant.deliverables ? {
+                            deliverables: {
+                                create: variant.deliverables.map(d => ({
+                                    label: d.label,
+                                    quantity: d.quantity,
+                                    detail: d.detail,
+                                    isFree: d.isFree,
+                                })),
+                            },
+                        } : {}),
                     },
                 });
             });
