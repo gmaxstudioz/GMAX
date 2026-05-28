@@ -1086,6 +1086,14 @@ export default function BookingPage() {
           <div className={cn("overflow-hidden transition-all duration-500", rulesExpanded ? "opacity-100 max-h-[1500px]" : "opacity-0 max-h-0")}>
             <div className="space-y-3 mt-4 pt-4 border-t border-border/50">
               <div>
+                <span className="font-semibold text-foreground block md:inline">PAYMENT VALIDATES BOOKING:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Secure your booking by paying a non-refundable deposit, and note Picture deliver won’t be possible unless full payment is settled.</span>
+              </div>
+              <div>
+                <span className="font-semibold text-foreground block md:inline">CLIENT COOPERATION:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">To ensure a seamless photo session, clients are kindly expected to provide all necessary information and cooperate throughout the shoot.</span>
+              </div>
+              <div>
                 <span className="font-semibold text-foreground block md:inline">BOOKING AND PAYMENT:</span>
                 <span className="text-muted-foreground md:ml-2 block md:inline">Secure your booking by paying a non-refundable deposit, and make sure the full payment is settled by the date of your photo session or event.</span>
               </div>

@@ -265,7 +265,7 @@ export default function DeliverablesPage() {
                             <AlertCircle className="w-5 h-5" /> Any Correction?
                         </h4>
                         <p className="text-orange-700 dark:text-orange-400 text-sm">
-                            You have 24 hours from the time of delivery to report any errors or issues with the images to allow us address and rectify them promptly.
+                            Promptly notify us of any corrections needed on delivered images within 12 hours timeframe after delivery, so we can address and rectify them promptly.
                         </p>
                         {(() => {
                             const deliveredAt = data.deliveredAt ? new Date(data.deliveredAt) : new Date(data.photos[0]?.uploadedAt || Date.now());

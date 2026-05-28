@@ -128,19 +128,21 @@ export default function CoursePage() {
                         <div>
                             <h2 className="text-2xl font-bold mb-6">What you will learn</h2>
                             <div className="space-y-4">
-                                {course.modules.map((mod: CourseModule, idx: number) => (
-                                    <Card key={mod.id} className="bg-card border-border shadow-sm py-0 rounded-xl">
-                                        <CardContent className="p-5 flex gap-4">
-                                            <div className="text-2xl font-bold text-muted-foreground w-8">{idx + 1}</div>
-                                            <div>
-                                                <h3 className="text-lg font-medium text-foreground mb-1">{mod.title}</h3>
-                                                {mod.description && (
-                                                    <p className="text-sm text-muted-foreground">{mod.description}</p>
-                                                )}
-                                            </div>
+                                    <Card className="bg-card border-border shadow-sm py-0 rounded-xl">
+                                        <CardContent className="p-5 flex flex-col gap-4">
+                                            {course.modules.map((mod: CourseModule, idx: number) => (
+                                                <div key={mod.id} className="flex gap-0">
+                                                    <div className="text-2xl font-bold text-muted-foreground w-8">{idx + 1}</div>
+                                                    <div>
+                                                        <h3 className="text-lg font-regular text-foreground mb-1">{mod.title}</h3>
+                                                        {mod.description && (
+                                                            <p className="text-sm text-muted-foreground">{mod.description}</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </CardContent>
                                     </Card>
-                                ))}
                             </div>
                         </div>
                     )}
