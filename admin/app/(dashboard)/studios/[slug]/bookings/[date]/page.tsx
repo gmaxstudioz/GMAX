@@ -66,8 +66,6 @@ export default async function StudioDailyBookingsPage({ params, searchParams }: 
     const myMembership = studio.members.find(m => m.userId === session?.user?.id);
     if (!myMembership) redirect("/");
 
-    const adminRoles = ["owner", "developer", "manager", "admin", "receptionist"];
-    const hasAdminRole = adminRoles.includes(myMembership!.role);
     const canReassign = ["owner", "developer", "manager", "admin"].includes(myMembership!.role);
 
     const mappedMembers = studio.members.map(m => ({

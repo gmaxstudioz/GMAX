@@ -5,7 +5,7 @@ import { Prisma } from "@/lib/generated/prisma/client";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, Trash, ChevronDownIcon, HardDriveIcon, ClockIcon, PencilIcon, MinusIcon, Loader2Icon, CopyIcon } from "lucide-react";
+import { PlusIcon, Trash, ChevronDownIcon, ClockIcon, PencilIcon, MinusIcon, Loader2Icon, CopyIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useSearchParams } from "next/navigation";
 import { Controller, useForm, useFieldArray, Control, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ServiceSchema, ServicePayload } from "@/lib/schemas/service";
+import { ServiceSchema } from "@/lib/schemas/service";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { z } from "zod";
@@ -145,7 +145,6 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
     });
 
     const watchedFeatures = useWatch({ control: serviceForm.control, name: "features" }) ?? [];
-    const watchedVariants = useWatch({ control: serviceForm.control, name: "variants" });
     const watchedSessionId = useWatch({ control: serviceForm.control, name: "studioSessionId" });
     const watchedIsAddon = useWatch({ control: serviceForm.control, name: "isAddon" }) ?? false;
 

@@ -164,15 +164,18 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
                                                     <ReassignMemberDropdown 
                                                         bookingId={booking.id} 
                                                         currentMemberId={booking.memberId} 
-                                                        members={booking.studio?.members.map((m) => ({
-                                                            id: (m as any).id,
-                                                            name: (m as any).user.name,
-                                                            email: (m as any).user.email,
-                                                            role: (m as any).role as MemberRole,
-                                                            studioId: (m as any).studioId,
-                                                            createdAt: (m as any).createdAt.toISOString(),
-                                                            updatedAt: (m as any).createdAt.toISOString()
-                                                        })) || []} 
+                                                        members={booking.studio?.members.map((m) => {
+                                                            const member = m as { id: string; role: string; studioId: string; createdAt: Date; user: { name: string; email: string; } };
+                                                            return {
+                                                                id: member.id,
+                                                                name: member.user.name,
+                                                                email: member.user.email,
+                                                                role: member.role as MemberRole,
+                                                                studioId: member.studioId,
+                                                                createdAt: member.createdAt.toISOString(),
+                                                                updatedAt: member.createdAt.toISOString()
+                                                            }
+                                                        }) || []} 
                                                         disabled={!canReassign}
                                                     />
                                                 </TableCell>
@@ -217,15 +220,18 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
                                                 <ReassignMemberDropdown 
                                                     bookingId={booking.id} 
                                                     currentMemberId={booking.memberId} 
-                                                    members={booking.studio?.members.map((m) => ({
-                                                        id: (m as any).id,
-                                                        name: (m as any).user.name,
-                                                        email: (m as any).user.email,
-                                                        role: (m as any).role as MemberRole,
-                                                        studioId: (m as any).studioId,
-                                                        createdAt: (m as any).createdAt.toISOString(),
-                                                        updatedAt: (m as any).createdAt.toISOString()
-                                                    })) || []} 
+                                                    members={booking.studio?.members.map((m) => {
+                                                        const member = m as { id: string; role: string; studioId: string; createdAt: Date; user: { name: string; email: string; } };
+                                                        return {
+                                                            id: member.id,
+                                                            name: member.user.name,
+                                                            email: member.user.email,
+                                                            role: member.role as MemberRole,
+                                                            studioId: member.studioId,
+                                                            createdAt: member.createdAt.toISOString(),
+                                                            updatedAt: member.createdAt.toISOString()
+                                                        }
+                                                    }) || []} 
                                                     disabled={!canReassign}
                                                 />
                                             </div>

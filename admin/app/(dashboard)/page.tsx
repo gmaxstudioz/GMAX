@@ -5,8 +5,7 @@ import { SectionCards } from "@/components/web/section-cards"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { prisma } from "@/lib/prisma"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BriefcaseIcon, CheckCircleIcon, ClockIcon } from "lucide-react"
+
 
 import { redirect } from "next/navigation";
 
