@@ -53,8 +53,9 @@ export default function AddClient({ studioId, onSuccess }: AddClientProps) {
                 form.reset();
                 setIsOpen(false);
                 router.refresh();
-                if (onSuccess && result.data?.id) {
-                    onSuccess(result.data.id);
+                const data = result.data as { id: string } | undefined;
+                if (onSuccess && data?.id) {
+                    onSuccess(data.id);
                 }
             } else if (result?.status === "error") {
                 toast.error(result?.message);
