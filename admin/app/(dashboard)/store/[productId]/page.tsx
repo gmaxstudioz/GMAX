@@ -35,7 +35,7 @@ export default async function ProductDetailsPage({ params }: Props) {
         select: { role: true },
     });
 
-    const adminRoles = ["owner", "developer", "manager"];
+    const adminRoles = ["owner", "developer"];
     const hasAdminRole = members.some((m) => adminRoles.includes(m.role));
     if (members.length > 0 && !hasAdminRole) redirect("/my-tasks");
 

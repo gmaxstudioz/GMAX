@@ -93,6 +93,7 @@ export default function ServicesSection() {
                         src={service.media}
                         alt={service.title}
                         fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         className="object-cover"
                       />
                     )}
@@ -133,6 +134,7 @@ export default function ServicesSection() {
                           src={service.media}
                           alt={service.title}
                           fill
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                           className="object-cover"
                         />
                       )}
@@ -172,6 +174,7 @@ export default function ServicesSection() {
                 src={servicesData.find((s) => s.id === hoveredService)?.media || ""}
                 alt="Preview"
                 fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 className="object-cover"
               />
             )}

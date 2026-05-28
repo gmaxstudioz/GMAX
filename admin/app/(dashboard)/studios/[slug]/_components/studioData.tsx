@@ -19,8 +19,8 @@ import { InviteMemberInput, InviteMemberSchema } from "@/lib/schemas/studio";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Filter, Loading, MoreVerticalIcon, Refresh01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { BadgeCheck, MailIcon, Phone, PlusIcon, UsersIcon, CalendarCheckIcon, LayersIcon, ArrowRightIcon, SearchIcon, ChevronDown, MessageCircle, ExternalLink } from "lucide-react";
-import { format } from "date-fns";
+import { BadgeCheck, MailIcon, Phone, PlusIcon, UsersIcon, CalendarCheckIcon, LayersIcon, ArrowRightIcon, SearchIcon, ChevronDown, MessageCircle, ExternalLink, Trash } from "lucide-react";
+import { format, startOfDay, endOfDay } from "date-fns";
 import Link from "next/link";
 import { useTransition, useState, useMemo, useEffect, Suspense } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -36,6 +36,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CreateBookingSchema, CreateBookingInput, Booking } from "@/lib/schemas/booking";
 import { createBooking } from "@/lib/actions/booking";
 import { moveBooking } from "@/lib/actions/calendar";
+import { inviteMember } from "@/lib/actions/invitation";
 import { FieldLabel } from "@/components/ui/field";
 import { EditClientDialog } from "../client/[clientId]/_components/edit-client-dialog";
 import UpdateStudio from "./UpdateStudio";
@@ -45,6 +46,8 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { CalendarBooking } from "@/lib/schemas/calendar";
 import { ClientType } from "@/lib/schemas/client";
 import { Reviews } from "./Reviews";
+import { ViewToggle } from "@/components/web/ViewToggle";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapPrismaBookingToBooking(b: any): Booking {
@@ -117,7 +120,47 @@ type StudioWithRelations = Prisma.StudioGetPayload<{
   }
 }>;
 
-function Overview({ data, setActiveTab }: { data: StudioWithRelations, setActiveTab: (v: string) => void }) {
+function Overview({ data, setActiveTab, userRole }: { data: StudioWithRelations, setActiveTab: (v: string) => void, userRole: string }) {
+    if (userRole === "receptionist") {
+        const todayStart = startOfDay(new Date());
+        const todayEnd = endOfDay(new Date());
+        const bookingsCompleted = data.bookings.filter(b => b.bookingStatus === "COMPLETED").length;
+        const paymentsCompleted = data.bookings.filter(b => b.paymentStatus === "PAID").length;
+        const intentsToday = data.bookingIntents.filter(i => {
+            const d = new Date(i.createdAt);
+            return d >= todayStart && d <= todayEnd;
+        }).length;
+
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Bookings Completed</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-bold">{bookingsCompleted}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Payments Completed</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-bold">{paymentsCompleted}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Booking Intents Today</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-bold">{intentsToday}</div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
     // Recent Bookings (sort descending by date created)
     const recentBookings = [...data.bookings]
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -211,8 +254,11 @@ function Overview({ data, setActiveTab }: { data: StudioWithRelations, setActive
 }
 
 
-function Clients({studioData}: {studioData: StudioWithRelations}) {
+function Clients({ studioData, userRole }: { studioData: StudioWithRelations, userRole: string }) {
+    const canAdd = ["owner", "developer", "manager", "admin", "receptionist"].includes(userRole);
+    const canEditClient = ["owner", "developer", "manager", "admin"].includes(userRole);
     const [ isPending, startTransition ] = useTransition();
+    const searchParamsHooks = useSearchParams();
 
     function handleDelete(clientId: string) {
         startTransition(async () => {
@@ -273,6 +319,8 @@ function Clients({studioData}: {studioData: StudioWithRelations}) {
     const paginatedClients = filteredClients.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
     const allTypes = Array.from(new Set(studioData.clients.map(c => c.type)));
 
+    const isListView = searchParamsHooks.get("view") !== "grid";
+
     return (
         <Card>
             <CardHeader className="flex flex-col xl:flex-row xl:justify-between items-start xl:items-center gap-4">
@@ -281,15 +329,21 @@ function Clients({studioData}: {studioData: StudioWithRelations}) {
                     <CardDescription>Manage the Clients of this studio</CardDescription>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <div className="relative w-full sm:w-60 xl:w-72 max-w-full">
-                        <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            type="text"
-                            placeholder="Name, email, phone..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="bg-background border-muted-foreground/30 w-full pl-9 h-10"
-                        />
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
+                            <form className="relative w-full sm:w-[300px]">
+                                <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input 
+                                    name="search" 
+                                    type="search" 
+                                    placeholder="Search clients..." 
+                                    className="pl-8 bg-background" 
+                                    defaultValue={searchParamsHooks.get("search") || ""}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                />
+                            </form>
+                            {canAdd && <AddClient studioId={studioData.id} />}
+                        </div>
                     </div>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -307,7 +361,7 @@ function Clients({studioData}: {studioData: StudioWithRelations}) {
                             ))}
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    <AddClient studioId={studioData.id} />
+                    <ViewToggle defaultView="list" />
                     <Button onClick={handleRefresh} type="button" variant="outline" size="icon" disabled={isPending} className="h-10 w-10 shrink-0">
                         {isPending ? <HugeiconsIcon icon={Loading} className="animate-spin" /> : <HugeiconsIcon icon={Refresh01Icon} />}
                     </Button>
@@ -324,61 +378,42 @@ function Clients({studioData}: {studioData: StudioWithRelations}) {
                     </div>
                 ) : (
                     <div className="flex flex-col gap-4">
-                        <div className="grid grid-cols-1 gap-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
-                            {paginatedClients.map((client) => (
-                                <ContextMenu  key={client.id}>
-                                    <ContextMenuTrigger>
-                                        <Card className="@container/card">
-                                            <CardHeader>
-                                                <div className="w-full flex items-center justify-between">
-                                                    <CardTitle className="text-lg font-bold">{client.name}</CardTitle>
-                                                    <Badge variant="outline">
-                                                        <BadgeCheck data-icon="inline-start" />
-                                                        {client.type}
-                                                    </Badge>
-                                                </div>
-                                            </CardHeader>
-                                            <CardContent className="text-muted-foreground flex flex-col gap-2">
-                                                <div className="flex flex-col gap-2 mb-2">
-                                                    <p className="text-foreground/80 font-semibold">Bookings</p>
-                                                    <div className="flex items-center justify-between gap-1 w-full">
-                                                        <div className="rounded w-full bg-accent p-2">
-                                                            <p className="text-xs">Total</p>
-                                                            <p className="font-bold text-primary">{client.bookings?.length || 0}</p>
-                                                        </div>
-                                                        <div className="rounded w-full bg-accent p-2">
-                                                            <p className="text-xs">Completed</p>
-                                                            <p className="font-bold text-primary">{client.bookings?.filter((booking) => booking.bookingStatus === "COMPLETED").length || 0}</p>
-                                                        </div>
-                                                        <div className="rounded w-full bg-accent p-2">
-                                                            <p className="text-xs">Cancelled</p>
-                                                            <p className="font-bold text-primary">{client.bookings?.filter((booking) => booking.bookingStatus === "CANCELLED").length || 0}</p>
-                                                        </div>
+                        {isListView ? (
+                            <div className="border rounded-md mt-2">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Client</TableHead>
+                                            <TableHead>Contact</TableHead>
+                                            <TableHead>Bookings</TableHead>
+                                            <TableHead>Type</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {paginatedClients.map((client) => (
+                                            <TableRow key={client.id}>
+                                                <TableCell>
+                                                    <div className="font-medium">{client.name}</div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                                                        <span className="flex items-center gap-1"><Phone size={12} /> {client.phone}</span>
+                                                        {client.email && <span className="flex items-center gap-1"><MailIcon size={12} /> {client.email}</span>}
                                                     </div>
-                                                </div>
-                                                <div className="flex flex-col gap-2">
-                                                    <p className="text-foreground/80 font-semibold">Contact</p>
-                                                    <div className="flex items-center gap-1">
-                                                        <Phone size={16} className="text-foreground" />
-                                                        <p className="flex gap-1.5">{client.phone}</p>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2 text-xs">
+                                                        <span className="font-bold text-primary">{client.bookings?.length || 0} Total</span>
+                                                        <span className="text-muted-foreground">({client.bookings?.filter(b => b.bookingStatus === "COMPLETED").length || 0} Done)</span>
                                                     </div>
-                                                {client.email && (
-                                                    <p className="flex gap-1.5">
-                                                        <MailIcon size={16} className="text-foreground" />
-                                                        {client.email}
-                                                    </p>
-                                                )}
-                                                </div>
-                                                
-                                                <div className="flex items-center gap-1 mt-4">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="secondary" size="icon">
-                                                                <HugeiconsIcon icon={MoreVerticalIcon} />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent>
-                                                            <DropdownMenuLabel className="text-xs">Actions</DropdownMenuLabel>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline" className="text-[10px]"><BadgeCheck className="size-3 mr-1" />{client.type}</Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right flex items-center justify-end gap-1">
+                                                    {canEditClient && (
+                                                        <>
                                                             <EditClientDialog 
                                                                 clientId={client.id}
                                                                 initialData={{
@@ -389,37 +424,130 @@ function Clients({studioData}: {studioData: StudioWithRelations}) {
                                                                     notes: client.notes,
                                                                     type: client.type as ClientType
                                                                 }}
-                                                                triggerItem={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Edit</DropdownMenuItem>}
+                                                                triggerItem={<Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary"><HugeiconsIcon icon={MoreVerticalIcon} className="size-4" /></Button>}
                                                             />
-                                                            <DropdownMenuItem onClick={() =>handleDelete(client.id)} className="text-red-500 font-medium">Delete</DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                    <Link className={buttonVariants({variant: "default", className: "flex-1 cursor-pointer"})} href={`/studios/${studioData.slug}/client/${client.id}`}>
-                                                        View Details
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(client.id)}>
+                                                                <Trash className="size-4" /> 
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                    <Link href={`/studios/${studioData.slug}/client/${client.id}`}>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
+                                                            <ArrowRightIcon className="size-4" />
+                                                        </Button>
                                                     </Link>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    </ContextMenuTrigger>
-                                    <ContextMenuContent>
-                                        <ContextMenuLabel className="text-xs">Actions</ContextMenuLabel>
-                                        <EditClientDialog 
-                                            clientId={client.id}
-                                            initialData={{
-                                                name: client.name,
-                                                email: client.email,
-                                                phone: client.phone,
-                                                address: client.address,
-                                                notes: client.notes,
-                                                type: client.type as ClientType
-                                            }}
-                                            triggerItem={<ContextMenuItem onSelect={(e) => e.preventDefault()}>Edit</ContextMenuItem>}
-                                        />
-                                        <ContextMenuItem onClick={() => handleDelete(client.id)} className="text-red-500 font-medium">Delete</ContextMenuItem>
-                                    </ContextMenuContent>
-                                </ContextMenu>     
-                            ))}
-                        </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 gap-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
+                                {paginatedClients.map((client) => (
+                                    <ContextMenu key={client.id}>
+                                        <ContextMenuTrigger>
+                                            <Card className="@container/card">
+                                                <CardHeader>
+                                                    <div className="w-full flex items-center justify-between">
+                                                        <CardTitle className="text-lg font-bold">{client.name}</CardTitle>
+                                                        <Badge variant="outline">
+                                                            <BadgeCheck data-icon="inline-start" />
+                                                            {client.type}
+                                                        </Badge>
+                                                    </div>
+                                                </CardHeader>
+                                                <CardContent className="text-muted-foreground flex flex-col gap-2">
+                                                    <div className="flex flex-col gap-2 mb-2">
+                                                        <p className="text-foreground/80 font-semibold">Bookings</p>
+                                                        <div className="flex items-center justify-between gap-1 w-full">
+                                                            <div className="rounded w-full bg-accent p-2">
+                                                                <p className="text-xs">Total</p>
+                                                                <p className="font-bold text-primary">{client.bookings?.length || 0}</p>
+                                                            </div>
+                                                            <div className="rounded w-full bg-accent p-2">
+                                                                <p className="text-xs">Completed</p>
+                                                                <p className="font-bold text-primary">{client.bookings?.filter((booking) => booking.bookingStatus === "COMPLETED").length || 0}</p>
+                                                            </div>
+                                                            <div className="rounded w-full bg-accent p-2">
+                                                                <p className="text-xs">Cancelled</p>
+                                                                <p className="font-bold text-primary">{client.bookings?.filter((booking) => booking.bookingStatus === "CANCELLED").length || 0}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-col gap-2">
+                                                        <p className="text-foreground/80 font-semibold">Contact</p>
+                                                        <div className="flex items-center gap-1">
+                                                            <Phone size={16} className="text-foreground" />
+                                                            <p className="flex gap-1.5">{client.phone}</p>
+                                                        </div>
+                                                    {client.email && (
+                                                        <p className="flex gap-1.5">
+                                                            <MailIcon size={16} className="text-foreground" />
+                                                            {client.email}
+                                                        </p>
+                                                    )}
+                                                    </div>
+                                                    
+                                                    <div className="flex items-center gap-1 mt-4">
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="secondary" size="icon">
+                                                                    <HugeiconsIcon icon={MoreVerticalIcon} />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent>
+                                                                <DropdownMenuLabel className="text-xs">Actions</DropdownMenuLabel>
+                                                                {canEditClient && (
+                                                                    <>
+                                                                        <EditClientDialog 
+                                                                            clientId={client.id}
+                                                                            initialData={{
+                                                                                name: client.name,
+                                                                                email: client.email,
+                                                                                phone: client.phone,
+                                                                                address: client.address,
+                                                                                notes: client.notes,
+                                                                                type: client.type as ClientType
+                                                                            }}
+                                                                            triggerItem={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Edit</DropdownMenuItem>}
+                                                                        />
+                                                                        <DropdownMenuItem onClick={() =>handleDelete(client.id)} className="text-red-500 font-medium">Delete</DropdownMenuItem>
+                                                                    </>
+                                                                )}
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                        <Link className={buttonVariants({variant: "default", className: "flex-1 cursor-pointer"})} href={`/studios/${studioData.slug}/client/${client.id}`}>
+                                                            View Details
+                                                        </Link>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        </ContextMenuTrigger>
+                                        <ContextMenuContent>
+                                            <ContextMenuLabel className="text-xs">Actions</ContextMenuLabel>
+                                            {canEditClient && (
+                                                <>
+                                                    <EditClientDialog 
+                                                        clientId={client.id}
+                                                        initialData={{
+                                                            name: client.name,
+                                                            email: client.email,
+                                                            phone: client.phone,
+                                                            address: client.address,
+                                                            notes: client.notes,
+                                                            type: client.type as ClientType
+                                                        }}
+                                                        triggerItem={<ContextMenuItem onSelect={(e) => e.preventDefault()}>Edit</ContextMenuItem>}
+                                                    />
+                                                    <ContextMenuItem onClick={() =>handleDelete(client.id)} className="text-red-500 font-medium">Delete</ContextMenuItem>
+                                                </>
+                                            )}
+                                        </ContextMenuContent>
+                                    </ContextMenu>     
+                                ))}
+                            </div>
+                        )}
                         {totalPages > 1 && (
                             <Pagination className="mt-4">
                                 <PaginationContent>
@@ -458,14 +586,9 @@ function Staffs({studioData}: {studioData: StudioWithRelations}) {
     });
     async function handleAddStaff(values: InviteMemberInput) {
         startTransition(async () => {
-            const { error } = await authClient.organization.inviteMember({
-                email: values.email,
-                role: values.role,
-                organizationId: studioData.id,
-            });
-
-            if (error) {
-                toast.error(error.message || "Failed to invite staff");
+            const result = await inviteMember(values, studioData.id);
+            if (result.status === "error") {
+                toast.error(result.message || "Failed to invite staff");
             } else {
                 toast.success("Staff invited successfully");
                 form.reset();
@@ -521,6 +644,16 @@ function Staffs({studioData}: {studioData: StudioWithRelations}) {
                                             <Field>
                                                 <Label>Email</Label>
                                                 <Input {...field} />
+                                            </Field>
+                                        )}
+                                    />
+                                    <Controller
+                                        name="phone"
+                                        control={form.control}
+                                        render={({field}) => (
+                                            <Field>
+                                                <Label>Phone (Optional for SMS)</Label>
+                                                <Input {...field} placeholder="+234..." />
                                             </Field>
                                         )}
                                     />
@@ -649,7 +782,7 @@ function Staffs({studioData}: {studioData: StudioWithRelations}) {
         </Card>
     )
 }
-function Bookings({ studioData }: { studioData: StudioWithRelations }) {
+function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, userRole: string }) {
     const [open, setOpen] = useState(false);
     const [isPending, startTransition] = useTransition();
     const [serviceSearch, setServiceSearch] = useState("");
@@ -657,6 +790,8 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
     const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
     const [clientOpen, setClientOpen] = useState(false);
     const [serviceOpen, setServiceOpen] = useState(false);
+    const canAdd = ["owner", "developer", "manager", "admin", "receptionist"].includes(userRole);
+    const searchParams = useSearchParams();
 
     const form = useForm<CreateBookingInput>({
         resolver: zodResolver(CreateBookingSchema),
@@ -672,8 +807,6 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
             paymentPlan: "FULL",
         }
     });
-
-    const searchParams = useSearchParams();
 
     useEffect(() => {
         if (searchParams.get("action") === "add-booking") {
@@ -729,6 +862,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
     const watchedSessionCount   = useWatch({ control: form.control, name: "sessionCount" }) ?? 1;
     const watchedClientId       = useWatch({ control: form.control, name: "clientId" });
     const watchedPaymentPlan    = useWatch({ control: form.control, name: "paymentPlan" }) ?? "FULL";
+    const watchedTotalAmount    = useWatch({ control: form.control, name: "totalAmount" }) ?? 0;
 
     const selectedService = useMemo(() => allServices.find(s => s.id === watchedServiceId), [allServices, watchedServiceId]);
     const selectedVariant = useMemo(() => selectedService?.variants?.find((v) => v.id === watchedServiceVariantId), [selectedService, watchedServiceVariantId]);
@@ -788,25 +922,26 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
 
     return (
         <Card>
-            <CardHeader className="flex flex-row justify-between">
+            <CardHeader className="flex flex-row justify-between items-center">
                 <div className="flex flex-col gap-1">
                     <CardTitle className="font-bold text-xl flex gap-2">Bookings <span className="font-extrabold text-primary">{studioData.bookings.length}</span></CardTitle>
                     <CardDescription>Manage the Bookings of this studio</CardDescription>
                 </div>
-                <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { form.reset(); setServiceSearch(""); setClientSearch(""); setSelectedAddonIds([]); setClientOpen(false); setServiceOpen(false); } }}>
-                    <DialogTrigger asChild>
-                        <Button variant="outline">
-                            <PlusIcon className="mr-2 h-4 w-4" />
-                            Add Booking
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[520px]">
-                        <DialogHeader>
-                            <DialogTitle className="text-2xl font-bold">Add Booking</DialogTitle>
-                            <DialogDescription>
-                                Schedule a new session by selecting the client, service, and assigned team member.
-                            </DialogDescription>
-                        </DialogHeader>
+                {canAdd && (
+                    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { form.reset(); setServiceSearch(""); setClientSearch(""); setSelectedAddonIds([]); setClientOpen(false); setServiceOpen(false); } }}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline">
+                                <PlusIcon className="mr-2 h-4 w-4" />
+                                Add Booking
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[520px]">
+                            <DialogHeader>
+                                <DialogTitle className="text-2xl font-bold">Add Booking</DialogTitle>
+                                <DialogDescription>
+                                    Schedule a new session by selecting the client, service, and assigned team member.
+                                </DialogDescription>
+                            </DialogHeader>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4 py-2 mt-2 max-h-[70vh] overflow-y-auto px-1">
                             {/* Client Selection with Search */}
                             <Controller
@@ -857,7 +992,14 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                                                             )) : (
                                                                 <div className="text-center py-3">
                                                                     <p className="text-sm text-muted-foreground mb-2">No clients found</p>
-                                                                    <AddClient studioId={studioData.id} />
+                                                                    <AddClient 
+                                                                        studioId={studioData.id} 
+                                                                        onSuccess={(clientId) => {
+                                                                            form.setValue("clientId", clientId);
+                                                                            setClientOpen(false);
+                                                                            setClientSearch("");
+                                                                        }}
+                                                                    />
                                                                 </div>
                                                             )}
                                                         </div>
@@ -1104,7 +1246,6 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                                                 min={0}
                                                 value={value}
                                                 onChange={(e) => onChange(Number(e.target.value))}
-                                                readOnly
                                             />
                                         </Field>
                                     )}
@@ -1112,7 +1253,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                                 <div className="col-span-2 bg-muted p-3 rounded-md flex justify-between items-center text-sm">
                                     <span className="font-medium">Amount Due Now ({watchedPaymentPlan}):</span>
                                     <span className="font-bold text-lg">
-                                        ₦{(grandTotal * (watchedPaymentPlan === "FULL" ? 1 : watchedPaymentPlan === "HALF" ? 0.5 : 0.25)).toLocaleString()}
+                                        ₦{(watchedTotalAmount * (watchedPaymentPlan === "FULL" ? 1 : watchedPaymentPlan === "HALF" ? 0.5 : 0.25)).toLocaleString()}
                                     </span>
                                 </div>
                             </div>
@@ -1158,6 +1299,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                         </form>
                     </DialogContent>
                 </Dialog>
+                )}
             </CardHeader>
             <CardContent>
                 <CalenderGrid initialYear={new Date().getFullYear()} initialMonth={new Date().getMonth()} bookings={studioData.bookings.map(mapPrismaBookingToCalendarBooking)} onMoveConfirm={async (bookingId, toDateKey) => {
@@ -1183,7 +1325,8 @@ export default function StudioDataWrapper({ studioData, userRole }: { studioData
 }
 
 function BookingIntents({ data }: { data: StudioWithRelations }) {
-    const intents = data.bookingIntents;
+    // Hide completed intents
+    const intents = data.bookingIntents.filter(i => i.status !== "COMPLETED");
 
     const statusStyles: Record<string, string> = {
         PENDING: "bg-amber-500/10 text-amber-600 border-amber-500/20",
@@ -1346,21 +1489,27 @@ function BookingIntents({ data }: { data: StudioWithRelations }) {
 function StudioData({ studioData, userRole }: { studioData: StudioWithRelations, userRole: string }) {
     const searchParams = useSearchParams();
     const tabParam = searchParams.get("tab");
-    const [activeTab, setActiveTab] = useState(tabParam || "overview");
-
     const adminRoles = ["owner", "developer", "manager"];
     const isAdmin = adminRoles.includes(userRole);
     const canViewSettings = isAdmin;
+
+    const restrictedRoles = ["receptionist", "photographer", "videographer"];
+    const canViewReviews = !restrictedRoles.includes(userRole);
+    const canViewOverview = userRole === "receptionist" || !restrictedRoles.includes(userRole);
+
+    const [activeTab, setActiveTab] = useState(tabParam || (canViewOverview ? "overview" : "bookings"));
 
     return (
         <div className="w-full flex">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-full">
                 <div className="w-full overflow-x-auto no-scrollbar mt-4 flex items-center">
                     <TabsList className="w-max mx-auto">
-                        <TabsTrigger 
-                            value="overview" 
-                            className="inline-flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-4 py-2 text-sm font-medium transition-all hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-                        >Overview</TabsTrigger>
+                        {canViewOverview && (
+                            <TabsTrigger 
+                                value="overview" 
+                                className="inline-flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-4 py-2 text-sm font-medium transition-all hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                            >Overview</TabsTrigger>
+                        )}
                         {canViewSettings && (
                             <TabsTrigger 
                                 value="services" 
@@ -1375,10 +1524,12 @@ function StudioData({ studioData, userRole }: { studioData: StudioWithRelations,
                             value="bookings" 
                             className="inline-flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-4 py-2 text-sm font-medium transition-all hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
                         >Bookings</TabsTrigger>
-                        <TabsTrigger 
-                            value="reviews" 
-                            className="inline-flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-4 py-2 text-sm font-medium transition-all hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-                        >Reviews</TabsTrigger>
+                        {canViewReviews && (
+                            <TabsTrigger 
+                                value="reviews" 
+                                className="inline-flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-4 py-2 text-sm font-medium transition-all hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                            >Reviews</TabsTrigger>
+                        )}
                         <TabsTrigger 
                             value="intents" 
                             className="inline-flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-4 py-2 text-sm font-medium transition-all hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
@@ -1398,23 +1549,27 @@ function StudioData({ studioData, userRole }: { studioData: StudioWithRelations,
                     </TabsList>
                 </div>
                 <div className="mt-4 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                    <TabsContent value="overview" className="m-0 bg-transparent p-0">
-                        <Overview data={studioData} setActiveTab={setActiveTab} />
-                    </TabsContent>
+                    {canViewOverview && (
+                        <TabsContent value="overview" className="m-0 bg-transparent p-0">
+                            <Overview data={studioData} setActiveTab={setActiveTab} userRole={userRole} />
+                        </TabsContent>
+                    )}
                     {canViewSettings && (
                         <TabsContent value="services">
                             <StudioServices studioData={studioData} />
                         </TabsContent>
                     )}
                     <TabsContent value="clients">
-                        <Clients studioData={studioData} />
+                        <Clients studioData={studioData} userRole={userRole} />
                     </TabsContent>
                     <TabsContent value="bookings">
-                        <Bookings studioData={studioData} />
+                        <Bookings studioData={studioData} userRole={userRole} />
                     </TabsContent>
-                    <TabsContent value="reviews">
-                        <Reviews studioData={studioData} />
-                    </TabsContent>
+                    {canViewReviews && (
+                        <TabsContent value="reviews">
+                            <Reviews studioData={studioData} />
+                        </TabsContent>
+                    )}
                     <TabsContent value="intents">
                         <BookingIntents data={studioData} />
                     </TabsContent>

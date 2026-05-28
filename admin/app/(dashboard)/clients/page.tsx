@@ -19,11 +19,13 @@ export default async function ClientsPage() {
         select: { role: true }
     });
     
-    const adminRoles = ["owner", "developer", "manager"];
+    const adminRoles = ["owner", "developer", "receptionist"];
     const hasAdminRole = members.some(m => adminRoles.includes(m.role));
     if (members.length > 0 && !hasAdminRole) {
         redirect("/my-tasks");
     }
+
+    const canEdit = members.some(m => ["owner", "developer", "admin"].includes(m.role));
 
     const studios = await prisma.studio.findMany({
         where: {
@@ -65,7 +67,7 @@ export default async function ClientsPage() {
 
     return (
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">
-            <ClientsView studioGroups={studioGroups} />
+            <ClientsView studioGroups={studioGroups} canEdit={canEdit} />
         </div>
     );
 }

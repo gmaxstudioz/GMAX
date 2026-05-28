@@ -21,7 +21,7 @@ export default async function GlobalBookingsPage() {
         select: { role: true }
     });
     
-    const adminRoles = ["owner", "developer", "manager"];
+    const adminRoles = ["owner", "developer", "receptionist"];
     const hasAdminRole = members.some(m => adminRoles.includes(m.role));
     if (members.length > 0 && !hasAdminRole) {
         redirect("/my-tasks");

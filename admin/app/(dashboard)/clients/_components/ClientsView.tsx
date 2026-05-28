@@ -45,7 +45,7 @@ type StudioGroup = {
     }[];
 };
 
-export function ClientsView({ studioGroups }: { studioGroups: StudioGroup[] }) {
+export function ClientsView({ studioGroups, canEdit = true }: { studioGroups: StudioGroup[], canEdit?: boolean }) {
     const [isPending, startTransition] = useTransition();
     const [search, setSearch] = useState("");
     const debouncedSearch = useDebounce(search, 300);
@@ -149,7 +149,7 @@ export function ClientsView({ studioGroups }: { studioGroups: StudioGroup[] }) {
                         <Button onClick={handleRefresh} type="button" variant="outline" size="icon" disabled={isPending} className="h-10 w-10 shrink-0">
                             {isPending ? <HugeiconsIcon icon={Loading} className="animate-spin" /> : <HugeiconsIcon icon={Refresh01Icon} />}
                         </Button>
-                        <ViewToggle defaultView="grid" />
+                        <ViewToggle defaultView="list" />
                     </div>
                 </CardHeader>
             </Card>
@@ -226,22 +226,26 @@ export function ClientsView({ studioGroups }: { studioGroups: StudioGroup[] }) {
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end">
                                                                 <DropdownMenuLabel className="text-xs">Actions</DropdownMenuLabel>
-                                                                <EditClientDialog
-                                                                    clientId={client.id}
-                                                                    initialData={{
-                                                                        name: client.name,
-                                                                        email: client.email || undefined,
-                                                                        phone: client.phone || "",
-                                                                        address: client.address || undefined,
-                                                                        notes: client.notes || undefined,
-                                                                        type: client.type as "vvip" | "vip" | "regular"
-                                                                    }}
-                                                                    triggerItem={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Edit</DropdownMenuItem>}
-                                                                />
                                                                 <DropdownMenuItem asChild>
                                                                     <Link href={`/studios/${group.slug}/client/${client.id}`}>View Details</Link>
                                                                 </DropdownMenuItem>
-                                                                <DropdownMenuItem onClick={() => handleDelete(client.id)} className="text-red-500 font-medium">Delete</DropdownMenuItem>
+                                                                {canEdit && (
+                                                                    <>
+                                                                        <EditClientDialog
+                                                                            clientId={client.id}
+                                                                            initialData={{
+                                                                                name: client.name,
+                                                                                email: client.email || undefined,
+                                                                                phone: client.phone || "",
+                                                                                address: client.address || undefined,
+                                                                                notes: client.notes || undefined,
+                                                                                type: client.type as "vvip" | "vip" | "regular"
+                                                                            }}
+                                                                            triggerItem={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Edit</DropdownMenuItem>}
+                                                                        />
+                                                                        <DropdownMenuItem onClick={() => handleDelete(client.id)} className="text-red-500 font-medium">Delete</DropdownMenuItem>
+                                                                    </>
+                                                                )}
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
                                                     </TableCell>
@@ -306,19 +310,23 @@ export function ClientsView({ studioGroups }: { studioGroups: StudioGroup[] }) {
                                                                 </DropdownMenuTrigger>
                                                                 <DropdownMenuContent>
                                                                     <DropdownMenuLabel className="text-xs">Actions</DropdownMenuLabel>
-                                                                    <EditClientDialog
-                                                                        clientId={client.id}
-                                                                        initialData={{
-                                                                            name: client.name,
-                                                                            email: client.email || undefined,
-                                                                            phone: client.phone || "",
-                                                                            address: client.address || undefined,
-                                                                            notes: client.notes || undefined,
-                                                                            type: client.type as "vvip" | "vip" | "regular"
-                                                                        }}
-                                                                        triggerItem={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Edit</DropdownMenuItem>}
-                                                                    />
-                                                                    <DropdownMenuItem onClick={() => handleDelete(client.id)} className="text-red-500 font-medium">Delete</DropdownMenuItem>
+                                                                    {canEdit && (
+                                                                        <>
+                                                                            <EditClientDialog
+                                                                                clientId={client.id}
+                                                                                initialData={{
+                                                                                    name: client.name,
+                                                                                    email: client.email || undefined,
+                                                                                    phone: client.phone || "",
+                                                                                    address: client.address || undefined,
+                                                                                    notes: client.notes || undefined,
+                                                                                    type: client.type as "vvip" | "vip" | "regular"
+                                                                                }}
+                                                                                triggerItem={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Edit</DropdownMenuItem>}
+                                                                            />
+                                                                            <DropdownMenuItem onClick={() => handleDelete(client.id)} className="text-red-500 font-medium">Delete</DropdownMenuItem>
+                                                                        </>
+                                                                    )}
                                                                 </DropdownMenuContent>
                                                             </DropdownMenu>
                                                             <Link
@@ -333,19 +341,23 @@ export function ClientsView({ studioGroups }: { studioGroups: StudioGroup[] }) {
                                             </ContextMenuTrigger>
                                             <ContextMenuContent>
                                                 <ContextMenuLabel className="text-xs">Actions</ContextMenuLabel>
-                                                <EditClientDialog
-                                                    clientId={client.id}
-                                                    initialData={{
-                                                        name: client.name,
-                                                        email: client.email || undefined,
-                                                        phone: client.phone || "",
-                                                        address: client.address || undefined,
-                                                        notes: client.notes || undefined,
-                                                        type: client.type as "vvip" | "vip" | "regular"
-                                                    }}
-                                                    triggerItem={<ContextMenuItem onSelect={(e) => e.preventDefault()}>Edit</ContextMenuItem>}
-                                                />
-                                                <ContextMenuItem onClick={() => handleDelete(client.id)} className="text-red-500 font-medium">Delete</ContextMenuItem>
+                                                {canEdit && (
+                                                    <>
+                                                        <EditClientDialog
+                                                            clientId={client.id}
+                                                            initialData={{
+                                                                name: client.name,
+                                                                email: client.email || undefined,
+                                                                phone: client.phone || "",
+                                                                address: client.address || undefined,
+                                                                notes: client.notes || undefined,
+                                                                type: client.type as "vvip" | "vip" | "regular"
+                                                            }}
+                                                            triggerItem={<ContextMenuItem onSelect={(e) => e.preventDefault()}>Edit</ContextMenuItem>}
+                                                        />
+                                                        <ContextMenuItem onClick={() => handleDelete(client.id)} className="text-red-500 font-medium">Delete</ContextMenuItem>
+                                                    </>
+                                                )}
                                             </ContextMenuContent>
                                         </ContextMenu>
                                     ))}

@@ -119,7 +119,7 @@ function VariantDeliverables({ control, variantIndex, isPending }: { control: Co
 export default function StudioServices({ studioData }: { studioData: StudioWithRelations }) {
     const [isPending, startTransition] = useTransition();
     const searchParamsHooks = useSearchParams();
-    const isListView = searchParamsHooks.get("view") === "list";
+    const isListView = searchParamsHooks.get("view") !== "grid";
 
     const [serviceDialogOpenForCategory, setServiceDialogOpenForCategory] = useState<string | null>(null);
     const [editModeService, setEditModeService] = useState<string | null>(null);
@@ -147,6 +147,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
     const watchedFeatures = useWatch({ control: serviceForm.control, name: "features" }) ?? [];
     const watchedVariants = useWatch({ control: serviceForm.control, name: "variants" });
     const watchedSessionId = useWatch({ control: serviceForm.control, name: "studioSessionId" });
+    const watchedIsAddon = useWatch({ control: serviceForm.control, name: "isAddon" }) ?? false;
 
     const { fields: variantFields, append: appendVariant, remove: removeVariant } = useFieldArray({
         control: serviceForm.control,
@@ -198,12 +199,14 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
         }
         startTransition(async () => {
             const filteredFeatures = data.features?.filter(f => f.trim().length > 0) || [];
+            const finalVariants = data.isAddon ? data.variants.map(v => ({ ...v, locationType: "STUDIO" as const })) : data.variants;
             
             if (editModeService) {
                 const result = await updateService(editModeService, { 
                     ...data, 
                     features: filteredFeatures,
-                    category: serviceDialogOpenForCategory as any,
+                    variants: finalVariants,
+                    category: serviceDialogOpenForCategory as "PHOTOGRAPHY" | "VIDEOGRAPHY" | "OTHERS",
                     studioId: studioData.id 
                 });
                 if (result.status === "success") {
@@ -216,7 +219,8 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                 const result = await createService({
                     ...data,
                     features: filteredFeatures,
-                    category: serviceDialogOpenForCategory as any,
+                    variants: finalVariants,
+                    category: serviceDialogOpenForCategory as "PHOTOGRAPHY" | "VIDEOGRAPHY" | "OTHERS",
                     studioId: studioData.id
                 });
                 if (result.status === "success") {
@@ -237,8 +241,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
     };
 
     const handleCloneService = (serviceId: string) => {
-        const targetStudioId = prompt("Enter target Studio ID to clone this service to:");
-        if (!targetStudioId) return;
+        const targetStudioId = studioData.id;
         
         startTransition(async () => {
             const result = await cloneService(serviceId, targetStudioId);
@@ -258,7 +261,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <ViewToggle defaultView="grid" />
+                    <ViewToggle defaultView="list" />
                 </div>
             </CardHeader>
 
@@ -329,7 +332,12 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                         return (
                                                             <TableRow key={svc.id}>
                                                                 <TableCell>
-                                                                    <div className="font-medium">{svc.name}</div>
+                                                                    <div className="font-medium">
+                                                                        {svc.name}
+                                                                        {svc.variants && svc.variants.length > 0 && (
+                                                                            <span className="ml-2 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">{svc.variants.length} Variant{svc.variants.length > 1 ? 's' : ''}</span>
+                                                                        )}
+                                                                    </div>
                                                                     <div className="text-xs text-muted-foreground line-clamp-1 max-w-[250px]">{svc.description}</div>
                                                                 </TableCell>
                                                                 <TableCell className="font-medium text-primary">
@@ -374,6 +382,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                             const mappedVariants = (svc.variants && svc.variants.length > 0) 
                                                                                 ? svc.variants.map((v) => ({
                                                                                     id: v.id,
+                                                                                    title: v.title ?? undefined,
                                                                                     locationType: v.locationType as "STUDIO" | "OUTDOOR" | "BOTH" | "MULTIPLE",
                                                                                     basePrice: Number(v.basePrice),
                                                                                     maxPrice: v.maxPrice ? Number(v.maxPrice) : undefined,
@@ -427,8 +436,11 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                 const basePrice = svc.variants?.[0]?.basePrice ? Number(svc.variants[0].basePrice) : 0;
                                                 return (
                                                     <div key={svc.id} className="flex flex-col border rounded-md p-3 bg-muted/20 relative group/svc">
-                                                        <h5 className="font-medium text-sm flex gap-2">
+                                                        <h5 className="font-medium text-sm flex gap-2 items-center">
                                                             {svc.name}
+                                                            {svc.variants && svc.variants.length > 0 && (
+                                                                <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full leading-none">{svc.variants.length} Var</span>
+                                                            )}
                                                         </h5>
                                                         <span className="text-xs font-bold text-primary mt-1">
                                                             ₦{basePrice.toLocaleString()}
@@ -473,6 +485,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                     const mappedVariants = (svc.variants && svc.variants.length > 0) 
                                                                         ? svc.variants.map((v) => ({
                                                                             id: v.id,
+                                                                            title: v.title ?? undefined,
                                                                             locationType: v.locationType as "STUDIO" | "OUTDOOR" | "BOTH" | "MULTIPLE",
                                                                             basePrice: Number(v.basePrice),
                                                                             maxPrice: v.maxPrice ? Number(v.maxPrice) : undefined,
@@ -567,7 +580,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                             <Field>
                                 <FieldLabel>Features</FieldLabel>
                                 <div className="flex flex-col gap-2">
-                                    {(serviceForm.watch("features") || [""]).map((featureValue, index) => (
+                                    {(watchedFeatures.length > 0 ? watchedFeatures : [""]).map((featureValue, index) => (
                                         <div key={index} className="flex items-center gap-2">
                                             <Input
                                                 value={featureValue}
@@ -638,10 +651,20 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                             
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                 <Controller
-                                                    name={`variants.${index}.locationType`}
+                                                    name={`variants.${index}.title`}
                                                     control={serviceForm.control}
                                                     render={({ field }) => (
                                                         <Field>
+                                                            <FieldLabel>Variant Title (Opt)</FieldLabel>
+                                                            <Input {...field} value={field.value || ""} placeholder="e.g. Premium Package" disabled={isPending} />
+                                                        </Field>
+                                                    )}
+                                                />
+                                                <Controller
+                                                    name={`variants.${index}.locationType`}
+                                                    control={serviceForm.control}
+                                                    render={({ field }) => (
+                                                        <Field className={watchedIsAddon ? "hidden" : ""}>
                                                             <FieldLabel>Location Type</FieldLabel>
                                                             <Select value={field.value} onValueChange={field.onChange} disabled={isPending}>
                                                                 <SelectTrigger>

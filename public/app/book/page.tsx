@@ -4,13 +4,16 @@ import { APP_NAME } from "@/lib/constants";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import gsap from "gsap";
-import { buttonVariants } from "@/components/ui/button";
-import { ArrowRight, ArrowLeft, CheckCircle2, User, CreditCard, Loader2, Building2, Clock, Sparkles, MapPin, ChevronDown, ChevronUp, ChevronRight, CheckCircle, UploadCloud, Users, Image as ImageIcon } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Calendar as CalendarIcon, ArrowRight, ArrowLeft, CheckCircle2, User, CreditCard, Loader2, Building2, Clock, Sparkles, MapPin, ChevronDown, ChevronUp, ChevronRight, CheckCircle, UploadCloud, Users, Image as ImageIcon, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { publicBookingSchema, type PublicBookingInput } from "@/lib/schemas/booking.schema";
 import { getStudioBySlug, getStudios, createPublicBooking } from "@/lib/api";
 import type { PublicStudioOutput, PublicServiceOutput, PublicCategoryOutput, ServiceVariantOutput, ServiceDeliverableOutput } from "@/lib/types/studio";
@@ -31,6 +34,7 @@ export default function BookingPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [configStep, setConfigStep] = useState(1);
   const [selectedOccasionType, setSelectedOccasionType] = useState<string>("");
+  const [selectedOccasionLabel, setSelectedOccasionLabel] = useState<string>("");
   const containerRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
   
@@ -102,20 +106,51 @@ export default function BookingPage() {
         ? generateTimeSlots(selectedService.variants[0].sessionDurationMins) 
         : [];
 
-  const isTomorrow = selectedDate === new Date(Date.now() + 86400000).toISOString().split("T")[0];
-  
+  const isSlotBooked = (time: string, dateStr: string) => {
+    if (!dateStr) return false;
+    const slotDate = new Date(dateStr);
+    const [hours, minutes] = time.split(':').map(Number);
+    slotDate.setHours(hours, minutes, 0, 0);
+    return slotDate.getTime() < Date.now();
+  };
+
   let maxAvailableSessions = 1;
-  if (selectedTime && timeSlots.length > 0) {
+  if (selectedTime && selectedDate && timeSlots.length > 0) {
       const startIndex = timeSlots.indexOf(selectedTime);
       let continuousAvailable = 0;
       for (let i = startIndex; i < timeSlots.length; i++) {
           const time = timeSlots[i];
-          const isBooked = isTomorrow && timeSlots.indexOf(time) < 3;
-          if (isBooked) break;
+          if (isSlotBooked(time, selectedDate)) break;
           continuousAvailable++;
       }
       maxAvailableSessions = continuousAvailable > 0 ? continuousAvailable : 1;
   }
+
+  // Auto-select Date & Time
+  useEffect(() => {
+      if (configStep === 5 && selectedVariant && !selectedDate && timeSlots.length > 0) {
+          const today = new Date();
+          const todayStr = today.toISOString().split("T")[0];
+          
+          let availableTime = null;
+          for (const t of timeSlots) {
+               if (!isSlotBooked(t, todayStr)) {
+                   availableTime = t;
+                   break;
+               }
+          }
+
+          if (availableTime) {
+              setSelectedDate(todayStr);
+              setSelectedTime(availableTime);
+          } else {
+              const tomorrow = new Date(Date.now() + 86400000);
+              const tmrStr = tomorrow.toISOString().split("T")[0];
+              setSelectedDate(tmrStr);
+              setSelectedTime(timeSlots[0]);
+          }
+      }
+  }, [configStep, selectedVariant, selectedDate, timeSlots]);
 
   useEffect(() => {
     if (selectedDate && selectedTime) {
@@ -213,8 +248,7 @@ export default function BookingPage() {
         onComplete: () => {
           setCurrentStep((prev) => Math.min(prev + 1, steps.length));
           if (formRef.current) {
-            const y = formRef.current.getBoundingClientRect().top + window.scrollY - 150;
-            window.scrollTo({ top: y, behavior: "smooth" });
+            window.scrollTo({ top: 0, behavior: "smooth" });
           }
           gsap.fromTo(formRef.current, { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" });
         },
@@ -227,6 +261,9 @@ export default function BookingPage() {
             prevConfigStep = 3;
           }
           setConfigStep(prevConfigStep);
+          setTimeout(() => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }, 50);
         }
         return;
       }
@@ -238,8 +275,7 @@ export default function BookingPage() {
         onComplete: () => {
           setCurrentStep((prev) => Math.max(prev - 1, 1));
           if (formRef.current) {
-            const y = formRef.current.getBoundingClientRect().top + window.scrollY - 150;
-            window.scrollTo({ top: y, behavior: "smooth" });
+            window.scrollTo({ top: 0, behavior: "smooth" });
           }
           gsap.fromTo(formRef.current, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" });
         },
@@ -250,8 +286,15 @@ export default function BookingPage() {
     const onSubmit = async (data: PublicBookingInput) => {
     try {
       setIsSubmitting(true);
+      
+      const finalNotes = [
+          selectedOccasionLabel ? `Occasion: ${selectedOccasionLabel}` : "",
+          data.notes ? `Notes: ${data.notes}` : ""
+      ].filter(Boolean).join("\n\n");
+
       const result = await createPublicBooking({
         ...data,
+        notes: finalNotes || undefined,
         sessionCount: data.sessionCount || 1,
       });
       if (result && result.bookingId) {
@@ -282,7 +325,7 @@ export default function BookingPage() {
           { label: "Birthday", mappedCategory: "PHOTOGRAPHY", icon: "🎂" },
           { label: "Wedding", mappedCategory: "PHOTOGRAPHY", icon: "💍" },
           { label: "Event", mappedCategory: "PHOTOGRAPHY", icon: "🎊" },
-          { label: "Graduation", mappedCategory: "PHOTOGRAPHY", icon: "🎓" },
+          { label: "Graduation / Matriculation", mappedCategory: "PHOTOGRAPHY", icon: "🎓" },
           { label: "Personal Shoot", mappedCategory: "PHOTOGRAPHY", icon: "📸" },
           { label: "Other", mappedCategory: "OTHERS", icon: "✨" }
         ];
@@ -296,7 +339,7 @@ export default function BookingPage() {
                   <Label className="text-2xl font-bold font-heading text-foreground">
                     Select a location close to you
                   </Label>
-                  <p className="text-sm text-muted-foreground mt-2">Pick the studio you would like to visit.</p>
+                  <p className="text-sm text-muted-foreground mt-2">Pick the studio nearest to you.</p>
                 </div>
                 {studiosList.length === 0 ? (
                   <p className="text-muted-foreground">No studios available at the moment.</p>
@@ -367,6 +410,7 @@ export default function BookingPage() {
                       key={answer.label}
                       onClick={() => {
                         setSelectedOccasionType(answer.mappedCategory);
+                        setSelectedOccasionLabel(answer.label);
                         setConfigStep(3);
                       }}
                       className={cn(
@@ -476,7 +520,16 @@ export default function BookingPage() {
                   <p className="text-sm text-muted-foreground mt-2">Select your preferred location type for this session.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  {selectedService.variants.filter((v: ServiceVariantOutput) => v.locationType.toUpperCase() !== "BOTH").map((variant: ServiceVariantOutput) => {
+                  {selectedService.variants
+                    .filter((v: ServiceVariantOutput) => v.locationType.toUpperCase() !== "BOTH")
+                    .sort((a: ServiceVariantOutput, b: ServiceVariantOutput) => {
+                       const aIsStudio = a.locationType.toUpperCase() === 'STUDIO';
+                       const bIsStudio = b.locationType.toUpperCase() === 'STUDIO';
+                       if (aIsStudio && !bIsStudio) return -1;
+                       if (!aIsStudio && bIsStudio) return 1;
+                       return 0;
+                    })
+                    .map((variant: ServiceVariantOutput) => {
                     const isSelectedV = selectedVariantId === variant.id;
                     const locationMeta: Record<string, { label: string; icon: string }> = {
                       STUDIO:   { label: "Studio",          icon: "🏢" },
@@ -575,14 +628,50 @@ export default function BookingPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-border/50">
                   <div className="space-y-3">
                     <Label className="text-sm font-medium text-foreground uppercase tracking-wider">Select Date</Label>
-                    <Input type="date" min={new Date().toISOString().split("T")[0]} value={selectedDate} onChange={e => { setSelectedDate(e.target.value); setSelectedTime(""); }} className="flex h-12 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary transition-colors hover:border-primary/50" />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full justify-start text-left font-normal h-12 rounded-xl bg-background border-input hover:border-primary/50",
+                            !selectedDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {selectedDate ? format(new Date(selectedDate), "PPP") : <span>Pick a date</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate ? new Date(selectedDate) : undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                                const offset = date.getTimezoneOffset();
+                                const localDate = new Date(date.getTime() - (offset*60*1000));
+                                const dStr = localDate.toISOString().split('T')[0];
+                                setSelectedDate(dStr);
+                                setSelectedTime("");
+                            } else {
+                                setSelectedDate("");
+                                setSelectedTime("");
+                            }
+                          }}
+                          disabled={(date) => {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            return date < today;
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div className="space-y-3">
                     <Label className="text-sm font-medium text-foreground uppercase tracking-wider">Available Times</Label>
                     <div className="grid grid-cols-3 gap-3">
                       {selectedDate ? (
                         timeSlots.map(time => {
-                          const isBooked = isTomorrow && timeSlots.indexOf(time) < 3;
+                          const isBooked = isSlotBooked(time, selectedDate);
                           return (
                             <button key={time} type="button" disabled={isBooked} onClick={() => setSelectedTime(time)} className={cn("py-2.5 px-3 text-sm font-medium rounded-xl border transition-all", isBooked ? "bg-muted/50 text-muted-foreground opacity-40 cursor-not-allowed border-transparent" : selectedTime === time ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-card hover:border-primary/50 border-border")}>
                               {time}
@@ -1122,6 +1211,19 @@ export default function BookingPage() {
           </form>
         </div>
       </div>
+
+      {/* WhatsApp Floating Button */}
+      <a
+        href="https://wa.me/2349122223353?text=Hello,%20I%20would%20like%20to%20discuss%20my%20session%20ideas%20with%20you!"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-50 bg-[#25D366] hover:bg-[#1ebd5a] text-white p-4 rounded-full shadow-lg transition-transform hover:scale-110 flex items-center justify-center group"
+      >
+        <MessageCircle className="w-6 h-6" />
+        <span className="absolute right-full mr-4 bg-foreground text-background text-sm px-3 py-1.5 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+          Chat with us!
+        </span>
+      </a>
     </main>
   );
 }

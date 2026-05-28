@@ -177,3 +177,8 @@ export type AcademyModule = Prisma.AcademyModuleModel
  * 
  */
 export type AcademyStudent = Prisma.AcademyStudentModel
+/**
+ * Model UserNotification
+ * 
+ */
+export type UserNotification = Prisma.UserNotificationModel

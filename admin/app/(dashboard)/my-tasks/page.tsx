@@ -39,8 +39,9 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
         select: { role: true, studioId: true }
     });
     
-    const adminRoles = ["owner", "admin", "developer", "manager"];
+    const adminRoles = ["owner", "admin", "developer", "manager", "receptionist"];
     const hasAdminRole = members.some(m => adminRoles.includes(m.role));
+    const canReassign = members.some(m => ["owner", "admin", "developer", "manager"].includes(m.role));
 
     const baseWhere = hasAdminRole 
         ? { 
@@ -61,7 +62,13 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
     const myBookings = await prisma.booking.findMany({
         where: {
             ...baseWhere,
-            ...searchFilter
+            ...searchFilter,
+            bookingStatus: {
+                notIn: ["COMPLETED", "CANCELLED"]
+            },
+            deliveryStatus: {
+                notIn: ["DELIVERED"]
+            }
         },
         include: {
             client: true,
@@ -126,7 +133,7 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
                                         <TableHead>Service</TableHead>
                                         <TableHead>Studio</TableHead>
                                         <TableHead>Status</TableHead>
-                                        {hasAdminRole && <TableHead className="w-[200px]">Assign To</TableHead>}
+                                        {canReassign && <TableHead className="w-[200px]">Assign To</TableHead>}
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -152,21 +159,21 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
                                             <TableCell>
                                                 <Badge variant="secondary">{String(booking.bookingStatus).replace(/_/g, " ")}</Badge>
                                             </TableCell>
-                                            {hasAdminRole && (
+                                            {canReassign && (
                                                 <TableCell>
                                                     <ReassignMemberDropdown 
                                                         bookingId={booking.id} 
                                                         currentMemberId={booking.memberId} 
-                                                        members={booking.studio?.members.map((m: any) => ({
-                                                            id: m.id,
-                                                            name: m.user.name,
-                                                            email: m.user.email,
-                                                            role: m.role as MemberRole,
-                                                            studioId: m.studioId,
-                                                            createdAt: m.createdAt.toISOString(),
-                                                            updatedAt: m.createdAt.toISOString()
+                                                        members={booking.studio?.members.map((m) => ({
+                                                            id: (m as any).id,
+                                                            name: (m as any).user.name,
+                                                            email: (m as any).user.email,
+                                                            role: (m as any).role as MemberRole,
+                                                            studioId: (m as any).studioId,
+                                                            createdAt: (m as any).createdAt.toISOString(),
+                                                            updatedAt: (m as any).createdAt.toISOString()
                                                         })) || []} 
-                                                        disabled={!hasAdminRole}
+                                                        disabled={!canReassign}
                                                     />
                                                 </TableCell>
                                             )}
@@ -205,21 +212,21 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
                                         {booking.studio && (
                                             <p className="text-sm font-medium text-muted-foreground">Studio: {booking.studio.name}</p>
                                         )}
-                                        {hasAdminRole && (
+                                        {canReassign && (
                                             <div>
                                                 <ReassignMemberDropdown 
                                                     bookingId={booking.id} 
                                                     currentMemberId={booking.memberId} 
-                                                    members={booking.studio?.members.map((m: any) => ({
-                                                        id: m.id,
-                                                        name: m.user.name,
-                                                        email: m.user.email,
-                                                        role: m.role as MemberRole,
-                                                        studioId: m.studioId,
-                                                        createdAt: m.createdAt.toISOString(),
-                                                        updatedAt: m.createdAt.toISOString()
+                                                    members={booking.studio?.members.map((m) => ({
+                                                        id: (m as any).id,
+                                                        name: (m as any).user.name,
+                                                        email: (m as any).user.email,
+                                                        role: (m as any).role as MemberRole,
+                                                        studioId: (m as any).studioId,
+                                                        createdAt: (m as any).createdAt.toISOString(),
+                                                        updatedAt: (m as any).createdAt.toISOString()
                                                     })) || []} 
-                                                    disabled={!hasAdminRole}
+                                                    disabled={!canReassign}
                                                 />
                                             </div>
                                         )}

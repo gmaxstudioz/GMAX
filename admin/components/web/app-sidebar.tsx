@@ -112,6 +112,8 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
   })
   
   let isOnlyMinorRole = false;
+  let isPhotoVideoRole = false;
+
   if (session?.user) {
     const userData = await prisma.user.findUnique({
       where: { id: session.user.id },
@@ -126,15 +128,16 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
         select: { role: true }
       });
       
-      // Check if user has NO administrative roles across all studios
-      const adminRoles = ["owner", "developer", "manager", "admin"];
+      const adminRoles = ["owner", "developer", "admin"];
       const hasAdminRole = members.some(m => adminRoles.includes(m.role));
       isOnlyMinorRole = members.length > 0 && !hasAdminRole;
+
+      const photoVideoRoles = ["photographer", "videographer"];
+      isPhotoVideoRole = members.length > 0 && members.every(m => photoVideoRoles.includes(m.role));
     }
   }
 
-  // Create restricted nav for minor roles
-  const minorNavMain = [
+  let minorNavMain = [
     {
       title: "Overview",
       url: "/",
@@ -151,6 +154,10 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
       icon: <HugeiconsIcon icon={WarehouseIcon} />,
     },
   ];
+
+  if (isPhotoVideoRole) {
+    minorNavMain = minorNavMain.filter(item => item.url !== "/studios");
+  }
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>

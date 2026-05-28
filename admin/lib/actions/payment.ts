@@ -271,3 +271,85 @@ export async function verifyPayment(reference: string) {
         return { status: "error", message: "Failed to verify payment" };
     }
 }
+
+// ── Mark Payment as Paid Manually ───────────────────────────────────────────
+
+export async function markAsPaidManually(bookingId: string) {
+    try {
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (!session?.user) return { status: "error", message: "Unauthorized" };
+
+        const booking = await prisma.booking.findUnique({
+            where: { id: bookingId },
+            include: {
+                payments: true,
+                service: { include: { variants: true } },
+                addons: { include: { variants: true } },
+            },
+        });
+
+        if (!booking) return { status: "error", message: "Booking not found" };
+
+        const member = await prisma.member.findFirst({
+            where: { userId: session.user.id, studioId: booking.studioId },
+        });
+        if (!member) return { status: "error", message: "Unauthorized access to this booking" };
+
+        const servicePrice = Number(booking.service?.variants?.find((v) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.variants?.[0]?.basePrice ?? 0);
+        const sessionTotal = servicePrice * booking.sessionCount;
+        const addonsTotal = booking.addons.reduce((sum, a) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const variantId = (a as any).addonVariantId;
+            const variant = variantId ? a.variants?.find((v) => v.id === variantId) : a.variants?.[0];
+            return sum + Number(variant?.basePrice ?? 0);
+        }, 0);
+        const grandTotal = booking.totalAmount != null ? Number(booking.totalAmount) : (sessionTotal + addonsTotal);
+
+        const totalPaid = booking.payments
+            .filter((p) => p.status === "PAID")
+            .reduce((sum, p) => sum + Number(p.amount), 0);
+
+        const balanceDue = Math.max(0, grandTotal - totalPaid);
+
+        if (balanceDue <= 0) {
+            return { status: "error", message: "Booking is already fully paid" };
+        }
+
+        const receiptNumber = generateReceiptNumber();
+
+        await prisma.$transaction(async (tx) => {
+            // Create a manual PAID payment
+            await tx.payment.create({
+                data: {
+                    amount: balanceDue,
+                    method: "CASH", // Default to CASH for manual entry, could be TRANSFER too
+                    status: "PAID",
+                    receiptNumber,
+                    bookingId: booking.id,
+                    recordedById: session.user.id,
+                },
+            });
+
+            // Re-calculate and update booking
+            const allPayments = await tx.payment.findMany({
+                where: { bookingId: booking.id },
+            });
+            const newTotalPaid = allPayments
+                .filter((p) => p.status === "PAID")
+                .reduce((sum, p) => sum + Number(p.amount), 0);
+            
+            const newPaymentStatus = newTotalPaid >= grandTotal ? "PAID" : "PARTIALLY_PAID";
+
+            await tx.booking.update({
+                where: { id: booking.id },
+                data: { paymentStatus: newPaymentStatus },
+            });
+        });
+
+        revalidatePath("/studios", "layout");
+        return { status: "success", message: "Payment marked as paid manually" };
+    } catch (e) {
+        console.error("Failed to mark as paid:", e);
+        return { status: "error", message: "Failed to mark as paid manually" };
+    }
+}

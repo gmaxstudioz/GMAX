@@ -9,11 +9,15 @@ import { requireSession, requireStudioMember } from "./with-auth";
 
 export async function CreateClient(values: Client, studioId: string): Promise<ApiResponse> {
     try {
-        // Verify caller is a member of this studio before creating
         const auth = await requireStudioMember(studioId);
         if (auth.status === "error") return auth;
 
-        await prisma.client.create({
+        const allowedRoles = ["owner", "admin", "manager", "receptionist", "developer"];
+        if (!allowedRoles.includes(auth.member.role)) {
+            return { status: "error", message: "Unauthorized: You do not have permission to create clients" };
+        }
+
+        const newClient = await prisma.client.create({
             data: {
                 name: values.name,
                 email: values.email,
@@ -27,7 +31,7 @@ export async function CreateClient(values: Client, studioId: string): Promise<Ap
             },
         });
 
-        return { status: "success", message: "Client created successfully" };
+        return { status: "success", message: "Client created successfully", data: newClient };
     } catch (error) {
         console.error("[Action] CreateClient failed:", error);
         return {
@@ -77,6 +81,11 @@ export async function UpdateClient(values: Client, clientId: string): Promise<Ap
 
         const auth = await requireStudioMember(existing.studioId);
         if (auth.status === "error") return auth;
+
+        const allowedRoles = ["owner", "admin", "manager", "developer"];
+        if (!allowedRoles.includes(auth.member.role)) {
+            return { status: "error", message: "Unauthorized: You do not have permission to update clients" };
+        }
 
         await prisma.client.update({
             where: { id: clientId },

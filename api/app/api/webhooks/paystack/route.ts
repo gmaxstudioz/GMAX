@@ -85,6 +85,7 @@ export async function POST(req: Request) {
             return Response.json({ received: true });
         }
 
+        let newBookingId: string | null = null;
         await prisma.$transaction(async (tx) => {
             // 1. Resolve client
             let clientId = intent.existingClientId;
@@ -147,6 +148,8 @@ export async function POST(req: Request) {
                     }),
                 },
             });
+            
+            newBookingId = booking.id;
 
             // 3. Create payment record
             const installmentType = intent.paymentPlan === "FULL" ? "FULL" : "DEPOSIT";
@@ -211,6 +214,17 @@ export async function POST(req: Request) {
                 }).catch(err => console.error(`[Webhook] WhatsApp notification failed for ${reference}:`, err));
                 
                 console.info(`[Webhook] Notifications dispatched for ${reference}`);
+            }
+
+            if (newBookingId) {
+                const { notifyAdminsOfPayment } = await import("@/lib/notifications");
+                await notifyAdminsOfPayment(
+                    intent.studioId,
+                    newBookingId,
+                    Number(intent.amount),
+                    clientName,
+                    serviceName
+                ).catch(err => console.error(`[Webhook] Admin notification failed for ${reference}:`, err));
             }
         } catch (notifErr) {
             console.error(`[Webhook] Notification dispatch failed for ${reference}:`, notifErr);

@@ -7,12 +7,30 @@ import { AcademyStudentsTable } from "./_components/AcademyStudentsTable";
 import { BookOpen, Users, DollarSign } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+
 export const metadata: Metadata = {
     title: "Academy",
     description: "Manage your Academy courses, modules, and students.",
 };
 
 export default async function AcademyPage() {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) redirect("/auth/login");
+
+    const members = await prisma.member.findMany({
+        where: { userId: session.user.id },
+        select: { role: true }
+    });
+    
+    const adminRoles = ["owner", "developer"];
+    const hasAdminRole = members.some(m => adminRoles.includes(m.role));
+    if (members.length > 0 && !hasAdminRole) {
+        redirect("/my-tasks");
+    }
+
     // Fetch courses with their module count and student count
     const courses = await prisma.academyCourse.findMany({
         include: {

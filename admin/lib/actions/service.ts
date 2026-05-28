@@ -187,7 +187,7 @@ export async function updateService(id: string, data: ServicePayload) {
 
         revalidatePath(`/studios/[slug]`, "page");
         return { status: "success", message: "Service updated", data: updatedService };
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("SERVICE UPDATE ERROR:", error);
         return { status: "error", message: error instanceof Error ? error.message : "Error updating service" };
     }

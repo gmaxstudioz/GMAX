@@ -66,8 +66,9 @@ export default async function StudioDailyBookingsPage({ params, searchParams }: 
     const myMembership = studio.members.find(m => m.userId === session?.user?.id);
     if (!myMembership) redirect("/");
 
-    const adminRoles = ["owner", "developer", "manager", "admin"];
+    const adminRoles = ["owner", "developer", "manager", "admin", "receptionist"];
     const hasAdminRole = adminRoles.includes(myMembership!.role);
+    const canReassign = ["owner", "developer", "manager", "admin"].includes(myMembership!.role);
 
     const mappedMembers = studio.members.map(m => ({
         id: m.id,
@@ -183,7 +184,7 @@ export default async function StudioDailyBookingsPage({ params, searchParams }: 
                                                         bookingId={booking.id} 
                                                         currentMemberId={booking.memberId} 
                                                         members={mappedMembers} 
-                                                        disabled={!hasAdminRole}
+                                                        disabled={!canReassign}
                                                     />
                                                 </TableCell>
                                                 <TableCell className="text-right">
@@ -218,7 +219,7 @@ export default async function StudioDailyBookingsPage({ params, searchParams }: 
                                                 <RescheduleTimePicker bookingId={booking.id} currentDate={booking.bookingDate} />
                                             </div>
                                             <div>
-                                                <ReassignMemberDropdown bookingId={booking.id} currentMemberId={booking.memberId} members={mappedMembers} disabled={!hasAdminRole} />
+                                                <ReassignMemberDropdown bookingId={booking.id} currentMemberId={booking.memberId} members={mappedMembers} disabled={!canReassign} />
                                             </div>
                                             <Button variant="outline" size="sm" className="w-full gap-1.5 mt-1" asChild>
                                                 <Link href={`/studios/${slug}/bookings/detail/${booking.id}`}>

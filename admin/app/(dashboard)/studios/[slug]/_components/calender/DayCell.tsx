@@ -33,7 +33,7 @@ export function DayCell({ day, bookings }: Props ) {
         <div
             ref={setNodeRef}
             className={cn(
-                "p-2 border rounded-lg min-h-[100px] transition-colors flex flex-col gap-2 relative group",
+                "p-2 border rounded-lg min-h-[250px] md:min-h-[100px] transition-colors flex flex-col gap-2 relative group",
                 isOver ? "bg-blue-50 dark:bg-blue-950/20" : "",
                 !day.isCurrentMonth ? "opacity-50" : ""
             )}

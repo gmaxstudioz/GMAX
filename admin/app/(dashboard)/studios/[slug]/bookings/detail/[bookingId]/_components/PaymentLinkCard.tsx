@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { initializePayment } from "@/lib/actions/payment";
+import { initializePayment, markAsPaidManually } from "@/lib/actions/payment";
+import { approvePriceChange, rejectPriceChange } from "@/lib/actions/price-approval";
 import { tryCatch } from "@/hooks/try-catch";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
@@ -41,6 +42,9 @@ interface PaymentLinkCardProps {
     servicePrice: number;
     salePrice: number | null;
     addonsCount: number;
+    priceApprovalStatus?: string;
+    pendingTotalAmount?: number | null;
+    userRole?: string;
 }
 
 const statusVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -64,6 +68,9 @@ export function PaymentLinkCard({
     servicePrice,
     salePrice,
     addonsCount,
+    priceApprovalStatus = "APPROVED",
+    pendingTotalAmount,
+    userRole,
 }: PaymentLinkCardProps) {
     const [isPending, startTransition] = useTransition();
     const [paymentLink, setPaymentLink] = useState<string | null>(null);
@@ -71,6 +78,21 @@ export function PaymentLinkCard({
     const [copied, setCopied] = useState(false);
 
     const isFullyPaid = paymentStatus === "PAID" || balanceDue <= 0;
+
+    const handleMarkAsPaidManually = () => {
+        startTransition(async () => {
+            const { data: result, error } = await tryCatch(markAsPaidManually(bookingId));
+            if (error) {
+                toast.error("An unexpected error occurred");
+                return;
+            }
+            if (result?.status === "success") {
+                toast.success(result.message);
+            } else {
+                toast.error(result?.message || "Failed to mark as paid");
+            }
+        });
+    };
 
     const handleGenerateLink = () => {
         startTransition(async () => {
@@ -95,6 +117,30 @@ export function PaymentLinkCard({
         toast.success("Link copied to clipboard!");
         setTimeout(() => setCopied(false), 2000);
     };
+
+    const handleApprovePrice = () => {
+        startTransition(async () => {
+            const { data: result, error } = await tryCatch(approvePriceChange(bookingId));
+            if (error || result?.status !== "success") {
+                toast.error(result?.message || "Failed to approve price");
+            } else {
+                toast.success(result.message);
+            }
+        });
+    };
+
+    const handleRejectPrice = () => {
+        startTransition(async () => {
+            const { data: result, error } = await tryCatch(rejectPriceChange(bookingId));
+            if (error || result?.status !== "success") {
+                toast.error(result?.message || "Failed to reject price");
+            } else {
+                toast.success(result.message);
+            }
+        });
+    };
+
+    const isAdminOrOwner = userRole ? ["admin", "owner", "developer"].includes(userRole) : false;
 
     return (
         <Card>
@@ -137,6 +183,33 @@ export function PaymentLinkCard({
                     <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Balance Due</span>
                         <span className="text-destructive font-bold">{formatCurrency(balanceDue)}</span>
+                    </div>
+                )}
+
+                {priceApprovalStatus === "PENDING_APPROVAL" && pendingTotalAmount && (
+                    <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 space-y-2">
+                        <div className="flex items-start gap-2">
+                            <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                                Price change pending admin approval (₦{grandTotal.toLocaleString()} → ₦{Number(pendingTotalAmount).toLocaleString()})
+                            </span>
+                        </div>
+                        {isAdminOrOwner && (
+                            <div className="flex gap-2 mt-2">
+                                <Button size="sm" onClick={handleApprovePrice} disabled={isPending} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white">
+                                    Approve
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={handleRejectPrice} disabled={isPending} className="flex-1">
+                                    Reject
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                )}
+                {priceApprovalStatus === "REJECTED" && (
+                    <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800">
+                        <span className="text-sm font-medium text-red-700 dark:text-red-400">
+                            A recent price change request was rejected by admin.
+                        </span>
                     </div>
                 )}
 
@@ -183,11 +256,15 @@ export function PaymentLinkCard({
                                 </div>
                             </div>
                         ) : (
-                            <Button onClick={handleGenerateLink} disabled={isPending} className="w-full gap-2">
+                            <Button onClick={handleGenerateLink} disabled={isPending || priceApprovalStatus === "PENDING_APPROVAL"} className="w-full gap-2">
                                 {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <LinkIcon className="h-4 w-4" />}
                                 Generate Payment Link
                             </Button>
                         )}
+                        <Button onClick={handleMarkAsPaidManually} disabled={isPending || priceApprovalStatus === "PENDING_APPROVAL"} variant="secondary" className="w-full gap-2 mt-2">
+                            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2Icon className="h-4 w-4" />}
+                            Mark as Paid Manually
+                        </Button>
                     </>
                 )}
 

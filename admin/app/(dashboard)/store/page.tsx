@@ -20,7 +20,7 @@ export default async function Page() {
   });
   
   // Only users with some administrative role should access the store manager
-  const adminRoles = ["owner", "developer", "manager"];
+  const adminRoles = ["owner", "developer"];
   const hasAdminRole = members.some(m => adminRoles.includes(m.role));
   if (members.length > 0 && !hasAdminRole) {
       redirect("/my-tasks");

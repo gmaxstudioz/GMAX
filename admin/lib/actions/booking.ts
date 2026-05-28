@@ -25,6 +25,11 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
             return { status: "error", message: "Unauthorized access to studio" };
         }
 
+        const allowedRoles = ["owner", "admin", "manager", "receptionist", "developer"];
+        if (!allowedRoles.includes(member.role)) {
+            return { status: "error", message: "Unauthorized: You do not have permission to create bookings" };
+        }
+
         const { addonIds, ...bookingData } = data;
 
         // Capacity and Alternative Recommendation Logic
@@ -196,12 +201,11 @@ export async function rescheduleBooking(bookingId: string, newDate: string) {
 
         if (!booking) return { status: "error", message: "Booking not found" };
 
-        // Verify user belongs to this studio
         const member = await prisma.member.findFirst({
             where: { userId: session.user.id, studioId: booking.studioId }
         });
-        if (!member) {
-            return { status: "error", message: "Unauthorized" };
+        if (!member || member.role === "receptionist") {
+            return { status: "error", message: "Unauthorized: Receptionists cannot reschedule bookings" };
         }
 
         const targetDate = new Date(newDate);
@@ -305,7 +309,10 @@ export async function updateBookingInfo(
         const member = await prisma.member.findFirst({
             where: { userId: session.user.id, studioId: booking.studioId }
         });
-        if (!member) return { status: "error", message: "Unauthorized" };
+        const disallowedRoles = ["receptionist", "photographer", "videographer"];
+        if (!member || disallowedRoles.includes(member.role)) {
+            return { status: "error", message: "Unauthorized: You do not have permission to update bookings" };
+        }
 
         const updateData: Record<string, unknown> = {};
         if (data.notes !== undefined) updateData.notes = data.notes;
@@ -366,6 +373,33 @@ export async function uploadBookingPhoto(data: {
                 approvedById: isAutoApproved ? session.user.id : undefined,
             },
         });
+
+        if (["photographer", "videographer"].includes(member.role)) {
+            const admins = await prisma.member.findMany({
+                where: { studioId: booking.studioId, role: { in: ["admin", "owner", "manager"] } },
+                include: { user: true }
+            });
+
+            const { sendSMS } = await import("../termii");
+            for (const admin of admins) {
+                await prisma.userNotification.create({
+                    data: {
+                        userId: admin.userId,
+                        title: "New Photo Uploaded",
+                        message: `A new photo was uploaded for a booking by ${session.user.name || "staff"}.`,
+                        type: "PHOTO_UPLOAD",
+                        bookingId: booking.id
+                    }
+                });
+                if (admin.user.phoneNumber) {
+                    try {
+                        await sendSMS(admin.user.phoneNumber, `GMAX Studio: A new photo was uploaded for a booking by ${session.user.name || "staff"}. Please review it.`);
+                    } catch (err) {
+                        console.error("SMS failed", err);
+                    }
+                }
+            }
+        }
 
         revalidatePath("/studios", "layout");
         return { status: "success", data: photo };
@@ -452,6 +486,28 @@ export async function rejectPhoto(photoId: string, reason?: string) {
                 rejectionReason: reason || undefined,
             },
         });
+
+        const uploader = await prisma.user.findUnique({ where: { id: photo.uploadedById }});
+        if (uploader) {
+            await prisma.userNotification.create({
+                data: {
+                    userId: uploader.id,
+                    title: "Photo Rejected",
+                    message: `Your photo upload for a booking was rejected. Reason: ${reason || "No reason provided"}`,
+                    type: "PHOTO_REJECTED",
+                    bookingId: photo.bookingId
+                }
+            });
+
+            if (uploader.phoneNumber) {
+                const { sendSMS } = await import("../termii");
+                try {
+                    await sendSMS(uploader.phoneNumber, `GMAX Studio: Your photo upload was rejected. Reason: ${reason || "Please check dashboard"}`);
+                } catch(e){
+                    console.error("SMS failed", e);
+                }
+            }
+        }
 
         revalidatePath("/studios", "layout");
         return { status: "success", message: "Photo rejected" };
@@ -587,7 +643,10 @@ export async function updateBookingFull(
         const member = await prisma.member.findFirst({
             where: { userId: session.user.id, studioId: booking.studioId }
         });
-        if (!member) return { status: "error", message: "Unauthorized" };
+        const disallowedRoles = ["receptionist", "photographer", "videographer"];
+        if (!member || disallowedRoles.includes(member.role)) {
+            return { status: "error", message: "Unauthorized: You do not have permission to update bookings" };
+        }
 
         // Build update data
         const updateData: Record<string, unknown> = {};
@@ -602,7 +661,21 @@ export async function updateBookingFull(
         if (data.bookingStatus) updateData.bookingStatus = data.bookingStatus;
         if (data.paymentStatus) updateData.paymentStatus = data.paymentStatus;
         if (data.deliveryStatus) updateData.deliveryStatus = data.deliveryStatus;
-        if (data.totalAmount !== undefined) updateData.totalAmount = data.totalAmount;
+        
+        let priceChangeNotificationNeeded = false;
+        if (data.totalAmount !== undefined && data.totalAmount !== Number(booking.totalAmount)) {
+            if (member.role === "manager") {
+                updateData.pendingTotalAmount = data.totalAmount;
+                updateData.priceApprovalStatus = "PENDING_APPROVAL";
+                updateData.priceChangedBy = member.id;
+                priceChangeNotificationNeeded = true;
+            } else {
+                updateData.totalAmount = data.totalAmount;
+                updateData.priceApprovalStatus = "APPROVED";
+                updateData.pendingTotalAmount = null;
+            }
+        }
+        
         if (data.paymentPlan) updateData.paymentPlan = data.paymentPlan;
 
         // Handle date change with overlap checking
@@ -663,11 +736,71 @@ export async function updateBookingFull(
             data: updateData,
         });
 
+        if (priceChangeNotificationNeeded) {
+            const admins = await prisma.member.findMany({
+                where: { studioId: booking.studioId, role: { in: ["admin", "owner", "developer"] } },
+                include: { user: true }
+            });
+            for (const admin of admins) {
+                await prisma.userNotification.create({
+                    data: {
+                        userId: admin.userId,
+                        title: "Price Approval Required",
+                        message: `Manager ${session.user.name || "staff"} requested a price change to ₦${data.totalAmount} for a booking.`,
+                        type: "SYSTEM",
+                        bookingId: booking.id
+                    }
+                });
+            }
+        }
+
         revalidatePath("/studios", "layout");
         return { status: "success", message: "Booking updated successfully" };
     } catch (e) {
         console.error("Failed to update booking:", e);
         return { status: "error", message: "Failed to update booking" };
+    }
+}
+
+// ── Mark Task Completed (Staff) ────────────────────────────────────
+
+export async function markTaskCompleted(bookingId: string) {
+    try {
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (!session?.user) return { status: "error", message: "Unauthorized" };
+
+        const booking = await prisma.booking.findUnique({
+            where: { id: bookingId }
+        });
+        if (!booking) return { status: "error", message: "Booking not found" };
+
+        const member = await prisma.member.findFirst({
+            where: { userId: session.user.id, studioId: booking.studioId }
+        });
+        
+        if (!member) {
+            return { status: "error", message: "Unauthorized: You do not belong to this studio" };
+        }
+
+        // Only allow if they are assigned to this booking OR they are an admin/manager
+        const isAssigned = booking.memberId === member.id;
+        const isAdminOrManager = ["owner", "admin", "manager", "developer"].includes(member.role);
+
+        if (!isAssigned && !isAdminOrManager) {
+            return { status: "error", message: "Unauthorized: You can only complete tasks assigned to you" };
+        }
+
+        await prisma.booking.update({
+            where: { id: bookingId },
+            data: { bookingStatus: "COMPLETED" }
+        });
+
+        revalidatePath("/studios", "layout");
+        revalidatePath("/my-tasks");
+        return { status: "success", message: "Task marked as completed" };
+    } catch (e) {
+        console.error("Failed to mark task completed:", e);
+        return { status: "error", message: "Internal server error" };
     }
 }
 

@@ -9,7 +9,8 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { Button } from "@/components/ui/button";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { format, addMonths, subMonths } from "date-fns";
+import { format, addMonths, subMonths, addDays, subDays, eachDayOfInterval, formatISO, isToday } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type Props = {
     initialYear: number
@@ -20,13 +21,35 @@ type Props = {
 
 export function CalenderGrid({ initialYear, initialMonth, bookings, onMoveConfirm }: Props) {
     const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
-    const [currentDate, setCurrentDate] = useState(new Date(initialYear, initialMonth, 1));
+    const [currentDate, setCurrentDate] = useState(new Date(initialYear, initialMonth, new Date().getDate()));
+    const isMobile = useIsMobile();
 
     const currentYear = currentDate.getFullYear();
     const currentMonthNum = currentDate.getMonth();
 
     const daysInMonth = getDaysInMonth(currentYear, currentMonthNum);
     const groupedBookings = groupBookingsByDate(bookings);
+
+    const daysInMobileView = eachDayOfInterval({ start: currentDate, end: addDays(currentDate, 2) }).map(date => {
+        return {
+            date,
+            key: formatISO(date, { representation: "date" }),
+            isCurrentMonth: date.getMonth() === currentMonthNum,
+            isToday: isToday(date)
+        }
+    });
+
+    const daysToRender = isMobile ? daysInMobileView : daysInMonth;
+
+    const handlePrev = () => {
+        if (isMobile) setCurrentDate(subDays(currentDate, 3));
+        else setCurrentDate(subMonths(currentDate, 1));
+    };
+
+    const handleNext = () => {
+        if (isMobile) setCurrentDate(addDays(currentDate, 3));
+        else setCurrentDate(addMonths(currentDate, 1));
+    };
 
     function handleDragEnd({ active, over }: DragEndEvent) {
         if (!over) return;
@@ -47,21 +70,27 @@ export function CalenderGrid({ initialYear, initialMonth, bookings, onMoveConfir
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-bold">{format(currentDate, "MMMM yyyy")}</h2>
                     <div className="flex gap-2">
-                        <Button variant="outline" size="icon" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
+                        <Button variant="outline" size="icon" onClick={handlePrev}>
                             <ChevronLeft className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="icon" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
+                        <Button variant="outline" size="icon" onClick={handleNext}>
                             <ChevronRight className="h-4 w-4" />
                         </Button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-7 gap-px">
-                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                        <div key={day} className="bg-background/20 p-2 text-xs font-medium text-muted-foreground text-center rounded-md">{day}</div>
-                    ))}
+                <div className={`grid gap-px ${isMobile ? "grid-cols-3" : "grid-cols-7"}`}>
+                    {isMobile ? (
+                        daysToRender.map(day => (
+                            <div key={day.key} className="bg-background/20 p-2 text-xs font-medium text-muted-foreground text-center rounded-md">{format(day.date, "EEE")}</div>
+                        ))
+                    ) : (
+                        ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                            <div key={day} className="bg-background/20 p-2 text-xs font-medium text-muted-foreground text-center rounded-md">{day}</div>
+                        ))
+                    )}
 
-                    {daysInMonth.map((day) => (
+                    {daysToRender.map((day) => (
                         <DayCell key={day.key} day={day} bookings={groupedBookings[day.key] || []} />
                     ))}
                 </div>

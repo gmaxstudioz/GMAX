@@ -262,7 +262,7 @@ export default function DeliverablesPage() {
                 {data.photos.length > 0 && (
                     <div className="mt-12 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800/50 rounded-2xl p-6">
                         <h4 className="font-semibold text-orange-800 dark:text-orange-300 flex items-center gap-2 mb-2">
-                            <AlertCircle className="w-5 h-5" /> Delivery Errors
+                            <AlertCircle className="w-5 h-5" /> Any Correction?
                         </h4>
                         <p className="text-orange-700 dark:text-orange-400 text-sm">
                             You have 24 hours from the time of delivery to report any errors or issues with the images to allow us address and rectify them promptly.
@@ -290,7 +290,7 @@ export default function DeliverablesPage() {
 
             {/* Floating WhatsApp Button */}
             <a 
-                href="https://wa.me/2348122223353" 
+                href="https://wa.me/2349122223353" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="fixed bottom-6 right-6 bg-[#25D366] text-white p-4 rounded-full shadow-lg hover:scale-105 transition-transform z-40 flex items-center justify-center group"

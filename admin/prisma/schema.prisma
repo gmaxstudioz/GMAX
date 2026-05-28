@@ -28,6 +28,7 @@ model User {
   payments      Payment[]
   photos        Photo[]
   approvedPhotos Photo[] @relation("PhotoApprovals")
+  userNotifications UserNotification[]
 
   role                String   @default("user") // "user" | "admin"
   phoneNumber         String?
@@ -235,6 +236,7 @@ model ServiceVariant {
   serviceId String
   service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
+  title               String?
   locationType        LocationType
   basePrice           Decimal      @db.Decimal(12, 2)
   maxPrice            Decimal?     @db.Decimal(12, 2)
@@ -414,6 +416,13 @@ model Booking {
   totalAmount Decimal     @db.Decimal(12, 2)
   paymentPlan PaymentPlan @default(FULL)
 
+  // Price approval workflow
+  priceApprovalStatus  PriceApprovalStatus @default(APPROVED)
+  pendingTotalAmount   Decimal?            @db.Decimal(12, 2)
+  priceChangedBy       String?             // memberId of who requested the change
+  priceApprovedBy      String?             // userId of admin who approved
+  priceApprovedAt      DateTime?
+
   bookingStatus  BookingStatus  @default(PENDING)
   paymentStatus  PaymentStatus  @default(PENDING)
   deliveryStatus DeliveryStatus @default(PENDING)
@@ -443,12 +452,19 @@ model Booking {
   deliveredAt      DateTime?       // When the photos were delivered to the client
 
   notifications Notification[]
+  userNotifications UserNotification[]
   revisionRequests RevisionRequest[]
 
   @@index([studioId])
   @@index([clientId])
   @@index([accessCode])
   @@map("booking")
+}
+
+enum PriceApprovalStatus {
+  APPROVED          // Default — price is final
+  PENDING_APPROVAL  // Manager changed price, waiting for admin
+  REJECTED          // Admin rejected the change
 }
 
 enum BookingStatus {
@@ -619,6 +635,7 @@ model ProductCategory {
 
   @@map("product_category")
 }
+
 
 model Product {
   id          String   @id @default(cuid())
@@ -816,4 +833,24 @@ model AcademyStudent {
   @@index([courseId])
   @@index([batchId])
   @@map("academy_student")
+}
+
+model UserNotification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title     String
+  message   String   @db.Text
+  type      String   // e.g. "PHOTO_UPLOAD", "PHOTO_REJECTED", "SYSTEM"
+  
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("user_notification")
 }

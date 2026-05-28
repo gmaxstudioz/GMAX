@@ -8,6 +8,7 @@ import { formatCurrency } from "@/lib/utils";
 import { ArrowLeft, BookOpen, Calendar, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { CourseSignupForm } from "./_components/CourseSignupForm";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface CourseModule {
     id: string;
@@ -82,59 +83,63 @@ export default function CoursePage() {
                 <div className="lg:col-span-7 space-y-10">
                     <div>
                         <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">{course.title}</h1>
-                        <p className="text-lg text-neutral-400 leading-relaxed whitespace-pre-wrap">
+                        <p className="text-lg text-muted-foreground leading-relaxed whitespace-pre-wrap">
                             {course.description}
                         </p>
                     </div>
 
-                    <div className="flex flex-wrap gap-6 text-neutral-300 bg-neutral-900/50 p-6 rounded-2xl border border-neutral-800">
-                        <div className="flex items-center gap-3">
-                            <div className="p-3 bg-neutral-800 rounded-lg">
-                                <Calendar className="w-5 h-5 text-neutral-400" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-neutral-500 uppercase tracking-wider mb-1">Duration</p>
-                                <p className="font-medium">
-                                    {course.duration || "Self-paced"}
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="p-3 bg-neutral-800 rounded-lg">
-                                <BookOpen className="w-5 h-5 text-neutral-400" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-neutral-500 uppercase tracking-wider mb-1">Modules</p>
-                                <p className="font-medium">{course.modules?.length || 0}</p>
-                            </div>
-                        </div>
-                        {course.location && (
+                    <Card className="bg-card text-card-foreground border-border shadow-sm py-0">
+                        <CardContent className="flex flex-wrap gap-6 p-6">
                             <div className="flex items-center gap-3">
-                                <div className="p-3 bg-neutral-800 rounded-lg">
-                                    <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                <div className="p-3 bg-muted rounded-lg">
+                                    <Calendar className="w-5 h-5 text-muted-foreground" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-neutral-500 uppercase tracking-wider mb-1">Location</p>
-                                    <p className="font-medium">{course.location}</p>
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Duration</p>
+                                    <p className="font-medium">
+                                        {course.duration || "Self-paced"}
+                                    </p>
                                 </div>
                             </div>
-                        )}
-                    </div>
+                            <div className="flex items-center gap-3">
+                                <div className="p-3 bg-muted rounded-lg">
+                                    <BookOpen className="w-5 h-5 text-muted-foreground" />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Modules</p>
+                                    <p className="font-medium">{course.modules?.length || 0}</p>
+                                </div>
+                            </div>
+                            {course.location && (
+                                <div className="flex items-center gap-3">
+                                    <div className="p-3 bg-muted rounded-lg">
+                                        <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Location</p>
+                                        <p className="font-medium">{course.location}</p>
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
 
                     {course.modules && course.modules.length > 0 && (
                         <div>
                             <h2 className="text-2xl font-bold mb-6">What you will learn</h2>
                             <div className="space-y-4">
                                 {course.modules.map((mod: CourseModule, idx: number) => (
-                                    <div key={mod.id} className="p-5 bg-neutral-900/30 border border-neutral-800 rounded-xl flex gap-4">
-                                        <div className="text-2xl font-bold text-neutral-700 w-8">{idx + 1}</div>
-                                        <div>
-                                            <h3 className="text-lg font-medium text-neutral-200 mb-1">{mod.title}</h3>
-                                            {mod.description && (
-                                                <p className="text-sm text-neutral-500">{mod.description}</p>
-                                            )}
-                                        </div>
-                                    </div>
+                                    <Card key={mod.id} className="bg-card border-border shadow-sm py-0 rounded-xl">
+                                        <CardContent className="p-5 flex gap-4">
+                                            <div className="text-2xl font-bold text-muted-foreground w-8">{idx + 1}</div>
+                                            <div>
+                                                <h3 className="text-lg font-medium text-foreground mb-1">{mod.title}</h3>
+                                                {mod.description && (
+                                                    <p className="text-sm text-muted-foreground">{mod.description}</p>
+                                                )}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
                                 ))}
                             </div>
                         </div>
@@ -143,29 +148,31 @@ export default function CoursePage() {
 
                 <div className="lg:col-span-5">
                     <div className="sticky top-32">
-                        <div className="aspect-[4/3] rounded-t-2xl bg-neutral-900 relative overflow-hidden">
-                            {course.thumbnail ? (
-                                <Image 
-                                    src={`${process.env.NEXT_PUBLIC_R2_PUBLIC_URL?.startsWith('http') ? '' : 'https://'}${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${course.thumbnail}`} 
-                                    alt={course.title} 
-                                    fill 
-                                    className="object-cover"
-                                />
-                            ) : (
-                                <div className="absolute inset-0 flex items-center justify-center text-neutral-700">
-                                    <BookOpen className="w-16 h-16 opacity-50" />
-                                </div>
-                            )}
-                        </div>
-                        <div className="bg-neutral-900 border border-t-0 border-neutral-800 rounded-b-2xl p-6 lg:p-8">
-                            <div className="flex items-end gap-2 mb-8 border-b border-neutral-800 pb-6">
-                                <span className="text-4xl font-bold text-white tracking-tight">
-                                    {formatCurrency(Number(course.price))}
-                                </span>
+                        <Card className="overflow-hidden border-border bg-card shadow-lg py-0">
+                            <div className="aspect-[4/3] bg-muted relative overflow-hidden">
+                                {course.thumbnail ? (
+                                    <Image 
+                                        src={`${process.env.NEXT_PUBLIC_R2_PUBLIC_URL?.startsWith('http') ? '' : 'https://'}${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${course.thumbnail}`} 
+                                        alt={course.title} 
+                                        fill 
+                                        className="object-cover"
+                                    />
+                                ) : (
+                                    <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                                        <BookOpen className="w-16 h-16 opacity-50" />
+                                    </div>
+                                )}
                             </div>
-                            
-                            <CourseSignupForm course={course} />
-                        </div>
+                            <CardContent className="p-6 lg:p-8 pt-6">
+                                <div className="flex items-end gap-2 mb-8 border-b border-border pb-6">
+                                    <span className="text-4xl font-bold text-foreground tracking-tight">
+                                        {formatCurrency(Number(course.price))}
+                                    </span>
+                                </div>
+                                
+                                <CourseSignupForm course={course} />
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
             </div>

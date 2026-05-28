@@ -50,19 +50,16 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
     // Auto-redirect after success
     useEffect(() => {
         if (status !== "success") return;
-        const timer = setInterval(() => {
-            setCountdown((prev) => {
-                if (prev <= 1) {
-                    clearInterval(timer);
-                    const redirectTo = purchaseType === "product" ? "/shop/access" : "/";
-                    router.push(redirectTo);
-                    return 0;
-                }
-                return prev - 1;
-            });
+        if (countdown <= 0) {
+            const redirectTo = purchaseType === "product" ? "/shop/access" : "/";
+            router.push(redirectTo);
+            return;
+        }
+        const timer = setTimeout(() => {
+            setCountdown((prev) => prev - 1);
         }, 1000);
-        return () => clearInterval(timer);
-    }, [status, purchaseType, router]);
+        return () => clearTimeout(timer);
+    }, [status, countdown, purchaseType, router]);
 
     const handlePay = () => {
         if (!scriptLoaded || !window.PaystackPop) {
@@ -81,19 +78,24 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
             return;
         }
 
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reference);
+        const actualRef = (purchaseType === "booking" && isUUID) 
+            ? `${reference}_bal_${Date.now()}` 
+            : reference;
+
         try {
             const popup = new window.PaystackPop();
             popup.newTransaction({
                 key: publicKey,
                 email,
                 amount: Math.round(amount * 100),
-                ref: reference,
+                ref: actualRef,
                 currency: "NGN",
                 onSuccess: async () => {
                     setStatus("processing");
                     
                     if (purchaseType === "booking") {
-                        const { data: result, error } = await tryCatch(verifyBookingPayment(reference));
+                        const { data: result, error } = await tryCatch(verifyBookingPayment(actualRef));
                         if (error || result?.status === "FAILED") {
                             setStatus("failed");
                             toast.error("Payment verification failed. Please contact support.");
@@ -102,7 +104,7 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
                             toast.success("Payment successful!");
                         }
                     } else {
-                        const { data: result, error } = await tryCatch(verifyPurchase(reference));
+                        const { data: result, error } = await tryCatch(verifyPurchase(actualRef));
                         if (error || !result?.verified) {
                             setStatus("failed");
                             toast.error("Payment verification failed. Please contact support.");

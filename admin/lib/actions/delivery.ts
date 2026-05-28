@@ -36,6 +36,10 @@ export async function deliverBooking(bookingId: string) {
         throw new Error("Unauthorized access to studio");
     }
 
+    if (!["owner", "admin", "manager", "developer"].includes(member.role)) {
+        throw new Error("You do not have permission to deliver assets");
+    }
+
     // Generate access code if one doesn't exist
 
     const publicDomain = process.env.NEXT_PUBLIC_APP_URL;
@@ -197,6 +201,10 @@ export async function sendBalanceDueReminder(bookingId: string) {
 
     if (!member) {
         throw new Error("Unauthorized access to studio");
+    }
+
+    if (!["owner", "admin", "manager", "developer"].includes(member.role)) {
+        throw new Error("You do not have permission to send payment reminders");
     }
 
     const publicDomain = process.env.NEXT_PUBLIC_APP_URL;

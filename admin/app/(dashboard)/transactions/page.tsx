@@ -26,7 +26,7 @@ export default async function TransactionsPage() {
     });
     
     // Check if user is an admin/manager
-    const adminRoles = ["owner", "developer", "manager"];
+    const adminRoles = ["owner", "developer"];
     const hasAdminRole = members.some(m => adminRoles.includes(m.role));
 
     if (!hasAdminRole) {

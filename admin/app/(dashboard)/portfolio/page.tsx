@@ -27,7 +27,7 @@ export default async function Page() {
       where: { userId: session.user.id },
       select: { role: true },
     });
-    const adminRoles = ["owner", "developer", "manager"];
+    const adminRoles = ["owner", "developer"];
     const hasAdminRole = members.some((m) => adminRoles.includes(m.role));
     if (members.length > 0 && !hasAdminRole) {
       redirect("/my-tasks");

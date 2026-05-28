@@ -30,55 +30,27 @@ export default async function Page() {
     select: { role: true, studioId: true }
   });
   
-  const adminRoles = ["owner", "developer", "manager"];
+  const adminRoles = ["owner", "developer"];
   const hasAdminRole = members.some(m => adminRoles.includes(m.role));
   const isOnlyMinorRole = members.length > 0 && !hasAdminRole;
 
   if (isOnlyMinorRole) {
-    const minorRoleStats = { total: 0, completed: 0, pending: 0 };
-    const myBookings = await prisma.booking.findMany({
-      where: { member: { userId: session.user.id } }
-    });
-    minorRoleStats.total = myBookings.length;
-    minorRoleStats.completed = myBookings.filter(b => b.bookingStatus === "COMPLETED").length;
-    minorRoleStats.pending = myBookings.filter(b => b.bookingStatus === "PENDING").length;
+    const photoVideoRoles = ["photographer", "videographer"];
+    const isPhotoVideoRole = members.every(m => photoVideoRoles.includes(m.role));
 
-    return (
-      <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">
-        <h1 className="text-2xl font-bold">Welcome, {session?.user.name}!</h1>
-        <p className="text-muted-foreground">Here is an overview of your tasks and assignments.</p>
-        
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Assigned Tasks</CardTitle>
-              <BriefcaseIcon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{minorRoleStats.total}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Tasks</CardTitle>
-              <ClockIcon className="h-4 w-4 text-amber-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{minorRoleStats.pending}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completed Tasks</CardTitle>
-              <CheckCircleIcon className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{minorRoleStats.completed}</div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
+    if (isPhotoVideoRole) {
+      redirect("/my-tasks");
+    }
+
+    if (members.length > 0) {
+      const primaryStudioId = members[0].studioId;
+      const studio = await prisma.studio.findUnique({ where: { id: primaryStudioId } });
+      if (studio) {
+        redirect(`/studios/${studio.slug}`);
+      }
+    }
+    
+    redirect("/my-tasks");
   }
 
   // === ADMIN DATA AGGREGATION ===

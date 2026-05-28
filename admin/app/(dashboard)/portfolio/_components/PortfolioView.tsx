@@ -71,6 +71,8 @@ const DEFAULT_CATEGORIES = [
     "Videography",
     "Events",
     "Commercial",
+    "Premium Shoot",
+    "Basic Shoot",
     "Portraits",
     "General",
 ];

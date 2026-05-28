@@ -138,38 +138,55 @@ export const clientSubmitReview = os.photo.clientSubmitReview
             },
         });
 
-        // Try to send email notifications to manager/admin and the assigned staff
-        const dashboardLink = `${process.env.PORTAL_URL || "http://localhost:3000"}/studios/${booking.studio.slug}/reviews`;
+        // Try to send email and in-app notifications to manager/admin and the assigned staff
+        const dashboardLink = `${process.env.PORTAL_URL || "http://localhost:3000"}/studios/${booking.studio.slug}/bookings/detail/${booking.id}`;
         const sentEmails = new Set<string>();
+        const notifiedUserIds = new Set<string>();
 
-        const sendTo = async (email: string, name: string) => {
-            if (!email || sentEmails.has(email)) return;
-            sentEmails.add(email);
-            try {
-                await sendReviewNotificationEmail({
-                    email,
-                    recipientName: name,
-                    clientName: booking.client.name,
-                    serviceName: booking.service.name,
-                    reviewContent: input.description,
-                    dashboardLink,
-                });
-            } catch (err) {
-                console.error(`Failed to send review notification to ${email}:`, err);
+        const sendTo = async (email: string, name: string, userId: string) => {
+            if (email && !sentEmails.has(email)) {
+                sentEmails.add(email);
+                try {
+                    await sendReviewNotificationEmail({
+                        email,
+                        recipientName: name,
+                        clientName: booking.client.name,
+                        serviceName: booking.service.name,
+                        reviewContent: input.description,
+                        dashboardLink,
+                    });
+                } catch (err) {
+                    console.error(`Failed to send review notification to ${email}:`, err);
+                }
+            }
+
+            if (userId && !notifiedUserIds.has(userId)) {
+                notifiedUserIds.add(userId);
+                try {
+                    await prisma.userNotification.create({
+                        data: {
+                            userId,
+                            title: "New Revision Request",
+                            message: `Client ${booking.client.name} requested a revision for their photos.`,
+                            type: "REVISION_REQUEST",
+                            bookingId: booking.id,
+                        }
+                    });
+                } catch (err) {
+                    console.error(`Failed to create in-app notification for ${userId}:`, err);
+                }
             }
         };
 
         // Notify assigned staff
-        if (booking.member?.user?.email) {
-            await sendTo(booking.member.user.email, booking.member.user.name || "Staff");
+        if (booking.member?.userId) {
+            await sendTo(booking.member.user?.email || "", booking.member.user?.name || "Staff", booking.member.userId);
         }
 
-        // Notify admins/owners
+        // Notify admins/owners/managers
         for (const m of booking.studio.members) {
-            if (m.role === "admin" || m.role === "owner") {
-                if (m.user?.email) {
-                    await sendTo(m.user.email, m.user.name || "Admin");
-                }
+            if (m.role === "admin" || m.role === "owner" || m.role === "manager") {
+                await sendTo(m.user?.email || "", m.user?.name || "Admin", m.userId);
             }
         }
 

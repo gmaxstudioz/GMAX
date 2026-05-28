@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { registerForCourse } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 
 declare global {
     interface Window {
@@ -111,81 +112,81 @@ export function CourseSignupForm({ course }: { course: CourseData }) {
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-                <div className="p-3 bg-red-900/30 border border-red-800 rounded-lg text-red-200 text-sm">
+                <div className="p-3 bg-destructive/10 border border-destructive rounded-lg text-destructive text-sm">
                     {error}
                 </div>
             )}
             
             <div className="space-y-2">
-                <label className="text-xs font-medium text-neutral-400 uppercase tracking-wider">Select Batch / Session</label>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Select Batch / Session</label>
                 <select 
                     name="batchId" 
                     required 
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-neutral-500 transition-colors"
+                    className="w-full bg-background border border-input rounded-lg px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-input transition-colors"
                 >
                     <option value="">-- Choose a Batch --</option>
                     {course.batches?.map((batch: Batch) => (
                         <option key={batch.id} value={batch.id}>
-                            {batch.name} ({new Date(batch.startDate).toLocaleDateString()} - {new Date(batch.endDate).toLocaleDateString()})
+                            {batch.name} ({format(new Date(batch.startDate), "do MMMM")} - {format(new Date(batch.endDate), "do MMMM")})
                         </option>
                     ))}
                 </select>
                 {(!course.batches || course.batches.length === 0) && (
-                    <p className="text-xs text-red-400 mt-1">No batches available for this course yet.</p>
+                    <p className="text-xs text-destructive mt-1">No batches available for this course yet.</p>
                 )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <label className="text-xs font-medium text-neutral-400 uppercase tracking-wider">First Name</label>
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">First Name</label>
                     <input 
                         type="text" 
                         name="firstName" 
                         required 
-                        className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-500 transition-colors"
+                        className="w-full bg-background border border-input rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-input transition-colors"
                         placeholder="Jane"
                     />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-xs font-medium text-neutral-400 uppercase tracking-wider">Last Name</label>
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Last Name</label>
                     <input 
                         type="text" 
                         name="lastName" 
                         required 
-                        className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-500 transition-colors"
+                        className="w-full bg-background border border-input rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-input transition-colors"
                         placeholder="Doe"
                     />
                 </div>
             </div>
             
             <div className="space-y-2">
-                <label className="text-xs font-medium text-neutral-400 uppercase tracking-wider">Email Address</label>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Email Address</label>
                 <input 
                     type="email" 
                     name="email" 
                     required 
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-500 transition-colors"
+                    className="w-full bg-background border border-input rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-input transition-colors"
                     placeholder="jane@example.com"
                 />
             </div>
             
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <label className="text-xs font-medium text-neutral-400 uppercase tracking-wider">Phone Number</label>
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Phone Number</label>
                     <input 
                         type="tel" 
                         name="phone" 
                         required 
-                        className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-500 transition-colors"
+                        className="w-full bg-background border border-input rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-input transition-colors"
                         placeholder="+234..."
                     />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-xs font-medium text-neutral-400 uppercase tracking-wider">How did you hear about us?</label>
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">How did you hear about us?</label>
                     <select 
                         name="howDidYouHear" 
                         required 
-                        className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-neutral-500 transition-colors"
+                        className="w-full bg-background border border-input rounded-lg px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-input transition-colors"
                     >
                         <option value="">-- Select --</option>
                         <option value="Social Media">Social Media</option>
@@ -197,17 +198,17 @@ export function CourseSignupForm({ course }: { course: CourseData }) {
             </div>
 
             <div className="space-y-2">
-                <label className="text-xs font-medium text-neutral-400 uppercase tracking-wider">Payment Plan</label>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Payment Plan</label>
                 <div className="grid grid-cols-3 gap-2">
-                    <label className={`cursor-pointer border rounded-lg p-3 text-center transition-colors ${selectedPlan === "FULL" ? "bg-white text-black border-white" : "bg-neutral-950 border-neutral-800 text-neutral-300 hover:border-neutral-600"}`}>
+                    <label className={`cursor-pointer border rounded-lg p-3 text-center transition-colors ${selectedPlan === "FULL" ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border text-foreground hover:border-muted-foreground"}`}>
                         <input type="radio" name="paymentPlan" value="FULL" checked={selectedPlan === "FULL"} onChange={(e) => setSelectedPlan(e.target.value)} className="hidden" />
                         <div className="text-xs font-semibold uppercase">100% Full</div>
                     </label>
-                    <label className={`cursor-pointer border rounded-lg p-3 text-center transition-colors ${selectedPlan === "HALF" ? "bg-white text-black border-white" : "bg-neutral-950 border-neutral-800 text-neutral-300 hover:border-neutral-600"}`}>
+                    <label className={`cursor-pointer border rounded-lg p-3 text-center transition-colors ${selectedPlan === "HALF" ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border text-foreground hover:border-muted-foreground"}`}>
                         <input type="radio" name="paymentPlan" value="HALF" checked={selectedPlan === "HALF"} onChange={(e) => setSelectedPlan(e.target.value)} className="hidden" />
                         <div className="text-xs font-semibold uppercase">50% Part</div>
                     </label>
-                    <label className={`cursor-pointer border rounded-lg p-3 text-center transition-colors ${selectedPlan === "QUARTER" ? "bg-white text-black border-white" : "bg-neutral-950 border-neutral-800 text-neutral-300 hover:border-neutral-600"}`}>
+                    <label className={`cursor-pointer border rounded-lg p-3 text-center transition-colors ${selectedPlan === "QUARTER" ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border text-foreground hover:border-muted-foreground"}`}>
                         <input type="radio" name="paymentPlan" value="QUARTER" checked={selectedPlan === "QUARTER"} onChange={(e) => setSelectedPlan(e.target.value)} className="hidden" />
                         <div className="text-xs font-semibold uppercase">25% Part</div>
                     </label>
@@ -217,11 +218,11 @@ export function CourseSignupForm({ course }: { course: CourseData }) {
             <button 
                 type="submit" 
                 disabled={loading || !course.batches || course.batches.length === 0}
-                className="w-full mt-4 bg-white text-black font-semibold rounded-lg px-4 py-4 hover:bg-neutral-200 transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
+                className="w-full mt-4 bg-primary text-primary-foreground font-semibold rounded-lg px-4 py-4 hover:opacity-90 transition-opacity disabled:opacity-50 flex justify-center items-center gap-2"
             >
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Pay ₦{displayPrice.toLocaleString()}</>}
             </button>
-            <p className="text-center text-xs text-neutral-600 mt-4">
+            <p className="text-center text-xs text-muted-foreground mt-4">
                 Payments are securely processed by Paystack
             </p>
         </form>

@@ -415,7 +415,8 @@ export const ModelName = {
   AcademyCourse: 'AcademyCourse',
   AcademyBatch: 'AcademyBatch',
   AcademyModule: 'AcademyModule',
-  AcademyStudent: 'AcademyStudent'
+  AcademyStudent: 'AcademyStudent',
+  UserNotification: 'UserNotification'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -431,7 +432,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "session" | "account" | "verification" | "studio" | "role" | "studioSession" | "member" | "invitation" | "service" | "serviceVariant" | "serviceDeliverable" | "course" | "courseModule" | "enrollment" | "client" | "bookingIntent" | "booking" | "payment" | "photo" | "notification" | "productCategory" | "product" | "buyer" | "buyerAccessToken" | "productAccess" | "portfolioItem" | "revisionRequest" | "academyCourse" | "academyBatch" | "academyModule" | "academyStudent"
+    modelProps: "user" | "session" | "account" | "verification" | "studio" | "role" | "studioSession" | "member" | "invitation" | "service" | "serviceVariant" | "serviceDeliverable" | "course" | "courseModule" | "enrollment" | "client" | "bookingIntent" | "booking" | "payment" | "photo" | "notification" | "productCategory" | "product" | "buyer" | "buyerAccessToken" | "productAccess" | "portfolioItem" | "revisionRequest" | "academyCourse" | "academyBatch" | "academyModule" | "academyStudent" | "userNotification"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2803,6 +2804,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    UserNotification: {
+      payload: Prisma.$UserNotificationPayload<ExtArgs>
+      fields: Prisma.UserNotificationFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.UserNotificationFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserNotificationPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.UserNotificationFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserNotificationPayload>
+        }
+        findFirst: {
+          args: Prisma.UserNotificationFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserNotificationPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.UserNotificationFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserNotificationPayload>
+        }
+        findMany: {
+          args: Prisma.UserNotificationFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserNotificationPayload>[]
+        }
+        create: {
+          args: Prisma.UserNotificationCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserNotificationPayload>
+        }
+        createMany: {
+          args: Prisma.UserNotificationCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.UserNotificationCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserNotificationPayload>[]
+        }
+        delete: {
+          args: Prisma.UserNotificationDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserNotificationPayload>
+        }
+        update: {
+          args: Prisma.UserNotificationUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserNotificationPayload>
+        }
+        deleteMany: {
+          args: Prisma.UserNotificationDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.UserNotificationUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.UserNotificationUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserNotificationPayload>[]
+        }
+        upsert: {
+          args: Prisma.UserNotificationUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserNotificationPayload>
+        }
+        aggregate: {
+          args: Prisma.UserNotificationAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateUserNotification>
+        }
+        groupBy: {
+          args: Prisma.UserNotificationGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserNotificationGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.UserNotificationCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserNotificationCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -2986,6 +3061,7 @@ export type ServiceScalarFieldEnum = (typeof ServiceScalarFieldEnum)[keyof typeo
 export const ServiceVariantScalarFieldEnum = {
   id: 'id',
   serviceId: 'serviceId',
+  title: 'title',
   locationType: 'locationType',
   basePrice: 'basePrice',
   maxPrice: 'maxPrice',
@@ -3107,6 +3183,11 @@ export const BookingScalarFieldEnum = {
   notes: 'notes',
   totalAmount: 'totalAmount',
   paymentPlan: 'paymentPlan',
+  priceApprovalStatus: 'priceApprovalStatus',
+  pendingTotalAmount: 'pendingTotalAmount',
+  priceChangedBy: 'priceChangedBy',
+  priceApprovedBy: 'priceApprovedBy',
+  priceApprovedAt: 'priceApprovedAt',
   bookingStatus: 'bookingStatus',
   paymentStatus: 'paymentStatus',
   deliveryStatus: 'deliveryStatus',
@@ -3350,6 +3431,20 @@ export const AcademyStudentScalarFieldEnum = {
 export type AcademyStudentScalarFieldEnum = (typeof AcademyStudentScalarFieldEnum)[keyof typeof AcademyStudentScalarFieldEnum]
 
 
+export const UserNotificationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  title: 'title',
+  message: 'message',
+  type: 'type',
+  bookingId: 'bookingId',
+  isRead: 'isRead',
+  createdAt: 'createdAt'
+} as const
+
+export type UserNotificationScalarFieldEnum = (typeof UserNotificationScalarFieldEnum)[keyof typeof UserNotificationScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -3569,6 +3664,20 @@ export type EnumBookingIntentStatusFieldRefInput<$PrismaModel> = FieldRefInputTy
  * Reference to a field of type 'BookingIntentStatus[]'
  */
 export type ListEnumBookingIntentStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BookingIntentStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'PriceApprovalStatus'
+ */
+export type EnumPriceApprovalStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PriceApprovalStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'PriceApprovalStatus[]'
+ */
+export type ListEnumPriceApprovalStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PriceApprovalStatus[]'>
     
 
 
@@ -3838,6 +3947,7 @@ export type GlobalOmitConfig = {
   academyBatch?: Prisma.AcademyBatchOmit
   academyModule?: Prisma.AcademyModuleOmit
   academyStudent?: Prisma.AcademyStudentOmit
+  userNotification?: Prisma.UserNotificationOmit
 }
 
 /* Types for Logging */

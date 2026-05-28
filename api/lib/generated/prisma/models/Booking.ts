@@ -30,12 +30,14 @@ export type BookingAvgAggregateOutputType = {
   sessionCount: number | null
   extraPicturesCount: number | null
   totalAmount: runtime.Decimal | null
+  pendingTotalAmount: runtime.Decimal | null
 }
 
 export type BookingSumAggregateOutputType = {
   sessionCount: number | null
   extraPicturesCount: number | null
   totalAmount: runtime.Decimal | null
+  pendingTotalAmount: runtime.Decimal | null
 }
 
 export type BookingMinAggregateOutputType = {
@@ -46,6 +48,11 @@ export type BookingMinAggregateOutputType = {
   notes: string | null
   totalAmount: runtime.Decimal | null
   paymentPlan: $Enums.PaymentPlan | null
+  priceApprovalStatus: $Enums.PriceApprovalStatus | null
+  pendingTotalAmount: runtime.Decimal | null
+  priceChangedBy: string | null
+  priceApprovedBy: string | null
+  priceApprovedAt: Date | null
   bookingStatus: $Enums.BookingStatus | null
   paymentStatus: $Enums.PaymentStatus | null
   deliveryStatus: $Enums.DeliveryStatus | null
@@ -69,6 +76,11 @@ export type BookingMaxAggregateOutputType = {
   notes: string | null
   totalAmount: runtime.Decimal | null
   paymentPlan: $Enums.PaymentPlan | null
+  priceApprovalStatus: $Enums.PriceApprovalStatus | null
+  pendingTotalAmount: runtime.Decimal | null
+  priceChangedBy: string | null
+  priceApprovedBy: string | null
+  priceApprovedAt: Date | null
   bookingStatus: $Enums.BookingStatus | null
   paymentStatus: $Enums.PaymentStatus | null
   deliveryStatus: $Enums.DeliveryStatus | null
@@ -92,6 +104,11 @@ export type BookingCountAggregateOutputType = {
   notes: number
   totalAmount: number
   paymentPlan: number
+  priceApprovalStatus: number
+  pendingTotalAmount: number
+  priceChangedBy: number
+  priceApprovedBy: number
+  priceApprovedAt: number
   bookingStatus: number
   paymentStatus: number
   deliveryStatus: number
@@ -113,12 +130,14 @@ export type BookingAvgAggregateInputType = {
   sessionCount?: true
   extraPicturesCount?: true
   totalAmount?: true
+  pendingTotalAmount?: true
 }
 
 export type BookingSumAggregateInputType = {
   sessionCount?: true
   extraPicturesCount?: true
   totalAmount?: true
+  pendingTotalAmount?: true
 }
 
 export type BookingMinAggregateInputType = {
@@ -129,6 +148,11 @@ export type BookingMinAggregateInputType = {
   notes?: true
   totalAmount?: true
   paymentPlan?: true
+  priceApprovalStatus?: true
+  pendingTotalAmount?: true
+  priceChangedBy?: true
+  priceApprovedBy?: true
+  priceApprovedAt?: true
   bookingStatus?: true
   paymentStatus?: true
   deliveryStatus?: true
@@ -152,6 +176,11 @@ export type BookingMaxAggregateInputType = {
   notes?: true
   totalAmount?: true
   paymentPlan?: true
+  priceApprovalStatus?: true
+  pendingTotalAmount?: true
+  priceChangedBy?: true
+  priceApprovedBy?: true
+  priceApprovedAt?: true
   bookingStatus?: true
   paymentStatus?: true
   deliveryStatus?: true
@@ -175,6 +204,11 @@ export type BookingCountAggregateInputType = {
   notes?: true
   totalAmount?: true
   paymentPlan?: true
+  priceApprovalStatus?: true
+  pendingTotalAmount?: true
+  priceChangedBy?: true
+  priceApprovedBy?: true
+  priceApprovedAt?: true
   bookingStatus?: true
   paymentStatus?: true
   deliveryStatus?: true
@@ -285,6 +319,11 @@ export type BookingGroupByOutputType = {
   notes: string | null
   totalAmount: runtime.Decimal
   paymentPlan: $Enums.PaymentPlan
+  priceApprovalStatus: $Enums.PriceApprovalStatus
+  pendingTotalAmount: runtime.Decimal | null
+  priceChangedBy: string | null
+  priceApprovedBy: string | null
+  priceApprovedAt: Date | null
   bookingStatus: $Enums.BookingStatus
   paymentStatus: $Enums.PaymentStatus
   deliveryStatus: $Enums.DeliveryStatus
@@ -331,6 +370,11 @@ export type BookingWhereInput = {
   notes?: Prisma.StringNullableFilter<"Booking"> | string | null
   totalAmount?: Prisma.DecimalFilter<"Booking"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFilter<"Booking"> | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFilter<"Booking"> | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.DecimalNullableFilter<"Booking"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.StringNullableFilter<"Booking"> | string | null
+  priceApprovedBy?: Prisma.StringNullableFilter<"Booking"> | string | null
+  priceApprovedAt?: Prisma.DateTimeNullableFilter<"Booking"> | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFilter<"Booking"> | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFilter<"Booking"> | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFilter<"Booking"> | $Enums.DeliveryStatus
@@ -354,6 +398,7 @@ export type BookingWhereInput = {
   member?: Prisma.XOR<Prisma.MemberNullableScalarRelationFilter, Prisma.MemberWhereInput> | null
   serviceVariant?: Prisma.XOR<Prisma.ServiceVariantNullableScalarRelationFilter, Prisma.ServiceVariantWhereInput> | null
   notifications?: Prisma.NotificationListRelationFilter
+  userNotifications?: Prisma.UserNotificationListRelationFilter
   revisionRequests?: Prisma.RevisionRequestListRelationFilter
 }
 
@@ -365,6 +410,11 @@ export type BookingOrderByWithRelationInput = {
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paymentPlan?: Prisma.SortOrder
+  priceApprovalStatus?: Prisma.SortOrder
+  pendingTotalAmount?: Prisma.SortOrderInput | Prisma.SortOrder
+  priceChangedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  priceApprovedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  priceApprovedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   bookingStatus?: Prisma.SortOrder
   paymentStatus?: Prisma.SortOrder
   deliveryStatus?: Prisma.SortOrder
@@ -388,6 +438,7 @@ export type BookingOrderByWithRelationInput = {
   member?: Prisma.MemberOrderByWithRelationInput
   serviceVariant?: Prisma.ServiceVariantOrderByWithRelationInput
   notifications?: Prisma.NotificationOrderByRelationAggregateInput
+  userNotifications?: Prisma.UserNotificationOrderByRelationAggregateInput
   revisionRequests?: Prisma.RevisionRequestOrderByRelationAggregateInput
 }
 
@@ -403,6 +454,11 @@ export type BookingWhereUniqueInput = Prisma.AtLeast<{
   notes?: Prisma.StringNullableFilter<"Booking"> | string | null
   totalAmount?: Prisma.DecimalFilter<"Booking"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFilter<"Booking"> | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFilter<"Booking"> | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.DecimalNullableFilter<"Booking"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.StringNullableFilter<"Booking"> | string | null
+  priceApprovedBy?: Prisma.StringNullableFilter<"Booking"> | string | null
+  priceApprovedAt?: Prisma.DateTimeNullableFilter<"Booking"> | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFilter<"Booking"> | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFilter<"Booking"> | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFilter<"Booking"> | $Enums.DeliveryStatus
@@ -425,6 +481,7 @@ export type BookingWhereUniqueInput = Prisma.AtLeast<{
   member?: Prisma.XOR<Prisma.MemberNullableScalarRelationFilter, Prisma.MemberWhereInput> | null
   serviceVariant?: Prisma.XOR<Prisma.ServiceVariantNullableScalarRelationFilter, Prisma.ServiceVariantWhereInput> | null
   notifications?: Prisma.NotificationListRelationFilter
+  userNotifications?: Prisma.UserNotificationListRelationFilter
   revisionRequests?: Prisma.RevisionRequestListRelationFilter
 }, "id" | "accessCode">
 
@@ -436,6 +493,11 @@ export type BookingOrderByWithAggregationInput = {
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paymentPlan?: Prisma.SortOrder
+  priceApprovalStatus?: Prisma.SortOrder
+  pendingTotalAmount?: Prisma.SortOrderInput | Prisma.SortOrder
+  priceChangedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  priceApprovedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  priceApprovedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   bookingStatus?: Prisma.SortOrder
   paymentStatus?: Prisma.SortOrder
   deliveryStatus?: Prisma.SortOrder
@@ -467,6 +529,11 @@ export type BookingScalarWhereWithAggregatesInput = {
   notes?: Prisma.StringNullableWithAggregatesFilter<"Booking"> | string | null
   totalAmount?: Prisma.DecimalWithAggregatesFilter<"Booking"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanWithAggregatesFilter<"Booking"> | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusWithAggregatesFilter<"Booking"> | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.DecimalNullableWithAggregatesFilter<"Booking"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.StringNullableWithAggregatesFilter<"Booking"> | string | null
+  priceApprovedBy?: Prisma.StringNullableWithAggregatesFilter<"Booking"> | string | null
+  priceApprovedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Booking"> | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusWithAggregatesFilter<"Booking"> | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusWithAggregatesFilter<"Booking"> | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusWithAggregatesFilter<"Booking"> | $Enums.DeliveryStatus
@@ -490,6 +557,11 @@ export type BookingCreateInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -507,6 +579,7 @@ export type BookingCreateInput = {
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
@@ -518,6 +591,11 @@ export type BookingUncheckedCreateInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -535,6 +613,7 @@ export type BookingUncheckedCreateInput = {
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationUncheckedCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
@@ -546,6 +625,11 @@ export type BookingUpdateInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -563,6 +647,7 @@ export type BookingUpdateInput = {
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
@@ -574,6 +659,11 @@ export type BookingUncheckedUpdateInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -591,6 +681,7 @@ export type BookingUncheckedUpdateInput = {
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUncheckedUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
@@ -602,6 +693,11 @@ export type BookingCreateManyInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -625,6 +721,11 @@ export type BookingUpdateManyMutationInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -642,6 +743,11 @@ export type BookingUncheckedUpdateManyInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -675,6 +781,11 @@ export type BookingCountOrderByAggregateInput = {
   notes?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paymentPlan?: Prisma.SortOrder
+  priceApprovalStatus?: Prisma.SortOrder
+  pendingTotalAmount?: Prisma.SortOrder
+  priceChangedBy?: Prisma.SortOrder
+  priceApprovedBy?: Prisma.SortOrder
+  priceApprovedAt?: Prisma.SortOrder
   bookingStatus?: Prisma.SortOrder
   paymentStatus?: Prisma.SortOrder
   deliveryStatus?: Prisma.SortOrder
@@ -694,6 +805,7 @@ export type BookingAvgOrderByAggregateInput = {
   sessionCount?: Prisma.SortOrder
   extraPicturesCount?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
+  pendingTotalAmount?: Prisma.SortOrder
 }
 
 export type BookingMaxOrderByAggregateInput = {
@@ -704,6 +816,11 @@ export type BookingMaxOrderByAggregateInput = {
   notes?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paymentPlan?: Prisma.SortOrder
+  priceApprovalStatus?: Prisma.SortOrder
+  pendingTotalAmount?: Prisma.SortOrder
+  priceChangedBy?: Prisma.SortOrder
+  priceApprovedBy?: Prisma.SortOrder
+  priceApprovedAt?: Prisma.SortOrder
   bookingStatus?: Prisma.SortOrder
   paymentStatus?: Prisma.SortOrder
   deliveryStatus?: Prisma.SortOrder
@@ -727,6 +844,11 @@ export type BookingMinOrderByAggregateInput = {
   notes?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paymentPlan?: Prisma.SortOrder
+  priceApprovalStatus?: Prisma.SortOrder
+  pendingTotalAmount?: Prisma.SortOrder
+  priceChangedBy?: Prisma.SortOrder
+  priceApprovedBy?: Prisma.SortOrder
+  priceApprovedAt?: Prisma.SortOrder
   bookingStatus?: Prisma.SortOrder
   paymentStatus?: Prisma.SortOrder
   deliveryStatus?: Prisma.SortOrder
@@ -746,6 +868,7 @@ export type BookingSumOrderByAggregateInput = {
   sessionCount?: Prisma.SortOrder
   extraPicturesCount?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
+  pendingTotalAmount?: Prisma.SortOrder
 }
 
 export type BookingNullableScalarRelationFilter = {
@@ -1048,6 +1171,10 @@ export type BookingUncheckedUpdateManyWithoutClientNestedInput = {
   deleteMany?: Prisma.BookingScalarWhereInput | Prisma.BookingScalarWhereInput[]
 }
 
+export type EnumPriceApprovalStatusFieldUpdateOperationsInput = {
+  set?: $Enums.PriceApprovalStatus
+}
+
 export type EnumBookingStatusFieldUpdateOperationsInput = {
   set?: $Enums.BookingStatus
 }
@@ -1116,6 +1243,22 @@ export type BookingUpdateOneRequiredWithoutRevisionRequestsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.BookingUpdateToOneWithWhereWithoutRevisionRequestsInput, Prisma.BookingUpdateWithoutRevisionRequestsInput>, Prisma.BookingUncheckedUpdateWithoutRevisionRequestsInput>
 }
 
+export type BookingCreateNestedOneWithoutUserNotificationsInput = {
+  create?: Prisma.XOR<Prisma.BookingCreateWithoutUserNotificationsInput, Prisma.BookingUncheckedCreateWithoutUserNotificationsInput>
+  connectOrCreate?: Prisma.BookingCreateOrConnectWithoutUserNotificationsInput
+  connect?: Prisma.BookingWhereUniqueInput
+}
+
+export type BookingUpdateOneWithoutUserNotificationsNestedInput = {
+  create?: Prisma.XOR<Prisma.BookingCreateWithoutUserNotificationsInput, Prisma.BookingUncheckedCreateWithoutUserNotificationsInput>
+  connectOrCreate?: Prisma.BookingCreateOrConnectWithoutUserNotificationsInput
+  upsert?: Prisma.BookingUpsertWithoutUserNotificationsInput
+  disconnect?: Prisma.BookingWhereInput | boolean
+  delete?: Prisma.BookingWhereInput | boolean
+  connect?: Prisma.BookingWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.BookingUpdateToOneWithWhereWithoutUserNotificationsInput, Prisma.BookingUpdateWithoutUserNotificationsInput>, Prisma.BookingUncheckedUpdateWithoutUserNotificationsInput>
+}
+
 export type BookingCreateWithoutCreatorInput = {
   id?: string
   bookingDate: Date | string
@@ -1124,6 +1267,11 @@ export type BookingCreateWithoutCreatorInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -1140,6 +1288,7 @@ export type BookingCreateWithoutCreatorInput = {
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
@@ -1151,6 +1300,11 @@ export type BookingUncheckedCreateWithoutCreatorInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -1167,6 +1321,7 @@ export type BookingUncheckedCreateWithoutCreatorInput = {
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationUncheckedCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
@@ -1207,6 +1362,11 @@ export type BookingScalarWhereInput = {
   notes?: Prisma.StringNullableFilter<"Booking"> | string | null
   totalAmount?: Prisma.DecimalFilter<"Booking"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFilter<"Booking"> | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFilter<"Booking"> | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.DecimalNullableFilter<"Booking"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.StringNullableFilter<"Booking"> | string | null
+  priceApprovedBy?: Prisma.StringNullableFilter<"Booking"> | string | null
+  priceApprovedAt?: Prisma.DateTimeNullableFilter<"Booking"> | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFilter<"Booking"> | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFilter<"Booking"> | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFilter<"Booking"> | $Enums.DeliveryStatus
@@ -1230,6 +1390,11 @@ export type BookingCreateWithoutStudioInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -1246,6 +1411,7 @@ export type BookingCreateWithoutStudioInput = {
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
@@ -1257,6 +1423,11 @@ export type BookingUncheckedCreateWithoutStudioInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -1273,6 +1444,7 @@ export type BookingUncheckedCreateWithoutStudioInput = {
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationUncheckedCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
@@ -1310,6 +1482,11 @@ export type BookingCreateWithoutMemberInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -1326,6 +1503,7 @@ export type BookingCreateWithoutMemberInput = {
   creator: Prisma.UserCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
@@ -1337,6 +1515,11 @@ export type BookingUncheckedCreateWithoutMemberInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -1353,6 +1536,7 @@ export type BookingUncheckedCreateWithoutMemberInput = {
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationUncheckedCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
@@ -1390,6 +1574,11 @@ export type BookingCreateWithoutServiceInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -1406,6 +1595,7 @@ export type BookingCreateWithoutServiceInput = {
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
@@ -1417,6 +1607,11 @@ export type BookingUncheckedCreateWithoutServiceInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -1433,6 +1628,7 @@ export type BookingUncheckedCreateWithoutServiceInput = {
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationUncheckedCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
@@ -1454,6 +1650,11 @@ export type BookingCreateWithoutAddonsInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -1470,6 +1671,7 @@ export type BookingCreateWithoutAddonsInput = {
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
@@ -1481,6 +1683,11 @@ export type BookingUncheckedCreateWithoutAddonsInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -1497,6 +1704,7 @@ export type BookingUncheckedCreateWithoutAddonsInput = {
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationUncheckedCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
@@ -1545,6 +1753,11 @@ export type BookingCreateWithoutServiceVariantInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -1561,6 +1774,7 @@ export type BookingCreateWithoutServiceVariantInput = {
   creator: Prisma.UserCreateNestedOneWithoutBookingsInput
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
@@ -1572,6 +1786,11 @@ export type BookingUncheckedCreateWithoutServiceVariantInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -1588,6 +1807,7 @@ export type BookingUncheckedCreateWithoutServiceVariantInput = {
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationUncheckedCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
@@ -1625,6 +1845,11 @@ export type BookingCreateWithoutClientInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -1641,6 +1866,7 @@ export type BookingCreateWithoutClientInput = {
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
@@ -1652,6 +1878,11 @@ export type BookingUncheckedCreateWithoutClientInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -1668,6 +1899,7 @@ export type BookingUncheckedCreateWithoutClientInput = {
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationUncheckedCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
@@ -1705,6 +1937,11 @@ export type BookingCreateWithoutPaymentsInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -1721,6 +1958,7 @@ export type BookingCreateWithoutPaymentsInput = {
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
@@ -1732,6 +1970,11 @@ export type BookingUncheckedCreateWithoutPaymentsInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -1748,6 +1991,7 @@ export type BookingUncheckedCreateWithoutPaymentsInput = {
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationUncheckedCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
@@ -1775,6 +2019,11 @@ export type BookingUpdateWithoutPaymentsInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -1791,6 +2040,7 @@ export type BookingUpdateWithoutPaymentsInput = {
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
@@ -1802,6 +2052,11 @@ export type BookingUncheckedUpdateWithoutPaymentsInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -1818,6 +2073,7 @@ export type BookingUncheckedUpdateWithoutPaymentsInput = {
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUncheckedUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
@@ -1829,6 +2085,11 @@ export type BookingCreateWithoutPhotosInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -1845,6 +2106,7 @@ export type BookingCreateWithoutPhotosInput = {
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
@@ -1856,6 +2118,11 @@ export type BookingUncheckedCreateWithoutPhotosInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -1872,6 +2139,7 @@ export type BookingUncheckedCreateWithoutPhotosInput = {
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationUncheckedCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
@@ -1899,6 +2167,11 @@ export type BookingUpdateWithoutPhotosInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -1915,6 +2188,7 @@ export type BookingUpdateWithoutPhotosInput = {
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
@@ -1926,6 +2200,11 @@ export type BookingUncheckedUpdateWithoutPhotosInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -1942,6 +2221,7 @@ export type BookingUncheckedUpdateWithoutPhotosInput = {
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUncheckedUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
@@ -1953,6 +2233,11 @@ export type BookingCreateWithoutNotificationsInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -1969,6 +2254,7 @@ export type BookingCreateWithoutNotificationsInput = {
   creator: Prisma.UserCreateNestedOneWithoutBookingsInput
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
+  userNotifications?: Prisma.UserNotificationCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
 }
 
@@ -1980,6 +2266,11 @@ export type BookingUncheckedCreateWithoutNotificationsInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -1996,6 +2287,7 @@ export type BookingUncheckedCreateWithoutNotificationsInput = {
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
+  userNotifications?: Prisma.UserNotificationUncheckedCreateNestedManyWithoutBookingInput
   revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
 }
 
@@ -2023,6 +2315,11 @@ export type BookingUpdateWithoutNotificationsInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2039,6 +2336,7 @@ export type BookingUpdateWithoutNotificationsInput = {
   creator?: Prisma.UserUpdateOneRequiredWithoutBookingsNestedInput
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
+  userNotifications?: Prisma.UserNotificationUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
@@ -2050,6 +2348,11 @@ export type BookingUncheckedUpdateWithoutNotificationsInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2066,6 +2369,7 @@ export type BookingUncheckedUpdateWithoutNotificationsInput = {
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
+  userNotifications?: Prisma.UserNotificationUncheckedUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
@@ -2077,6 +2381,11 @@ export type BookingCreateWithoutRevisionRequestsInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -2094,6 +2403,7 @@ export type BookingCreateWithoutRevisionRequestsInput = {
   member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
   serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationCreateNestedManyWithoutBookingInput
 }
 
 export type BookingUncheckedCreateWithoutRevisionRequestsInput = {
@@ -2104,6 +2414,11 @@ export type BookingUncheckedCreateWithoutRevisionRequestsInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -2121,6 +2436,7 @@ export type BookingUncheckedCreateWithoutRevisionRequestsInput = {
   photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
   addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  userNotifications?: Prisma.UserNotificationUncheckedCreateNestedManyWithoutBookingInput
 }
 
 export type BookingCreateOrConnectWithoutRevisionRequestsInput = {
@@ -2147,6 +2463,11 @@ export type BookingUpdateWithoutRevisionRequestsInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2164,6 +2485,7 @@ export type BookingUpdateWithoutRevisionRequestsInput = {
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutRevisionRequestsInput = {
@@ -2174,6 +2496,11 @@ export type BookingUncheckedUpdateWithoutRevisionRequestsInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2191,6 +2518,155 @@ export type BookingUncheckedUpdateWithoutRevisionRequestsInput = {
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUncheckedUpdateManyWithoutBookingNestedInput
+}
+
+export type BookingCreateWithoutUserNotificationsInput = {
+  id?: string
+  bookingDate: Date | string
+  sessionCount?: number
+  extraPicturesCount?: number
+  notes?: string | null
+  totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
+  bookingStatus?: $Enums.BookingStatus
+  paymentStatus?: $Enums.PaymentStatus
+  deliveryStatus?: $Enums.DeliveryStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  accessCode?: string | null
+  deliveredAt?: Date | string | null
+  payments?: Prisma.PaymentCreateNestedManyWithoutBookingInput
+  photos?: Prisma.PhotoCreateNestedManyWithoutBookingInput
+  addons?: Prisma.ServiceCreateNestedManyWithoutAddonBookingsInput
+  service: Prisma.ServiceCreateNestedOneWithoutBookingsInput
+  studio: Prisma.StudioCreateNestedOneWithoutBookingsInput
+  client: Prisma.ClientCreateNestedOneWithoutBookingsInput
+  creator: Prisma.UserCreateNestedOneWithoutBookingsInput
+  member?: Prisma.MemberCreateNestedOneWithoutBookingsInput
+  serviceVariant?: Prisma.ServiceVariantCreateNestedOneWithoutBookingsInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestCreateNestedManyWithoutBookingInput
+}
+
+export type BookingUncheckedCreateWithoutUserNotificationsInput = {
+  id?: string
+  bookingDate: Date | string
+  sessionCount?: number
+  extraPicturesCount?: number
+  notes?: string | null
+  totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
+  bookingStatus?: $Enums.BookingStatus
+  paymentStatus?: $Enums.PaymentStatus
+  deliveryStatus?: $Enums.DeliveryStatus
+  serviceId: string
+  studioId: string
+  clientId: string
+  createdBy: string
+  memberId?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  serviceVariantId?: string | null
+  accessCode?: string | null
+  deliveredAt?: Date | string | null
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
+  photos?: Prisma.PhotoUncheckedCreateNestedManyWithoutBookingInput
+  addons?: Prisma.ServiceUncheckedCreateNestedManyWithoutAddonBookingsInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutBookingInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedCreateNestedManyWithoutBookingInput
+}
+
+export type BookingCreateOrConnectWithoutUserNotificationsInput = {
+  where: Prisma.BookingWhereUniqueInput
+  create: Prisma.XOR<Prisma.BookingCreateWithoutUserNotificationsInput, Prisma.BookingUncheckedCreateWithoutUserNotificationsInput>
+}
+
+export type BookingUpsertWithoutUserNotificationsInput = {
+  update: Prisma.XOR<Prisma.BookingUpdateWithoutUserNotificationsInput, Prisma.BookingUncheckedUpdateWithoutUserNotificationsInput>
+  create: Prisma.XOR<Prisma.BookingCreateWithoutUserNotificationsInput, Prisma.BookingUncheckedCreateWithoutUserNotificationsInput>
+  where?: Prisma.BookingWhereInput
+}
+
+export type BookingUpdateToOneWithWhereWithoutUserNotificationsInput = {
+  where?: Prisma.BookingWhereInput
+  data: Prisma.XOR<Prisma.BookingUpdateWithoutUserNotificationsInput, Prisma.BookingUncheckedUpdateWithoutUserNotificationsInput>
+}
+
+export type BookingUpdateWithoutUserNotificationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
+  paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
+  deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  payments?: Prisma.PaymentUpdateManyWithoutBookingNestedInput
+  photos?: Prisma.PhotoUpdateManyWithoutBookingNestedInput
+  addons?: Prisma.ServiceUpdateManyWithoutAddonBookingsNestedInput
+  service?: Prisma.ServiceUpdateOneRequiredWithoutBookingsNestedInput
+  studio?: Prisma.StudioUpdateOneRequiredWithoutBookingsNestedInput
+  client?: Prisma.ClientUpdateOneRequiredWithoutBookingsNestedInput
+  creator?: Prisma.UserUpdateOneRequiredWithoutBookingsNestedInput
+  member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
+  serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
+}
+
+export type BookingUncheckedUpdateWithoutUserNotificationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  bookingDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessionCount?: Prisma.IntFieldUpdateOperationsInput | number
+  extraPicturesCount?: Prisma.IntFieldUpdateOperationsInput | number
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
+  paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
+  deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
+  serviceId?: Prisma.StringFieldUpdateOperationsInput | string
+  studioId?: Prisma.StringFieldUpdateOperationsInput | string
+  clientId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  serviceVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
+  photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
+  addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingCreateManyCreatorInput = {
@@ -2201,6 +2677,11 @@ export type BookingCreateManyCreatorInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -2223,6 +2704,11 @@ export type BookingUpdateWithoutCreatorInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2239,6 +2725,7 @@ export type BookingUpdateWithoutCreatorInput = {
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
@@ -2250,6 +2737,11 @@ export type BookingUncheckedUpdateWithoutCreatorInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2266,6 +2758,7 @@ export type BookingUncheckedUpdateWithoutCreatorInput = {
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUncheckedUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
@@ -2277,6 +2770,11 @@ export type BookingUncheckedUpdateManyWithoutCreatorInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2299,6 +2797,11 @@ export type BookingCreateManyStudioInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -2321,6 +2824,11 @@ export type BookingUpdateWithoutStudioInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2337,6 +2845,7 @@ export type BookingUpdateWithoutStudioInput = {
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
@@ -2348,6 +2857,11 @@ export type BookingUncheckedUpdateWithoutStudioInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2364,6 +2878,7 @@ export type BookingUncheckedUpdateWithoutStudioInput = {
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUncheckedUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
@@ -2375,6 +2890,11 @@ export type BookingUncheckedUpdateManyWithoutStudioInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2397,6 +2917,11 @@ export type BookingCreateManyMemberInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -2419,6 +2944,11 @@ export type BookingUpdateWithoutMemberInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2435,6 +2965,7 @@ export type BookingUpdateWithoutMemberInput = {
   creator?: Prisma.UserUpdateOneRequiredWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
@@ -2446,6 +2977,11 @@ export type BookingUncheckedUpdateWithoutMemberInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2462,6 +2998,7 @@ export type BookingUncheckedUpdateWithoutMemberInput = {
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUncheckedUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
@@ -2473,6 +3010,11 @@ export type BookingUncheckedUpdateManyWithoutMemberInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2495,6 +3037,11 @@ export type BookingCreateManyServiceInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -2517,6 +3064,11 @@ export type BookingUpdateWithoutServiceInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2533,6 +3085,7 @@ export type BookingUpdateWithoutServiceInput = {
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
@@ -2544,6 +3097,11 @@ export type BookingUncheckedUpdateWithoutServiceInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2560,6 +3118,7 @@ export type BookingUncheckedUpdateWithoutServiceInput = {
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUncheckedUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
@@ -2571,6 +3130,11 @@ export type BookingUncheckedUpdateManyWithoutServiceInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2593,6 +3157,11 @@ export type BookingUpdateWithoutAddonsInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2609,6 +3178,7 @@ export type BookingUpdateWithoutAddonsInput = {
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
@@ -2620,6 +3190,11 @@ export type BookingUncheckedUpdateWithoutAddonsInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2636,6 +3211,7 @@ export type BookingUncheckedUpdateWithoutAddonsInput = {
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUncheckedUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
@@ -2647,6 +3223,11 @@ export type BookingUncheckedUpdateManyWithoutAddonsInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2670,6 +3251,11 @@ export type BookingCreateManyServiceVariantInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -2692,6 +3278,11 @@ export type BookingUpdateWithoutServiceVariantInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2708,6 +3299,7 @@ export type BookingUpdateWithoutServiceVariantInput = {
   creator?: Prisma.UserUpdateOneRequiredWithoutBookingsNestedInput
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
@@ -2719,6 +3311,11 @@ export type BookingUncheckedUpdateWithoutServiceVariantInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2735,6 +3332,7 @@ export type BookingUncheckedUpdateWithoutServiceVariantInput = {
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUncheckedUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
@@ -2746,6 +3344,11 @@ export type BookingUncheckedUpdateManyWithoutServiceVariantInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2768,6 +3371,11 @@ export type BookingCreateManyClientInput = {
   notes?: string | null
   totalAmount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: $Enums.PaymentPlan
+  priceApprovalStatus?: $Enums.PriceApprovalStatus
+  pendingTotalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: string | null
+  priceApprovedBy?: string | null
+  priceApprovedAt?: Date | string | null
   bookingStatus?: $Enums.BookingStatus
   paymentStatus?: $Enums.PaymentStatus
   deliveryStatus?: $Enums.DeliveryStatus
@@ -2790,6 +3398,11 @@ export type BookingUpdateWithoutClientInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2806,6 +3419,7 @@ export type BookingUpdateWithoutClientInput = {
   member?: Prisma.MemberUpdateOneWithoutBookingsNestedInput
   serviceVariant?: Prisma.ServiceVariantUpdateOneWithoutBookingsNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUpdateManyWithoutBookingNestedInput
 }
 
@@ -2817,6 +3431,11 @@ export type BookingUncheckedUpdateWithoutClientInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2833,6 +3452,7 @@ export type BookingUncheckedUpdateWithoutClientInput = {
   photos?: Prisma.PhotoUncheckedUpdateManyWithoutBookingNestedInput
   addons?: Prisma.ServiceUncheckedUpdateManyWithoutAddonBookingsNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutBookingNestedInput
+  userNotifications?: Prisma.UserNotificationUncheckedUpdateManyWithoutBookingNestedInput
   revisionRequests?: Prisma.RevisionRequestUncheckedUpdateManyWithoutBookingNestedInput
 }
 
@@ -2844,6 +3464,11 @@ export type BookingUncheckedUpdateManyWithoutClientInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentPlan?: Prisma.EnumPaymentPlanFieldUpdateOperationsInput | $Enums.PaymentPlan
+  priceApprovalStatus?: Prisma.EnumPriceApprovalStatusFieldUpdateOperationsInput | $Enums.PriceApprovalStatus
+  pendingTotalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  priceChangedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  priceApprovedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookingStatus?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
   paymentStatus?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
   deliveryStatus?: Prisma.EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
@@ -2868,6 +3493,7 @@ export type BookingCountOutputType = {
   photos: number
   addons: number
   notifications: number
+  userNotifications: number
   revisionRequests: number
 }
 
@@ -2876,6 +3502,7 @@ export type BookingCountOutputTypeSelect<ExtArgs extends runtime.Types.Extension
   photos?: boolean | BookingCountOutputTypeCountPhotosArgs
   addons?: boolean | BookingCountOutputTypeCountAddonsArgs
   notifications?: boolean | BookingCountOutputTypeCountNotificationsArgs
+  userNotifications?: boolean | BookingCountOutputTypeCountUserNotificationsArgs
   revisionRequests?: boolean | BookingCountOutputTypeCountRevisionRequestsArgs
 }
 
@@ -2920,6 +3547,13 @@ export type BookingCountOutputTypeCountNotificationsArgs<ExtArgs extends runtime
 /**
  * BookingCountOutputType without action
  */
+export type BookingCountOutputTypeCountUserNotificationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.UserNotificationWhereInput
+}
+
+/**
+ * BookingCountOutputType without action
+ */
 export type BookingCountOutputTypeCountRevisionRequestsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.RevisionRequestWhereInput
 }
@@ -2933,6 +3567,11 @@ export type BookingSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   notes?: boolean
   totalAmount?: boolean
   paymentPlan?: boolean
+  priceApprovalStatus?: boolean
+  pendingTotalAmount?: boolean
+  priceChangedBy?: boolean
+  priceApprovedBy?: boolean
+  priceApprovedAt?: boolean
   bookingStatus?: boolean
   paymentStatus?: boolean
   deliveryStatus?: boolean
@@ -2956,6 +3595,7 @@ export type BookingSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   member?: boolean | Prisma.Booking$memberArgs<ExtArgs>
   serviceVariant?: boolean | Prisma.Booking$serviceVariantArgs<ExtArgs>
   notifications?: boolean | Prisma.Booking$notificationsArgs<ExtArgs>
+  userNotifications?: boolean | Prisma.Booking$userNotificationsArgs<ExtArgs>
   revisionRequests?: boolean | Prisma.Booking$revisionRequestsArgs<ExtArgs>
   _count?: boolean | Prisma.BookingCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["booking"]>
@@ -2968,6 +3608,11 @@ export type BookingSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   notes?: boolean
   totalAmount?: boolean
   paymentPlan?: boolean
+  priceApprovalStatus?: boolean
+  pendingTotalAmount?: boolean
+  priceChangedBy?: boolean
+  priceApprovedBy?: boolean
+  priceApprovedAt?: boolean
   bookingStatus?: boolean
   paymentStatus?: boolean
   deliveryStatus?: boolean
@@ -2997,6 +3642,11 @@ export type BookingSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   notes?: boolean
   totalAmount?: boolean
   paymentPlan?: boolean
+  priceApprovalStatus?: boolean
+  pendingTotalAmount?: boolean
+  priceChangedBy?: boolean
+  priceApprovedBy?: boolean
+  priceApprovedAt?: boolean
   bookingStatus?: boolean
   paymentStatus?: boolean
   deliveryStatus?: boolean
@@ -3026,6 +3676,11 @@ export type BookingSelectScalar = {
   notes?: boolean
   totalAmount?: boolean
   paymentPlan?: boolean
+  priceApprovalStatus?: boolean
+  pendingTotalAmount?: boolean
+  priceChangedBy?: boolean
+  priceApprovedBy?: boolean
+  priceApprovedAt?: boolean
   bookingStatus?: boolean
   paymentStatus?: boolean
   deliveryStatus?: boolean
@@ -3041,7 +3696,7 @@ export type BookingSelectScalar = {
   deliveredAt?: boolean
 }
 
-export type BookingOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "bookingDate" | "sessionCount" | "extraPicturesCount" | "notes" | "totalAmount" | "paymentPlan" | "bookingStatus" | "paymentStatus" | "deliveryStatus" | "serviceId" | "studioId" | "clientId" | "createdBy" | "memberId" | "createdAt" | "updatedAt" | "serviceVariantId" | "accessCode" | "deliveredAt", ExtArgs["result"]["booking"]>
+export type BookingOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "bookingDate" | "sessionCount" | "extraPicturesCount" | "notes" | "totalAmount" | "paymentPlan" | "priceApprovalStatus" | "pendingTotalAmount" | "priceChangedBy" | "priceApprovedBy" | "priceApprovedAt" | "bookingStatus" | "paymentStatus" | "deliveryStatus" | "serviceId" | "studioId" | "clientId" | "createdBy" | "memberId" | "createdAt" | "updatedAt" | "serviceVariantId" | "accessCode" | "deliveredAt", ExtArgs["result"]["booking"]>
 export type BookingInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   payments?: boolean | Prisma.Booking$paymentsArgs<ExtArgs>
   photos?: boolean | Prisma.Booking$photosArgs<ExtArgs>
@@ -3053,6 +3708,7 @@ export type BookingInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   member?: boolean | Prisma.Booking$memberArgs<ExtArgs>
   serviceVariant?: boolean | Prisma.Booking$serviceVariantArgs<ExtArgs>
   notifications?: boolean | Prisma.Booking$notificationsArgs<ExtArgs>
+  userNotifications?: boolean | Prisma.Booking$userNotificationsArgs<ExtArgs>
   revisionRequests?: boolean | Prisma.Booking$revisionRequestsArgs<ExtArgs>
   _count?: boolean | Prisma.BookingCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -3086,6 +3742,7 @@ export type $BookingPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     member: Prisma.$MemberPayload<ExtArgs> | null
     serviceVariant: Prisma.$ServiceVariantPayload<ExtArgs> | null
     notifications: Prisma.$NotificationPayload<ExtArgs>[]
+    userNotifications: Prisma.$UserNotificationPayload<ExtArgs>[]
     revisionRequests: Prisma.$RevisionRequestPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -3096,6 +3753,11 @@ export type $BookingPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     notes: string | null
     totalAmount: runtime.Decimal
     paymentPlan: $Enums.PaymentPlan
+    priceApprovalStatus: $Enums.PriceApprovalStatus
+    pendingTotalAmount: runtime.Decimal | null
+    priceChangedBy: string | null
+    priceApprovedBy: string | null
+    priceApprovedAt: Date | null
     bookingStatus: $Enums.BookingStatus
     paymentStatus: $Enums.PaymentStatus
     deliveryStatus: $Enums.DeliveryStatus
@@ -3513,6 +4175,7 @@ export interface Prisma__BookingClient<T, Null = never, ExtArgs extends runtime.
   member<T extends Prisma.Booking$memberArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Booking$memberArgs<ExtArgs>>): Prisma.Prisma__MemberClient<runtime.Types.Result.GetResult<Prisma.$MemberPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   serviceVariant<T extends Prisma.Booking$serviceVariantArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Booking$serviceVariantArgs<ExtArgs>>): Prisma.Prisma__ServiceVariantClient<runtime.Types.Result.GetResult<Prisma.$ServiceVariantPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   notifications<T extends Prisma.Booking$notificationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Booking$notificationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$NotificationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  userNotifications<T extends Prisma.Booking$userNotificationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Booking$userNotificationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$UserNotificationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   revisionRequests<T extends Prisma.Booking$revisionRequestsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Booking$revisionRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RevisionRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -3550,6 +4213,11 @@ export interface BookingFieldRefs {
   readonly notes: Prisma.FieldRef<"Booking", 'String'>
   readonly totalAmount: Prisma.FieldRef<"Booking", 'Decimal'>
   readonly paymentPlan: Prisma.FieldRef<"Booking", 'PaymentPlan'>
+  readonly priceApprovalStatus: Prisma.FieldRef<"Booking", 'PriceApprovalStatus'>
+  readonly pendingTotalAmount: Prisma.FieldRef<"Booking", 'Decimal'>
+  readonly priceChangedBy: Prisma.FieldRef<"Booking", 'String'>
+  readonly priceApprovedBy: Prisma.FieldRef<"Booking", 'String'>
+  readonly priceApprovedAt: Prisma.FieldRef<"Booking", 'DateTime'>
   readonly bookingStatus: Prisma.FieldRef<"Booking", 'BookingStatus'>
   readonly paymentStatus: Prisma.FieldRef<"Booking", 'PaymentStatus'>
   readonly deliveryStatus: Prisma.FieldRef<"Booking", 'DeliveryStatus'>
@@ -4095,6 +4763,30 @@ export type Booking$notificationsArgs<ExtArgs extends runtime.Types.Extensions.I
   take?: number
   skip?: number
   distinct?: Prisma.NotificationScalarFieldEnum | Prisma.NotificationScalarFieldEnum[]
+}
+
+/**
+ * Booking.userNotifications
+ */
+export type Booking$userNotificationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the UserNotification
+   */
+  select?: Prisma.UserNotificationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the UserNotification
+   */
+  omit?: Prisma.UserNotificationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserNotificationInclude<ExtArgs> | null
+  where?: Prisma.UserNotificationWhereInput
+  orderBy?: Prisma.UserNotificationOrderByWithRelationInput | Prisma.UserNotificationOrderByWithRelationInput[]
+  cursor?: Prisma.UserNotificationWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.UserNotificationScalarFieldEnum | Prisma.UserNotificationScalarFieldEnum[]
 }
 
 /**

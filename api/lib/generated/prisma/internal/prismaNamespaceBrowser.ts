@@ -82,7 +82,8 @@ export const ModelName = {
   AcademyCourse: 'AcademyCourse',
   AcademyBatch: 'AcademyBatch',
   AcademyModule: 'AcademyModule',
-  AcademyStudent: 'AcademyStudent'
+  AcademyStudent: 'AcademyStudent',
+  UserNotification: 'UserNotification'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -245,6 +246,7 @@ export type ServiceScalarFieldEnum = (typeof ServiceScalarFieldEnum)[keyof typeo
 export const ServiceVariantScalarFieldEnum = {
   id: 'id',
   serviceId: 'serviceId',
+  title: 'title',
   locationType: 'locationType',
   basePrice: 'basePrice',
   maxPrice: 'maxPrice',
@@ -366,6 +368,11 @@ export const BookingScalarFieldEnum = {
   notes: 'notes',
   totalAmount: 'totalAmount',
   paymentPlan: 'paymentPlan',
+  priceApprovalStatus: 'priceApprovalStatus',
+  pendingTotalAmount: 'pendingTotalAmount',
+  priceChangedBy: 'priceChangedBy',
+  priceApprovedBy: 'priceApprovedBy',
+  priceApprovedAt: 'priceApprovedAt',
   bookingStatus: 'bookingStatus',
   paymentStatus: 'paymentStatus',
   deliveryStatus: 'deliveryStatus',
@@ -607,6 +614,20 @@ export const AcademyStudentScalarFieldEnum = {
 } as const
 
 export type AcademyStudentScalarFieldEnum = (typeof AcademyStudentScalarFieldEnum)[keyof typeof AcademyStudentScalarFieldEnum]
+
+
+export const UserNotificationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  title: 'title',
+  message: 'message',
+  type: 'type',
+  bookingId: 'bookingId',
+  isRead: 'isRead',
+  createdAt: 'createdAt'
+} as const
+
+export type UserNotificationScalarFieldEnum = (typeof UserNotificationScalarFieldEnum)[keyof typeof UserNotificationScalarFieldEnum]
 
 
 export const SortOrder = {

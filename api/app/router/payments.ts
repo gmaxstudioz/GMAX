@@ -252,6 +252,58 @@ export const getPublicPaymentDetails = os.payment.getPublicPaymentDetails
             });
 
             if (!intent) {
+                // Check if it's a direct booking ID (for balance payments)
+                const booking = await prisma.booking.findUnique({
+                    where: { id: input.reference },
+                    include: {
+                        client: true,
+                        service: { include: { studioSession: true } },
+                        studio: true,
+                        addons: true,
+                        payments: true,
+                    }
+                });
+
+                if (booking) {
+                    const totalPaid = booking.payments
+                        .filter((p: any) => p.status === "PAID")
+                        .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+                    const grandTotal = Number(booking.totalAmount || 0);
+                    const balanceDue = grandTotal - totalPaid;
+
+                    if (balanceDue <= 0) {
+                        return {
+                            amount: "0",
+                            status: "PAID",
+                            isAlreadyPaid: true,
+                            booking: {
+                                sessionCount: booking.sessionCount,
+                                bookingDate: booking.bookingDate.toISOString(),
+                                client: booking.client ? { name: booking.client.name, email: booking.client.email } : null,
+                                service: booking.service ? { name: booking.service.name, duration: booking.service.studioSession?.duration || 45 } : null,
+                                studio: booking.studio ? { name: booking.studio.name, logo: booking.studio.logo } : null,
+                                addons: booking.addons.map((a: any) => ({ id: a.id, name: a.name })),
+                            },
+                            productAccess: null,
+                        };
+                    }
+
+                    return {
+                        amount: balanceDue.toString(),
+                        status: "PENDING",
+                        isAlreadyPaid: false,
+                        booking: {
+                            sessionCount: booking.sessionCount,
+                            bookingDate: booking.bookingDate.toISOString(),
+                            client: booking.client ? { name: booking.client.name, email: booking.client.email } : null,
+                            service: booking.service ? { name: booking.service.name, duration: booking.service.studioSession?.duration || 45 } : null,
+                            studio: booking.studio ? { name: booking.studio.name, logo: booking.studio.logo } : null,
+                            addons: booking.addons.map((a: any) => ({ id: a.id, name: a.name })),
+                        },
+                        productAccess: null,
+                    };
+                }
+
                 throw new Error("Payment not found");
             }
 

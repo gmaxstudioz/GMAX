@@ -14,8 +14,15 @@ import { ChevronDown, ChevronUp, CirclePlusIcon, Loader2Icon, PlusIcon } from "l
 import { useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
-export default function AddClient({studioId}: {studioId: string}) {
+interface AddClientProps {
+    studioId: string;
+    onSuccess?: (clientId: string) => void;
+}
+
+export default function AddClient({ studioId, onSuccess }: AddClientProps) {
+    const router = useRouter();
     const [ isPending, startTransition ] = useTransition();
     const [optionalOpen, setOptionalOpen] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
@@ -45,6 +52,10 @@ export default function AddClient({studioId}: {studioId: string}) {
                 toast.success("Client added successfully");
                 form.reset();
                 setIsOpen(false);
+                router.refresh();
+                if (onSuccess && result.data?.id) {
+                    onSuccess(result.data.id);
+                }
             } else if (result?.status === "error") {
                 toast.error(result?.message);
             }

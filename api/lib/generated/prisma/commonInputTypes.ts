@@ -439,6 +439,13 @@ export type EnumBookingIntentStatusWithAggregatesFilter<$PrismaModel = never> = 
   _max?: Prisma.NestedEnumBookingIntentStatusFilter<$PrismaModel>
 }
 
+export type EnumPriceApprovalStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.PriceApprovalStatus | Prisma.EnumPriceApprovalStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PriceApprovalStatus[] | Prisma.ListEnumPriceApprovalStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PriceApprovalStatus[] | Prisma.ListEnumPriceApprovalStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPriceApprovalStatusFilter<$PrismaModel> | $Enums.PriceApprovalStatus
+}
+
 export type EnumBookingStatusFilter<$PrismaModel = never> = {
   equals?: $Enums.BookingStatus | Prisma.EnumBookingStatusFieldRefInput<$PrismaModel>
   in?: $Enums.BookingStatus[] | Prisma.ListEnumBookingStatusFieldRefInput<$PrismaModel>
@@ -451,6 +458,16 @@ export type EnumDeliveryStatusFilter<$PrismaModel = never> = {
   in?: $Enums.DeliveryStatus[] | Prisma.ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
   notIn?: $Enums.DeliveryStatus[] | Prisma.ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
   not?: Prisma.NestedEnumDeliveryStatusFilter<$PrismaModel> | $Enums.DeliveryStatus
+}
+
+export type EnumPriceApprovalStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PriceApprovalStatus | Prisma.EnumPriceApprovalStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PriceApprovalStatus[] | Prisma.ListEnumPriceApprovalStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PriceApprovalStatus[] | Prisma.ListEnumPriceApprovalStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPriceApprovalStatusWithAggregatesFilter<$PrismaModel> | $Enums.PriceApprovalStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPriceApprovalStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPriceApprovalStatusFilter<$PrismaModel>
 }
 
 export type EnumBookingStatusWithAggregatesFilter<$PrismaModel = never> = {
@@ -986,6 +1003,13 @@ export type NestedEnumBookingIntentStatusWithAggregatesFilter<$PrismaModel = nev
   _max?: Prisma.NestedEnumBookingIntentStatusFilter<$PrismaModel>
 }
 
+export type NestedEnumPriceApprovalStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.PriceApprovalStatus | Prisma.EnumPriceApprovalStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PriceApprovalStatus[] | Prisma.ListEnumPriceApprovalStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PriceApprovalStatus[] | Prisma.ListEnumPriceApprovalStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPriceApprovalStatusFilter<$PrismaModel> | $Enums.PriceApprovalStatus
+}
+
 export type NestedEnumBookingStatusFilter<$PrismaModel = never> = {
   equals?: $Enums.BookingStatus | Prisma.EnumBookingStatusFieldRefInput<$PrismaModel>
   in?: $Enums.BookingStatus[] | Prisma.ListEnumBookingStatusFieldRefInput<$PrismaModel>
@@ -998,6 +1022,16 @@ export type NestedEnumDeliveryStatusFilter<$PrismaModel = never> = {
   in?: $Enums.DeliveryStatus[] | Prisma.ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
   notIn?: $Enums.DeliveryStatus[] | Prisma.ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
   not?: Prisma.NestedEnumDeliveryStatusFilter<$PrismaModel> | $Enums.DeliveryStatus
+}
+
+export type NestedEnumPriceApprovalStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PriceApprovalStatus | Prisma.EnumPriceApprovalStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PriceApprovalStatus[] | Prisma.ListEnumPriceApprovalStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PriceApprovalStatus[] | Prisma.ListEnumPriceApprovalStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPriceApprovalStatusWithAggregatesFilter<$PrismaModel> | $Enums.PriceApprovalStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPriceApprovalStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPriceApprovalStatusFilter<$PrismaModel>
 }
 
 export type NestedEnumBookingStatusWithAggregatesFilter<$PrismaModel = never> = {

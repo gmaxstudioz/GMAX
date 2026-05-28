@@ -64,9 +64,10 @@ interface UpdateBookingDialogProps {
     clients: ClientOption[];
     services: ServiceOption[];
     members: MemberOption[];
+    canEditPrice?: boolean;
 }
 
-export function UpdateBookingDialog({ bookingId, currentData, clients, services, members }: UpdateBookingDialogProps) {
+export function UpdateBookingDialog({ bookingId, currentData, clients, services, members, canEditPrice = true }: UpdateBookingDialogProps) {
     const [isPending, startTransition] = useTransition();
     const [open, setOpen] = useState(false);
 
@@ -592,7 +593,13 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                                         min={0}
                                         value={value}
                                         onChange={(e) => onChange(Number(e.target.value))}
+                                        disabled={!canEditPrice}
                                     />
+                                    {!canEditPrice && (
+                                        <p className="text-[10px] text-muted-foreground mt-1">
+                                            Only managers and admins can edit price directly.
+                                        </p>
+                                    )}
                                     {form.formState.errors.totalAmount && (
                                         <p className="text-xs text-red-500">{form.formState.errors.totalAmount.message}</p>
                                     )}

@@ -23,7 +23,7 @@ export default async function StudiosPage(props: { searchParams: Promise<{ [key:
     ]);
 
     const isPlatformAdmin = user?.role === "admin";
-    const hasAdminRole = isPlatformAdmin || members.some(m => ["owner", "manager"].includes(m.role));
+    const hasAdminRole = isPlatformAdmin || members.some(m => ["owner", "developer"].includes(m.role));
 
     // 2. Optimized Studio Query
     // Note: We use 'creator' as defined in your Booking model relation

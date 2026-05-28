@@ -4,6 +4,7 @@ import { auth } from "../auth";
 import { headers } from "next/headers";
 import { InviteMemberSchema, InviteMemberInput } from "../schemas/studio";
 import { ApiResponse } from "../type";
+import { sendSMS } from "../termii";
 
 // ── Invite Member ───────────────────────────────────────────────────
 
@@ -21,7 +22,7 @@ export async function inviteMember(
             };
         }
 
-        await auth.api.createInvitation({
+        const invitation = await auth.api.createInvitation({
             body: {
                 email: validation.data.email,
                 role: validation.data.role,
@@ -29,6 +30,15 @@ export async function inviteMember(
             },
             headers: await headers(),
         });
+
+        if (validation.data.phone && invitation) {
+            // @ts-expect-error - BetterAuth response typing might be complex
+            const inviteId = invitation.id || invitation.invitation?.id;
+            const BASE_URL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
+            const inviteLink = `${BASE_URL}/auth/accept-invitation/${inviteId}`;
+            const msg = `You have been invited to join the studio as a ${validation.data.role}. Click here to accept: ${inviteLink}`;
+            await sendSMS(validation.data.phone, msg).catch(e => console.error("Termii invite SMS failed", e));
+        }
 
         return {
             status: "success",

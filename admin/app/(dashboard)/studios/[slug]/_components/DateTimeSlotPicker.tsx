@@ -127,7 +127,7 @@ export function DateTimeSlotPicker({
                     {selectedDate ? format(selectedDate, "PPP 'at' p") : <span>Pick a date & time</span>}
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 flex items-start" align="start">
+            <PopoverContent className="w-auto p-0 flex flex-col sm:flex-row items-start" align="start">
                 <Calendar
                     mode="single"
                     selected={calendarDate}
@@ -136,9 +136,9 @@ export function DateTimeSlotPicker({
                 />
 
                 {calendarDate && (
-                    <div className="border-l h-[300px] w-[140px] p-3 flex flex-col gap-2">
+                    <div className="border-t sm:border-t-0 sm:border-l h-[200px] sm:h-[300px] w-[280px] sm:w-[140px] p-3 flex flex-col gap-2">
                         <span className="text-sm font-semibold mb-2">Available Times</span>
-                        <ScrollArea className="flex-1">
+                        <ScrollArea className="flex-1 max-h-[150px] sm:max-h-full">
                             {proposedDuration > 0 ? (
                                 availableTimeSlots.length > 0 ? (
                                     <div className="flex flex-col gap-2 pr-3 pb-4">

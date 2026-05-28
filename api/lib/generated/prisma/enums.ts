@@ -67,6 +67,15 @@ export const BookingIntentStatus = {
 export type BookingIntentStatus = (typeof BookingIntentStatus)[keyof typeof BookingIntentStatus]
 
 
+export const PriceApprovalStatus = {
+  APPROVED: 'APPROVED',
+  PENDING_APPROVAL: 'PENDING_APPROVAL',
+  REJECTED: 'REJECTED'
+} as const
+
+export type PriceApprovalStatus = (typeof PriceApprovalStatus)[keyof typeof PriceApprovalStatus]
+
+
 export const BookingStatus = {
   PENDING: 'PENDING',
   CONFIRMED: 'CONFIRMED',

@@ -4,7 +4,7 @@ import { useState, useCallback, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { uploadBookingPhoto } from "@/lib/actions/booking";
+import { uploadBookingPhoto, deletePhoto } from "@/lib/actions/booking";
 import { tryCatch } from "@/hooks/try-catch";
 import { toast } from "sonner";
 import { useDropzone } from "react-dropzone";
@@ -31,6 +31,8 @@ interface UploadItem {
 
 interface MediaUploaderProps {
     bookingId: string;
+    replacePhotoId?: string;
+    onSuccess?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -141,7 +143,7 @@ async function uploadLargeFile(
 // Component
 // ---------------------------------------------------------------------------
 
-export function MediaUploader({ bookingId }: MediaUploaderProps) {
+export function MediaUploader({ bookingId, replacePhotoId, onSuccess }: MediaUploaderProps) {
     const router = useRouter();
     const [uploads, setUploads] = useState<UploadItem[]>([]);
     const [isUploading, setIsUploading] = useState(false);
@@ -195,6 +197,9 @@ export function MediaUploader({ bookingId }: MediaUploaderProps) {
                         updateUpload(item.id, { status: "error", progress: 0 });
                         toast.error(`Failed to save "${item.file.name}"`);
                     } else {
+                        if (replacePhotoId) {
+                            await tryCatch(deletePhoto(replacePhotoId));
+                        }
                         updateUpload(item.id, { status: "done", progress: 100, key });
                         successCount++;
                     }
@@ -213,9 +218,10 @@ export function MediaUploader({ bookingId }: MediaUploaderProps) {
                         : `${successCount} of ${items.length} files uploaded`
                 );
                 router.refresh();
+                if (onSuccess) onSuccess();
             }
         },
-        [bookingId, updateUpload, router]
+        [bookingId, replacePhotoId, onSuccess, updateUpload, router]
     );
 
     const onDrop = useCallback(
@@ -244,6 +250,7 @@ export function MediaUploader({ bookingId }: MediaUploaderProps) {
             "video/*": [],
         },
         disabled: isUploading,
+        maxFiles: replacePhotoId ? 1 : undefined,
     });
 
     const getIcon = (type: string) => {

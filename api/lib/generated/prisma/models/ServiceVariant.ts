@@ -41,6 +41,7 @@ export type ServiceVariantSumAggregateOutputType = {
 export type ServiceVariantMinAggregateOutputType = {
   id: string | null
   serviceId: string | null
+  title: string | null
   locationType: $Enums.LocationType | null
   basePrice: runtime.Decimal | null
   maxPrice: runtime.Decimal | null
@@ -53,6 +54,7 @@ export type ServiceVariantMinAggregateOutputType = {
 export type ServiceVariantMaxAggregateOutputType = {
   id: string | null
   serviceId: string | null
+  title: string | null
   locationType: $Enums.LocationType | null
   basePrice: runtime.Decimal | null
   maxPrice: runtime.Decimal | null
@@ -65,6 +67,7 @@ export type ServiceVariantMaxAggregateOutputType = {
 export type ServiceVariantCountAggregateOutputType = {
   id: number
   serviceId: number
+  title: number
   locationType: number
   basePrice: number
   maxPrice: number
@@ -91,6 +94,7 @@ export type ServiceVariantSumAggregateInputType = {
 export type ServiceVariantMinAggregateInputType = {
   id?: true
   serviceId?: true
+  title?: true
   locationType?: true
   basePrice?: true
   maxPrice?: true
@@ -103,6 +107,7 @@ export type ServiceVariantMinAggregateInputType = {
 export type ServiceVariantMaxAggregateInputType = {
   id?: true
   serviceId?: true
+  title?: true
   locationType?: true
   basePrice?: true
   maxPrice?: true
@@ -115,6 +120,7 @@ export type ServiceVariantMaxAggregateInputType = {
 export type ServiceVariantCountAggregateInputType = {
   id?: true
   serviceId?: true
+  title?: true
   locationType?: true
   basePrice?: true
   maxPrice?: true
@@ -214,6 +220,7 @@ export type ServiceVariantGroupByArgs<ExtArgs extends runtime.Types.Extensions.I
 export type ServiceVariantGroupByOutputType = {
   id: string
   serviceId: string
+  title: string | null
   locationType: $Enums.LocationType
   basePrice: runtime.Decimal
   maxPrice: runtime.Decimal | null
@@ -249,6 +256,7 @@ export type ServiceVariantWhereInput = {
   NOT?: Prisma.ServiceVariantWhereInput | Prisma.ServiceVariantWhereInput[]
   id?: Prisma.StringFilter<"ServiceVariant"> | string
   serviceId?: Prisma.StringFilter<"ServiceVariant"> | string
+  title?: Prisma.StringNullableFilter<"ServiceVariant"> | string | null
   locationType?: Prisma.EnumLocationTypeFilter<"ServiceVariant"> | $Enums.LocationType
   basePrice?: Prisma.DecimalFilter<"ServiceVariant"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: Prisma.DecimalNullableFilter<"ServiceVariant"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -264,6 +272,7 @@ export type ServiceVariantWhereInput = {
 export type ServiceVariantOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   serviceId?: Prisma.SortOrder
+  title?: Prisma.SortOrderInput | Prisma.SortOrder
   locationType?: Prisma.SortOrder
   basePrice?: Prisma.SortOrder
   maxPrice?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -282,6 +291,7 @@ export type ServiceVariantWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.ServiceVariantWhereInput[]
   NOT?: Prisma.ServiceVariantWhereInput | Prisma.ServiceVariantWhereInput[]
   serviceId?: Prisma.StringFilter<"ServiceVariant"> | string
+  title?: Prisma.StringNullableFilter<"ServiceVariant"> | string | null
   locationType?: Prisma.EnumLocationTypeFilter<"ServiceVariant"> | $Enums.LocationType
   basePrice?: Prisma.DecimalFilter<"ServiceVariant"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: Prisma.DecimalNullableFilter<"ServiceVariant"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -297,6 +307,7 @@ export type ServiceVariantWhereUniqueInput = Prisma.AtLeast<{
 export type ServiceVariantOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   serviceId?: Prisma.SortOrder
+  title?: Prisma.SortOrderInput | Prisma.SortOrder
   locationType?: Prisma.SortOrder
   basePrice?: Prisma.SortOrder
   maxPrice?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -317,6 +328,7 @@ export type ServiceVariantScalarWhereWithAggregatesInput = {
   NOT?: Prisma.ServiceVariantScalarWhereWithAggregatesInput | Prisma.ServiceVariantScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"ServiceVariant"> | string
   serviceId?: Prisma.StringWithAggregatesFilter<"ServiceVariant"> | string
+  title?: Prisma.StringNullableWithAggregatesFilter<"ServiceVariant"> | string | null
   locationType?: Prisma.EnumLocationTypeWithAggregatesFilter<"ServiceVariant"> | $Enums.LocationType
   basePrice?: Prisma.DecimalWithAggregatesFilter<"ServiceVariant"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: Prisma.DecimalNullableWithAggregatesFilter<"ServiceVariant"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -328,6 +340,7 @@ export type ServiceVariantScalarWhereWithAggregatesInput = {
 
 export type ServiceVariantCreateInput = {
   id?: string
+  title?: string | null
   locationType: $Enums.LocationType
   basePrice: runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -343,6 +356,7 @@ export type ServiceVariantCreateInput = {
 export type ServiceVariantUncheckedCreateInput = {
   id?: string
   serviceId: string
+  title?: string | null
   locationType: $Enums.LocationType
   basePrice: runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -356,6 +370,7 @@ export type ServiceVariantUncheckedCreateInput = {
 
 export type ServiceVariantUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   basePrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -371,6 +386,7 @@ export type ServiceVariantUpdateInput = {
 export type ServiceVariantUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   serviceId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   basePrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -385,6 +401,7 @@ export type ServiceVariantUncheckedUpdateInput = {
 export type ServiceVariantCreateManyInput = {
   id?: string
   serviceId: string
+  title?: string | null
   locationType: $Enums.LocationType
   basePrice: runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -396,6 +413,7 @@ export type ServiceVariantCreateManyInput = {
 
 export type ServiceVariantUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   basePrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -408,6 +426,7 @@ export type ServiceVariantUpdateManyMutationInput = {
 export type ServiceVariantUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   serviceId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   basePrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -430,6 +449,7 @@ export type ServiceVariantOrderByRelationAggregateInput = {
 export type ServiceVariantCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   serviceId?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   locationType?: Prisma.SortOrder
   basePrice?: Prisma.SortOrder
   maxPrice?: Prisma.SortOrder
@@ -448,6 +468,7 @@ export type ServiceVariantAvgOrderByAggregateInput = {
 export type ServiceVariantMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   serviceId?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   locationType?: Prisma.SortOrder
   basePrice?: Prisma.SortOrder
   maxPrice?: Prisma.SortOrder
@@ -460,6 +481,7 @@ export type ServiceVariantMaxOrderByAggregateInput = {
 export type ServiceVariantMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   serviceId?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   locationType?: Prisma.SortOrder
   basePrice?: Prisma.SortOrder
   maxPrice?: Prisma.SortOrder
@@ -579,6 +601,7 @@ export type ServiceVariantUpdateOneWithoutBookingsNestedInput = {
 
 export type ServiceVariantCreateWithoutServiceInput = {
   id?: string
+  title?: string | null
   locationType: $Enums.LocationType
   basePrice: runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -592,6 +615,7 @@ export type ServiceVariantCreateWithoutServiceInput = {
 
 export type ServiceVariantUncheckedCreateWithoutServiceInput = {
   id?: string
+  title?: string | null
   locationType: $Enums.LocationType
   basePrice: runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -635,6 +659,7 @@ export type ServiceVariantScalarWhereInput = {
   NOT?: Prisma.ServiceVariantScalarWhereInput | Prisma.ServiceVariantScalarWhereInput[]
   id?: Prisma.StringFilter<"ServiceVariant"> | string
   serviceId?: Prisma.StringFilter<"ServiceVariant"> | string
+  title?: Prisma.StringNullableFilter<"ServiceVariant"> | string | null
   locationType?: Prisma.EnumLocationTypeFilter<"ServiceVariant"> | $Enums.LocationType
   basePrice?: Prisma.DecimalFilter<"ServiceVariant"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: Prisma.DecimalNullableFilter<"ServiceVariant"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -646,6 +671,7 @@ export type ServiceVariantScalarWhereInput = {
 
 export type ServiceVariantCreateWithoutDeliverablesInput = {
   id?: string
+  title?: string | null
   locationType: $Enums.LocationType
   basePrice: runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -660,6 +686,7 @@ export type ServiceVariantCreateWithoutDeliverablesInput = {
 export type ServiceVariantUncheckedCreateWithoutDeliverablesInput = {
   id?: string
   serviceId: string
+  title?: string | null
   locationType: $Enums.LocationType
   basePrice: runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -688,6 +715,7 @@ export type ServiceVariantUpdateToOneWithWhereWithoutDeliverablesInput = {
 
 export type ServiceVariantUpdateWithoutDeliverablesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   basePrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -702,6 +730,7 @@ export type ServiceVariantUpdateWithoutDeliverablesInput = {
 export type ServiceVariantUncheckedUpdateWithoutDeliverablesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   serviceId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   basePrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -714,6 +743,7 @@ export type ServiceVariantUncheckedUpdateWithoutDeliverablesInput = {
 
 export type ServiceVariantCreateWithoutBookingsInput = {
   id?: string
+  title?: string | null
   locationType: $Enums.LocationType
   basePrice: runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -728,6 +758,7 @@ export type ServiceVariantCreateWithoutBookingsInput = {
 export type ServiceVariantUncheckedCreateWithoutBookingsInput = {
   id?: string
   serviceId: string
+  title?: string | null
   locationType: $Enums.LocationType
   basePrice: runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -756,6 +787,7 @@ export type ServiceVariantUpdateToOneWithWhereWithoutBookingsInput = {
 
 export type ServiceVariantUpdateWithoutBookingsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   basePrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -770,6 +802,7 @@ export type ServiceVariantUpdateWithoutBookingsInput = {
 export type ServiceVariantUncheckedUpdateWithoutBookingsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   serviceId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   basePrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -782,6 +815,7 @@ export type ServiceVariantUncheckedUpdateWithoutBookingsInput = {
 
 export type ServiceVariantCreateManyServiceInput = {
   id?: string
+  title?: string | null
   locationType: $Enums.LocationType
   basePrice: runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -793,6 +827,7 @@ export type ServiceVariantCreateManyServiceInput = {
 
 export type ServiceVariantUpdateWithoutServiceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   basePrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -806,6 +841,7 @@ export type ServiceVariantUpdateWithoutServiceInput = {
 
 export type ServiceVariantUncheckedUpdateWithoutServiceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   basePrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -819,6 +855,7 @@ export type ServiceVariantUncheckedUpdateWithoutServiceInput = {
 
 export type ServiceVariantUncheckedUpdateManyWithoutServiceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   basePrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   maxPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
@@ -871,6 +908,7 @@ export type ServiceVariantCountOutputTypeCountBookingsArgs<ExtArgs extends runti
 export type ServiceVariantSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   serviceId?: boolean
+  title?: boolean
   locationType?: boolean
   basePrice?: boolean
   maxPrice?: boolean
@@ -887,6 +925,7 @@ export type ServiceVariantSelect<ExtArgs extends runtime.Types.Extensions.Intern
 export type ServiceVariantSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   serviceId?: boolean
+  title?: boolean
   locationType?: boolean
   basePrice?: boolean
   maxPrice?: boolean
@@ -900,6 +939,7 @@ export type ServiceVariantSelectCreateManyAndReturn<ExtArgs extends runtime.Type
 export type ServiceVariantSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   serviceId?: boolean
+  title?: boolean
   locationType?: boolean
   basePrice?: boolean
   maxPrice?: boolean
@@ -913,6 +953,7 @@ export type ServiceVariantSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
 export type ServiceVariantSelectScalar = {
   id?: boolean
   serviceId?: boolean
+  title?: boolean
   locationType?: boolean
   basePrice?: boolean
   maxPrice?: boolean
@@ -922,7 +963,7 @@ export type ServiceVariantSelectScalar = {
   updatedAt?: boolean
 }
 
-export type ServiceVariantOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "serviceId" | "locationType" | "basePrice" | "maxPrice" | "sessionDurationMins" | "logisticsIncluded" | "createdAt" | "updatedAt", ExtArgs["result"]["serviceVariant"]>
+export type ServiceVariantOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "serviceId" | "title" | "locationType" | "basePrice" | "maxPrice" | "sessionDurationMins" | "logisticsIncluded" | "createdAt" | "updatedAt", ExtArgs["result"]["serviceVariant"]>
 export type ServiceVariantInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   service?: boolean | Prisma.ServiceDefaultArgs<ExtArgs>
   deliverables?: boolean | Prisma.ServiceVariant$deliverablesArgs<ExtArgs>
@@ -946,6 +987,7 @@ export type $ServiceVariantPayload<ExtArgs extends runtime.Types.Extensions.Inte
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     serviceId: string
+    title: string | null
     locationType: $Enums.LocationType
     basePrice: runtime.Decimal
     maxPrice: runtime.Decimal | null
@@ -1381,6 +1423,7 @@ export interface Prisma__ServiceVariantClient<T, Null = never, ExtArgs extends r
 export interface ServiceVariantFieldRefs {
   readonly id: Prisma.FieldRef<"ServiceVariant", 'String'>
   readonly serviceId: Prisma.FieldRef<"ServiceVariant", 'String'>
+  readonly title: Prisma.FieldRef<"ServiceVariant", 'String'>
   readonly locationType: Prisma.FieldRef<"ServiceVariant", 'LocationType'>
   readonly basePrice: Prisma.FieldRef<"ServiceVariant", 'Decimal'>
   readonly maxPrice: Prisma.FieldRef<"ServiceVariant", 'Decimal'>

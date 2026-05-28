@@ -8,12 +8,13 @@ import { Input } from "@/components/ui/input";
 import { approvePhoto, rejectPhoto, deletePhoto } from "@/lib/actions/booking";
 import { tryCatch } from "@/hooks/try-catch";
 import { toast } from "sonner";
-import { CheckIcon, XIcon, ImageIcon, VideoIcon, DownloadIcon, EyeIcon, Loader2, ShieldAlertIcon } from "lucide-react";
+import { CheckIcon, XIcon, ImageIcon, VideoIcon, DownloadIcon, EyeIcon, Loader2, ShieldAlertIcon, UploadCloudIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Info, Delete02Icon } from "@hugeicons/core-free-icons";
+import { MediaUploader } from "./MediaUploader";
 
 interface PhotoItem {
     id: string;
@@ -30,6 +31,7 @@ interface MediaGalleryProps {
     photos: PhotoItem[];
     isManager: boolean;
     r2PublicUrl: string;
+    bookingId: string;
 }
 
 const statusBadgeVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -38,7 +40,7 @@ const statusBadgeVariant: Record<string, "default" | "secondary" | "destructive"
     REJECTED: "destructive",
 };
 
-export function MediaGallery({ photos, isManager, r2PublicUrl }: MediaGalleryProps) {
+export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: MediaGalleryProps) {
     const [isPending, startTransition] = useTransition();
     const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
     const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
@@ -46,6 +48,7 @@ export function MediaGallery({ photos, isManager, r2PublicUrl }: MediaGalleryPro
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
+    const [photoToReplace, setPhotoToReplace] = useState<string | null>(null);
 
     const handleApprove = (photoId: string) => {
         startTransition(async () => {
@@ -222,11 +225,26 @@ export function MediaGallery({ photos, isManager, r2PublicUrl }: MediaGalleryPro
                                 </div>
                             )}
 
-                            {photo.approvalStatus === "REJECTED" && photo.rejectionReason && (
-                                <p className="text-[10px] text-destructive flex items-center gap-1 mt-1">
-                                    <ShieldAlertIcon className="h-3 w-3" />
-                                    {photo.rejectionReason}
-                                </p>
+                            {photo.approvalStatus === "REJECTED" && (
+                                <div className="flex flex-col gap-1.5 mt-1">
+                                    {photo.rejectionReason && (
+                                        <p className="text-[10px] text-destructive flex items-center gap-1">
+                                            <ShieldAlertIcon className="h-3 w-3 shrink-0" />
+                                            <span className="truncate" title={photo.rejectionReason}>
+                                                {photo.rejectionReason}
+                                            </span>
+                                        </p>
+                                    )}
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 text-[10px] gap-1"
+                                        onClick={() => setPhotoToReplace(photo.id)}
+                                    >
+                                        <UploadCloudIcon className="h-3 w-3" />
+                                        Replace Photo
+                                    </Button>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -271,6 +289,23 @@ export function MediaGallery({ photos, isManager, r2PublicUrl }: MediaGalleryPro
                             Confirm Rejection
                         </Button>
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Replace photo dialog */}
+            <Dialog open={!!photoToReplace} onOpenChange={(open) => !open && setPhotoToReplace(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Replace Photo</DialogTitle>
+                        <DialogDescription>Upload a new file to replace the rejected photo.</DialogDescription>
+                    </DialogHeader>
+                    {photoToReplace && (
+                        <MediaUploader 
+                            bookingId={bookingId} 
+                            replacePhotoId={photoToReplace} 
+                            onSuccess={() => setPhotoToReplace(null)}
+                        />
+                    )}
                 </DialogContent>
             </Dialog>
 

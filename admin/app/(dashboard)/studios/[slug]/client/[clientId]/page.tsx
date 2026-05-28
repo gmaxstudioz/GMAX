@@ -70,17 +70,22 @@ export default async function ClientPage({ params }: ClientPageProps) {
                     <BackButton />
                     <h1 className="text-2xl font-bold">Client Profile</h1>
                 </div>
-                <EditClientDialog 
-                    clientId={clientData.id} 
-                    initialData={{
-                        name: clientData.name,
-                        email: clientData.email,
-                        phone: clientData.phone,
-                        address: clientData.address,
-                        notes: clientData.notes,
-                        type: clientData.type as "regular" | "vip" | "vvip"
-                    }} 
-                />
+                {(() => {
+                    const canEditClient = ["owner", "developer", "manager", "admin"].includes(currentMember.role);
+                    return canEditClient ? (
+                        <EditClientDialog 
+                            clientId={clientData.id} 
+                            initialData={{
+                                name: clientData.name,
+                                email: clientData.email,
+                                phone: clientData.phone,
+                                address: clientData.address,
+                                notes: clientData.notes,
+                                type: clientData.type as "regular" | "vip" | "vvip"
+                            }} 
+                        />
+                    ) : null;
+                })()}
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

@@ -20,11 +20,11 @@ import { MediaGallery } from "./_components/MediaGallery";
 import { PaymentLinkCard } from "./_components/PaymentLinkCard";
 import { DeleteBookingButton } from "./_components/DeleteBookingButton";
 import { DeliverAssetsButton } from "./_components/DeliverAssetsButton";
+import { MarkTaskCompletedButton } from "./_components/MarkTaskCompletedButton";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Camera, Download, Upload } from "@hugeicons/core-free-icons";
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { bookingId } = await params;
     const booking = await prisma.booking.findUnique({
@@ -102,6 +102,9 @@ export default async function BookingDetailPage({ params }: Props) {
     if (!currentMember) return notFound();
 
     const isManager = ["owner", "manager", "developer"].includes(currentMember.role);
+    const canUpdateBooking = ["owner", "manager", "developer", "admin"].includes(currentMember.role);
+    const canViewFinancials = ["owner", "admin", "manager", "receptionist", "developer"].includes(currentMember.role);
+    const canDeliver = ["owner", "admin", "manager", "developer"].includes(currentMember.role);
 
     const booking = await prisma.booking.findFirst({
         where: { id: bookingId, studioId: studio.id },
@@ -224,7 +227,7 @@ export default async function BookingDetailPage({ params }: Props) {
                     <p className="text-muted-foreground text-sm">{studio.name}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    {serializedBooking.photos.length > 0 && (
+                    {canDeliver && serializedBooking.photos.length > 0 && (
                         <DeliverAssetsButton 
                             bookingId={serializedBooking.id} 
                             isDelivered={serializedBooking.deliveryStatus === "DELIVERED"} 
@@ -232,28 +235,34 @@ export default async function BookingDetailPage({ params }: Props) {
                             balanceDue={balanceDue}
                         />
                     )}
-                    <UpdateBookingDialog
-                        bookingId={serializedBooking.id}
-                        clients={studioClients}
-                        services={studioServices}
-                        members={mappedMembers}
-                        currentData={{
-                            notes: serializedBooking.notes,
-                            sessionCount: serializedBooking.sessionCount,
-                            bookingStatus: serializedBooking.bookingStatus,
-                            paymentStatus: serializedBooking.paymentStatus,
-                            deliveryStatus: serializedBooking.deliveryStatus,
-                            clientId: serializedBooking.clientId,
-                            serviceId: serializedBooking.serviceId,
-                            serviceVariantId: serializedBooking.serviceVariantId ?? undefined,
-                            memberId: serializedBooking.memberId || "",
-                            bookingDate: serializedBooking.bookingDate,
-                            addonIds: serializedBooking.addons.map((addon: { id: string; variants?: { id: string }[] }) => `${addon.id}:${addon.variants?.[0]?.id}`),
-                            totalAmount: Number(serializedBooking.totalAmount),
-                            paymentPlan: serializedBooking.paymentPlan,
-                            extraPicturesCount: serializedBooking.extraPicturesCount,
-                        }}
-                    />
+                    {canUpdateBooking && (
+                        <UpdateBookingDialog
+                            bookingId={serializedBooking.id}
+                            clients={studioClients}
+                            services={studioServices}
+                            members={mappedMembers}
+                            currentData={{
+                                notes: serializedBooking.notes,
+                                sessionCount: serializedBooking.sessionCount,
+                                bookingStatus: serializedBooking.bookingStatus,
+                                paymentStatus: serializedBooking.paymentStatus,
+                                deliveryStatus: serializedBooking.deliveryStatus,
+                                clientId: serializedBooking.clientId,
+                                serviceId: serializedBooking.serviceId,
+                                serviceVariantId: serializedBooking.serviceVariantId ?? undefined,
+                                memberId: serializedBooking.memberId || "",
+                                bookingDate: serializedBooking.bookingDate,
+                                addonIds: serializedBooking.addons.map((addon: { id: string; variants?: { id: string }[] }) => `${addon.id}:${addon.variants?.[0]?.id}`),
+                                totalAmount: Number(serializedBooking.totalAmount),
+                                paymentPlan: serializedBooking.paymentPlan,
+                                extraPicturesCount: serializedBooking.extraPicturesCount,
+                            }}
+                            canEditPrice={isManager}
+                        />
+                    )}
+                    {serializedBooking.memberId === currentMember.id && serializedBooking.bookingStatus !== "COMPLETED" && (
+                        <MarkTaskCompletedButton bookingId={serializedBooking.id} />
+                    )}
                     {isManager && <DeleteBookingButton bookingId={serializedBooking.id} slug={studio.slug} />}
                 </div>
             </div>
@@ -266,12 +275,14 @@ export default async function BookingDetailPage({ params }: Props) {
                         <StatusBadge status={serializedBooking.bookingStatus} />
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardContent>
-                        <p className="text-muted-foreground font-bold text-lg mb-2">Payment</p>
-                        <StatusBadge status={serializedBooking.paymentStatus} />
-                    </CardContent>
-                </Card>
+                {canViewFinancials && (
+                    <Card>
+                        <CardContent>
+                            <p className="text-muted-foreground font-bold text-lg mb-2">Payment</p>
+                            <StatusBadge status={serializedBooking.paymentStatus} />
+                        </CardContent>
+                    </Card>
+                )}
                 <Card>
                     <CardContent>
                         <p className="text-muted-foreground font-bold text-lg mb-2">Delivery</p>
@@ -390,6 +401,7 @@ export default async function BookingDetailPage({ params }: Props) {
                                     photos={serializedPhotos}
                                     isManager={isManager}
                                     r2PublicUrl={r2PublicUrl}
+                                    bookingId={serializedBooking.id}
                                 />
                             )}
                         </CardContent>
@@ -399,18 +411,23 @@ export default async function BookingDetailPage({ params }: Props) {
                 {/* Right Column — Payment & Meta */}
                 <div className="flex flex-col gap-6">
                     {/* Combined Payment Card */}
-                    <PaymentLinkCard
-                        bookingId={serializedBooking.id}
-                        balanceDue={balanceDue}
-                        grandTotal={grandTotal}
-                        totalPaid={totalPaid}
-                        paymentStatus={serializedBooking.paymentStatus}
-                        payments={serializedPayments}
-                        addonsTotal={0}
-                        servicePrice={grandTotal}
-                        salePrice={null}
-                        addonsCount={0}
-                    />
+                    {canViewFinancials && (
+                        <PaymentLinkCard
+                            bookingId={serializedBooking.id}
+                            balanceDue={balanceDue}
+                            grandTotal={grandTotal}
+                            totalPaid={totalPaid}
+                            paymentStatus={serializedBooking.paymentStatus}
+                            payments={serializedPayments}
+                            addonsTotal={0}
+                            servicePrice={grandTotal}
+                            salePrice={null}
+                            addonsCount={0}
+                            priceApprovalStatus={serializedBooking.priceApprovalStatus}
+                            pendingTotalAmount={serializedBooking.pendingTotalAmount ? Number(serializedBooking.pendingTotalAmount) : null}
+                            userRole={currentMember?.role}
+                        />
+                    )}
 
                     {/* Meta / Timestamps */}
                     <Card>

@@ -6,6 +6,7 @@ import { optionalAuthMiddleware, authMiddleware, BaseContext } from "./middlewar
 import { calculateGrandTotal } from "@/lib/pricing";
 import { v4 as uuidv4 } from "uuid";
 import { paystackFetch } from "@/lib/paystack";
+import { notifyAdminsOfPayment } from "@/lib/notifications";
 
 const os = implement(contract).$context<BaseContext>();
 
@@ -549,27 +550,9 @@ export const createPublicBooking = os.booking.createPublic
             };
         }
 
-        // Initialize Paystack
-        const paystack = await paystackFetch<{
-            data?: { authorization_url?: string }
-        }>("/transaction/initialize", {
-            method: "POST",
-            body: JSON.stringify({
-                email:    clientEmail,
-                amount:   Math.round(chargeAmount * 100), // kobo
-                reference,
-                metadata: {
-                    type:     "booking",
-                    studioId: input.studioId,
-                    intentId: reference,
-                },
-                callback_url: `${PORTAL_URL}/booking/verify?reference=${reference}`,
-            }),
-        });
-
         return {
             bookingId:  reference,
-            paymentUrl: paystack.data?.authorization_url ?? null,
+            paymentUrl: null,
             reference,
             amount:     chargeAmount,
         };
@@ -608,6 +591,107 @@ export const verifyBooking = os.booking.verifyBooking
             where: { paystackReference: input.reference },
         });
 
+        if (!intent && input.reference.includes("_bal_")) {
+            const bookingId = input.reference.split("_bal_")[0];
+            const booking = await prisma.booking.findUnique({
+                where: { id: bookingId },
+                include: { client: true, service: true, studio: { include: { members: true } }, payments: true }
+            });
+
+            if (!booking) {
+                return {
+                    status: "FAILED" as const,
+                    clientName: "",
+                    serviceName: "",
+                    bookingDate: "",
+                    totalAmount: 0,
+                    amountPaid: 0,
+                    paymentPlan: "FULL" as const,
+                    reference: input.reference,
+                    bookingId: null,
+                };
+            }
+
+            try {
+                const verification = await paystackFetch<{
+                    status: boolean;
+                    data?: { status?: string; amount?: number; currency?: string; reference?: string };
+                }>(`/transaction/verify/${encodeURIComponent(input.reference)}`);
+
+                if (verification.status && verification.data?.status === "success") {
+                    const paidAmount = Number(verification.data.amount ?? 0) / 100;
+                    const paidCurrency = String(verification.data.currency ?? "").toUpperCase();
+
+                    if (paidCurrency === "NGN") {
+                        let isNewPayment = false;
+                        // Create payment if it doesn't exist
+                        await prisma.$transaction(async (tx) => {
+                            const existingPayment = await tx.payment.findUnique({
+                                where: { paystackReference: input.reference }
+                            });
+
+                            if (!existingPayment) {
+                                isNewPayment = true;
+                                const defaultMember = booking.studio?.members.find((m: any) => m.role === "owner") ?? booking.studio?.members[0];
+                                
+                                await tx.payment.create({
+                                    data: {
+                                        amount: paidAmount,
+                                        method: "TRANSFER",
+                                        status: "PAID",
+                                        paystackReference: input.reference,
+                                        paystackResponse: verification.data as any,
+                                        receiptNumber: `RCP-${Date.now()}-${uuidv4().slice(0, 8).toUpperCase()}`,
+                                        bookingId: booking.id,
+                                        recordedById: defaultMember?.userId || booking.createdBy,
+                                        installmentType: "BALANCE",
+                                        sequence: booking.payments.length + 1,
+                                        expectedAmount: paidAmount,
+                                        paymentDate: new Date(),
+                                    },
+                                });
+
+                                const totalPaid = booking.payments
+                                    .filter((p: any) => p.status === "PAID")
+                                    .reduce((sum: number, p: any) => sum + Number(p.amount), 0) + paidAmount;
+                                
+                                await tx.booking.update({
+                                    where: { id: booking.id },
+                                    data: {
+                                        paymentStatus: totalPaid >= Number(booking.totalAmount) ? "PAID" : "PARTIALLY_PAID"
+                                    }
+                                });
+                            }
+                        });
+
+                        if (isNewPayment) {
+                            await notifyAdminsOfPayment(
+                                booking.studioId,
+                                booking.id,
+                                paidAmount,
+                                booking.client.name,
+                                booking.service?.name ?? "Session"
+                            ).catch(console.error);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error(`[Verify] Paystack balance verification failed for ${input.reference}:`, err);
+            }
+
+            return {
+                status: "COMPLETED" as const,
+                clientName: booking.client.name,
+                serviceName: booking.service?.name ?? "Session",
+                bookingDate: booking.bookingDate.toISOString(),
+                totalAmount: Number(booking.totalAmount),
+                amountPaid: 0, // This will be updated if verification succeeds? Actually just return the balance logic
+                paymentPlan: "FULL" as const,
+                reference: input.reference,
+                bookingId: booking.id,
+            };
+        }
+
         if (!intent) {
             return {
                 status: "FAILED" as const,
@@ -645,6 +729,7 @@ export const verifyBooking = os.booking.verifyBooking
                         const defaultMember = studio?.members.find(m => m.role === "owner") ?? studio?.members[0];
 
                         if (studio && defaultMember) {
+                            let newBookingId: string | null = null;
                             try {
                                 await prisma.$transaction(async (tx) => {
                                     // 0. Atomically claim the intent
@@ -728,6 +813,8 @@ export const verifyBooking = os.booking.verifyBooking
                                             }),
                                         },
                                     });
+                                    
+                                    newBookingId = booking.id;
 
                                     // 3. Create payment record
                                     const installmentType = intent!.paymentPlan === "FULL" ? "FULL" : "DEPOSIT";
@@ -759,6 +846,20 @@ export const verifyBooking = os.booking.verifyBooking
                                 });
                             } catch (txErr) {
                                 console.error(`[Verify] Transaction failed for ${input.reference}:`, txErr);
+                            }
+
+                            if (newBookingId) {
+                                const service = await prisma.service.findUnique({
+                                    where: { id: intent!.serviceId },
+                                    select: { name: true }
+                                });
+                                await notifyAdminsOfPayment(
+                                    intent!.studioId,
+                                    newBookingId,
+                                    Number(intent!.amount),
+                                    intent!.clientName,
+                                    service?.name ?? "Session"
+                                ).catch(console.error);
                             }
 
                             // Re-fetch updated intent

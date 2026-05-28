@@ -43,6 +43,20 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
     const start = startOfDay(targetDate);
     const end = endOfDay(targetDate);
 
+    const { auth } = await import("@/lib/auth");
+    const { headers } = await import("next/headers");
+    const { redirect } = await import("next/navigation");
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) redirect("/auth/login");
+
+    if (!session?.user) {
+        return <div>Unauthorized</div>;
+    }
+
+    const myMemberships = await prisma.member.findMany({
+        where: { userId: session.user.id }
+    });
+
     // 1. Fetch bookings with comprehensive relations
     const dailyBookings = await prisma.booking.findMany({
         where: {
@@ -302,32 +316,49 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
                                                 <ContextMenuContent>
                                                     <ContextMenuGroup>
                                                         <ContextMenuLabel>Actions</ContextMenuLabel>
-                                                        <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
-                                                           {/* Note: UpdateBookingDialog is usually a Dialog, so ensure it works correctly inside a ContextMenu (often requires a DialogTrigger wrap) */}
-                                                            <UpdateBookingDialog
-                                                                bookingId={booking.id}
-                                                                clients={group.studioClients}
-                                                                services={group.studioServices}
-                                                                members={group.studioMembers}
-                                                                currentData={{
-                                                                    notes: booking.notes || "",
-                                                                    sessionCount: booking.sessionCount,
-                                                                    bookingStatus: booking.bookingStatus,
-                                                                    paymentStatus: booking.paymentStatus,
-                                                                    deliveryStatus: booking.deliveryStatus,
-                                                                    clientId: booking.clientId,
-                                                                    serviceId: booking.serviceId,
-                                                                    serviceVariantId: booking.serviceVariantId ?? undefined,
-                                                                    memberId: booking.memberId || "",
-                                                                    bookingDate: booking.bookingDate.toISOString(),
-                                                                    addonIds: booking.addons.map(addon => addon.id),
-                                                                    totalAmount: Number(booking.totalAmount),
-                                                                    paymentPlan: booking.paymentPlan,
-                                                                }}
-                                                            />
-                                                        </div>
-                                                        <ContextMenuItem className="text-destructive">Delete</ContextMenuItem>
-                                                        <ContextMenuItem>Cancel</ContextMenuItem>
+                                                        {(() => {
+                                                            const membership = myMemberships.find(m => m.studioId === booking.studioId);
+                                                            const canUpdateBooking = membership && ["owner", "manager", "developer", "admin"].includes(membership.role);
+                                                            
+                                                            return canUpdateBooking ? (
+                                                                <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+                                                                   {/* Note: UpdateBookingDialog is usually a Dialog, so ensure it works correctly inside a ContextMenu (often requires a DialogTrigger wrap) */}
+                                                                    <UpdateBookingDialog
+                                                                        bookingId={booking.id}
+                                                                        clients={group.studioClients}
+                                                                        services={group.studioServices}
+                                                                        members={group.studioMembers}
+                                                                        currentData={{
+                                                                            notes: booking.notes || "",
+                                                                            sessionCount: booking.sessionCount,
+                                                                            bookingStatus: booking.bookingStatus,
+                                                                            paymentStatus: booking.paymentStatus,
+                                                                            deliveryStatus: booking.deliveryStatus,
+                                                                            clientId: booking.clientId,
+                                                                            serviceId: booking.serviceId,
+                                                                            serviceVariantId: booking.serviceVariantId ?? undefined,
+                                                                            memberId: booking.memberId || "",
+                                                                            bookingDate: booking.bookingDate.toISOString(),
+                                                                            addonIds: booking.addons.map(addon => addon.id),
+                                                                            totalAmount: Number(booking.totalAmount),
+                                                                            paymentPlan: booking.paymentPlan,
+                                                                        }}
+                                                                        canEditPrice={canUpdateBooking}
+                                                                    />
+                                                                </div>
+                                                            ) : null;
+                                                        })()}
+                                                        {(() => {
+                                                            const membership = myMemberships.find(m => m.studioId === booking.studioId);
+                                                            const canUpdateBooking = membership && ["owner", "manager", "developer", "admin"].includes(membership.role);
+                                                            
+                                                            return canUpdateBooking ? (
+                                                                <>
+                                                                    <ContextMenuItem className="text-destructive">Delete</ContextMenuItem>
+                                                                    <ContextMenuItem>Cancel</ContextMenuItem>
+                                                                </>
+                                                            ) : null;
+                                                        })()}
                                                     </ContextMenuGroup>
                                                 </ContextMenuContent>
                                             </ContextMenu>

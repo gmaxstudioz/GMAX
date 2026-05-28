@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { GlobalSearch } from "./global-search"
+import { NotificationArea } from "../NotificationArea"
 
 export async function SiteHeader() {
   const session = await auth.api.getSession({
@@ -33,8 +34,8 @@ export async function SiteHeader() {
     canCreateStudio = members.some(m => ["owner", "developer"].includes(m.role));
     canCreateService = members.some(m => ["owner", "developer", "manager"].includes(m.role));
     
-    // If they have NO roles, technically they can't create anything
-    if (members.length === 0) {
+    // If they have NO roles, or their only roles are photographer/videographer, they can't create clients/bookings
+    if (members.length === 0 || members.every(m => ["photographer", "videographer"].includes(m.role))) {
       canCreateClient = false;
       canCreateBooking = false;
     }
@@ -57,30 +58,7 @@ export async function SiteHeader() {
       </div>
       
       <div className="px-4 lg:px-6 flex items-center gap-2">
-        {canCreateBooking && (
-          <Button variant="outline" size="sm" className="hidden md:flex" asChild>
-            <Link href="/bookings">
-              <CalendarPlusIcon className="mr-2 h-4 w-4" />
-              Add Booking
-            </Link>
-          </Button>
-        )}
-        {canCreateClient && (
-          <Button variant="outline" size="sm" className="hidden md:flex" asChild>
-            <Link href="/clients">
-              <UsersIcon className="mr-2 h-4 w-4" />
-              Add Client
-            </Link>
-          </Button>
-        )}
-        {canCreateService && (
-          <Button variant="outline" size="sm" className="hidden md:flex" asChild>
-            <Link href="/services">
-              <WrenchIcon className="mr-2 h-4 w-4" />
-              Add Service
-            </Link>
-          </Button>
-        )}
+        <NotificationArea />
         {canCreateStudio && (
           <Button size="sm" asChild>
             <Link href="/studios/create">

@@ -76,6 +76,8 @@ export default async function StudioDetails({ params }: StudioDetailsProps) {
             : value
     ));
 
+    const canViewStats = ["owner", "admin", "manager", "developer"].includes(userRole);
+
     return (
         <div className="flex flex-col gap-4 py-4 px-4 md:gap-6 md:py-6 md:px-6">
             <div className="flex items-center justify-center gap-2 w-full">
@@ -84,7 +86,7 @@ export default async function StudioDetails({ params }: StudioDetailsProps) {
                     <h1 className="text-2xl font-bold">{studioData?.name.toUpperCase()}</h1>
                 </div>
             </div>
-            <StudioStatsCards data={serialized} />
+            {canViewStats && <StudioStatsCards data={serialized} />}
             <StudioData studioData={serialized} userRole={userRole} />
         </div>
     )
