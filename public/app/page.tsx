@@ -17,23 +17,33 @@ const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
 
 const words = ["CREATIVE", "STUDIO"];
 
-const heroImages = [
-  { src: "/works/image-1.jpg", top: "5%", left: "5%" },
-  { src: "/works/image-2.jpg", top: "8%", right: "5%" },
-  { src: "/works/image-3.jpg", top: "40%", left: "2%" },
-  { src: "/works/image-4.jpg", top: "42%", right: "2%" },
-  { src: "/works/image-5.jpg", bottom: "5%", left: "5%" },
-  { src: "/works/image-6.jpg", bottom: "8%", right: "5%" },
-  { src: "/works/image-7.jpg", top: "10%", left: "25%" },
-  { src: "/works/image-8.jpg", top: "12%", right: "25%" },
-  { src: "/works/image-9.jpg", bottom: "10%", left: "25%" },
-  { src: "/works/image-10.jpg", bottom: "12%", right: "25%" },
-  { src: "/works/image-11.jpg", top: "25%", left: "15%" },
-  { src: "/works/image-12.jpg", top: "28%", right: "15%" },
-  { src: "/works/image-13.jpg", bottom: "25%", left: "15%" },
-  { src: "/works/image-14.jpg", bottom: "28%", right: "15%" },
-  { src: "/works/image-15.jpg", top: "75%", left: "45%" },
+const heroPositions = [
+  { top: "5%", left: "5%" },
+  { top: "8%", right: "5%" },
+  { top: "40%", left: "2%" },
+  { top: "42%", right: "2%" },
+  { bottom: "5%", left: "5%" },
+  { bottom: "8%", right: "5%" },
+  { top: "10%", left: "25%" },
+  { top: "12%", right: "25%" },
+  { bottom: "10%", left: "25%" },
+  { bottom: "12%", right: "25%" },
+  { top: "25%", left: "15%" },
+  { top: "28%", right: "15%" },
+  { bottom: "25%", left: "15%" },
+  { bottom: "28%", right: "15%" },
+  { top: "75%", left: "45%" },
+  { top: "20%", left: "40%" },
+  { top: "20%", right: "40%" },
+  { bottom: "20%", left: "40%" },
+  { bottom: "20%", right: "40%" },
+  { top: "50%", right: "20%" },
 ];
+
+const defaultHeroImages = heroPositions.map((pos, i) => ({
+  src: `/works/image-${(i % 15) + 1}.jpg`,
+  ...pos
+}));
 
 export default function Home() {
   const textRef = useRef<HTMLParagraphElement>(null);
@@ -44,11 +54,21 @@ export default function Home() {
   const worksBtnRef = useRef<HTMLDivElement>(null);
   const [activeWorkIndex, setActiveWorkIndex] = useState<number | null>(null);
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
+  const [heroItems, setHeroItems] = useState(defaultHeroImages);
 
   const footerText = "We masterfully blur the line between reality and art, crafting cinematic legacies and luxury imagery that command attention and stand the test of time.";
   const footerWords = footerText.split(" ");
 
   useEffect(() => {
+    getPortfolio("General").then(data => {
+      if (data.items.length > 0) {
+        setHeroItems(heroPositions.map((pos, i) => ({
+          src: `${R2_PUBLIC_URL}/${data.items[i % data.items.length].r2Key}`,
+          ...pos
+        })));
+      }
+    }).catch(() => {});
+    
     getPortfolio().then(data => setPortfolioItems(data.items.slice(0, 8))).catch(() => {});
   }, []);
 
@@ -185,7 +205,7 @@ export default function Home() {
   return (
     <main>
         <section className="hero-section relative flex flex-col items-center justify-center w-full min-h-screen overflow-hidden">
-            {heroImages.map((image, index) => (
+            {heroItems.map((image, index) => (
               <div 
                 key={index}
                 ref={(el) => {
@@ -193,7 +213,7 @@ export default function Home() {
                 }}
                 className={cn(
                   "absolute z-0 pointer-events-none w-[90px] h-[120px] md:w-[150px] md:h-[200px]",
-                  index >= 6 && "hidden md:block"
+                  index >= 8 && "hidden md:block"
                 )}
                 style={{
                   ...(image.top && { top: image.top }),

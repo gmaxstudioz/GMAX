@@ -11,7 +11,7 @@ const servicesData = [
     id: "videography",
     title: "Videography",
     description: "We craft cinematic visual stories that capture the essence of your brand. From promotional campaigns to event coverage, our high-quality video production engages your audience and brings your vision to life on screen. Ideal for weddings, birthday, party, events.",
-    media: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    media: "/video.mp4",
     type: "video",
   },
   {
