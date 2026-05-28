@@ -5,7 +5,7 @@ import Image from "next/image";
 import gsap from "gsap";
 import { cn } from "@/lib/utils";
 import { getPortfolio, type PortfolioItem } from "@/lib/api";
-import { Loader2, ChevronDown } from "lucide-react";
+import { Loader2, ChevronDown, FilterIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 
@@ -58,7 +58,7 @@ export default function WorksPage() {
   }, [activeCategory, filteredWorks.length]);
 
   return (
-    <main className="min-h-screen pt-32 pb-24 px-4 sm:px-6 w-full mx-auto">
+    <main className="min-h-screen pt-32 pb-24 px-4 sm:px-6 w-full mx-auto flex flex-col justify-center items-center">
       <div className="flex flex-col items-center text-center mb-16">
         <div className="flex items-center gap-2 mb-6">
           <div className="w-4 h-4 rounded-full bg-primary"></div>
@@ -71,12 +71,13 @@ export default function WorksPage() {
       </div>
 
       {/* Category Filters */}
-      <div className="flex items-center justify-center mb-16">
+      <div className="flex items-center justify-between mb-16 w-80">
+        <p>{activeCategory}</p>
         <Popover open={isOpen} onOpenChange={setIsOpen}>
           <PopoverTrigger asChild>
-            <Button size="lg" className="gap-2 rounded-full px-8 shadow-xl">
-              {activeCategory === "All" ? "Filter by Category" : activeCategory}
-              <ChevronDown className="w-4 h-4 ml-2" />
+            <Button size="icon-lg" className="shadow-xl">
+              
+              <FilterIcon className="size-4" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[240px] p-2 flex flex-col gap-1 rounded-xl bg-card border border-border shadow-2xl">
