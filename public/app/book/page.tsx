@@ -323,8 +323,8 @@ export default function BookingPage() {
 
         const occasionAnswers = [
           { label: "Birthday", mappedCategory: "PHOTOGRAPHY", icon: "🎂" },
-          { label: "Wedding", mappedCategory: "PHOTOGRAPHY", icon: "💍" },
-          { label: "Event", mappedCategory: "PHOTOGRAPHY", icon: "🎊" },
+          { label: "Wedding", mappedCategory: "VIDEOGRAPHY", icon: "💍" },
+          { label: "Event", mappedCategory: "VIDEOGRAPHY", icon: "🎊" },
           { label: "Graduation / Matriculation", mappedCategory: "PHOTOGRAPHY", icon: "🎓" },
           { label: "Personal Shoot", mappedCategory: "PHOTOGRAPHY", icon: "📸" },
           { label: "Other", mappedCategory: "OTHERS", icon: "✨" }
