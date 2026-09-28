@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import posthog from "posthog-js";
+import { posthogLogs } from "@/lib/posthog-logs";
 
 const steps = [
   { id: 1, title: "Studio", icon: Building2, description: "Choose location" },
@@ -211,6 +213,22 @@ export default function BookingPage() {
       setIsSubmitting(true);
       try {
           const result = await createPublicBooking(data);
+          posthog.capture("booking_submitted", {
+            service_id: data.selectedServiceId,
+            variant_id: data.selectedVariantId,
+            payment_plan: data.paymentPlan,
+            session_count: data.sessionCount,
+            addon_count: data.selectedAddonIds.length,
+            payment_redirect_available: Boolean(result.paymentUrl),
+          });
+          posthogLogs.info("booking submission completed", {
+            service_id: data.selectedServiceId,
+            variant_id: data.selectedVariantId,
+            payment_plan: data.paymentPlan,
+            session_count: data.sessionCount,
+            addon_count: data.selectedAddonIds.length,
+            payment_redirect_available: Boolean(result.paymentUrl),
+          });
           if (result.paymentUrl) {
               window.location.href = result.paymentUrl;
           } else {
