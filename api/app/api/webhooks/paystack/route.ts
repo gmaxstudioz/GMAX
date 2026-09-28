@@ -2,6 +2,15 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { sendSMS } from "@/lib/termii";
+import { getPostHogClient } from "@/lib/auth";
+
+async function captureEvent(event: string, properties: Record<string, string | number | boolean>) {
+    const posthog = getPostHogClient();
+    if (!posthog) return;
+
+    posthog.capture({ event, properties });
+    await posthog.flush();
+}
 
 function generateReceiptNumber(): string {
     return `RCP-${Date.now()}-${uuidv4().slice(0, 8).toUpperCase()}`;
@@ -199,6 +208,11 @@ export async function POST(req: Request) {
             // Don't fail the webhook — booking is already created
         }
 
+        await captureEvent("booking_payment_completed", {
+            payment_plan: intent.paymentPlan,
+            session_count: intent.sessionCount,
+        });
+
         return Response.json({ received: true });
     }
 
@@ -261,6 +275,8 @@ export async function POST(req: Request) {
                 update: {},
             });
         });
+
+        await captureEvent("product_purchase_completed", {});
 
         return Response.json({ received: true });
     }

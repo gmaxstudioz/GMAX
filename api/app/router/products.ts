@@ -7,9 +7,18 @@ import crypto from "crypto";
 import { getPresignedUrl } from "@/lib/r2";
 import { sendAccessLinkEmail, sendSMS } from "@/lib/termii";
 import { Prisma } from "@/lib/generated/prisma/client";
+import { getPostHogClient } from "@/lib/auth";
 
 // Initialize the oRPC implementation builder with the base context
 const os = implement(contract).$context<BaseContext>();
+
+async function captureEvent(event: string, properties: Record<string, string | number | boolean>) {
+    const posthog = getPostHogClient();
+    if (!posthog) return;
+
+    posthog.capture({ event, properties });
+    await posthog.flush();
+}
 
 // Generates a structured receipt identifier for transaction tracking
 function generateReceiptNumber(): string {
@@ -91,6 +100,7 @@ export const createProduct = os.product.create
 
         // Insert the new product record and pull structural category relations
         const data = await prisma.product.create({ data: input, include: { category: true } });
+        await captureEvent("product_created", { is_published: data.isPublished });
         return mapProductToOutput(data);
     });
 
@@ -104,6 +114,7 @@ export const deleteProduct = os.product.delete
 
         // Wipe the target record from the database table
         await prisma.product.delete({ where: { id: input.productId } });
+        await captureEvent("product_deleted", {});
         return { id: input.productId, deleted: true as const };
     });
 
@@ -125,6 +136,7 @@ export const updateProduct = os.product.update
             data: updateData,
             include: { category: true },
         });
+        await captureEvent("product_updated", { is_published: data.isPublished });
         return mapProductToOutput(data);
     });
 
@@ -264,6 +276,10 @@ export const purchaseProduct = os.product.purchase
             },
         });
 
+        await captureEvent("product_checkout_started", {
+            has_sale_price: product.salePrice !== null,
+        });
+
         return {
             paymentUrl: null,
             reference,
@@ -330,6 +346,8 @@ export const requestAccessLink = os.product.requestAccessLink
         console.info(
             `[Shop] Magic access link record ${tokenRecord.id} created and delivered via ${deliveryMethod}`
         );
+
+        await captureEvent("product_access_link_requested", { delivery_method: deliveryMethod });
 
         return { sent: true };
     });
@@ -427,6 +445,10 @@ export const requestDownload = os.product.requestDownload
         // Generate dynamic asset cloud file endpoints configured to self-destruct in 10 minutes
         const downloadUrl = await getPresignedUrl(access.product.r2Key, 600);
         const expiresAt = new Date(Date.now() + 600 * 1000);
+
+        await captureEvent("product_download_requested", {
+            download_count: access.downloadCount + 1,
+        });
 
         return {
             downloadUrl,

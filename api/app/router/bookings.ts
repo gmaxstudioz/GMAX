@@ -6,8 +6,17 @@ import { optionalAuthMiddleware, authMiddleware, BaseContext } from "./middlewar
 import { calculateGrandTotal } from "@/lib/pricing";
 import { v4 as uuidv4 } from "uuid";
 import { paystackFetch } from "@/lib/paystack";
+import { getPostHogClient } from "@/lib/auth";
 
 const os = implement(contract).$context<BaseContext>();
+
+async function captureEvent(event: string, properties: Record<string, string | number | boolean>) {
+    const posthog = getPostHogClient();
+    if (!posthog) return;
+
+    posthog.capture({ event, properties });
+    await posthog.flush();
+}
 
 const mapBookingToOutput = (data: any) => {
     const totalPaid = data.payments
@@ -251,6 +260,12 @@ export const createBookings = os.booking.create.use(optionalAuthMiddleware).hand
             }
         });
 
+        await captureEvent("booking_created", {
+            addon_count: addonIds?.length ?? 0,
+            session_count: bookingData.sessionCount,
+            source: context.user ? "staff" : "public",
+        });
+
         return mapBookingToOutput(data);
     },
 );
@@ -299,6 +314,10 @@ export const updateBooking = os.booking.update.use(authMiddleware).handler(
             }
         });
 
+        await captureEvent("booking_updated", {
+            addons_updated: addonIds !== undefined,
+        });
+
         return mapBookingToOutput(data);
     }
 );
@@ -309,6 +328,7 @@ export const deleteBooking = os.booking.delete.use(authMiddleware).handler(
         if (!existing) throw errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: input.bookingId }});
 
         await prisma.booking.delete({ where: { id: input.bookingId }});
+        await captureEvent("booking_deleted", {});
         return { id: input.bookingId, deleted: true as const };
     }
 );
@@ -376,6 +396,8 @@ export const reassignBooking = os.booking.reassign.use(authMiddleware).handler(
             }
         });
 
+        await captureEvent("booking_reassigned", {});
+
         return mapBookingToOutput(data);
     }
 );
@@ -398,6 +420,8 @@ export const rescheduleBooking = os.booking.reschedule.use(authMiddleware).handl
                 photos: true,
             }
         });
+
+        await captureEvent("booking_rescheduled", {});
 
         return mapBookingToOutput(data);
     }
@@ -425,6 +449,12 @@ export const updateBookingStatus = os.booking.updateStatus.use(authMiddleware).h
                 payments: true,
                 photos: true,
             }
+        });
+
+        await captureEvent("booking_status_updated", {
+            booking_status_changed: Boolean(bookingStatus),
+            delivery_status_changed: Boolean(deliveryStatus),
+            payment_status_changed: Boolean(paymentStatus),
         });
 
         return mapBookingToOutput(data);
@@ -528,6 +558,12 @@ export const createPublicBooking = os.booking.createPublic
                 paymentPlan,
                 expiresAt:       new Date(Date.now() + 60 * 60 * 1000), // 1 hour
             },
+        });
+
+        await captureEvent("public_booking_checkout_started", {
+            addon_count: parsedAddons.length,
+            payment_plan: paymentPlan,
+            session_count: input.sessionCount,
         });
 
         const clientEmail = input.clientEmail;
