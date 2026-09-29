@@ -1,148 +1,91 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import { service, serviceVariant, serviceDeliverable, studioSession, booking, member } from "@/lib/schema";
+import { eq, inArray, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { CategorySchema, CategoryPayload, ServiceSchema, ServicePayload } from "@/lib/schemas/service";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
 export async function createCategory(data: CategoryPayload) {
-    const parsed = CategorySchema.safeParse(data);
-    if (!parsed.success) {
-        return { status: "error", message: parsed.error.issues[0].message };
-    }
-
-    try {
-        const session = await auth.api.getSession({ headers: await headers() });
-        if (!session?.user) return { status: "error", message: "Unauthorized" };
-
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: parsed.data.studioId! },
-        });
-        if (!member) return { status: "error", message: "Unauthorized access to studio" };
-
-        const newCategory = await prisma.category.create({
-            data: {
-                name: parsed.data.name,
-                type: parsed.data.type || "standard",
-                studioId: parsed.data.studioId!,
-            },
-        });
-
-        revalidatePath(`/studios/[slug]`, "page");
-        return { status: "success", message: "Category created successfully", data: newCategory };
-    } catch (error) {
-        console.error("Failed to create category:", error);
-        return { status: "error", message: error instanceof Error ? error.message : "Failed to create category" };
-    }
+    return { status: "error", message: "Categories are now managed via enums in Drizzle. This function is deprecated." };
 }
 
 export async function updateCategory(id: string, data: CategoryPayload) {
-    const parsed = CategorySchema.safeParse(data);
-    if (!parsed.success) {
-        return { status: "error", message: parsed.error.issues[0].message };
-    }
-
-    try {
-        const existing = await prisma.category.findUnique({ where: { id } });
-        if (!existing) return { status: "error", message: "Category not found" };
-
-        const session = await auth.api.getSession({ headers: await headers() });
-        if (!session?.user) return { status: "error", message: "Unauthorized" };
-
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: existing.studioId },
-        });
-        if (!member) return { status: "error", message: "Unauthorized access to studio" };
-
-        const updatedCategory = await prisma.category.update({
-            where: { id },
-            data: {
-                name: parsed.data.name,
-                ...(parsed.data.type ? { type: parsed.data.type } : {}),
-            },
-        });
-
-        revalidatePath(`/studios/[slug]`, "page");
-        return { status: "success", message: "Category updated", data: updatedCategory };
-    } catch {
-        return { status: "error", message: "Error updating category" };
-    }
+    return { status: "error", message: "Categories are now managed via enums in Drizzle. This function is deprecated." };
 }
 
 export async function createService(data: ServicePayload) {
-    // 1. Validate payload via Zod
     const parsed = ServiceSchema.safeParse(data);
     if (!parsed.success) return { status: "error", message: parsed.error.issues[0].message };
 
     try {
-        const session = await auth.api.getSession({ headers: await headers() });
-        if (!session?.user) return { status: "error", message: "Unauthorized" };
+        const userSession = await auth.api.getSession({ headers: await headers() });
+        if (!userSession?.user) return { status: "error", message: "Unauthorized" };
 
         let studioId: string | null = null;
 
-        if (parsed.data.categoryId) {
-            const category = await prisma.category.findUnique({
-                where: { id: parsed.data.categoryId },
-                select: { studioId: true }
+        if (parsed.data.studioSessionId) {
+            const sSession = await db.query.studioSession.findFirst({
+                where: eq(studioSession.id, parsed.data.studioSessionId),
+                columns: { studioId: true }
             });
-            if (!category) return { status: "error", message: "Category not found" };
-            studioId = category.studioId;
-        }
-
-        if (!studioId && parsed.data.studioSessionId) {
-            const studioSession = await prisma.studioSession.findUnique({
-                where: { id: parsed.data.studioSessionId },
-                select: { studioId: true }
-            });
-            if (!studioSession) return { status: "error", message: "Studio session not found" };
-            studioId = studioSession.studioId;
+            if (!sSession) return { status: "error", message: "Studio session not found" };
+            studioId = sSession.studioId;
         }
 
         if (!studioId) {
             return { status: "error", message: "Unable to determine owning studio" };
         }
 
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId }
+        const memberRecord = await db.query.member.findFirst({
+            where: and(eq(member.userId, userSession.user.id), eq(member.studioId, studioId))
         });
-        if (!member) return { status: "error", message: "Unauthorized access to studio" };
+        if (!memberRecord) return { status: "error", message: "Unauthorized access to studio" };
 
-        // 2. Transactional creation
-        const newService = await prisma.service.create({
-            data: {
+        const newService = await db.transaction(async tx => {
+            const [createdService] = await tx.insert(service).values({
+                id: crypto.randomUUID(),
                 name: parsed.data.name,
                 isAddon: parsed.data.isAddon,
                 isActive: parsed.data.isActive,
                 description: parsed.data.description,
-                features: parsed.data.features,
-                categoryId: parsed.data.categoryId!,
+                features: parsed.data.features ?? [],
+                category: 'OTHERS',
+                studioId: studioId!,
                 studioSessionId: parsed.data.studioSessionId,
-                variants: {
-                    create: parsed.data.variants.map(v => ({
-                        locationType: v.locationType,
-                        basePrice: v.basePrice,
-                        maxPrice: v.maxPrice,
-                        sessionDurationMins: v.sessionDurationMins,
-                        logisticsIncluded: v.logisticsIncluded,
-                        ...(v.deliverables ? {
-                            deliverables: {
-                                create: v.deliverables.map(d => ({
-                                    label: d.label,
-                                    quantity: d.quantity,
-                                    detail: d.detail,
-                                    isFree: d.isFree,
-                                })),
-                            },
-                        } : {}),
-                    }))
+            }).returning();
+
+            for (const v of parsed.data.variants) {
+                const [createdVariant] = await tx.insert(serviceVariant).values({
+                    id: crypto.randomUUID(),
+                    serviceId: createdService.id,
+                    locationType: v.locationType,
+                    basePrice: v.basePrice.toString(),
+                    maxPrice: v.maxPrice?.toString(),
+                    sessionDurationMins: v.sessionDurationMins,
+                    logisticsIncluded: v.logisticsIncluded,
+                }).returning();
+
+                if (v.deliverables && v.deliverables.length > 0) {
+                    await tx.insert(serviceDeliverable).values(v.deliverables.map(d => ({
+                        id: crypto.randomUUID(),
+                        variantId: createdVariant.id,
+                        label: d.label,
+                        quantity: d.quantity,
+                        detail: d.detail,
+                        isFree: d.isFree,
+                    })));
                 }
-            },
+            }
+            return createdService;
         });
 
         revalidatePath(`/studios/[slug]`, "page");
         return { status: "success", message: "Service created with pricing variants", data: newService };
-    } catch {
+    } catch (error) {
+        console.error(error);
         return { status: "error", message: "Failed to create service" };
     }
 }
@@ -152,27 +95,28 @@ export async function updateService(id: string, data: ServicePayload) {
     if (!parsed.success) return { status: "error", message: parsed.error.issues[0].message };
 
     try {
-        const existing = await prisma.service.findUnique({ where: { id }, include: { category: true } });
+        const existing = await db.query.service.findFirst({ where: eq(service.id, id) });
         if (!existing) return { status: "error", message: "Service not found" };
 
-        const session = await auth.api.getSession({ headers: await headers() });
-        if (!session?.user) return { status: "error", message: "Unauthorized" };
+        const userSession = await auth.api.getSession({ headers: await headers() });
+        if (!userSession?.user) return { status: "error", message: "Unauthorized" };
 
-        const existingVariants = await prisma.serviceVariant.findMany({
-            where: { serviceId: id },
-            include: { _count: { select: { bookings: true } } },
+        const existingVariants = await db.query.serviceVariant.findMany({
+            where: eq(serviceVariant.serviceId, id),
+            with: { bookings: { columns: { id: true } } }
         });
 
         const inputLocationTypes = parsed.data.variants.map(v => v.locationType);
-        const variantsToRemove = existingVariants.filter(variant => !inputLocationTypes.includes(variant.locationType));
+        const variantsToRemove = existingVariants.filter(variant => !inputLocationTypes.includes(variant.locationType as any));
         const variantIdsToRemove = variantsToRemove.map(variant => variant.id);
 
         if (variantIdsToRemove.length > 0) {
-            const referencedBookingCount = await prisma.booking.count({
-                where: { serviceVariantId: { in: variantIdsToRemove } },
+            const referencedBookingCount = await db.query.booking.findMany({
+                where: inArray(booking.serviceVariantId, variantIdsToRemove),
+                columns: { id: true }
             });
 
-            if (referencedBookingCount > 0) {
+            if (referencedBookingCount.length > 0) {
                 return {
                     status: "error",
                     message: "Unable to remove pricing variants that are referenced by existing bookings.",
@@ -182,61 +126,58 @@ export async function updateService(id: string, data: ServicePayload) {
 
         const existingVariantByLocation = new Map(existingVariants.map(variant => [variant.locationType, variant]));
 
-        const updatedService = await prisma.$transaction(async tx => {
-            const serviceUpdate = tx.service.update({
-                where: { id },
-                data: {
-                    name: parsed.data.name,
-                    isAddon: parsed.data.isAddon,
-                    isActive: parsed.data.isActive,
-                    description: parsed.data.description,
-                    features: parsed.data.features,
-                    studioSessionId: parsed.data.studioSessionId,
-                },
-            });
+        const updatedService = await db.transaction(async tx => {
+            const [updated] = await tx.update(service).set({
+                name: parsed.data.name,
+                isAddon: parsed.data.isAddon,
+                isActive: parsed.data.isActive,
+                description: parsed.data.description,
+                features: parsed.data.features ?? [],
+                studioSessionId: parsed.data.studioSessionId,
+            }).where(eq(service.id, id)).returning();
 
-            const variantPromises = parsed.data.variants.map(variant => {
-                const data = {
-                    locationType: variant.locationType,
-                    basePrice: variant.basePrice,
-                    maxPrice: variant.maxPrice,
-                    sessionDurationMins: variant.sessionDurationMins,
-                    logisticsIncluded: variant.logisticsIncluded,
-                    ...(variant.deliverables ? {
-                        deliverables: {
-                            deleteMany: {},
-                            create: variant.deliverables.map(d => ({
-                                label: d.label,
-                                quantity: d.quantity,
-                                detail: d.detail,
-                                isFree: d.isFree,
-                            })),
-                        },
-                    } : {}),
-                };
-
-                const existingVariant = existingVariantByLocation.get(variant.locationType);
+            for (const variant of parsed.data.variants) {
+                const existingVariant = existingVariantByLocation.get(variant.locationType as any);
+                let variantId: string;
                 if (existingVariant) {
-                    return tx.serviceVariant.update({
-                        where: { id: existingVariant.id },
-                        data,
-                    });
+                    const [updatedVar] = await tx.update(serviceVariant).set({
+                        basePrice: variant.basePrice.toString(),
+                        maxPrice: variant.maxPrice?.toString(),
+                        sessionDurationMins: variant.sessionDurationMins,
+                        logisticsIncluded: variant.logisticsIncluded,
+                    }).where(eq(serviceVariant.id, existingVariant.id)).returning();
+                    variantId = updatedVar.id;
+                } else {
+                    const [createdVar] = await tx.insert(serviceVariant).values({
+                        id: crypto.randomUUID(),
+                        serviceId: id,
+                        locationType: variant.locationType,
+                        basePrice: variant.basePrice.toString(),
+                        maxPrice: variant.maxPrice?.toString(),
+                        sessionDurationMins: variant.sessionDurationMins,
+                        logisticsIncluded: variant.logisticsIncluded,
+                    }).returning();
+                    variantId = createdVar.id;
                 }
 
-                return tx.serviceVariant.create({
-                    data: {
-                        serviceId: id,
-                        ...data,
-                    },
-                });
-            });
-
-            const [updated] = await Promise.all([serviceUpdate, ...variantPromises]);
+                if (existingVariant) {
+                    await tx.delete(serviceDeliverable).where(eq(serviceDeliverable.variantId, variantId));
+                }
+                
+                if (variant.deliverables && variant.deliverables.length > 0) {
+                    await tx.insert(serviceDeliverable).values(variant.deliverables.map(d => ({
+                        id: crypto.randomUUID(),
+                        variantId,
+                        label: d.label,
+                        quantity: d.quantity,
+                        detail: d.detail,
+                        isFree: d.isFree,
+                    })));
+                }
+            }
 
             if (variantIdsToRemove.length > 0) {
-                await tx.serviceVariant.deleteMany({
-                    where: { id: { in: variantIdsToRemove } },
-                });
+                await tx.delete(serviceVariant).where(inArray(serviceVariant.id, variantIdsToRemove));
             }
 
             return updated;
@@ -244,78 +185,37 @@ export async function updateService(id: string, data: ServicePayload) {
 
         revalidatePath(`/studios/[slug]`, "page");
         return { status: "success", message: "Service updated", data: updatedService };
-    } catch {
+    } catch (error) {
+        console.error(error);
         return { status: "error", message: "Error updating service" };
     }
 }
 
 export async function deleteCategory(id: string) {
-    try {
-        const existing = await prisma.category.findUnique({
-            where: { id },
-            select: { studioId: true }
-        });
-        if (!existing) return { status: "error", message: "Category not found" };
-
-        const session = await auth.api.getSession({ headers: await headers() });
-        if (!session?.user) return { status: "error", message: "Unauthorized" };
-
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: existing.studioId }
-        });
-        if (!member) return { status: "error", message: "Unauthorized access to studio" };
-
-        await prisma.category.delete({ where: { id } });
-        revalidatePath(`/studios/[slug]`, "page");
-        return { status: "success", message: "Category deleted" };
-    } catch {
-        return { status: "error", message: "Error deleting category" };
-    }
+    return { status: "error", message: "Categories are now managed via enums in Drizzle. This function is deprecated." };
 }
 
 export async function deleteService(id: string) {
     try {
-        const existing = await prisma.service.findUnique({
-            where: { id },
-            select: { categoryId: true, studioSessionId: true }
+        const existing = await db.query.service.findFirst({
+            where: eq(service.id, id),
+            columns: { studioId: true }
         });
         if (!existing) return { status: "error", message: "Service not found" };
 
-        let studioId: string | null = null;
-        if (existing.categoryId) {
-            const category = await prisma.category.findUnique({
-                where: { id: existing.categoryId },
-                select: { studioId: true }
-            });
-            if (!category) return { status: "error", message: "Category not found" };
-            studioId = category.studioId;
-        }
+        const userSession = await auth.api.getSession({ headers: await headers() });
+        if (!userSession?.user) return { status: "error", message: "Unauthorized" };
 
-        if (!studioId && existing.studioSessionId) {
-            const studioSession = await prisma.studioSession.findUnique({
-                where: { id: existing.studioSessionId },
-                select: { studioId: true }
-            });
-            if (!studioSession) return { status: "error", message: "Studio session not found" };
-            studioId = studioSession.studioId;
-        }
-
-        if (!studioId) {
-            return { status: "error", message: "Unable to determine owning studio" };
-        }
-
-        const session = await auth.api.getSession({ headers: await headers() });
-        if (!session?.user) return { status: "error", message: "Unauthorized" };
-
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId }
+        const memberRecord = await db.query.member.findFirst({
+            where: and(eq(member.userId, userSession.user.id), eq(member.studioId, existing.studioId))
         });
-        if (!member) return { status: "error", message: "Unauthorized access to studio" };
+        if (!memberRecord) return { status: "error", message: "Unauthorized access to studio" };
 
-        await prisma.service.delete({ where: { id } });
+        await db.delete(service).where(eq(service.id, id));
         revalidatePath(`/studios/[slug]`, "page");
         return { status: "success", message: "Service deleted" };
-    } catch {
+    } catch (error) {
+        console.error(error);
         return { status: "error", message: "Error deleting service" };
     }
 }

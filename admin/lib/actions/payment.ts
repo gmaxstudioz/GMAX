@@ -1,6 +1,8 @@
 "use server";
 
-import { prisma } from "../prisma";
+import { db } from "../db";
+import { booking, payment as paymentTable, member, serviceVariant, bookingAddons, service } from "../schema";
+import { eq, and } from "drizzle-orm";
 import { auth } from "../auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -41,37 +43,39 @@ export async function initializePayment(bookingId: string) {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const booking = await prisma.booking.findUnique({
-            where: { id: bookingId },
-            include: {
+        const foundBooking = await db.query.booking.findFirst({
+            where: eq(booking.id, bookingId),
+            with: {
                 client: true,
-                service: { include: { variants: true } },
+                service: { with: { serviceVariants: true } },
                 payments: true,
-                addons: { include: { variants: true } },
+                bookingAddons: { with: { service: { with: { serviceVariants: true } } } },
                 studio: true,
             },
         });
 
-        if (!booking) return { status: "error", message: "Booking not found" };
+        if (!foundBooking) return { status: "error", message: "Booking not found" };
 
         // Verify the caller is a member of this booking's studio
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: booking.studioId },
+        const memberRecord = await db.query.member.findFirst({
+            where: and(eq(member.userId, session.user.id), eq(member.studioId, foundBooking.studioId)),
         });
-        if (!member) return { status: "error", message: "Unauthorized access to this booking" };
+        if (!memberRecord) return { status: "error", message: "Unauthorized access to this booking" };
 
         // Calculate balance due
-        const servicePrice = Number(booking.service?.variants?.find((v) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.variants?.[0]?.basePrice ?? 0);
-        const sessionTotal = servicePrice * booking.sessionCount;
-        const addonsTotal = booking.addons.reduce((sum, a) => {
+        const servicePrice = Number(foundBooking.service?.serviceVariants?.find((v) => v.id === foundBooking.serviceVariantId)?.basePrice ?? foundBooking.service?.serviceVariants?.[0]?.basePrice ?? 0);
+        const sessionTotal = servicePrice * foundBooking.sessionCount;
+        const addonsTotal = foundBooking.bookingAddons.reduce((sum, relation) => {
+            const a = relation.service;
+            if (!a) return sum;
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const variantId = (a as any).addonVariantId;
-            const variant = variantId ? a.variants?.find((v) => v.id === variantId) : a.variants?.[0];
+            const variant = variantId ? a.serviceVariants?.find((v) => v.id === variantId) : a.serviceVariants?.[0];
             return sum + Number(variant?.basePrice ?? 0);
         }, 0);
-        const grandTotal = booking.totalAmount != null ? Number(booking.totalAmount) : (sessionTotal + addonsTotal);
+        const grandTotal = foundBooking.totalAmount != null ? Number(foundBooking.totalAmount) : (sessionTotal + addonsTotal);
 
-        const totalPaid = booking.payments
+        const totalPaid = foundBooking.payments
             .filter((p) => p.status === "PAID")
             .reduce((sum, p) => sum + Number(p.amount), 0);
 
@@ -85,24 +89,23 @@ export async function initializePayment(bookingId: string) {
         const receiptNumber = generateReceiptNumber();
 
         // Create a pending Payment record
-        const payment = await prisma.payment.create({
-            data: {
-                amount: balanceDue,
-                method: "TRANSFER",
-                status: "PENDING",
-                paystackReference: reference,
-                receiptNumber,
-                bookingId: booking.id,
-                recordedById: session.user.id,
-            },
-        });
+        const [payment] = await db.insert(paymentTable).values({
+            id: crypto.randomUUID(),
+            amount: balanceDue.toString(),
+            method: "TRANSFER",
+            status: "PENDING",
+            paystackReference: reference,
+            receiptNumber,
+            bookingId: foundBooking.id,
+            recordedById: session.user.id,
+        }).returning();
 
         // Paystack requires a real email — fall back only as a last resort and
         // flag clearly in logs so the team knows a receipt won't be delivered.
-        const clientEmail = booking.client?.email;
+        const clientEmail = foundBooking.client?.email;
         if (!clientEmail) {
             console.warn(
-                `[Payment] Booking ${booking.id} has no client email. ` +
+                `[Payment] Booking ${foundBooking.id} has no client email. ` +
                 `Paystack receipt will not be delivered to the client.`,
             );
         }
@@ -120,13 +123,13 @@ export async function initializePayment(bookingId: string) {
                 currency: "NGN",
                 callback_url: `${process.env.NEXT_PUBLIC_AUTH_URL ?? "http://localhost:3000"}/pay/${reference}?status=success`,
                 metadata: {
-                    booking_id: booking.id,
+                    booking_id: foundBooking.id,
                     payment_id: payment.id,
-                    studio_name: booking.studio?.name,
-                    client_name: booking.client?.name,
+                    studio_name: foundBooking.studio?.name,
+                    client_name: foundBooking.client?.name,
                     custom_fields: [
-                        { display_name: "Client", variable_name: "client", value: booking.client?.name ?? "N/A" },
-                        { display_name: "Service", variable_name: "service", value: booking.service?.name ?? "N/A" },
+                        { display_name: "Client", variable_name: "client", value: foundBooking.client?.name ?? "N/A" },
+                        { display_name: "Service", variable_name: "service", value: foundBooking.service?.name ?? "N/A" },
                     ],
                 },
             }),
@@ -167,18 +170,22 @@ export async function verifyPayment(reference: string) {
             return { status: "error", message: "Payment not confirmed by Paystack" };
         }
 
-        const payment = await prisma.payment.findFirst({
-            where: { paystackReference: reference },
-            include: {
+        const foundPayment = await db.query.payment.findFirst({
+            where: eq(paymentTable.paystackReference, reference),
+            with: {
                 booking: {
-                    include: { payments: true, service: { include: { variants: true } }, addons: { include: { variants: true } } },
+                    with: { 
+                        payments: true, 
+                        service: { with: { serviceVariants: true } }, 
+                        bookingAddons: { with: { service: { with: { serviceVariants: true } } } } 
+                    },
                 },
             },
         });
 
-        if (!payment) return { status: "error", message: "Payment record not found" };
+        if (!foundPayment) return { status: "error", message: "Payment record not found" };
 
-        if (payment.status === "PAID") {
+        if (foundPayment.status === "PAID") {
             // Idempotency guard — already processed, return success
             return { status: "success", message: "Payment already verified" };
         }
@@ -186,7 +193,7 @@ export async function verifyPayment(reference: string) {
         // Verify the confirmed amount matches what was initialized.
         // Paystack returns amounts in kobo; our DB stores in naira.
         const confirmedAmountNaira = paystackRes.data.amount / 100;
-        const expectedAmountNaira = Number(payment.amount);
+        const expectedAmountNaira = Number(foundPayment.amount);
 
         if (Math.abs(confirmedAmountNaira - expectedAmountNaira) > 0.5) {
             console.error(
@@ -200,39 +207,35 @@ export async function verifyPayment(reference: string) {
         }
 
         // Atomic transaction — update payment and booking status together.
-        // All reads within this block see a consistent snapshot; concurrent
-        // transactions targeting the same booking row will serialize correctly.
-        await prisma.$transaction(async (tx) => {
+        await db.transaction(async (tx) => {
             // Step 1: Mark this payment as PAID
-            await tx.payment.update({
-                where: { id: payment.id },
-                data: {
-                    status: "PAID",
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    paystackResponse: paystackRes.data as any,
-                },
-            });
+            await tx.update(paymentTable).set({
+                status: "PAID",
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                paystackResponse: paystackRes.data as any,
+            }).where(eq(paymentTable.id, foundPayment.id));
 
-            if (!payment.bookingId) return;
+            if (!foundPayment.bookingId) return;
 
             // Step 2: Re-read ALL payments for this booking within the transaction.
-            // The payment updated above will already show PAID in this read.
-            const allPayments = await tx.payment.findMany({
-                where: { bookingId: payment.bookingId },
+            const allPayments = await tx.query.payment.findMany({
+                where: eq(paymentTable.bookingId, foundPayment.bookingId),
             });
 
-            const booking = payment.booking;
-            if (!booking) return;
+            const currentBooking = foundPayment.booking;
+            if (!currentBooking) return;
 
-            const servicePrice = Number(booking.service?.variants?.find((v) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.variants?.[0]?.basePrice ?? 0);
-            const sessionTotal = servicePrice * booking.sessionCount;
-            const addonsTotal = booking.addons.reduce((sum, a) => {
+            const servicePrice = Number(currentBooking.service?.serviceVariants?.find((v) => v.id === currentBooking.serviceVariantId)?.basePrice ?? currentBooking.service?.serviceVariants?.[0]?.basePrice ?? 0);
+            const sessionTotal = servicePrice * currentBooking.sessionCount;
+            const addonsTotal = currentBooking.bookingAddons.reduce((sum, relation) => {
+                const a = relation.service;
+                if (!a) return sum;
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const variantId = (a as any).addonVariantId;
-                const variant = variantId ? a.variants?.find((v) => v.id === variantId) : a.variants?.[0];
+                const variant = variantId ? a.serviceVariants?.find((v) => v.id === variantId) : a.serviceVariants?.[0];
                 return sum + Number(variant?.basePrice ?? 0);
             }, 0);
-            const grandTotal = booking.totalAmount != null ? Number(booking.totalAmount) : (sessionTotal + addonsTotal);
+            const grandTotal = currentBooking.totalAmount != null ? Number(currentBooking.totalAmount) : (sessionTotal + addonsTotal);
 
             // Step 3: Recalculate with the freshly updated payment included
             const totalPaid = allPayments
@@ -242,10 +245,9 @@ export async function verifyPayment(reference: string) {
             const newPaymentStatus = totalPaid >= grandTotal ? "PAID" : "PARTIALLY_PAID";
 
             // Step 4: Update booking status atomically
-            await tx.booking.update({
-                where: { id: payment.bookingId },
-                data: { paymentStatus: newPaymentStatus },
-            });
+            await tx.update(booking).set({ 
+                paymentStatus: newPaymentStatus as any 
+            }).where(eq(booking.id, foundPayment.bookingId));
         });
 
         revalidatePath("/studios", "layout");

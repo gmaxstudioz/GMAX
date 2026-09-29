@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Prisma } from "@/lib/generated/prisma/client";
+
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
@@ -16,14 +16,14 @@ import { Controller, useForm, useFieldArray, Control, useWatch } from "react-hoo
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CategorySchema, CategoryPayload, ServiceSchema, ServicePayload } from "@/lib/schemas/service";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import posthog from "posthog-js";
+
+const posthogEnabled = Boolean(
+    process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && process.env.NEXT_PUBLIC_POSTHOG_HOST,
+);
 
 // ✅ Ensure variants are included in the expected type
-type StudioWithRelations = Prisma.StudioGetPayload<{
-    include: {
-        categories: { include: { services: { include: { variants: { include: { deliverables: true } } } } } },
-        studioSessions: true,
-    }
-}>;
+type StudioWithRelations = { id?: string; categories: any[] };
 
 function VariantDeliverables({ control, variantIndex, isPending }: { control: Control<ServicePayload>, variantIndex: number, isPending: boolean }) {
     const { fields, append, remove } = useFieldArray({
@@ -209,6 +209,9 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
             } else {
                 const result = await createCategory({ ...data, studioId: studioData.id });
                 if (result.status === "success") {
+                    if (posthogEnabled) {
+                        posthog.capture("service_category_created", { category_type: data.type });
+                    }
                     toast.success("Category created!");
                     resetCategoryState();
                     setIsCategoryDialogOpen(false);
@@ -248,6 +251,13 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                     categoryId: serviceDialogOpenForCategory
                 });
                 if (result.status === "success") {
+                    if (posthogEnabled) {
+                        posthog.capture("service_created", {
+                            is_active: data.isActive,
+                            is_addon: data.isAddon,
+                            variant_count: data.variants.length,
+                        });
+                    }
                     toast.success("Service added!");
                     resetServiceState();
                     setServiceDialogOpenForCategory(null);
@@ -421,10 +431,10 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                 <AccordionContent className="pt-2 w-full">
                                     {category.services && category.services.length > 0 ? (
                                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                            {category.services.map((svc) => {
-                                                const sessionBinding = studioData.studioSessions.find(s => s.id === svc.studioSessionId);
+                                            {category.services.map((svc: any) => {
+                                                const sessionBinding = (studioData as any).studioSessions.find((s: any) => s.id === svc.studioSessionId);
                                                 // ✅ Safely extract base price from variants
-                                                const basePrice = svc.variants?.[0]?.basePrice ? Number(svc.variants[0].basePrice) : 0;
+                                                const basePrice = svc.serviceVariants?.[0]?.basePrice ? Number(svc.serviceVariants[0].basePrice) : 0;
                                                 return (
                                                     <div key={svc.id} className="flex flex-col border rounded-md p-3 bg-muted/20 relative group/svc">
                                                         <h5 className="font-medium text-sm flex gap-2">
@@ -439,7 +449,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                         
                                                         {(svc.features && svc.features.length > 0) && (
                                                             <div className="mt-2 flex flex-wrap gap-1">
-                                                                {svc.features.map((f, i) => (
+                                                                {svc.features.map((f: any, i: number) => (
                                                                     <span key={i} className="bg-secondary text-secondary-foreground text-[10px] px-1.5 py-0.5 rounded-sm">
                                                                         {f}
                                                                     </span>
@@ -461,14 +471,14 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                     setEditModeService(svc.id);
                                                                     const svcFeatures = (svc.features && svc.features.length > 0) ? svc.features : [""];
                                                                     
-                                                                    const mappedVariants = (svc.variants && svc.variants.length > 0) 
-                                                                        ? svc.variants.map((v) => ({
+                                                                    const mappedVariants = (svc.serviceVariants && svc.serviceVariants.length > 0) 
+                                                                        ? svc.serviceVariants.map((v: any) => ({
                                                                             locationType: v.locationType as "STUDIO" | "OUTDOOR" | "BOTH" | "MULTIPLE",
                                                                             basePrice: Number(v.basePrice),
                                                                             maxPrice: v.maxPrice ? Number(v.maxPrice) : undefined,
                                                                             sessionDurationMins: v.sessionDurationMins,
                                                                             logisticsIncluded: v.logisticsIncluded,
-                                                                            deliverables: v.deliverables?.map((d) => ({
+                                                                            deliverables: v.deliverables?.map((d: any) => ({
                                                                                 label: d.label,
                                                                                 quantity: d.quantity ?? undefined,
                                                                                 detail: d.detail ?? undefined,
@@ -595,7 +605,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                         onClick={() => {
                                             // Auto-detect a good default duration from the session if selected
                                             const sessionId = serviceForm.getValues("studioSessionId");
-                                            const session = studioData.studioSessions.find(s => s.id === sessionId);
+                                            const session = (studioData as any).studioSessions.find((s: any) => s.id === sessionId);
                                             appendVariant({ 
                                                 locationType: "STUDIO", 
                                                 basePrice: 0, 
@@ -726,7 +736,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                               onValueChange={(val) => {
                                                   field.onChange(val);
                                                   // Auto-update the variant duration to match the session
-                                                  const session = studioData.studioSessions.find(s => s.id === val);
+                                                  const session = (studioData as any).studioSessions.find((s: any) => s.id === val);
                                                   if (session) {
                                                       serviceForm.setValue("variants.0.sessionDurationMins", session.duration);
                                                   }
@@ -737,7 +747,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                     <SelectValue placeholder="Linked Temporal Session" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {studioData.studioSessions.map(session => (
+                                                    {(studioData as any).studioSessions.map((session: any) => (
                                                         <SelectItem key={session.id} value={session.id}>
                                                             {session.name} ({session.duration}m)
                                                         </SelectItem>
@@ -780,7 +790,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                 />
                             </div>
 
-                            {studioData.studioSessions.length === 0 && (
+                            {(studioData as any).studioSessions.length === 0 && (
                                 <div className="rounded-md bg-destructive/10 text-destructive text-xs p-3 font-medium mt-2">
                                     You must create at least one Studio Session via the &apos;Settings&apos; tab first!
                                 </div>
@@ -793,7 +803,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                             }} disabled={isPending}>
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={isPending || studioData.studioSessions.length === 0 || !watchedSessionId}>
+                            <Button type="submit" disabled={isPending || (studioData as any).studioSessions.length === 0 || !watchedSessionId}>
                                 {isPending ? <Loader2Icon className="animate-spin size-4 mr-2" /> : null}
                                 {editModeService ? "Update" : "Add"} Service
                             </Button>

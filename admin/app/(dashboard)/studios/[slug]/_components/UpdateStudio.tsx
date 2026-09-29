@@ -35,32 +35,13 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { updateStudio } from "@/lib/actions/organization";
 import { createStudioSession, deleteStudioSession } from "@/lib/actions/session";
-import { Prisma } from "@/lib/generated/prisma/client";
+
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { PlusIcon, Trash } from "lucide-react";
 
-type StudioWithRelations = Prisma.StudioGetPayload<{
-  include: {
-    members: {
-        include: { user: true }
-    },
-    invitations: true,
-    categories: true,
-    studioSessions: true,
-    clients: {
-        include: {
-            bookings: true
-        }
-    },
-    bookings: {
-      include: {
-        client: true
-      }
-    },
-  }
-}>;
+type StudioWithRelations = { id?: string; name?: string; slug?: string; metadata?: any; logo?: string | null; studioSessions: any[] };
 
 interface UpdateStudioProps extends React.ComponentProps<"div"> {
     studioData: StudioWithRelations;
@@ -85,7 +66,7 @@ export default function UpdateStudio({
              const result = await createStudioSession({
                 name: newSessionName,
                 duration: parseInt(newSessionDuration) || 45,
-                studioId: studioData.id
+                studioId: studioData.id!
              });
              if (result.status === "success") {
                  toast.success("Session added");
@@ -159,7 +140,7 @@ export default function UpdateStudio({
 
     function onSubmit(values: UpdateStudioInput) {
         startTransition(async () => {
-            const { data: result, error } = await tryCatch(updateStudio(studioData.id, values));
+            const { data: result, error } = await tryCatch(updateStudio(studioData.id!, values));
 
             if (error) {
                 toast.error("An unexpected error occurred. Please try again.");

@@ -1,0 +1,53 @@
+--- admin/app/(dashboard)/page.tsx
++++ admin/app/(dashboard)/page.tsx
+@@ -5,3 +5,3 @@
+ import { auth } from "@/lib/auth"
+ import { headers } from "next/headers"
+-import { db } from "@/lib/db"
++import { db } from "@/lib/db"
+ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+@@ -26,3 +26,3 @@
+ 
+-  const members = await db.query.member.findMany({
+-    where: { userId: session.user.id },
+-    select: { role: true, studioId: true }
++  const members = await db.query.member.findMany({
++    where: (member, { eq }) => eq(member.userId, session.user.id),
++    columns: { id: true, role: true, studioId: true }
+   });
+@@ -37,5 +37,7 @@
+     const minorRoleStats = { total: 0, completed: 0, pending: 0 };
+-    const myBookings = await db.query.booking.findMany({
+-      where: { member: { userId: session.user.id } }
+-    });
++    const userMemberIds = members.map(m => m.id);
++    const myBookings = userMemberIds.length > 0 ? await db.query.booking.findMany({
++      where: (booking, { inArray }) => inArray(booking.memberId, userMemberIds)
++    }) : [];
++    
+     minorRoleStats.total = myBookings.length;
+@@ -91,4 +93,4 @@
+   // Fetch all bookings for metrics (exclude cancelled ones from positive metrics if desired, but let's include all non-cancelled)
+-  const allRelevantBookings = await db.query.booking.findMany({
+-    where: { studioId: { in: studioIds }, bookingStatus: { not: "CANCELLED" } },
+-    include: { client: true, service: true }
++  const allRelevantBookings = studioIds.length > 0 ? await db.query.booking.findMany({
++    where: (booking, { inArray, not, eq, and }) => and(inArray(booking.studioId, studioIds), not(eq(booking.bookingStatus, "CANCELLED"))),
++    with: { client: true, service: true }
+-  });
++  }) : [];
+ 
+@@ -150,5 +152,5 @@
+   // Recent Bookings for Data Table
+-  const rawRecentBookings = await db.query.booking.findMany({
+-      where: { studioId: { in: studioIds } },
+-      orderBy: { createdAt: 'desc' },
+-      take: 10,
+-      include: { client: true, service: true }
+-  });
++  const rawRecentBookings = studioIds.length > 0 ? await db.query.booking.findMany({
++      where: (booking, { inArray }) => inArray(booking.studioId, studioIds),
++      orderBy: (booking, { desc }) => [desc(booking.createdAt)],
++      limit: 10,
++      with: { client: true, service: true }
++  }) : [];

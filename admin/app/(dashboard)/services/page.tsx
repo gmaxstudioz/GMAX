@@ -1,4 +1,5 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import { sql } from "drizzle-orm";
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -13,9 +14,9 @@ export default async function ServicesPage() {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) redirect("/auth/login");
 
-    const members = await prisma.member.findMany({
-        where: { userId: session.user.id },
-        select: { role: true }
+    const members = await db.query.member.findMany({
+        where: (member, { eq }) => eq(member.userId, session.user.id),
+        columns: { role: true, studioId: true }
     });
     
     const adminRoles = ["owner", "developer", "manager"];
@@ -24,52 +25,60 @@ export default async function ServicesPage() {
         redirect("/my-tasks");
     }
 
-    const studios = await prisma.studio.findMany({
-        where: {
-            members: {
-                some: {
-                    userId: session.user.id
-                }
-            }
-        },
-        select: {
-            id: true,
-            slug: true,
-            name: true,
-            categories: {
-                include: {
-                    services: {
-                        include: {
-                            studioSession: {
-                                select: {
-                                    id: true,
-                                    name: true,
-                                    duration: true,
-                                }
-                            },
-                            variants: true,
-                            _count: {
-                                select: {
-                                    bookings: true,
-                                }
+    const myStudioIds = members.map(m => m.studioId);
+
+    let studiosRaw: any[] = [];
+    if (myStudioIds.length > 0) {
+        studiosRaw = await db.query.studio.findMany({
+            where: (studio, { inArray }) => inArray(studio.id, myStudioIds),
+            columns: {
+                id: true,
+                slug: true,
+                name: true,
+            },
+                with: {
+                services: {
+                    extras: {
+                        bookingsCount: sql<number>`(select count(*)::int from "booking" where "booking"."serviceId" = "service"."id")`.as('bookingsCount')
+                    },
+                    with: {
+                        studioSession: {
+                            columns: {
+                                id: true,
+                                name: true,
+                                duration: true,
                             }
-                        }
+                        },
+                        serviceVariants: true,
                     }
                 },
-                orderBy: { name: "asc" }
             },
-        },
-        orderBy: { name: "asc" }
-    });
+            orderBy: (studio, { asc }) => [asc(studio.name)]
+        });
+    }
+
+    const studios = studiosRaw.map(s => ({
+        ...s,
+        categories: s.categories.map((c: any) => ({
+            ...c,
+            services: c.services.map((sv: any) => {
+                const { bookingsCount, ...rest } = sv;
+                return {
+                    ...rest,
+                    _count: { bookings: bookingsCount || 0 }
+                };
+            })
+        }))
+    }));
 
     // Shape data grouped by studio
     const studioGroups = studios.map(studio => ({
         id: studio.id,
         slug: studio.slug,
         name: studio.name,
-        categories: studio.categories.map(category => ({
+        categories: studio.categories.map((category: any) => ({
             ...category,
-            services: category.services.map(service => ({
+            services: category.services.map((service: any) => ({
                 ...service,
                 studioId: studio.id,
                 studioSlug: studio.slug,

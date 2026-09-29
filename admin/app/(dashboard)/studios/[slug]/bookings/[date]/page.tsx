@@ -1,4 +1,6 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import { eq, and, or, inArray, asc, desc, isNull, sql } from "drizzle-orm";
+import * as schema from "@/lib/schema";
 import type { Metadata } from "next";
 import { format, parseISO, startOfDay, endOfDay } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,11 +36,11 @@ export default async function StudioDailyBookingsPage({ params }: Props) {
     const end = endOfDay(targetDate);
 
     // Fetch the studio to confirm it exists and get its ID
-    const studio = await prisma.studio.findUnique({
-        where: { slug },
-        include: {
+    const studio = await db.query.studio.findFirst({
+        where: eq(schema.studio.slug, slug),
+        with: {
             members: {
-                include: {
+                with: {
                     user: true
                 }
             }
@@ -55,35 +57,31 @@ export default async function StudioDailyBookingsPage({ params }: Props) {
         email: m.user.email,
         role: m.role as MemberRole,
         studioId: m.studioId,
-        createdAt: m.createdAt.toISOString(),
-        updatedAt: m.createdAt.toISOString()
+        createdAt: m.createdAt,
+        updatedAt: m.createdAt
     }));
 
     // Fetch bookings for that day
-    const dailyBookings = await prisma.booking.findMany({
-        where: {
-            studioId: studio.id,
-            bookingDate: {
-                gte: start,
-                lte: end,
-            }
-        },
-        include: {
+    const dailyBookings = await db.query.booking.findMany({
+        where: and(
+            eq(schema.booking.studioId, studio.id),
+            sql`${schema.booking.bookingDate} >= ${start.toISOString()}::timestamp`,
+            sql`${schema.booking.bookingDate} <= ${end.toISOString()}::timestamp`
+        ),
+        with: {
             client: true,
             service: {
-                include: {
+                with: {
                     studioSession: true
                 }
             },
             member: {
-                include: {
+                with: {
                     user: true
                 }
             }
         },
-        orderBy: {
-            bookingDate: 'asc'
-        }
+        orderBy: [asc(schema.booking.bookingDate)]
     });
 
     // Calculate total consumed minutes
@@ -93,9 +91,9 @@ export default async function StudioDailyBookingsPage({ params }: Props) {
     }, 0);
 
     // Fetch all services for this studio to calculate possible slots
-    const studioSessions = await prisma.studio.findUnique({
-        where: { id: studio.id },
-        include: { 
+    const studioSessions = await db.query.studio.findFirst({
+        where: eq(schema.studio.id, studio.id),
+        with: { 
             studioSessions: true 
         }
     });
@@ -140,7 +138,7 @@ export default async function StudioDailyBookingsPage({ params }: Props) {
                                 <CardContent className="flex flex-col gap-3">
                                     <div className="flex items-center justify-between">
                                         <p className="text-sm">Time: {format(new Date(booking.bookingDate), "hh:mm a")}</p>
-                                        <RescheduleTimePicker bookingId={booking.id} currentDate={booking.bookingDate} />
+                                        <RescheduleTimePicker bookingId={booking.id} currentDate={new Date(booking.bookingDate)} />
                                     </div>
                                     <div>
                                         <ReassignMemberDropdown bookingId={booking.id} currentMemberId={booking.memberId} members={mappedMembers} />

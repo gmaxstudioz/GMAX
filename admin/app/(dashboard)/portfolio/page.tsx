@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -15,17 +15,17 @@ export default async function Page() {
   if (!session?.user) redirect("/auth/login");
 
   // Allow admins or studio owners/managers
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { role: true },
+  const user = await db.query.user.findFirst({
+    where: (user, { eq }) => eq(user.id, session.user.id),
+    columns: { role: true },
   });
 
   const isAdmin = user?.role === "admin";
 
   if (!isAdmin) {
-    const members = await prisma.member.findMany({
-      where: { userId: session.user.id },
-      select: { role: true },
+    const members = await db.query.member.findMany({
+      where: (member, { eq }) => eq(member.userId, session.user.id),
+      columns: { role: true },
     });
     const adminRoles = ["owner", "developer", "manager"];
     const hasAdminRole = members.some((m) => adminRoles.includes(m.role));
@@ -34,15 +34,15 @@ export default async function Page() {
     }
   }
 
-  const items = await prisma.portfolioItem.findMany({
-    orderBy: { sortOrder: "asc" },
+  const items = await db.query.portfolioItem.findMany({
+    orderBy: (portfolioItem, { asc }) => [asc(portfolioItem.sortOrder)],
   });
 
   const categories = [...new Set(items.map((i) => i.category))];
 
   return (
     <div className="flex flex-col gap-4 py-4 px-4 md:gap-6 md:py-6 md:px-6">
-      <PortfolioView initialItems={items} existingCategories={categories} />
+      <PortfolioView initialItems={items as any} existingCategories={categories} />
     </div>
   );
 }

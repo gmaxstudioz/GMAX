@@ -1,6 +1,8 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import { user as userSchema, member as memberSchema, client as clientSchema, product as productSchema, service as serviceSchema, studio as studioSchema } from "@/lib/schema";
+import { eq, inArray, desc, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
@@ -9,48 +11,47 @@ export async function getGlobalSearchData() {
     if (!session?.user) return null;
 
     const [user, members] = await Promise.all([
-        prisma.user.findUnique({
-            where: { id: session.user.id },
-            select: { role: true }
+        db.query.user.findFirst({
+            where: eq(userSchema.id, session.user.id),
+            columns: { role: true }
         }),
-        prisma.member.findMany({
-            where: { userId: session.user.id },
-            select: { studioId: true, role: true }
+        db.query.member.findMany({
+            where: eq(memberSchema.userId, session.user.id),
+            columns: { studioId: true, role: true }
         })
     ]);
 
     const isPlatformAdmin = user?.role === "admin";
-    const accessibleStudioIds = isPlatformAdmin ? undefined : members.map((member) => member.studioId);
+    const accessibleStudioIds = isPlatformAdmin ? [] : members.map((member) => member.studioId);
     const hasStoreAccess = isPlatformAdmin || members.some((member) => ["owner", "developer", "manager"].includes(member.role));
 
-    // To prevent returning too much data, we'll fetch the most recent items
-    // or you can limit to 50-100 per category for instant searching.
+    const inAccessibleStudios = (col: any) => accessibleStudioIds.length > 0 ? inArray(col, accessibleStudioIds) : sql`false`;
 
     const [clients, products, services, studios] = await Promise.all([
-        prisma.client.findMany({
-            where: isPlatformAdmin ? undefined : { studioId: { in: accessibleStudioIds } },
-            select: { id: true, name: true, email: true },
-            take: 100,
-            orderBy: { createdAt: "desc" }
+        db.query.client.findMany({
+            where: isPlatformAdmin ? undefined : inAccessibleStudios(clientSchema.studioId),
+            columns: { id: true, name: true, email: true },
+            limit: 100,
+            orderBy: desc(clientSchema.createdAt)
         }),
         hasStoreAccess
-            ? prisma.product.findMany({
-                select: { id: true, title: true, isPublished: true },
-                take: 100,
-                orderBy: { createdAt: "desc" }
+            ? db.query.product.findMany({
+                columns: { id: true, title: true, isPublished: true },
+                limit: 100,
+                orderBy: desc(productSchema.createdAt)
             })
             : Promise.resolve([]),
-        prisma.service.findMany({
-            where: isPlatformAdmin ? undefined : { studioSession: { studioId: { in: accessibleStudioIds } } },
-            select: { id: true, name: true },
-            take: 100,
-            orderBy: { createdAt: "desc" }
+        db.query.service.findMany({
+            where: isPlatformAdmin ? undefined : inAccessibleStudios(serviceSchema.studioId),
+            columns: { id: true, name: true },
+            limit: 100,
+            orderBy: desc(serviceSchema.createdAt)
         }),
-        prisma.studio.findMany({
-            where: isPlatformAdmin ? undefined : { id: { in: accessibleStudioIds } },
-            select: { id: true, name: true, slug: true },
-            take: 50,
-            orderBy: { createdAt: "desc" }
+        db.query.studio.findMany({
+            where: isPlatformAdmin ? undefined : inAccessibleStudios(studioSchema.id),
+            columns: { id: true, name: true, slug: true },
+            limit: 50,
+            orderBy: desc(studioSchema.createdAt)
         })
     ]);
 

@@ -34,6 +34,11 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { toast } from "sonner";
 import Image from "next/image";
 import { SearchIcon, ImageIcon, Trash2, Plus, Eye, EyeOff } from "lucide-react";
+import posthog from "posthog-js";
+
+const posthogEnabled = Boolean(
+    process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && process.env.NEXT_PUBLIC_POSTHOG_HOST,
+);
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -131,7 +136,7 @@ export function PortfolioView({
             const { data: result, error } = await tryCatch(fetchPortfolioItems());
             if (error) { toast.error("An unexpected error occurred."); return; }
             if (result?.status === "success") {
-                setItems(result.data as PortfolioItemType[]);
+                setItems(result.data as unknown as PortfolioItemType[]);
                 toast.success("Refreshed");
             } else if (result?.status === "error") { toast.error(result.message); }
         });
@@ -527,7 +532,7 @@ function UploadDialog({
                 if (error || result?.status === "error") {
                     toast.error(`Failed to save: ${file.name}`);
                 } else if (result?.status === "success") {
-                    onSuccess(result.data as PortfolioItemType);
+                    onSuccess(result.data as unknown as PortfolioItemType);
                     uploaded++;
                 }
             } catch (err) {
@@ -543,6 +548,9 @@ function UploadDialog({
         if (inputRef.current) inputRef.current.value = "";
 
         if (uploaded > 0) {
+            if (posthogEnabled) {
+                posthog.capture("portfolio_items_uploaded", { item_count: uploaded });
+            }
             toast.success(`${uploaded} ${uploaded === 1 ? "image" : "images"} uploaded!`);
             onComplete?.();
         }

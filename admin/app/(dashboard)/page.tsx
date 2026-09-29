@@ -4,7 +4,7 @@ import { DataTable } from "@/components/web/data-table"
 import { SectionCards } from "@/components/web/section-cards"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
-import { prisma } from "@/lib/prisma"
+import { db } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BriefcaseIcon, CheckCircleIcon, ClockIcon } from "lucide-react"
 
@@ -25,9 +25,9 @@ export default async function Page() {
     redirect("/auth/login");
   }
 
-  const members = await prisma.member.findMany({
-    where: { userId: session.user.id },
-    select: { role: true, studioId: true }
+  const members = await db.query.member.findMany({
+    where: (member, { eq }) => eq(member.userId, session.user.id),
+    columns: { id: true, role: true, studioId: true }
   });
   
   const adminRoles = ["owner", "developer", "manager"];
@@ -36,9 +36,11 @@ export default async function Page() {
 
   if (isOnlyMinorRole) {
     const minorRoleStats = { total: 0, completed: 0, pending: 0 };
-    const myBookings = await prisma.booking.findMany({
-      where: { member: { userId: session.user.id } }
-    });
+    const userMemberIds = members.map(m => m.id);
+    const myBookings = userMemberIds.length > 0 ? await db.query.booking.findMany({
+      where: (booking, { inArray }) => inArray(booking.memberId, userMemberIds)
+    }) : [];
+    
     minorRoleStats.total = myBookings.length;
     minorRoleStats.completed = myBookings.filter(b => b.bookingStatus === "COMPLETED").length;
     minorRoleStats.pending = myBookings.filter(b => b.bookingStatus === "PENDING").length;
@@ -90,13 +92,13 @@ export default async function Page() {
   const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
 
   // Fetch all bookings for metrics (exclude cancelled ones from positive metrics if desired, but let's include all non-cancelled)
-  const allRelevantBookings = await prisma.booking.findMany({
-    where: { studioId: { in: studioIds }, bookingStatus: { not: "CANCELLED" } },
-    include: { client: true, service: true }
-  });
+  const allRelevantBookings = studioIds.length > 0 ? await db.query.booking.findMany({
+    where: (booking, { inArray, not, eq, and }) => and(inArray(booking.studioId, studioIds), not(eq(booking.bookingStatus, "CANCELLED"))),
+    with: { client: true, service: true }
+  }) : [];
 
-  const recentBookings = allRelevantBookings.filter(b => b.createdAt >= thirtyDaysAgo);
-  const previousBookings = allRelevantBookings.filter(b => b.createdAt >= sixtyDaysAgo && b.createdAt < thirtyDaysAgo);
+  const recentBookings = allRelevantBookings.filter(b => new Date(b.createdAt).getTime() >= thirtyDaysAgo.getTime());
+  const previousBookings = allRelevantBookings.filter(b => new Date(b.createdAt).getTime() >= sixtyDaysAgo.getTime() && new Date(b.createdAt).getTime() < thirtyDaysAgo.getTime());
 
   const totalRevenueRecent = recentBookings.reduce((sum, b) => sum + Number(b.totalAmount), 0);
   const totalRevenuePrev = previousBookings.reduce((sum, b) => sum + Number(b.totalAmount), 0);
@@ -128,7 +130,7 @@ export default async function Page() {
   };
 
   // Chart Data (last 90 days aggregated by day)
-  const bookingsLast90Days = allRelevantBookings.filter(b => b.createdAt >= ninetyDaysAgo);
+  const bookingsLast90Days = allRelevantBookings.filter(b => new Date(b.createdAt).getTime() >= ninetyDaysAgo.getTime());
   const chartDataMap = new Map<string, number>();
   
   // Pre-fill the map with 0s for the last 90 days
@@ -138,8 +140,8 @@ export default async function Page() {
   }
 
   bookingsLast90Days.forEach(b => {
-      const dateStr = b.createdAt.toISOString().split('T')[0];
-      if (chartDataMap.has(dateStr)) {
+      const dateStr = b.createdAt ? String(b.createdAt).split("T")[0] : "";
+      if (dateStr && chartDataMap.has(dateStr)) {
           chartDataMap.set(dateStr, chartDataMap.get(dateStr)! + Number(b.totalAmount));
       }
   });
@@ -149,21 +151,21 @@ export default async function Page() {
       .sort((a, b) => a.date.localeCompare(b.date));
 
   // Recent Bookings for Data Table
-  const rawRecentBookings = await prisma.booking.findMany({
-      where: { studioId: { in: studioIds } },
-      orderBy: { createdAt: 'desc' },
-      take: 10,
-      include: { client: true, service: true }
-  });
+  const rawRecentBookings = studioIds.length > 0 ? await db.query.booking.findMany({
+      where: (booking, { inArray }) => inArray(booking.studioId, studioIds),
+      orderBy: (booking, { desc }) => [desc(booking.createdAt)],
+      limit: 10,
+      with: { client: true, service: true }
+  }) : [];
 
   const tableData = rawRecentBookings.map(b => ({
       id: b.id,
       clientName: b.client?.name ?? 'Unknown',
       clientImage: b.client?.image ?? null,
       serviceName: b.service?.name ?? 'Unknown',
-      bookingDate: b.bookingDate && typeof b.bookingDate.getTime === 'function' && !isNaN(b.bookingDate.getTime()) 
-          ? b.bookingDate.toISOString() 
-          : null,
+      bookingDate: b.bookingDate && typeof (b.bookingDate as any).getTime === 'function' && !isNaN((b.bookingDate as any).getTime()) 
+          ? (b.bookingDate as any).toISOString() 
+          : (typeof b.bookingDate === 'string' ? b.bookingDate : null),
       totalAmount: Number(b.totalAmount),
       bookingStatus: b.bookingStatus
   }));

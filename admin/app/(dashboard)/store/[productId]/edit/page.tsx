@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect, notFound } from "next/navigation";
@@ -11,9 +11,9 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { productId } = await params;
-    const product = await prisma.product.findUnique({
-        where: { id: productId },
-        select: { title: true },
+    const product = await db.query.product.findFirst({
+        where: (product, { eq }) => eq(product.id, productId),
+        columns: { title: true },
     });
     return { title: product ? `Edit — ${product.title}` : "Edit Product" };
 }
@@ -24,9 +24,9 @@ export default async function EditProductPage({ params }: Props) {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) redirect("/auth/login");
 
-    const members = await prisma.member.findMany({
-        where: { userId: session.user.id },
-        select: { role: true },
+    const members = await db.query.member.findMany({
+        where: (member, { eq }) => eq(member.userId, session.user.id),
+        columns: { role: true },
     });
 
     const adminRoles = ["owner", "developer", "manager"];
@@ -34,11 +34,11 @@ export default async function EditProductPage({ params }: Props) {
     if (members.length > 0 && !hasAdminRole) redirect("/my-tasks");
 
     const [product, categories] = await Promise.all([
-        prisma.product.findUnique({
-            where: { id: productId },
-            include: { category: true },
+        db.query.product.findFirst({
+            where: (product, { eq }) => eq(product.id, productId),
+            with: { productCategory: true },
         }),
-        prisma.productCategory.findMany({ orderBy: { name: "asc" } }),
+        db.query.productCategory.findMany({ orderBy: (category, { asc }) => [asc(category.name)] }),
     ]);
 
     if (!product) notFound();

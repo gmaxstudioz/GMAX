@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Loader2, DownloadIcon, Image as ImageIcon, LockIcon } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
+import posthog from "posthog-js";
 
 export default function DeliverablesPage() {
     const params = useParams();
@@ -63,6 +64,7 @@ export default function DeliverablesPage() {
         try {
             toastId = toast.loading("Preparing download...");
             const res = await downloadPhoto({ bookingId, photoId, accessCode });
+            posthog.capture("photo_download_started");
             
             // Create a temporary link to download the file
             const a = document.createElement('a');

@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authClient } from "@/lib/auth-client";
-import { Prisma } from "@/lib/generated/prisma/client";
+
 import { InviteMemberInput, InviteMemberSchema } from "@/lib/schemas/studio";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Filter, Loading, MoreVerticalIcon, Refresh01Icon } from "@hugeicons/core-free-icons";
@@ -87,37 +87,7 @@ function mapPrismaBookingToCalendarBooking(b: any): CalendarBooking {
     } as CalendarBooking;
 }
 
-type StudioWithRelations = Prisma.StudioGetPayload<{
-  include: {
-    members: {
-        include: { user: true }
-    },
-    invitations: true,
-    categories: {
-      include: {
-        services: {
-            include: { 
-                studioSession: true,
-                variants: { include: { deliverables: true } }
-            }
-        }
-      }
-    },
-    studioSessions: true,
-    clients: {
-        include: {
-            bookings: true
-        }
-    },
-    bookings: {
-      include: {
-        client: true,
-        service: true
-      }
-    },
-    bookingIntents: true,
-  }
-}>;
+type StudioWithRelations = { id?: string; name?: string; slug?: string; logo?: string | null; metadata?: any; categories: any[]; services?: any[]; studioSessions: any[]; clients: any[]; bookings: any[]; bookingIntents: any[]; invitations: any[]; members: any[]; };
 
 function Overview({ data, setActiveTab }: { data: StudioWithRelations, setActiveTab: (v: string) => void }) {
     // Recent Bookings (sort descending by date created)
@@ -235,7 +205,7 @@ function Clients({studioData}: {studioData: StudioWithRelations}) {
 
     function handleRefresh() {
         startTransition(async () => {
-            const { data: result, error } = await tryCatch(FetchClients(studioData.id));
+            const { data: result, error } = await tryCatch(FetchClients(studioData.id!));
 
             if (error) {
                 toast.error("An unexpected error occurred. Please try again.");
@@ -273,7 +243,7 @@ function Clients({studioData}: {studioData: StudioWithRelations}) {
     const totalClients = filteredClients.length;
     const totalPages = Math.ceil(totalClients / ITEMS_PER_PAGE);
     const paginatedClients = filteredClients.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
-    const allTypes = Array.from(new Set(studioData.clients.map(c => c.type)));
+    const allTypes = Array.from(new Set(studioData.clients.map((c: any) => c.type)));
 
     return (
         <Card>
@@ -309,7 +279,7 @@ function Clients({studioData}: {studioData: StudioWithRelations}) {
                             ))}
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    <AddClient studioId={studioData.id} />
+                    <AddClient studioId={studioData.id!} />
                     <Button onClick={handleRefresh} type="button" variant="outline" size="icon" disabled={isPending} className="h-10 w-10 shrink-0">
                         {isPending ? <HugeiconsIcon icon={Loading} className="animate-spin" /> : <HugeiconsIcon icon={Refresh01Icon} />}
                     </Button>
@@ -350,11 +320,11 @@ function Clients({studioData}: {studioData: StudioWithRelations}) {
                                                         </div>
                                                         <div className="rounded w-full bg-accent p-2">
                                                             <p className="text-xs">Completed</p>
-                                                            <p className="font-bold text-primary">{client.bookings?.filter((booking) => booking.bookingStatus === "COMPLETED").length || 0}</p>
+                                                            <p className="font-bold text-primary">{client.bookings?.filter((booking: any) => booking.bookingStatus === "COMPLETED").length || 0}</p>
                                                         </div>
                                                         <div className="rounded w-full bg-accent p-2">
                                                             <p className="text-xs">Cancelled</p>
-                                                            <p className="font-bold text-primary">{client.bookings?.filter((booking) => booking.bookingStatus === "CANCELLED").length || 0}</p>
+                                                            <p className="font-bold text-primary">{client.bookings?.filter((booking: any) => booking.bookingStatus === "CANCELLED").length || 0}</p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -455,7 +425,7 @@ function Staffs({studioData}: {studioData: StudioWithRelations}) {
         defaultValues: {
             email: "",
             role: "photographer",
-            studio: studioData.id
+            studio: studioData.id!
         },
     });
     async function handleAddStaff(values: InviteMemberInput) {
@@ -463,7 +433,7 @@ function Staffs({studioData}: {studioData: StudioWithRelations}) {
             const { error } = await authClient.organization.inviteMember({
                 email: values.email,
                 role: values.role,
-                organizationId: studioData.id,
+                organizationId: studioData.id!,
             });
 
             if (error) {
@@ -478,7 +448,7 @@ function Staffs({studioData}: {studioData: StudioWithRelations}) {
         startTransition(async () => {
             const { error } = await authClient.organization.removeMember({
                 memberIdOrEmail:memberId,
-                organizationId: studioData.id,
+                organizationId: studioData.id!,
             });
 
             if (error) {
@@ -686,23 +656,23 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
         }
     }, [searchParams, form]);
 
-    const allServices = useMemo(() => studioData.categories.flatMap(c => c.services), [studioData.categories]);
+    const allServices = useMemo(() => studioData.categories.flatMap((c: any) => c.services), [studioData.categories]);
 
     // Split into main services and addons
-    const mainServices = useMemo(() => allServices.filter(s => !s.isAddon), [allServices]);
-    const addonServices = useMemo(() => allServices.filter(s => s.isAddon), [allServices]);
+    const mainServices = useMemo(() => allServices.filter((s: any) => !s.isAddon), [allServices]);
+    const addonServices = useMemo(() => allServices.filter((s: any) => s.isAddon), [allServices]);
 
     // Filter services by search
     const filteredMainServices = useMemo(() => {
         if (!serviceSearch.trim()) return mainServices;
         const q = serviceSearch.toLowerCase();
-        return mainServices.filter(s => s.name.toLowerCase().includes(q));
+        return mainServices.filter((s: any) => s.name.toLowerCase().includes(q));
     }, [mainServices, serviceSearch]);
 
     // Flatten addons into variants
     const flattenedAddons = useMemo(() => {
-        return addonServices.flatMap(addon => 
-            (addon.variants || []).map((variant) => ({
+        return addonServices.flatMap((addon: any) => 
+            (addon.serviceVariants || []).map((variant: any) => ({
                 compositeId: `${addon.id}:${variant.id}`,
                 addon,
                 variant
@@ -713,14 +683,14 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
     const filteredAddonVariants = useMemo(() => {
         if (!serviceSearch.trim()) return flattenedAddons;
         const q = serviceSearch.toLowerCase();
-        return flattenedAddons.filter(a => a.addon.name.toLowerCase().includes(q) || a.variant.locationType.toLowerCase().includes(q));
+        return flattenedAddons.filter((a: any) => a.addon.name.toLowerCase().includes(q) || a.variant.locationType.toLowerCase().includes(q));
     }, [flattenedAddons, serviceSearch]);
 
     // Filter clients by search
     const filteredClients = useMemo(() => {
         if (!clientSearch.trim()) return studioData.clients;
         const q = clientSearch.toLowerCase();
-        return studioData.clients.filter(c => c.name.toLowerCase().includes(q) || c.phone.includes(q));
+        return studioData.clients.filter((c: any) => c.name.toLowerCase().includes(q) || c.phone.includes(q));
     }, [studioData.clients, clientSearch]);
 
     // Watch reactive values for price calculation
@@ -730,14 +700,14 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
     const watchedClientId       = useWatch({ control: form.control, name: "clientId" });
     const watchedPaymentPlan    = useWatch({ control: form.control, name: "paymentPlan" }) ?? "FULL";
 
-    const selectedService = useMemo(() => allServices.find(s => s.id === watchedServiceId), [allServices, watchedServiceId]);
-    const selectedVariant = useMemo(() => selectedService?.variants?.find((v) => v.id === watchedServiceVariantId), [selectedService, watchedServiceVariantId]);
-    const selectedClient = useMemo(() => studioData.clients.find(c => c.id === watchedClientId), [studioData.clients, watchedClientId]);
-    const selectedAddonVariants = useMemo(() => flattenedAddons.filter(a => selectedAddonIds.includes(a.compositeId)), [flattenedAddons, selectedAddonIds]);
+    const selectedService = useMemo(() => allServices.find((s: any) => s.id === watchedServiceId), [allServices, watchedServiceId]);
+    const selectedVariant = useMemo(() => selectedService?.serviceVariants?.find((v: any) => v.id === watchedServiceVariantId), [selectedService, watchedServiceVariantId]);
+    const selectedClient = useMemo(() => studioData.clients.find((c: any) => c.id === watchedClientId), [studioData.clients, watchedClientId]);
+    const selectedAddonVariants = useMemo(() => flattenedAddons.filter((a: any) => selectedAddonIds.includes(a.compositeId)), [flattenedAddons, selectedAddonIds]);
 
     const servicePrice = selectedVariant?.basePrice ? Number(selectedVariant.basePrice) : 0;
     const sessionTotal = servicePrice * (watchedSessionCount || 1);
-    const addonsTotal = selectedAddonVariants.reduce((sum, a) => sum + Number(a.variant.basePrice || 0), 0);
+    const addonsTotal = selectedAddonVariants.reduce((sum: any, a: any) => sum + Number(a.variant.basePrice || 0), 0);
     const grandTotal = sessionTotal + addonsTotal;
 
     useEffect(() => {
@@ -745,11 +715,11 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
     }, [grandTotal, form]);
 
     function toggleAddon(compositeId: string) {
-        setSelectedAddonIds(prev => {
+        setSelectedAddonIds((prev: any[]) => {
             const baseAddonId = compositeId.split(':')[0];
             
             // Remove any existing variant of this exact same addon
-            const filtered = prev.filter(id => id.split(':')[0] !== baseAddonId);
+            const filtered = prev.filter((id: any) => id.split(':')[0] !== baseAddonId);
             
             // If the exact same composite ID was clicked, it means we are unchecking it
             if (prev.includes(compositeId)) {
@@ -766,7 +736,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
 
     function onSubmit(data: CreateBookingInput) {
         startTransition(async () => {
-            const { data: result, error } = await tryCatch(createBooking(data, studioData.id));
+            const { data: result, error } = await tryCatch(createBooking(data, studioData.id!));
 
             if (error) {
                 toast.error("Failed to create booking. Please try again.");
@@ -839,7 +809,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                                                             />
                                                         </div>
                                                         <div className="max-h-[200px] overflow-y-auto p-1">
-                                                            {filteredClients.length > 0 ? filteredClients.map(c => (
+                                                            {filteredClients.length > 0 ? filteredClients.map((c: any) => (
                                                                 <div
                                                                     key={c.id}
                                                                     onClick={() => { field.onChange(c.id); setClientOpen(false); setClientSearch(""); }}
@@ -857,7 +827,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                                                             )) : (
                                                                 <div className="text-center py-3">
                                                                     <p className="text-sm text-muted-foreground mb-2">No clients found</p>
-                                                                    <AddClient studioId={studioData.id} />
+                                                                    <AddClient studioId={studioData.id!} />
                                                                 </div>
                                                             )}
                                                         </div>
@@ -904,7 +874,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                                                             />
                                                         </div>
                                                         <div className="max-h-[200px] overflow-y-auto p-1">
-                                                            {filteredMainServices.length > 0 ? filteredMainServices.map(s => (
+                                                            {filteredMainServices.length > 0 ? filteredMainServices.map((s: any) => (
                                                                 <div
                                                                     key={s.id}
                                                                     onClick={() => { field.onChange(s.id); form.setValue("serviceVariantId", ""); setServiceOpen(false); setServiceSearch(""); }}
@@ -914,7 +884,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                                                                         <span>{s.name}</span>
                                                                     </div>
                                                                     <span className="text-muted-foreground font-mono text-xs">
-                                                                        ₦{Number(s.variants?.[0]?.basePrice ?? 0).toLocaleString()}
+                                                                        ₦{Number(s.serviceVariants?.[0]?.basePrice ?? 0).toLocaleString()}
                                                                     </span>
                                                                 </div>
                                                             )) : (
@@ -930,7 +900,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                             />
 
                             {/* Variant Selection */}
-                            {selectedService && selectedService.variants && selectedService.variants.length > 0 && (
+                            {selectedService && selectedService.serviceVariants && selectedService.serviceVariants.length > 0 && (
                                 <Controller
                                     name="serviceVariantId"
                                     control={form.control}
@@ -945,7 +915,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                                                     <SelectValue placeholder="Choose location type..." />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {selectedService.variants.map((v) => (
+                                                    {selectedService.serviceVariants.map((v: any) => (
                                                         <SelectItem key={v.id} value={v.id}>
                                                             {v.locationType} - ₦{Number(v.basePrice).toLocaleString()}
                                                             {v.maxPrice && ` to ₦${Number(v.maxPrice).toLocaleString()}`}
@@ -971,7 +941,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                                 <div className="rounded-lg border bg-muted/20 p-3">
                                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Included Deliverables</p>
                                     <ul className="text-sm space-y-1">
-                                        {selectedVariant.deliverables.map((d) => (
+                                        {selectedVariant.deliverables.map((d: any) => (
                                             <li key={d.id} className="flex gap-2 text-foreground/80">
                                                 <span className="text-primary">•</span>
                                                 <span>
@@ -990,7 +960,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                                 <Field>
                                     <FieldLabel>Add-ons <span className="text-muted-foreground font-normal">(Optional)</span></FieldLabel>
                                     <div className="border rounded-lg max-h-[220px] overflow-y-auto">
-                                        {filteredAddonVariants.length > 0 ? filteredAddonVariants.map(item => (
+                                        {filteredAddonVariants.length > 0 ? filteredAddonVariants.map((item: any) => (
                                             <label
                                                 key={item.compositeId}
                                                 className="flex items-start justify-between px-3 py-3 cursor-pointer text-sm transition-colors hover:bg-accent border-b last:border-0"
@@ -1005,7 +975,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                                                         <span>{item.addon.name} <span className="text-muted-foreground text-xs font-medium ml-1">({item.variant.locationType})</span></span>
                                                         {item.variant.deliverables && item.variant.deliverables.length > 0 && (
                                                             <div className="text-xs text-muted-foreground mt-1">
-                                                                {item.variant.deliverables.map((d) => `${d.quantity ? d.quantity + ' ' : ''}${d.label}`).join(" • ")}
+                                                                {item.variant.deliverables.map((d: any) => `${d.quantity ? d.quantity + ' ' : ''}${d.label}`).join(" • ")}
                                                             </div>
                                                         )}
                                                     </div>
@@ -1137,7 +1107,7 @@ function Bookings({ studioData }: { studioData: StudioWithRelations }) {
                                         <span>{selectedService.name} × {watchedSessionCount || 1} session{(watchedSessionCount || 1) > 1 ? "s" : ""}</span>
                                         <span className="font-mono">₦{sessionTotal.toLocaleString()}</span>
                                     </div>
-                                    {selectedAddonVariants.map(item => (
+                                    {selectedAddonVariants.map((item: any) => (
                                         <div key={item.compositeId} className="flex justify-between text-sm text-muted-foreground">
                                             <span>+ {item.addon.name} <span className="text-[10px]">({item.variant.locationType})</span></span>
                                             <span className="font-mono">₦{Number(item.variant.basePrice).toLocaleString()}</span>

@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -7,21 +7,33 @@ import { StudioMetadata } from "@/lib/schemas/studio";
 import Image from "next/image";
 
 export default async function BookPage() {
-    const studios = await prisma.studio.findMany({
-        select: {
+    const studios = await db.query.studio.findMany({
+        columns: {
             id: true,
             name: true,
             slug: true,
             logo: true,
             metadata: true,
-            _count: {
-                select: { categories: true, members: true },
-            },
         },
-        orderBy: { createdAt: "desc" },
+        with: {
+            services: { columns: { category: true } },
+            members: { columns: { id: true } },
+        },
+        orderBy: (s, { desc }) => [desc(s.createdAt)],
     });
 
     const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
+
+    const transformedStudios = studios.map(studio => {
+        const uniqueCategories = new Set(studio.services.map(s => s.category)).size;
+        return {
+            ...studio,
+            _count: {
+                categories: uniqueCategories,
+                members: studio.members.length,
+            }
+        };
+    });
 
     return (
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
@@ -40,7 +52,7 @@ export default async function BookPage() {
             </div>
 
             {/* Studio Grid */}
-            {studios.length === 0 ? (
+            {transformedStudios.length === 0 ? (
                 <div className="text-center py-16 text-muted-foreground">
                     <CameraIcon className="h-12 w-12 mx-auto opacity-30 mb-4" />
                     <p className="text-lg">No studios available yet</p>
@@ -48,7 +60,7 @@ export default async function BookPage() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {studios.map(studio => {
+                    {transformedStudios.map(studio => {
                         const meta = studio.metadata as StudioMetadata;
                         return (
                             <Link

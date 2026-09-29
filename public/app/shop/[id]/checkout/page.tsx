@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import posthog from "posthog-js";
 
 export default function CheckoutPage() {
   const { id } = useParams<{ id: string }>();
@@ -60,6 +61,10 @@ export default function CheckoutPage() {
     try {
       setSubmitting(true);
       const result = await purchaseProduct(data);
+      posthog.capture("product_purchase_submitted", {
+        product_id: data.productId,
+        price: product?.salePrice ?? product?.price,
+      });
       // The backend returns a reference, and we should redirect to /pay/[reference]
       router.push(`/pay/${result.reference}`);
     } catch (err) {

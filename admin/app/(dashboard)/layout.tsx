@@ -6,7 +6,7 @@ import { CSSProperties, ReactNode } from "react";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export default async function DashboardLayout({ children }: { children: ReactNode}) {
     const session = await auth.api.getSession({
@@ -17,16 +17,16 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         redirect("/auth/login");
     }
 
-    const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { role: true }
+    const user = await db.query.user.findFirst({
+        where: (user, { eq }) => eq(user.id, session.user.id),
+        columns: { role: true }
     });
 
     const isAdmin = user?.role === "admin";
 
     if (!isAdmin) {
-        const membership = await prisma.member.findFirst({
-            where: { userId: session.user.id }
+        const membership = await db.query.member.findFirst({
+            where: (member, { eq }) => eq(member.userId, session.user.id)
         });
 
         if (!membership) {

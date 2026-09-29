@@ -1,6 +1,8 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { db } from "../db";
+import { booking, member } from "../schema";
+import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { sendDeliveryEmail, sendDeliverySMS, sendDeliveryWhatsApp } from "@/lib/termii";
 import crypto from "crypto";
@@ -16,28 +18,31 @@ export async function deliverBooking(bookingId: string) {
         throw new Error("Unauthorized");
     }
 
-    const booking = await prisma.booking.findUnique({
-        where: { id: bookingId },
-        include: {
+    const bookingData = await db.query.booking.findFirst({
+        where: eq(booking.id, bookingId),
+        with: {
             client: true,
             studio: true,
         },
     });
 
-    if (!booking) {
+    if (!bookingData) {
         throw new Error("Booking not found");
     }
 
-    const member = await prisma.member.findFirst({
-        where: { userId: session.user.id, studioId: booking.studioId }
+    const memberData = await db.query.member.findFirst({
+        where: and(
+            eq(member.userId, session.user.id),
+            eq(member.studioId, bookingData.studioId)
+        )
     });
 
-    if (!member) {
+    if (!memberData) {
         throw new Error("Unauthorized access to studio");
     }
 
     // Generate access code if one doesn't exist
-    let accessCode = booking.accessCode;
+    let accessCode = bookingData.accessCode;
     const isNewAccessCode = !accessCode;
 
     let updated = false;
@@ -51,16 +56,17 @@ export async function deliverBooking(bookingId: string) {
 
         try {
             // Mark as delivered and set access code
-            await prisma.booking.update({
-                where: { id: bookingId },
-                data: { 
-                    deliveryStatus: "DELIVERED",
-                    ...(isNewAccessCode && { accessCode })
-                },
-            });
+            const updateData: any = { deliveryStatus: "DELIVERED" };
+            if (isNewAccessCode) {
+                updateData.accessCode = accessCode;
+            }
+            await db.update(booking)
+                .set(updateData)
+                .where(eq(booking.id, bookingId));
             updated = true;
         } catch (error: any) {
-            if (isNewAccessCode && error.code === 'P2002') {
+            // Drizzle/postgres duplicate key error code is 23505 usually
+            if (isNewAccessCode && (error.code === '23505' || error.code === 'P2002')) {
                 attempts++;
                 if (attempts >= maxAttempts) {
                     throw new Error("Failed to generate a unique access code after multiple attempts");
@@ -79,12 +85,12 @@ export async function deliverBooking(bookingId: string) {
     const promises = [];
 
     // Email
-    if (booking.client.email) {
+    if (bookingData.client?.email) {
         promises.push(
             sendDeliveryEmail({
-                email: booking.client.email,
-                clientName: booking.client.name,
-                studioName: booking.studio.name,
+                email: bookingData.client.email,
+                clientName: bookingData.client.name,
+                studioName: bookingData.studio?.name || "",
                 downloadLink,
                 accessCode: accessCode ?? "",
             })
@@ -92,12 +98,12 @@ export async function deliverBooking(bookingId: string) {
     }
 
     // SMS & WhatsApp
-    if (booking.client.phone) {
+    if (bookingData.client?.phone) {
         promises.push(
             sendDeliverySMS({
-                phone: booking.client.phone,
-                clientName: booking.client.name,
-                studioName: booking.studio.name,
+                phone: bookingData.client.phone,
+                clientName: bookingData.client.name,
+                studioName: bookingData.studio?.name || "",
                 downloadLink,
                 accessCode,
             })
@@ -106,9 +112,9 @@ export async function deliverBooking(bookingId: string) {
         if (process.env.TERMII_WHATSAPP_SENDER_ID) {
             promises.push(
                 sendDeliveryWhatsApp({
-                    phone: booking.client.phone,
-                    clientName: booking.client.name,
-                    studioName: booking.studio.name,
+                    phone: bookingData.client.phone,
+                    clientName: bookingData.client.name,
+                    studioName: bookingData.studio?.name || "",
                     downloadLink,
                     accessCode,
                 })
@@ -118,6 +124,6 @@ export async function deliverBooking(bookingId: string) {
 
     await Promise.allSettled(promises);
 
-    revalidatePath(`/studios/${booking.studio.slug}/bookings/detail/${bookingId}`);
+    revalidatePath(`/studios/${bookingData.studio?.slug}/bookings/detail/${bookingId}`);
     return { success: true, accessCode };
 }

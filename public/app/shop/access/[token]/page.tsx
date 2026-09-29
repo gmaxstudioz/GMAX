@@ -8,6 +8,7 @@ import type { VerifyAccessTokenOutput } from "@/lib/types/product";
 import { Loader2, Download, PackageOpen, ArrowLeft, Clock, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import posthog from "posthog-js";
 
 export default function TokenAccessPage() {
   const { token } = useParams<{ token: string }>();
@@ -48,6 +49,9 @@ export default function TokenAccessPage() {
     try {
       setDownloadingId(productId);
       const res = await requestDownload({ productId, token: sessionToken });
+      posthog.capture("product_download_started", {
+        product_id: productId,
+      });
       
       // Open download in new tab / trigger download
       const link = document.createElement("a");

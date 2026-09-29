@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import { eq, and, or, inArray, asc, desc, isNull, sql } from "drizzle-orm";
+import * as schema from "@/lib/schema";
 import { RenderEmptyState, RenderStudios } from "./_components/RenderSate";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -16,8 +18,8 @@ export default async function StudiosPage() {
 
     // 1. Fetch User and Memberships
     const [user, members] = await Promise.all([
-        prisma.user.findUnique({ where: { id: session.user.id } }),
-        prisma.member.findMany({ where: { userId: session.user.id } })
+        db.query.user.findFirst({ where: eq(schema.user.id, session.user.id) }),
+        db.query.member.findMany({ where: eq(schema.member.userId, session.user.id) })
     ]);
 
     const isPlatformAdmin = user?.role === "admin";
@@ -25,17 +27,19 @@ export default async function StudiosPage() {
 
     // 2. Optimized Studio Query
     // Note: We use 'creator' as defined in your Booking model relation
-    const studioData = await prisma.studio.findMany({
-        where: isPlatformAdmin ? {} : {
-            members: { some: { userId: session.user.id } }
-        },
-        orderBy: { createdAt: "desc" },
-        include: {
+    const studioIds = members.map(m => m.studioId);
+    
+    const studioData = await db.query.studio.findMany({
+        where: (studio, { inArray }) => 
+            isPlatformAdmin ? undefined : 
+            studioIds.length > 0 ? inArray(studio.id, studioIds) : sql`1 = 0`,
+        orderBy: (studio, { desc }) => [desc(studio.createdAt)],
+        with: {
             members: true,
-            categories: { include: { services: { include: { variants: true } } } },
+            services: { with: { serviceVariants: true } },
             studioSessions: true,
             clients: true,
-            bookings: { include: { creator: true, service: { include: { variants: true } } } } // Explicitly include the 'creator' and 'service' relation for revenue calculation
+            bookings: { with: { user: true, service: { with: { serviceVariants: true } } } } // Explicitly include the 'creator' and 'service' relation for revenue calculation
         },
     });
 

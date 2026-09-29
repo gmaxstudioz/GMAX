@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { ProfileForm } from "./_components/ProfileForm";
 import { ResetPasswordForm } from "./_components/ResetPasswordForm";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export const metadata: Metadata = {
     title: "Profile Settings",
@@ -15,8 +15,8 @@ export default async function ProfilePage() {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session) redirect("/login");
 
-    const fullUser = await prisma.user.findUnique({
-        where: { id: session.user.id }
+    const fullUser = await db.query.user.findFirst({
+        where: (user, { eq }) => eq(user.id, session.user.id)
     });
 
     if (!fullUser) redirect("/login");

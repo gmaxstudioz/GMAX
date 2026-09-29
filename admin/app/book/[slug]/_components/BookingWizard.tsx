@@ -25,6 +25,11 @@ import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PublicBookingSchema, PublicBookingInput } from "@/lib/schemas/booking";
 import Link from "next/link";
+import posthog from "posthog-js";
+
+const posthogEnabled = Boolean(
+    process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && process.env.NEXT_PUBLIC_POSTHOG_HOST,
+);
 
 interface Category {
     id: string;
@@ -188,6 +193,14 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
             }
 
             if (result?.status === "success" && result.data) {
+                if (posthogEnabled) {
+                    posthog.capture("booking_created", {
+                        addon_count: data.selectedAddonIds.length,
+                        amount: result.data.amount,
+                        payment_required: Boolean(result.data.paymentUrl),
+                        session_count: data.sessionCount,
+                    });
+                }
                 setBookingResult(result.data);
                 setStep(5);
                 if (result.data.paymentUrl) {

@@ -5,7 +5,7 @@ import { HourglassIcon } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export default async function WaitingForInvitePage() {
     const session = await auth.api.getSession({
@@ -16,8 +16,8 @@ export default async function WaitingForInvitePage() {
         redirect("/auth/login");
     }
 
-    const membership = await prisma.member.findFirst({
-        where: { userId: session.user.id }
+    const membership = await db.query.member.findFirst({
+        where: (m, { eq }) => eq(m.userId, session.user.id)
     });
 
     if (membership) {

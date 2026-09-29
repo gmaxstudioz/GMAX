@@ -4,7 +4,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { CirclePlusIcon, UsersIcon, WrenchIcon, Building2Icon, CalendarPlusIcon } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
-import { prisma } from "@/lib/prisma"
+import { db } from "@/lib/db"
 import Link from "next/link"
 import {
   DropdownMenu,
@@ -25,9 +25,9 @@ export async function SiteHeader() {
   let canCreateBooking = true;
 
   if (session?.user) {
-    const members = await prisma.member.findMany({
-      where: { userId: session.user.id },
-      select: { role: true }
+    const members = await db.query.member.findMany({
+      where: (member, { eq }) => eq(member.userId, session.user.id),
+      columns: { role: true }
     });
     
     canCreateStudio = members.some(m => ["owner", "developer"].includes(m.role));

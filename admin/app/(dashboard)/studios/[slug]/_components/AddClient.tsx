@@ -14,6 +14,11 @@ import { ChevronDown, ChevronUp, CirclePlusIcon, Loader2Icon, PlusIcon } from "l
 import { useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import posthog from "posthog-js";
+
+const posthogEnabled = Boolean(
+    process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && process.env.NEXT_PUBLIC_POSTHOG_HOST,
+);
 
 export default function AddClient({studioId}: {studioId: string}) {
     const [ isPending, startTransition ] = useTransition();
@@ -42,6 +47,9 @@ export default function AddClient({studioId}: {studioId: string}) {
             }
 
             if (result?.status === "success") {
+                if (posthogEnabled) {
+                    posthog.capture("client_created", { client_type: data.type });
+                }
                 toast.success("Client added successfully");
                 form.reset();
                 setIsOpen(false);

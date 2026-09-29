@@ -8,6 +8,8 @@ import { verifyPurchase } from "@/lib/api";
 import { tryCatch } from "@/hooks/try-catch";
 import { toast } from "sonner";
 import { Loader2, CheckCircle2, PartyPopperIcon, XCircleIcon, Download, ArrowRight } from "lucide-react";
+import posthog from "posthog-js";
+import { posthogLogs } from "@/lib/posthog-logs";
 
 declare global {
     interface Window {
@@ -93,14 +95,33 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
                     setStatus("processing");
                     const { data: result, error } = await tryCatch(verifyPurchase(reference));
                     if (error || !result?.verified) {
+                        posthog.capture("payment_verification_failed", {
+                            purchase_type: purchaseType,
+                        });
+                        posthogLogs.error("payment verification failed", {
+                            purchase_type: purchaseType,
+                        });
                         setStatus("failed");
                         toast.error("Payment verification failed. Please contact support.");
                     } else {
+                        posthog.capture("payment_completed", {
+                            purchase_type: purchaseType,
+                            amount,
+                            currency: "NGN",
+                        });
+                        posthogLogs.info("payment completed", {
+                            purchase_type: purchaseType,
+                            amount,
+                            currency: "NGN",
+                        });
                         setStatus("success");
                         toast.success("Payment successful!");
                     }
                 },
                 onCancel: () => {
+                    posthog.capture("payment_cancelled", {
+                        purchase_type: purchaseType,
+                    });
                     toast.info("Payment was cancelled");
                 },
             });
