@@ -1,15 +1,52 @@
 import { betterAuth } from "better-auth";
-import { prismaAdapter } from "better-auth/adapters/prisma";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { organization, phoneNumber } from "better-auth/plugins";
-import { prisma } from "./prisma";
+import { PostHog } from "posthog-node";
+import { db } from "./db";
+import * as schema from "./schema";
 import { sendInvitationEmail } from "./termii";
 import { studioAc, photographer, videographer, receptionist, manager, owner, developer } from "./permissions";
 
 const BASE_URL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
 
+let posthogClient: PostHog | null | undefined;
+
+export function getPostHogClient(): PostHog | null {
+    if (posthogClient !== undefined) {
+        return posthogClient;
+    }
+
+    const projectToken = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
+    const host = process.env.NEXT_PUBLIC_POSTHOG_HOST;
+
+    if (!projectToken || !host) {
+        if (process.env.NODE_ENV === "development") {
+            const missingVariable = !projectToken
+                ? "NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN"
+                : "NEXT_PUBLIC_POSTHOG_HOST";
+            throw new Error(
+                `${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`,
+            );
+        }
+
+        posthogClient = null;
+        return posthogClient;
+    }
+
+    posthogClient = new PostHog(projectToken, {
+        host,
+        enableExceptionAutocapture: true,
+        flushAt: 1,
+        flushInterval: 0,
+    });
+
+    return posthogClient;
+}
+
 export const auth = betterAuth({
-    database: prismaAdapter(prisma, {
-        provider: "postgresql",
+    database: drizzleAdapter(db, {
+        provider: "pg",
+        schema,
     }),
     emailAndPassword: {
         enabled: true,

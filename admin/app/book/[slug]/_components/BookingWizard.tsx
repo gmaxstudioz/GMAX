@@ -25,6 +25,11 @@ import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PublicBookingSchema, PublicBookingInput } from "@/lib/schemas/booking";
 import Link from "next/link";
+import posthog from "posthog-js";
+
+const posthogEnabled = Boolean(
+    process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && process.env.NEXT_PUBLIC_POSTHOG_HOST,
+);
 
 interface Category {
     id: string;
@@ -34,8 +39,7 @@ interface Category {
         name: string;
         isAddon: boolean;
         basePrice: number;
-        bothVariantPrice: number | null;
-        sessionDurationMins: number | null;
+        studioSession: { duration: number } | null;
     }[];
 }
 
@@ -49,6 +53,8 @@ interface BookingWizardProps {
     studioId: string;
     categories: Category[];
     addons: Addon[];
+    existingBookings: Record<string, unknown>[];
+    paystackPublicKey: string;
 }
 
 const STEPS = [
@@ -58,7 +64,7 @@ const STEPS = [
     { id: 4, label: "Review & Pay", icon: CreditCardIcon },
 ];
 
-export function BookingWizard({ studioId, categories, addons }: BookingWizardProps) {
+export function BookingWizard({ studioId, categories, addons, existingBookings, paystackPublicKey }: BookingWizardProps) {
     const [step, setStep] = useState(1);
     const [isPending, startTransition] = useTransition();
 
@@ -73,7 +79,6 @@ export function BookingWizard({ studioId, categories, addons }: BookingWizardPro
             selectedServiceId: "",
             selectedAddonIds: [],
             sessionCount: 1,
-            extraPicturesCount: 0,
             bookingDate: "",
             bookingTime: "",
             paymentPlan: "FULL",
@@ -90,10 +95,8 @@ export function BookingWizard({ studioId, categories, addons }: BookingWizardPro
     const clientEmail       = useWatch({ control, name: "clientEmail" }) ?? "";
     const useExisting       = useWatch({ control, name: "useExisting" }) ?? false;
     const selectedServiceId = useWatch({ control, name: "selectedServiceId" }) ?? "";
-    const watchedAddonIds   = useWatch({ control, name: "selectedAddonIds" });
-    const selectedAddonIds  = useMemo(() => watchedAddonIds ?? [], [watchedAddonIds]);
+    const selectedAddonIds  = useWatch({ control, name: "selectedAddonIds" }) ?? [];
     const sessionCount      = useWatch({ control, name: "sessionCount" }) ?? 1;
-    const extraPicturesCount = useWatch({ control, name: "extraPicturesCount" }) ?? 0;
     const bookingDate       = useWatch({ control, name: "bookingDate" }) ?? "";
     const bookingTime       = useWatch({ control, name: "bookingTime" }) ?? "";
     const notes             = useWatch({ control, name: "notes" }) ?? "";
@@ -116,39 +119,25 @@ export function BookingWizard({ studioId, categories, addons }: BookingWizardPro
     const selectedAddons = useMemo(() => addons.filter(a => selectedAddonIds.includes(a.id)), [addons, selectedAddonIds]);
 
     const servicePrice = selectedService?.basePrice ?? 0;
-    const bothVariantPrice = selectedService?.bothVariantPrice ?? 0;
     const sessionTotal = servicePrice * sessionCount;
     const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.basePrice, 0);
-    const extraPicturesTotal = bothVariantPrice * extraPicturesCount;
-    const grandTotal = sessionTotal + addonsTotal + extraPicturesTotal;
+    const grandTotal = sessionTotal + addonsTotal;
 
     useEffect(() => {
         if (!clientName || clientName.trim().length < 2) {
             setExistingClient(null);
             return;
         }
-        let isCancelled = false;
         const timeout = setTimeout(async () => {
             setNameCheckLoading(true);
-            try {
-                const result = await checkClientName(studioId, clientName.trim());
-                if (isCancelled) return;
-                setExistingClient(result);
-                if (result.exists && result.client) {
-                    setValue("existingClientId", result.client.id);
-                }
-            } catch (error) {
-                console.error("Failed to check client name:", error);
-            } finally {
-                if (!isCancelled) {
-                    setNameCheckLoading(false);
-                }
+            const result = await checkClientName(studioId, clientName.trim());
+            setExistingClient(result);
+            if (result.exists && result.client) {
+                setValue("existingClientId", result.client.id);
             }
+            setNameCheckLoading(false);
         }, 600);
-        return () => {
-            isCancelled = true;
-            clearTimeout(timeout);
-        };
+        return () => clearTimeout(timeout);
     }, [clientName, studioId, setValue]);
 
     const handleNext = async () => {
@@ -204,6 +193,14 @@ export function BookingWizard({ studioId, categories, addons }: BookingWizardPro
             }
 
             if (result?.status === "success" && result.data) {
+                if (posthogEnabled) {
+                    posthog.capture("booking_created", {
+                        addon_count: data.selectedAddonIds.length,
+                        amount: result.data.amount,
+                        payment_required: Boolean(result.data.paymentUrl),
+                        session_count: data.sessionCount,
+                    });
+                }
                 setBookingResult(result.data);
                 setStep(5);
                 if (result.data.paymentUrl) {
@@ -256,15 +253,15 @@ export function BookingWizard({ studioId, categories, addons }: BookingWizardPro
 
     return (
         <div className="space-y-6">
-            {/* Progress Bar (Desktop) */}
-            <div className="hidden sm:flex items-center gap-2 overflow-x-auto pb-2">
+            {/* Progress Bar */}
+            <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-2">
                 {STEPS.map((s, i) => {
                     const Icon = s.icon;
                     const isActive = step === s.id;
                     const isDone = step > s.id;
                     return (
-                        <div key={s.id} className="flex items-center gap-2 shrink-0">
-                            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                        <div key={s.id} className="flex items-center gap-1 sm:gap-2 shrink-0">
+                            <div className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                                 isActive ? "bg-primary text-primary-foreground" :
                                 isDone ? "bg-primary/10 text-primary" :
                                 "bg-muted text-muted-foreground"
@@ -274,30 +271,15 @@ export function BookingWizard({ studioId, categories, addons }: BookingWizardPro
                                 ) : (
                                     <Icon className="h-3.5 w-3.5" />
                                 )}
-                                <span>{s.label}</span>
+                                <span className="hidden sm:inline">{s.label}</span>
+                                <span className="sm:hidden">{s.id}</span>
                             </div>
                             {i < STEPS.length - 1 && (
-                                <div className={`w-8 h-0.5 rounded ${isDone ? "bg-primary" : "bg-muted"}`} />
+                                <div className={`w-4 sm:w-8 h-0.5 rounded ${isDone ? "bg-primary" : "bg-muted"}`} />
                             )}
                         </div>
                     );
                 })}
-            </div>
-
-            {/* Progress Indicator (Mobile) */}
-            <div className="flex sm:hidden items-center justify-between bg-muted/40 p-3 rounded-lg border">
-                <div className="flex items-center gap-2 text-primary">
-                    {STEPS.find(s => s.id === step)?.icon && (() => {
-                        const CurrentIcon = STEPS.find(s => s.id === step)!.icon;
-                        return <CurrentIcon className="h-4 w-4" />;
-                    })()}
-                    <span className="text-sm font-semibold">
-                        {STEPS.find(s => s.id === step)?.label}
-                    </span>
-                </div>
-                <div className="text-xs text-muted-foreground font-medium bg-background px-2 py-1 rounded-md border shadow-sm">
-                    Step {step} of {STEPS.length}
-                </div>
             </div>
 
             {/* Step Content */}
@@ -440,18 +422,18 @@ export function BookingWizard({ studioId, categories, addons }: BookingWizardPro
                                                     key={service.id}
                                                     type="button"
                                                     onClick={() => { setValue("selectedServiceId", service.id); form.clearErrors("selectedServiceId"); }}
-                                                    className={`text-left p-4 rounded-xl border-2 transition-all hover:-translate-y-1 active:scale-[0.98] ${
+                                                    className={`text-left p-4 rounded-xl border-2 transition-all ${
                                                         isSelected
-                                                            ? "border-primary bg-primary/10 shadow-md ring-2 ring-primary ring-offset-1"
-                                                            : "border-border hover:border-primary/50 hover:bg-muted/30 hover:shadow-md"
+                                                            ? "border-primary bg-primary/5 shadow-sm"
+                                                            : "border-border hover:border-primary/30 hover:bg-muted/30"
                                                     }`}
                                                 >
                                                     <div className="flex justify-between items-start gap-2">
                                                         <div>
                                                             <p className="font-medium text-sm">{service.name}</p>
                                                             <div className="flex items-center gap-2 mt-1">
-                                                                {service.sessionDurationMins && (
-                                                                    <span className="text-[10px] text-muted-foreground">{service.sessionDurationMins}min</span>
+                                                                {service.studioSession && (
+                                                                    <span className="text-[10px] text-muted-foreground">{service.studioSession.duration}min</span>
                                                                 )}
                                                             </div>
                                                         </div>
@@ -479,7 +461,7 @@ export function BookingWizard({ studioId, categories, addons }: BookingWizardPro
                                     <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Add-ons (Optional)</h3>
                                     <div className="space-y-2">
                                         {addons.map(addon => (
-                                            <label key={addon.id} className="flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all hover:-translate-y-1 active:scale-[0.98] hover:shadow-md hover:border-primary/50 hover:bg-muted/30">
+                                            <label key={addon.id} className="flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-muted/30 transition-colors">
                                                 <div className="flex items-center gap-3">
                                                     <Checkbox
                                                         checked={selectedAddonIds.includes(addon.id)}
@@ -517,36 +499,6 @@ export function BookingWizard({ studioId, categories, addons }: BookingWizardPro
                                     )}
                                 />
                             </div>
-
-                            {(() => {
-                                const selectedServiceObj = categories.flatMap(c => c.services).find(s => s.id === selectedServiceId);
-                                const bothVariantPrice = selectedServiceObj?.bothVariantPrice;
-                                if (bothVariantPrice == null) return null;
-                                return (
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium">Extra Pictures</label>
-                                        <div className="flex items-center gap-4">
-                                            <Controller
-                                                name="extraPicturesCount"
-                                                control={control}
-                                                render={({ field: { value, onChange, ...f } }) => (
-                                                    <Input
-                                                        {...f}
-                                                        type="number"
-                                                        value={value ?? 0}
-                                                        onChange={(e) => onChange(Number(e.target.value))}
-                                                        min={0}
-                                                        className="max-w-[120px]"
-                                                    />
-                                                )}
-                                            />
-                                            <span className="text-xs text-muted-foreground">
-                                                (₦{bothVariantPrice.toLocaleString()} each)
-                                            </span>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
                         </div>
 
                         {/* ── STEP 3: Date & Time ── */}
@@ -644,12 +596,6 @@ export function BookingWizard({ studioId, categories, addons }: BookingWizardPro
                                     <div className="flex justify-between text-sm">
                                         <span className="text-muted-foreground">Add-ons</span>
                                         <span>{selectedAddons.map(a => a.name).join(", ")}</span>
-                                    </div>
-                                )}
-                                {extraPicturesCount > 0 && (
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-muted-foreground">Extra Pictures</span>
-                                        <span>{extraPicturesCount}</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between text-sm">

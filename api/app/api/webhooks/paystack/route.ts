@@ -1,13 +1,24 @@
 import crypto from "crypto";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { v4 as uuidv4 } from "uuid";
-import { sendBookingPaymentSMS, sendBookingPaymentWhatsApp, sendBookingPaymentEmail, sendAcademyRegistrationEmail, sendAcademyRegistrationSMS, sendAcademyRegistrationWhatsApp } from "@/lib/termii";
+import { sendSMS } from "@/lib/termii";
+import { getPostHogClient } from "@/lib/auth";
+import { bookingIntent, studio, client, service, booking, payment, productAccess, bookingAddons } from "@/lib/schema";
+import { eq, and } from "drizzle-orm";
+
+async function captureEvent(event: string, properties: Record<string, string | number | boolean>) {
+    const posthog = getPostHogClient();
+    if (!posthog) return;
+
+    posthog.capture({ event, properties });
+    await posthog.flush();
+}
 
 function generateReceiptNumber(): string {
     return `RCP-${Date.now()}-${uuidv4().slice(0, 8).toUpperCase()}`;
 }
 
-
+const PORTAL_URL = process.env.PORTAL_URL ?? "";
 
 export async function POST(req: Request) {
     const rawBody = await req.text();
@@ -34,9 +45,8 @@ export async function POST(req: Request) {
     // ── Public Booking Flow ───────────────────────────────────────────────────
 
     if (reference.startsWith("gmax-pub-")) {
-        // Use Prisma findUnique instead of raw SQL to get proper camelCase fields
-        const intent = await prisma.bookingIntent.findUnique({
-            where: { paystackReference: reference },
+        const intent = await db.query.bookingIntent.findFirst({
+            where: (bookingIntent, { eq }) => eq(bookingIntent.paystackReference, reference),
         });
 
         if (!intent || intent.status !== "PENDING") {
@@ -52,41 +62,39 @@ export async function POST(req: Request) {
             console.error(
                 `[Webhook] Booking payment mismatch for ${reference}. expected ${expectedAmount} NGN, got ${paidAmount} ${paidCurrency}`
             );
-            await prisma.bookingIntent.update({
-                where: { paystackReference: reference },
-                data: { status: "FAILED" },
-            });
+            await db.update(bookingIntent)
+                .set({ status: "FAILED" })
+                .where(eq(bookingIntent.paystackReference, reference));
             return Response.json({ received: true });
         }
 
-        const studio = await prisma.studio.findUnique({
-            where: { id: intent.studioId },
-            include: { members: true },
+        const foundStudio = await db.query.studio.findFirst({
+            where: (studio, { eq }) => eq(studio.id, intent.studioId),
+            with: { members: true },
         });
 
-        if (!studio) {
+        if (!foundStudio) {
             console.error(`[Webhook] Studio not found: ${intent.studioId}`);
-            await prisma.bookingIntent.update({
-                where: { paystackReference: reference },
-                data: { status: "FAILED" },
-            });
+            await db.update(bookingIntent)
+                .set({ status: "FAILED" })
+                .where(eq(bookingIntent.paystackReference, reference));
             return Response.json({ received: true });
         }
 
         const defaultMember =
-            studio.members.find(m => m.role === "owner") ?? studio.members[0];
+            foundStudio.members.find(m => m.role === "owner") ?? foundStudio.members[0];
 
         if (!defaultMember) {
             console.error(`[Webhook] No staff member for studio: ${intent.studioId}`);
-            await prisma.bookingIntent.update({
-                where: { paystackReference: reference },
-                data: { status: "FAILED" },
-            });
+            await db.update(bookingIntent)
+                .set({ status: "FAILED" })
+                .where(eq(bookingIntent.paystackReference, reference));
             return Response.json({ received: true });
         }
 
-        let newBookingId: string | null = null;
-        await prisma.$transaction(async (tx) => {
+        let bookingId = "";
+
+        await db.transaction(async (tx) => {
             // 1. Resolve client
             let clientId = intent.existingClientId;
 
@@ -95,178 +103,158 @@ export async function POST(req: Request) {
 
                 let existing = null;
                 if (intent.clientEmail) {
-                    existing = await tx.client.findFirst({
-                        where: { studioId: intent.studioId, email: intent.clientEmail },
+                    existing = await tx.query.client.findFirst({
+                        where: (client, { and, eq }) => and(eq(client.studioId, intent.studioId), eq(client.email, intent.clientEmail!)),
                     });
                 }
                 if (!existing && phone) {
-                    existing = await tx.client.findFirst({
-                        where: { studioId: intent.studioId, phone },
+                    existing = await tx.query.client.findFirst({
+                        where: (client, { and, eq }) => and(eq(client.studioId, intent.studioId), eq(client.phone, phone)),
                     });
                 }
 
                 if (existing) {
                     clientId = existing.id;
                 } else {
-                    const client = await tx.client.create({
-                        data: {
-                            name:     intent.clientName,
-                            phone,
-                            email:    intent.clientEmail ?? null,
-                            type:     "regular",
-                            studioId: intent.studioId,
-                        },
-                    });
-                    clientId = client.id;
+                    const [newClient] = await tx.insert(client).values({
+                        id: uuidv4(),
+                        name: intent.clientName,
+                        phone,
+                        email: intent.clientEmail ?? null,
+                        type: "regular",
+                        studioId: intent.studioId,
+                        updatedAt: new Date().toISOString(),
+                    }).returning();
+                    clientId = newClient.id;
                 }
             }
 
             // 2. Create booking
-            const service = await tx.service.findUnique({
-                where: { id: intent.serviceId },
-                include: { variants: true },
-            });
-            const booking = await tx.booking.create({
-                data: {
-                    bookingDate:   intent.bookingDate,
-                    sessionCount:  intent.sessionCount,
-                    extraPicturesCount: intent.extraPicturesCount,
-                    notes:         intent.notes,
-                    totalAmount:   intent.totalAmount,
-                    paymentPlan:   intent.paymentPlan,
-                    bookingStatus: "CONFIRMED",
-                    paymentStatus: intent.paymentPlan === "FULL" ? "PAID" : "PARTIALLY_PAID",
-                    deliveryStatus: "PENDING",
-                    serviceId:     intent.serviceId,
-                    studioId:      intent.studioId,
-                    clientId:      clientId!,
-                    memberId:      defaultMember.id,
-                    createdBy:     defaultMember.userId,
-                    serviceVariantId: intent.serviceVariantId ?? service?.variants?.[0]?.id ?? null,
-                    ...(intent.addonIds.length > 0 && {
-                        addons: { connect: [...new Set(intent.addonIds.map((id: string) => id.split(":")[0]))].map(id => ({ id })) },
-                    }),
-                },
+            const foundService = await tx.query.service.findFirst({
+                where: (service, { eq }) => eq(service.id, intent.serviceId),
+                with: { serviceVariants: true },
             });
             
-            newBookingId = booking.id;
+            const [newBooking] = await tx.insert(booking).values({
+                id: uuidv4(),
+                bookingDate: intent.bookingDate,
+                sessionCount: intent.sessionCount,
+                notes: intent.notes,
+                totalAmount: intent.totalAmount,
+                paymentPlan: intent.paymentPlan,
+                bookingStatus: "CONFIRMED",
+                paymentStatus: intent.paymentPlan === "FULL" ? "PAID" : "PARTIALLY_PAID",
+                deliveryStatus: "PENDING",
+                serviceId: intent.serviceId,
+                studioId: intent.studioId,
+                        updatedAt: new Date().toISOString(),
+                clientId: clientId!,
+                memberId: defaultMember.id,
+                createdBy: defaultMember.userId,
+                serviceVariantId: intent.serviceVariantId ?? foundService?.serviceVariants?.[0]?.id ?? null,
+            }).returning();
+
+            bookingId = newBooking.id;
+
+            if (intent.addonIds && intent.addonIds.length > 0) {
+                const uniqueAddonIds = [...new Set(intent.addonIds.map((id: string) => id.split(":")[0]))];
+                await tx.insert(bookingAddons).values(
+                    uniqueAddonIds.map(id => ({
+                        a: bookingId,
+                        b: id
+                    }))
+                );
+            }
 
             // 3. Create payment record
             const installmentType = intent.paymentPlan === "FULL" ? "FULL" : "DEPOSIT";
-            await tx.payment.create({
-                data: {
-                    amount:            intent.amount,
-                    method:            "TRANSFER",
-                    status:            "PAID",
-                    paystackReference: reference,
-                    paystackResponse:  payload.data,
-                    receiptNumber:     generateReceiptNumber(),
-                    bookingId:         booking.id,
-                    recordedById:      defaultMember.userId,
-                    installmentType,
-                    sequence:          1,
-                    expectedAmount:    intent.amount,
-                    paymentDate:       new Date(),
-                },
+            await tx.insert(payment).values({
+                id: uuidv4(),
+                amount: intent.amount,
+                method: "TRANSFER",
+                status: "PAID",
+                paystackReference: reference,
+                paystackResponse: payload.data,
+                receiptNumber: generateReceiptNumber(),
+                bookingId: bookingId,
+                recordedById: defaultMember.userId,
+                installmentType,
+                sequence: 1,
+                expectedAmount: intent.amount,
+                paymentDate: new Date().toISOString(),
             });
 
             // 4. Mark intent resolved
-            await tx.bookingIntent.update({
-                where: { paystackReference: reference },
-                data: {
-                    status:            "COMPLETED",
-                    resolvedBookingId: booking.id,
-                },
-            });
+            await tx.update(bookingIntent)
+                .set({
+                    status: "COMPLETED",
+                    resolvedBookingId: bookingId,
+                })
+                .where(eq(bookingIntent.paystackReference, reference));
         });
 
-        // 5. Send notifications to client (fire-and-forget)
+        // 5. Send SMS notification to client (fire-and-forget)
         try {
             const clientPhone = intent.clientPhone?.trim();
-            const clientEmail = intent.clientEmail?.trim();
-            const clientName = intent.clientName || "Customer";
-            const service = await prisma.service.findUnique({ where: { id: intent.serviceId }, select: { name: true } });
-            const serviceName = service?.name ?? "Session";
-            const amountFormatted = new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(Number(intent.amount));
-
-            if (clientEmail) {
-                await sendBookingPaymentEmail({
-                    email: clientEmail,
-                    clientName,
-                    serviceName,
-                    amount: amountFormatted,
-                    reference,
-                }).catch(err => console.error(`[Webhook] Email notification failed for ${reference}:`, err));
-            }
-
             if (clientPhone) {
-                await sendBookingPaymentSMS({
-                    phone: clientPhone,
-                    serviceName,
-                    reference,
-                }).catch(err => console.error(`[Webhook] SMS notification failed for ${reference}:`, err));
+                const serviceRes = await db.query.service.findFirst({
+                    where: (service, { eq }) => eq(service.id, intent.serviceId),
+                    columns: { name: true }
+                });
+                const bookingDate = new Date(intent.bookingDate).toLocaleDateString("en-NG", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+                const amount = Number(intent.amount).toLocaleString("en-NG");
+                const planLabel = intent.paymentPlan === "FULL" ? "Full" : intent.paymentPlan === "HALF" ? "Half (50%)" : "Quarter (25%)";
+                const verifyLink = `${PORTAL_URL}/booking/verify?reference=${reference}`;
+                const message = `GMAX Studioz: Booking Confirmed! ✅\n\nService: ${serviceRes?.name ?? "Session"}\nDate: ${bookingDate}\nPaid: ₦${amount} (${planLabel})\nRef: ${reference}\n\nView details: ${verifyLink}`;
 
-                await sendBookingPaymentWhatsApp({
-                    phone: clientPhone,
-                    clientName,
-                    serviceName,
-                    reference,
-                }).catch(err => console.error(`[Webhook] WhatsApp notification failed for ${reference}:`, err));
-                
-                console.info(`[Webhook] Notifications dispatched for ${reference}`);
+                await sendSMS(clientPhone, message);
+                console.info(`[Webhook] SMS sent to ${clientPhone} for ${reference}`);
             }
-
-            if (newBookingId) {
-                const { notifyAdminsOfPayment } = await import("@/lib/notifications");
-                await notifyAdminsOfPayment(
-                    intent.studioId,
-                    newBookingId,
-                    Number(intent.amount),
-                    clientName,
-                    serviceName
-                ).catch(err => console.error(`[Webhook] Admin notification failed for ${reference}:`, err));
-            }
-        } catch (notifErr) {
-            console.error(`[Webhook] Notification dispatch failed for ${reference}:`, notifErr);
+        } catch (smsErr) {
+            console.error(`[Webhook] SMS notification failed for ${reference}:`, smsErr);
             // Don't fail the webhook — booking is already created
         }
+
+        await captureEvent("booking_payment_completed", {
+            payment_plan: intent.paymentPlan,
+            session_count: intent.sessionCount,
+        });
 
         return Response.json({ received: true });
     }
 
     // ── Shop Flow (payment record already exists) ─────────────────────────────
     if (reference.startsWith("gmax-shop-")) {
-        const payment = await prisma.payment.findUnique({
-            where: { paystackReference: reference },
+        const foundPayment = await db.query.payment.findFirst({
+            where: (payment, { eq }) => eq(payment.paystackReference, reference),
         });
 
-        if (!payment) {
+        if (!foundPayment) {
             console.warn(`[Webhook] No payment for shop reference: ${reference}`);
             return Response.json({ received: true });
         }
 
         // Idempotency guard
-        if (payment.status === "PAID") {
+        if (foundPayment.status === "PAID") {
             console.info(`[Webhook] Shop payment ${reference} already processed`);
             return Response.json({ received: true });
         }
 
         const paidAmount = Number(payload.data.amount ?? 0);
         const paidCurrency = String(payload.data.currency ?? "").toUpperCase();
-        const expectedAmount = Math.round(Number(payment.expectedAmount ?? payment.amount) * 100);
+        const expectedAmount = Math.round(Number(foundPayment.expectedAmount ?? foundPayment.amount) * 100);
 
         if (paidAmount !== expectedAmount || paidCurrency !== "NGN") {
             console.error(
                 `[Webhook] Shop payment mismatch for ${reference}. expected ${expectedAmount} NGN, got ${paidAmount} ${paidCurrency}`
             );
-            await prisma.payment.update({
-                where: { id: payment.id },
-                data: {
+            await db.update(payment)
+                .set({
                     status: "PENDING",
                     paystackResponse: payload.data,
-                    paymentDate: new Date(),
-                },
-            });
+                    paymentDate: new Date().toISOString(),
+                })
+                .where(eq(payment.id, foundPayment.id));
             return Response.json({ received: true });
         }
 
@@ -277,93 +265,29 @@ export async function POST(req: Request) {
             return Response.json({ received: true });
         }
 
-        await prisma.$transaction(async (tx) => {
-            await tx.payment.update({
-                where: { id: payment.id },
-                data: {
-                    status:           "PAID",
+        await db.transaction(async (tx) => {
+            await tx.update(payment)
+                .set({
+                    status: "PAID",
                     paystackResponse: payload.data,
-                    paymentDate:      new Date(),
-                },
-            });
+                    paymentDate: new Date().toISOString(),
+                })
+                .where(eq(payment.id, foundPayment.id));
 
-            await tx.productAccess.upsert({
-                where:  { productId_buyerId: { productId: product_id, buyerId: buyer_id } },
-                create: { productId: product_id, buyerId: buyer_id, paymentId: payment.id },
-                update: {},
-            });
+            await tx.insert(productAccess)
+                .values({
+                    id: uuidv4(),
+                    productId: product_id,
+                    buyerId: buyer_id,
+                    paymentId: foundPayment.id,
+                })
+                .onConflictDoUpdate({
+                    target: [productAccess.productId, productAccess.buyerId],
+                    set: { paymentId: foundPayment.id }
+                });
         });
 
-        return Response.json({ received: true });
-    }
-
-    // ── Academy Flow ──────────────────────────────────────────────────────────
-    if (reference.startsWith("gmax-academy-")) {
-        const registration = await prisma.academyStudent.findUnique({
-            where: { paymentReference: reference },
-            include: { course: true, batch: true },
-        });
-
-        if (!registration) {
-            console.warn(`[Webhook] No registration for academy reference: ${reference}`);
-            return Response.json({ received: true });
-        }
-
-        if (registration.paymentStatus === "SUCCESS") {
-            console.info(`[Webhook] Academy payment ${reference} already processed`);
-            return Response.json({ received: true });
-        }
-
-        const paidAmount = Number(payload.data.amount ?? 0);
-        const paidCurrency = String(payload.data.currency ?? "").toUpperCase();
-        const expectedAmount = Math.round(Number(registration.amountPaid) * 100);
-
-        if (paidAmount !== expectedAmount || paidCurrency !== "NGN") {
-            console.error(
-                `[Webhook] Academy payment mismatch for ${reference}. expected ${expectedAmount} NGN, got ${paidAmount} ${paidCurrency}`
-            );
-            await prisma.academyStudent.update({
-                where: { id: registration.id },
-                data: { paymentStatus: "FAILED" },
-            });
-            return Response.json({ received: true });
-        }
-
-        await prisma.academyStudent.update({
-            where: { id: registration.id },
-            data: { paymentStatus: "SUCCESS" },
-        });
-
-        const startDateStr = registration.batch?.startDate 
-            ? new Date(registration.batch.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-            : "a date to be announced";
-
-        try {
-            await sendAcademyRegistrationEmail({
-                email: registration.email,
-                studentName: registration.firstName,
-                courseName: registration.course.title,
-                startDate: startDateStr,
-                amountPaid: new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(Number(registration.amountPaid)),
-            }).catch(err => console.error(`[Webhook] Academy Email failed for ${reference}:`, err));
-
-            if (registration.phone) {
-                await sendAcademyRegistrationSMS({
-                    phone: registration.phone,
-                    courseName: registration.course.title,
-                    startDate: startDateStr,
-                }).catch(err => console.error(`[Webhook] Academy SMS failed for ${reference}:`, err));
-                
-                await sendAcademyRegistrationWhatsApp({
-                    phone: registration.phone,
-                    courseName: registration.course.title,
-                    startDate: startDateStr,
-                }).catch(err => console.error(`[Webhook] Academy WhatsApp failed for ${reference}:`, err));
-            }
-            console.info(`[Webhook] Academy notifications dispatched for ${reference}`);
-        } catch (notifErr) {
-            console.error(`[Webhook] Academy notification dispatch failed for ${reference}:`, notifErr);
-        }
+        await captureEvent("product_purchase_completed", {});
 
         return Response.json({ received: true });
     }

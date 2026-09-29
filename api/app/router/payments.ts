@@ -1,11 +1,12 @@
 // router/payments.ts
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import { payment, productAccess, buyerAccessToken, booking, buyer } from "@/lib/schema";
+import { eq, and } from "drizzle-orm";
 import { implement } from "@orpc/server";
 import { contract } from "@/app/contract";
 import { BaseContext, optionalAuthMiddleware } from "./middleware";
 import { paystackFetch } from "@/lib/paystack";
 import { sendPurchaseAccessEmail, sendPurchaseAccessSMS, sendPurchaseAccessWhatsApp, sendBookingPaymentEmail, sendBookingPaymentSMS, sendBookingPaymentWhatsApp } from "@/lib/termii";
-import { Prisma } from "@/lib/generated/prisma/client";
 import crypto from "crypto";
 
 const os = implement(contract).$context<BaseContext>();
@@ -24,12 +25,12 @@ function formatCurrency(amount: number | string): string {
 export const verifyPurchase = os.payment.verifyPurchase
     .use(optionalAuthMiddleware)
     .handler(async ({ input }) => {
-        const payment = await prisma.payment.findUnique({
-            where: { paystackReference: input.reference },
-            include: {
-                productAccess: true,
+        const paymentRecord = await db.query.payment.findFirst({
+            where: eq(payment.paystackReference, input.reference),
+            with: {
+                productAccesses: true,
                 booking: {
-                    include: {
+                    with: {
                         client: true,
                         service: true,
                     },
@@ -37,15 +38,17 @@ export const verifyPurchase = os.payment.verifyPurchase
             },
         });
 
-        if (!payment) {
+        if (!paymentRecord) {
             return { verified: false };
         }
 
+        const firstProductAccess = paymentRecord.productAccesses?.[0];
+
         // If already verified, return early
-        if (payment.status === "PAID") {
+        if (paymentRecord.status === "PAID") {
             return {
                 verified: true,
-                buyerId: payment.productAccess?.buyerId,
+                buyerId: firstProductAccess?.buyerId,
             };
         }
 
@@ -54,39 +57,40 @@ export const verifyPurchase = os.payment.verifyPurchase
             const response = await paystackFetch<{ data?: { status?: string } }>(`/transaction/verify/${input.reference}`);
             
             if (response.data?.status === "success") {
-                const paystackRes = payment.paystackResponse as { pendingProduct?: { title: string }, pendingBuyer?: { name: string, email: string }, productId?: string, buyerId?: string } | null;
+                const paystackRes = paymentRecord.paystackResponse as { pendingProduct?: { title: string }, pendingBuyer?: { name: string, email: string }, productId?: string, buyerId?: string } | null;
                 const isProductPurchase = Boolean(paystackRes?.pendingProduct && paystackRes?.pendingBuyer);
                 const productId = paystackRes?.productId;
                 const buyerId = paystackRes?.buyerId;
 
                 try {
-                    await prisma.$transaction(async (tx) => {
-                        await tx.payment.update({
-                            where: { id: payment.id, status: "PENDING" },
-                            data: { status: "PAID" },
-                        });
+                    await db.transaction(async (tx) => {
+                        const updateRes = await tx.update(payment)
+                            .set({ status: "PAID" })
+                            .where(and(eq(payment.id, paymentRecord.id), eq(payment.status, "PENDING")))
+                            .returning();
+                        
+                        if (updateRes.length === 0) {
+                            throw new Error("P2025");
+                        }
 
-                        if (isProductPurchase && productId && buyerId && !payment.productAccess) {
+                        if (isProductPurchase && productId && buyerId && !firstProductAccess) {
                             try {
-                                await tx.productAccess.create({
-                                    data: {
-                                        productId,
-                                        buyerId,
-                                        paymentId: payment.id,
-                                    },
+                                await tx.insert(productAccess).values({
+                                    id: crypto.randomUUID(),
+                                    productId,
+                                    buyerId,
+                                    paymentId: paymentRecord.id,
                                 });
-                            } catch (error) {
-                                const prismaError = error as Prisma.PrismaClientKnownRequestError;
-                                if (prismaError.code !== "P2002") {
+                            } catch (error: any) {
+                                if (error.code !== "23505") {
                                     throw error;
                                 }
                                 // Duplicate access already exists, treat as already processed.
                             }
                         }
                     });
-                } catch (error) {
-                    const prismaError = error as Prisma.PrismaClientKnownRequestError;
-                    if (prismaError.code === "P2025") {
+                } catch (error: any) {
+                    if (error.message === "P2025") {
                         return {
                             verified: true,
                             buyerId: buyerId,
@@ -98,19 +102,18 @@ export const verifyPurchase = os.payment.verifyPurchase
                 if (isProductPurchase && buyerId) {
                     try {
                         const token = generateToken();
-                        await prisma.buyerAccessToken.create({
-                            data: {
-                                buyerId,
-                                token,
-                                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-                                used: false,
-                            },
+                        await db.insert(buyerAccessToken).values({
+                            id: crypto.randomUUID(),
+                            buyerId,
+                            token,
+                            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
+                            used: false,
                         });
 
                         const accessLink = `${PORTAL_URL}/shop/access/${token}`;
-                        const buyerEmail = paystackRes.pendingBuyer?.email;
-                        const buyerName = paystackRes.pendingBuyer?.name || "Customer";
-                        const productTitle = paystackRes.pendingProduct?.title || "Digital Product";
+                        const buyerEmail = paystackRes?.pendingBuyer?.email;
+                        const buyerName = paystackRes?.pendingBuyer?.name || "Customer";
+                        const productTitle = paystackRes?.pendingProduct?.title || "Digital Product";
 
                         // Send email notification
                         if (buyerEmail) {
@@ -119,7 +122,7 @@ export const verifyPurchase = os.payment.verifyPurchase
                                 buyerName,
                                 productTitle,
                                 accessLink,
-                                amount: formatCurrency(Number(payment.amount)),
+                                amount: formatCurrency(Number(paymentRecord.amount)),
                             }).catch(err => {
                                 console.error("[verifyPurchase] Purchase email failed:", err);
                                 return null;
@@ -130,10 +133,10 @@ export const verifyPurchase = os.payment.verifyPurchase
                         }
 
                         // Also send SMS & WhatsApp if we have the phone number
-                        const buyer = await prisma.buyer.findUnique({ where: { id: buyerId } });
-                        if (buyer?.phone) {
+                        const buyerRecord = await db.query.buyer.findFirst({ where: eq(buyer.id, buyerId) });
+                        if (buyerRecord?.phone) {
                             await sendPurchaseAccessSMS({
-                                phone: buyer.phone,
+                                phone: buyerRecord.phone,
                                 productTitle,
                                 accessLink,
                             }).catch(err => {
@@ -141,7 +144,7 @@ export const verifyPurchase = os.payment.verifyPurchase
                             });
 
                             await sendPurchaseAccessWhatsApp({
-                                phone: buyer.phone,
+                                phone: buyerRecord.phone,
                                 productTitle,
                                 accessLink,
                             }).catch(err => {
@@ -160,21 +163,20 @@ export const verifyPurchase = os.payment.verifyPurchase
 
 
                 // ── Booking payment ──────────────────────────────────
-                if (payment.bookingId && payment.booking) {
-                    await prisma.booking.update({
-                        where: { id: payment.bookingId },
-                        data: { paymentStatus: "PAID" }
-                    });
+                if (paymentRecord.bookingId && paymentRecord.booking) {
+                    await db.update(booking)
+                        .set({ paymentStatus: "PAID" })
+                        .where(eq(booking.id, paymentRecord.bookingId));
 
                     // Send booking confirmation email
-                    const clientEmail = payment.booking.client?.email;
+                    const clientEmail = paymentRecord.booking.client?.email;
                     if (clientEmail) {
                         try {
                             await sendBookingPaymentEmail({
                                 email: clientEmail,
-                                clientName: payment.booking.client?.name || "Customer",
-                                serviceName: payment.booking.service?.name || "Service",
-                                amount: formatCurrency(Number(payment.amount)),
+                                clientName: paymentRecord.booking.client?.name || "Customer",
+                                serviceName: paymentRecord.booking.service?.name || "Service",
+                                amount: formatCurrency(Number(paymentRecord.amount)),
                                 reference: input.reference,
                             });
                             console.log(`[verifyPurchase] Booking confirmation sent to ${clientEmail}`);
@@ -184,10 +186,10 @@ export const verifyPurchase = os.payment.verifyPurchase
                     }
 
                     // Send SMS and WhatsApp
-                    const clientPhone = payment.booking.client?.phone;
+                    const clientPhone = paymentRecord.booking.client?.phone;
                     if (clientPhone) {
-                        const clientName = payment.booking.client?.name || "Customer";
-                        const serviceName = payment.booking.service?.name || "Service";
+                        const clientName = paymentRecord.booking.client?.name || "Customer";
+                        const serviceName = paymentRecord.booking.service?.name || "Service";
 
                         await sendBookingPaymentSMS({
                             phone: clientPhone,
@@ -222,21 +224,23 @@ export const verifyPurchase = os.payment.verifyPurchase
 export const getPublicPaymentDetails = os.payment.getPublicPaymentDetails
     .use(optionalAuthMiddleware)
     .handler(async ({ input }) => {
-        const payment = await prisma.payment.findUnique({
-            where: { paystackReference: input.reference },
-            include: {
+        const paymentRecord = await db.query.payment.findFirst({
+            where: eq(payment.paystackReference, input.reference),
+            with: {
                 booking: {
-                    include: {
+                    with: {
                         client: true,
                         service: {
-                            include: { studioSession: true },
+                            with: { studioSession: true },
                         },
                         studio: true,
-                        addons: true,
+                        bookingAddons: {
+                            with: { service: true }
+                        },
                     },
                 },
-                productAccess: {
-                    include: {
+                productAccesses: {
+                    with: {
                         product: true,
                         buyer: true,
                     }
@@ -244,142 +248,47 @@ export const getPublicPaymentDetails = os.payment.getPublicPaymentDetails
             },
         });
 
-        if (!payment) {
-            // Check if it's a pending booking intent
-            const intent = await prisma.bookingIntent.findUnique({
-                where: { paystackReference: input.reference },
-                include: { studio: true }
-            });
-
-            if (!intent) {
-                // Check if it's a direct booking ID (for balance payments)
-                const booking = await prisma.booking.findUnique({
-                    where: { id: input.reference },
-                    include: {
-                        client: true,
-                        service: { include: { studioSession: true } },
-                        studio: true,
-                        addons: true,
-                        payments: true,
-                    }
-                });
-
-                if (booking) {
-                    const totalPaid = booking.payments
-                        .filter((p: any) => p.status === "PAID")
-                        .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
-                    const grandTotal = Number(booking.totalAmount || 0);
-                    const balanceDue = grandTotal - totalPaid;
-
-                    if (balanceDue <= 0) {
-                        return {
-                            amount: "0",
-                            status: "PAID",
-                            isAlreadyPaid: true,
-                            booking: {
-                                sessionCount: booking.sessionCount,
-                                bookingDate: booking.bookingDate.toISOString(),
-                                client: booking.client ? { name: booking.client.name, email: booking.client.email } : null,
-                                service: booking.service ? { name: booking.service.name, duration: booking.service.studioSession?.duration || 45 } : null,
-                                studio: booking.studio ? { name: booking.studio.name, logo: booking.studio.logo } : null,
-                                addons: booking.addons.map((a: any) => ({ id: a.id, name: a.name })),
-                            },
-                            productAccess: null,
-                        };
-                    }
-
-                    return {
-                        amount: balanceDue.toString(),
-                        status: "PENDING",
-                        isAlreadyPaid: false,
-                        booking: {
-                            sessionCount: booking.sessionCount,
-                            bookingDate: booking.bookingDate.toISOString(),
-                            client: booking.client ? { name: booking.client.name, email: booking.client.email } : null,
-                            service: booking.service ? { name: booking.service.name, duration: booking.service.studioSession?.duration || 45 } : null,
-                            studio: booking.studio ? { name: booking.studio.name, logo: booking.studio.logo } : null,
-                            addons: booking.addons.map((a: any) => ({ id: a.id, name: a.name })),
-                        },
-                        productAccess: null,
-                    };
-                }
-
-                throw new Error("Payment not found");
-            }
-
-            const service = await prisma.service.findUnique({
-                where: { id: intent.serviceId },
-                include: { studioSession: true }
-            });
-
-            const uniqueAddonIds = [...new Set(intent.addonIds.map(id => id.split(":")[0]))];
-            const addons = uniqueAddonIds.length > 0 ? await prisma.service.findMany({
-                where: { id: { in: uniqueAddonIds } }
-            }) : [];
-
-            return {
-                amount: intent.amount.toString(),
-                status: intent.status === "COMPLETED" ? "PAID" : "PENDING",
-                isAlreadyPaid: intent.status === "COMPLETED",
-                booking: {
-                    sessionCount: intent.sessionCount,
-                    bookingDate: intent.bookingDate.toISOString(),
-                    client: {
-                        name: intent.clientName,
-                        email: intent.clientEmail || "",
-                    },
-                    service: service ? {
-                        name: service.name,
-                        duration: service.studioSession?.duration || 45,
-                    } : null,
-                    studio: intent.studio ? {
-                        name: intent.studio.name,
-                        logo: intent.studio.logo,
-                    } : null,
-                    addons: addons.map(a => ({
-                        id: a.id,
-                        name: a.name,
-                    })),
-                },
-                productAccess: null,
-            };
+        if (!paymentRecord) {
+            throw new Error("Payment not found");
         }
 
-        const isAlreadyPaid = payment.status === "PAID";
+        const isAlreadyPaid = paymentRecord.status === "PAID";
 
-        const bookingData = payment.booking ? {
-            sessionCount: payment.booking.sessionCount,
-            bookingDate: payment.booking.bookingDate.toISOString(),
-            client: payment.booking.client ? {
-                name: payment.booking.client.name,
-                email: payment.booking.client.email,
+        const bookingData = paymentRecord.booking ? {
+            sessionCount: paymentRecord.booking.sessionCount,
+            bookingDate: paymentRecord.booking.bookingDate,
+            client: paymentRecord.booking.client ? {
+                name: paymentRecord.booking.client.name,
+                email: paymentRecord.booking.client.email,
             } : null,
-            service: payment.booking.service ? {
-                name: payment.booking.service.name,
-                duration: payment.booking.service.studioSession?.duration || 45,
+            service: paymentRecord.booking.service ? {
+                name: paymentRecord.booking.service.name,
+                duration: paymentRecord.booking.service.studioSession?.duration || 45,
             } : null,
-            studio: payment.booking.studio ? {
-                name: payment.booking.studio.name,
-                logo: payment.booking.studio.logo,
+            studio: paymentRecord.booking.studio ? {
+                name: paymentRecord.booking.studio.name,
+                logo: paymentRecord.booking.studio.logo,
             } : null,
-            addons: payment.booking.addons.map(a => ({
-                id: a.id,
-                name: a.name,
-            })),
+            addons: paymentRecord.booking.bookingAddons?.map((a: any) => ({
+                id: a.service?.id,
+                name: a.service?.name,
+            })) || [],
         } : null;
 
-        const paystackRes = payment.paystackResponse as { pendingProduct?: { title: string }, pendingBuyer?: { name: string, email: string } } | null;
-        const productAccessData = payment.productAccess ? {
-            product: { title: payment.productAccess.product.title },
-            buyer: { name: payment.productAccess.buyer.name, email: payment.productAccess.buyer.email },
+        const paystackRes = paymentRecord.paystackResponse as { pendingProduct?: { title: string }, pendingBuyer?: { name: string, email: string } } | null;
+        
+        const firstProductAccess = paymentRecord.productAccesses?.[0];
+        const productAccessData = firstProductAccess ? {
+            product: { title: firstProductAccess.product.title },
+            buyer: { name: firstProductAccess.buyer.name, email: firstProductAccess.buyer.email },
         } : paystackRes?.pendingProduct ? {
             product: { title: paystackRes.pendingProduct.title },
             buyer: { name: paystackRes.pendingBuyer?.name || "Customer", email: paystackRes.pendingBuyer?.email || "" },
         } : null;
 
         return {
-            amount: payment.amount.toString(),
-            status: payment.status,
+            amount: paymentRecord.amount.toString(),
+            status: paymentRecord.status,
             isAlreadyPaid,
             booking: bookingData,
             productAccess: productAccessData,

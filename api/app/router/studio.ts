@@ -1,67 +1,68 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { implement } from "@orpc/server";
 import { optionalAuthMiddleware, BaseContext } from "./middleware";
 import { contract } from "../contract";
+import { eq, sql } from "drizzle-orm";
+import { studio } from "@/lib/schema";
 
 const os = implement(contract).$context<BaseContext>();
 
 export const getStudioBySlug = os.studio.getBySlug
     .use(optionalAuthMiddleware)
     .handler(async ({ input, errors }) => {
-        const studio = await prisma.studio.findUnique({
-            where: { slug: input.slug },
-            include: {
+        const foundStudio = await db.query.studio.findFirst({
+            where: (studio, { eq }) => eq(studio.slug, input.slug),
+            with: {
                 services: {
-                    where: { isAddon: false }, // Updated query
-                    include: { studioSession: true, variants: { include: { deliverables: true } } }, // Include variants & deliverables
+                    where: (service, { eq }) => eq(service.isAddon, false),
+                    with: { studioSession: true, serviceVariants: { with: { serviceDeliverables: true } } },
                 },
                 studioSessions: true,
             },
         });
 
-        if (!studio) throw errors.NOT_FOUND({
+        if (!foundStudio) throw errors.NOT_FOUND({
             data: { resourceType: "Studio", resourceId: input.slug },
         });
 
-        const addons = await prisma.service.findMany({
-            where: { isAddon: true, studioId: studio.id }, // Updated query
-            include: { studioSession: true, variants: { include: { deliverables: true } } }, // Include variants & deliverables
+        const addons = await db.query.service.findMany({
+            where: (service, { and, eq }) => and(eq(service.isAddon, true), eq(service.studioId, foundStudio.id)),
+            with: { studioSession: true, serviceVariants: { with: { serviceDeliverables: true } } },
         });
 
         return {
-            id: studio.id,
-            name: studio.name,
-            slug: studio.slug,
-            logo: (studio.logo && studio.logo.length > 0) ? studio.logo : null,
+            id: foundStudio.id,
+            name: foundStudio.name,
+            slug: foundStudio.slug,
+            logo: (foundStudio.logo && foundStudio.logo.length > 0) ? foundStudio.logo : null,
             metadata: (() => {
-                const raw = studio.metadata;
+                const raw = foundStudio.metadata;
                 if (raw == null) return null;
                 if (typeof raw === 'string') {
                     try { return JSON.parse(raw); } catch { return null; }
                 }
                 return raw as Record<string, unknown>;
             })(),
-            createdAt: studio.createdAt.toISOString(),
-            updatedAt: studio.updatedAt.toISOString(),
-            categories: (["PHOTOGRAPHY", "VIDEOGRAPHY", "OTHERS"] as const).map((cat) => ({
-                id: cat,
-                name: cat.charAt(0) + cat.slice(1).toLowerCase(),
-                type: cat,
-                services: studio.services.filter(s => s.category === cat).map((s) => ({
+            createdAt: new Date(foundStudio.createdAt).toISOString(),
+            updatedAt: new Date(foundStudio.updatedAt).toISOString(),
+            categories: Array.from(new Set(foundStudio.services.map(s => s.category))).map((catName) => ({
+                id: catName,
+                name: catName,
+                type: catName,
+                services: foundStudio.services.filter(s => s.category === catName).map((s) => ({
                     id: s.id,
                     name: s.name,
-                    category: s.category,
-                    isAddon: s.isAddon, // Updated mapping
+                    isAddon: s.isAddon,
                     description: s.description,
-                    features: s.features,
-                    variants: s.variants.map((v) => ({
+                    features: s.features || [],
+                    variants: s.serviceVariants.map((v) => ({
                         id: v.id,
                         locationType: v.locationType,
-                        basePrice: v.basePrice.toString(), // Convert Prisma Decimal to string
+                        basePrice: v.basePrice.toString(),
                         maxPrice: v.maxPrice ? v.maxPrice.toString() : null,
                         sessionDurationMins: v.sessionDurationMins,
                         logisticsIncluded: v.logisticsIncluded,
-                        deliverables: v.deliverables.map((d) => ({
+                        deliverables: v.serviceDeliverables.map((d) => ({
                             id: d.id,
                             label: d.label,
                             quantity: d.quantity,
@@ -70,8 +71,8 @@ export const getStudioBySlug = os.studio.getBySlug
                         }))
                     }))
                 })),
-            })).filter(c => c.services.length > 0),
-            studioSessions: studio.studioSessions.map((ss) => ({
+            })),
+            studioSessions: foundStudio.studioSessions.map((ss) => ({
                 id: ss.id,
                 name: ss.name,
                 duration: ss.duration,
@@ -79,18 +80,17 @@ export const getStudioBySlug = os.studio.getBySlug
             addons: addons.map((a) => ({
                 id: a.id,
                 name: a.name,
-                category: a.category,
-                isAddon: a.isAddon, // Updated mapping
+                isAddon: a.isAddon,
                 description: a.description,
-                features: a.features,
-                variants: a.variants.map((v) => ({
+                features: a.features || [],
+                variants: a.serviceVariants.map((v) => ({
                     id: v.id,
                     locationType: v.locationType,
-                    basePrice: v.basePrice.toString(), // Convert Prisma Decimal to string
+                    basePrice: v.basePrice.toString(),
                     maxPrice: v.maxPrice ? v.maxPrice.toString() : null,
                     sessionDurationMins: v.sessionDurationMins,
                     logisticsIncluded: v.logisticsIncluded,
-                    deliverables: v.deliverables.map((d) => ({
+                    deliverables: v.serviceDeliverables.map((d) => ({
                         id: d.id,
                         label: d.label,
                         quantity: d.quantity,
@@ -108,19 +108,18 @@ export const getAllStudios = os.studio.getAll
         const page = input.page || 1;
         const perPage = input.perPage || 20;
         
-        const [studios, total] = await Promise.all([
-            prisma.studio.findMany({
-                skip: (page - 1) * perPage,
-                take: perPage,
-                orderBy: { createdAt: "asc" },
-                include: {
-                    _count: {
-                        select: { members: true, bookings: true }
-                    }
-                }
-            }),
-            prisma.studio.count()
-        ]);
+        const countResult = await db.select({ total: sql<number>`count(*)::int` }).from(studio);
+        const total = countResult[0].total;
+
+        const studios = await db.query.studio.findMany({
+            offset: (page - 1) * perPage,
+            limit: perPage,
+            orderBy: (studio, { desc }) => [desc(studio.createdAt)],
+            extras: {
+                membersCount: sql<number>`(SELECT count(*)::int FROM "member" WHERE "member"."studioId" = "studio"."id")`.as("membersCount"),
+                bookingsCount: sql<number>`(SELECT count(*)::int FROM "booking" WHERE "booking"."studioId" = "studio"."id")`.as("bookingsCount"),
+            }
+        });
 
         const pageCount = Math.ceil(total / perPage);
         
@@ -138,9 +137,12 @@ export const getAllStudios = os.studio.getAll
                     }
                     return raw as Record<string, unknown>;
                 })(),
-                createdAt: s.createdAt.toISOString(),
-                updatedAt: s.updatedAt.toISOString(),
-                _count: s._count,
+                createdAt: new Date(s.createdAt).toISOString(),
+                updatedAt: new Date(s.updatedAt).toISOString(),
+                _count: {
+                    members: Number(s.membersCount || 0),
+                    bookings: Number(s.bookingsCount || 0)
+                },
             })),
             meta: {
                 total,

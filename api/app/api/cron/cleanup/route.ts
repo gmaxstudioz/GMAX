@@ -1,5 +1,9 @@
-import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { flushPostHogLogs, getPostHogLogger } from "@/instrumentation";
+import { SeverityNumber } from "@opentelemetry/api-logs";
+import { after, NextResponse } from "next/server";
+import { bookingIntent } from "@/lib/schema";
+import { eq, and, lt } from "drizzle-orm";
 
 export async function GET(req: Request) {
     // Optional: Protect this route with a secret key so only your cron job can trigger it
@@ -14,55 +18,27 @@ export async function GET(req: Request) {
 
     try {
         // Delete all intents that are still PENDING and have passed their expiration time
-        const deletedIntents = await prisma.bookingIntent.deleteMany({
-            where: {
-                status: "PENDING",
-                expiresAt: { lt: new Date() },
-            },
+        const deleted = await db.delete(bookingIntent)
+            .where(and(eq(bookingIntent.status, "PENDING"), lt(bookingIntent.expiresAt, new Date().toISOString())))
+            .returning();
+
+        const deletedCount = deleted.length;
+
+        console.log(`[Cron] Cleaned up ${deletedCount} abandoned booking intents.`);
+        getPostHogLogger()?.emit({
+            body: "abandoned booking intents cleaned",
+            severityNumber: SeverityNumber.INFO,
+            attributes: { deleted_count: deletedCount },
         });
-        
-        console.log(`[Cron] Cleaned up ${deletedIntents.count} abandoned booking intents.`);
-
-        // Delete all expired photos (5 days after delivery)
-        const expiredPhotos = await prisma.photo.findMany({
-            where: {
-                expiresAt: { lt: new Date() },
-            }
-        });
-
-        const { deleteFromR2 } = await import("@/lib/r2");
-        let deletedPhotosCount = 0;
-
-        for (const photo of expiredPhotos) {
-            try {
-                // Delete from R2
-                await deleteFromR2(photo.r2Key);
-                if (photo.thumbnailKey) {
-                    await deleteFromR2(photo.thumbnailKey);
-                }
-                
-                // Delete from DB
-                await prisma.photo.delete({
-                    where: { id: photo.id }
-                });
-                
-                deletedPhotosCount++;
-            } catch (err) {
-                console.error(`[Cron] Failed to delete photo ${photo.id}:`, err);
-            }
-        }
-        
-        if (deletedPhotosCount > 0) {
-            console.log(`[Cron] Cleaned up ${deletedPhotosCount} expired photos.`);
-        }
-
-        return NextResponse.json({ 
-            success: true, 
-            deletedIntents: deletedIntents.count,
-            deletedPhotos: deletedPhotosCount 
-        });
+        after(flushPostHogLogs);
+        return NextResponse.json({ success: true, deletedCount: deletedCount });
     } catch (error) {
         console.error("[Cron] Failed to clean up intents:", error);
+        getPostHogLogger()?.emit({
+            body: "abandoned booking intent cleanup failed",
+            severityNumber: SeverityNumber.ERROR,
+        });
+        after(flushPostHogLogs);
         return NextResponse.json({ success: false }, { status: 500 });
     }
 }

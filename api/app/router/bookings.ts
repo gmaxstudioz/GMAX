@@ -1,14 +1,24 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { contract } from "@/app/contract";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import { eq, and, or, inArray, asc, desc, isNull, sql } from "drizzle-orm";
+import { studio, service, booking, bookingIntent, client, payment, bookingAddons } from "@/lib/schema";
 import { implement } from "@orpc/server";
 import { optionalAuthMiddleware, authMiddleware, BaseContext } from "./middleware";
 import { calculateGrandTotal } from "@/lib/pricing";
 import { v4 as uuidv4 } from "uuid";
 import { paystackFetch } from "@/lib/paystack";
-import { notifyAdminsOfPayment } from "@/lib/notifications";
+import { getPostHogClient } from "@/lib/auth";
 
 const os = implement(contract).$context<BaseContext>();
+
+async function captureEvent(event: string, properties: Record<string, string | number | boolean>) {
+    const posthog = getPostHogClient();
+    if (!posthog) return;
+
+    posthog.capture({ event, properties });
+    await posthog.flush();
+}
 
 const mapBookingToOutput = (data: any) => {
     const totalPaid = data.payments
@@ -47,7 +57,7 @@ const mapBookingToOutput = (data: any) => {
             id: data.service.id,
             name: data.service.name,
             isAddon: data.service.isAddon,
-            variants: data.service.variants ? data.service.variants.map((v: any) => ({
+            variants: data.service.serviceVariants ? data.service.serviceVariants.map((v: any) => ({
                 id: v.id,
                 locationType: v.locationType,
                 basePrice: v.basePrice.toString(),
@@ -74,11 +84,11 @@ const mapBookingToOutput = (data: any) => {
                 updatedAt: data.member.user.updatedAt.toISOString(),
             }
         },
-        addons: data.addons.map((a: any) => ({
+        addons: (data.bookingAddons || []).map((ba: any) => ba.service).map((a: any) => ({
             id: a.id,
             name: a.name,
             isAddon: a.isAddon,
-            variants: a.variants ? a.variants.map((v: any) => ({
+            variants: a.serviceVariants ? a.serviceVariants.map((v: any) => ({
                 id: v.id,
                 locationType: v.locationType,
                 basePrice: v.basePrice.toString(),
@@ -137,7 +147,7 @@ const mapBookingSummaryToOutput = (data: any) => {
             id: data.service.id,
             name: data.service.name,
             isAddon: data.service.isAddon,
-            variants: data.service.variants ? data.service.variants.map((v: any) => ({
+            variants: data.service.serviceVariants ? data.service.serviceVariants.map((v: any) => ({
                 id: v.id,
                 locationType: v.locationType,
                 basePrice: v.basePrice.toString(),
@@ -155,9 +165,9 @@ export const createBookings = os.booking.create.use(optionalAuthMiddleware).hand
     async ({ input, context, errors }) => {
         const { addonIds, createdBy, memberId, ...bookingData } = input;
 
-        const studio = await prisma.studio.findUnique({
-            where: { id: bookingData.studioId },
-            include: { members: true },
+        const studio = await db.query.studio.findFirst({
+            where: (model, { eq }) => eq(model.id, bookingData.studioId),
+            with: { members: true },
         });
 
         if (!studio) {
@@ -167,9 +177,9 @@ export const createBookings = os.booking.create.use(optionalAuthMiddleware).hand
         }
 
         // 1. Fetch Service & Add-ons to calculate the total amount securely
-        const service = await prisma.service.findUnique({
-            where: { id: bookingData.serviceId },
-            include: { variants: true }
+        const service = await db.query.service.findFirst({
+            where: (model, { eq }) => eq(model.id, bookingData.serviceId),
+            with: { serviceVariants: true }
         });
         
         if (!service) throw errors.NOT_FOUND({
@@ -179,9 +189,9 @@ export const createBookings = os.booking.create.use(optionalAuthMiddleware).hand
         let fetchedAddons: any[] = [];
         let addonMapById: Record<string, any> = {};
         if (addonIds && addonIds.length > 0) {
-            fetchedAddons = await prisma.service.findMany({
-                where: { id: { in: addonIds } },
-                include: { variants: true }
+            fetchedAddons = await db.query.service.findMany({
+                where: (model, { inArray }) => inArray(model.id, addonIds),
+                with: { serviceVariants: true }
             });
             // Create a map from addon ID to addon object for consistent lookup
             addonMapById = Object.fromEntries(fetchedAddons.map(addon => [addon.id, addon]));
@@ -190,14 +200,14 @@ export const createBookings = os.booking.create.use(optionalAuthMiddleware).hand
         // 2. Build pricing objects for the calculator
         // Use the first available variant (default/primary variant) for pricing calculation
         const servicePricingObj = {
-            price: service.variants?.[0]?.basePrice ? Number(service.variants[0].basePrice) : 0,
+            price: service.serviceVariants?.[0]?.basePrice ? Number(service.serviceVariants[0].basePrice) : 0,
             salePrice: null
         };
         // Map addon IDs to their pricing in the order they were selected, using the first variant of each addon
         const addonPricingObjs = (addonIds || []).map(addonId => {
             const addon = addonMapById[addonId];
             return {
-                price: addon?.variants?.[0]?.basePrice ? Number(addon.variants[0].basePrice) : 0,
+                price: addon?.serviceVariants?.[0]?.basePrice ? Number(addon.serviceVariants[0].basePrice) : 0,
                 salePrice: null
             };
         });
@@ -230,26 +240,39 @@ export const createBookings = os.booking.create.use(optionalAuthMiddleware).hand
         }
 
         // 4. Pass totalAmount to Prisma
-        const data = await prisma.booking.create({
-            data: {
-                ...bookingData,
-                totalAmount: grandTotal,
-                createdBy: resolvedCreatedBy,
-                memberId: resolvedMemberId,
-                ...(addonIds && addonIds.length > 0 && {
-                    addons: {
-                        connect: addonIds.map(id => ({ id })),
-                    },
-                }),
-            },
-            include: {
+        const bookingId = uuidv4();
+        await db.insert(booking).values({
+            id: bookingId,
+            ...bookingData,
+            bookingDate: bookingData.bookingDate.toISOString(),
+            totalAmount: grandTotal.toString(),
+            createdBy: resolvedCreatedBy,
+            memberId: resolvedMemberId,
+            updatedAt: new Date().toISOString(),
+        });
+        
+        if (addonIds && addonIds.length > 0) {
+            await db.insert(bookingAddons).values(
+                addonIds.map(id => ({ a: bookingId, b: id }))
+            );
+        }
+
+        const data = await db.query.booking.findFirst({
+            where: (model, { eq }) => eq(model.id, bookingId),
+            with: {
                 client: true,
-                service: { include: { variants: true } },
-                member: { include: { user: true } },
-                addons: { include: { variants: true } },
+                service: { with: { serviceVariants: true } },
+                member: { with: { user: true } },
+                bookingAddons: { with: { service: { with: { serviceVariants: true } } } },
                 payments: true,
                 photos: true,
             }
+        });
+
+        await captureEvent("booking_created", {
+            addon_count: addonIds?.length ?? 0,
+            session_count: bookingData.sessionCount,
+            source: context.user ? "staff" : "public",
         });
 
         return mapBookingToOutput(data);
@@ -258,13 +281,13 @@ export const createBookings = os.booking.create.use(optionalAuthMiddleware).hand
 
 export const getBookingById = os.booking.getById.use(optionalAuthMiddleware).handler(
     async ({ input, errors }) => {
-        const data = await prisma.booking.findUnique({
-            where: { id: input.bookingId },
-            include: {
+        const data = await db.query.booking.findFirst({
+            where: (model, { eq }) => eq(model.id, input.bookingId),
+            with: {
                 client: true,
-                service: { include: { variants: true } },
-                member: { include: { user: true } },
-                addons: { include: { variants: true } },
+                service: { with: { serviceVariants: true } },
+                member: { with: { user: true } },
+                bookingAddons: { with: { service: { with: { serviceVariants: true } } } },
                 payments: true,
                 photos: true,
             }
@@ -279,25 +302,35 @@ export const updateBooking = os.booking.update.use(authMiddleware).handler(
     async ({ input, errors }) => {
         const { bookingId, addonIds, ...updateData } = input;
         
-        const existing = await prisma.booking.findUnique({ where: { id: bookingId }});
+        const existing = await db.query.booking.findFirst({ where: (model, { eq }) => eq(model.id, bookingId) });
         if (!existing) throw errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: bookingId }});
 
-        const data = await prisma.booking.update({
-            where: { id: bookingId },
-            data: {
-                ...updateData,
-                ...(addonIds !== undefined && {
-                    addons: { set: addonIds.map(id => ({ id })) }
-                })
-            },
-            include: {
+        if (Object.keys(updateData).length > 0) {
+            const { bookingDate, ...restData } = updateData;
+            await db.update(booking).set({ ...restData, updatedAt: new Date().toISOString(), ...(bookingDate ? { bookingDate: bookingDate.toISOString() } : {}) }).where(eq(booking.id, bookingId));
+        }
+
+        if (addonIds !== undefined) {
+            await db.delete(bookingAddons).where(eq(bookingAddons.a, bookingId));
+            if (addonIds.length > 0) {
+                await db.insert(bookingAddons).values(addonIds.map(id => ({ a: bookingId, b: id })));
+            }
+        }
+
+        const data = await db.query.booking.findFirst({
+            where: (model, { eq }) => eq(model.id, bookingId),
+            with: {
                 client: true,
-                service: { include: { variants: true } },
-                member: { include: { user: true } },
-                addons: { include: { variants: true } },
+                service: { with: { serviceVariants: true } },
+                member: { with: { user: true } },
+                bookingAddons: { with: { service: { with: { serviceVariants: true } } } },
                 payments: true,
                 photos: true,
             }
+        });
+
+        await captureEvent("booking_updated", {
+            addons_updated: addonIds !== undefined,
         });
 
         return mapBookingToOutput(data);
@@ -306,10 +339,11 @@ export const updateBooking = os.booking.update.use(authMiddleware).handler(
 
 export const deleteBooking = os.booking.delete.use(authMiddleware).handler(
     async ({ input, errors }) => {
-        const existing = await prisma.booking.findUnique({ where: { id: input.bookingId }});
+        const existing = await db.query.booking.findFirst({ where: (model, { eq }) => eq(model.id, input.bookingId) });
         if (!existing) throw errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: input.bookingId }});
 
-        await prisma.booking.delete({ where: { id: input.bookingId }});
+        await db.delete(booking).where(eq(booking.id, input.bookingId));
+        await captureEvent("booking_deleted", {});
         return { id: input.bookingId, deleted: true as const };
     }
 );
@@ -318,26 +352,47 @@ export const getAllBookings = os.booking.getAll.use(authMiddleware).handler(
     async ({ input }) => {
         const { page, perPage, sortBy, sortOrder, studioId, search } = input;
         
-        const whereClause: any = { studioId };
+        let baseWhere = eq(booking.studioId, studioId);
+        
+        // Handling search correctly with Drizzle requires joins, but since we are replacing the ORM we can just use exists or similar.
+        // For simplicity, we fetch all matching client/service IDs first if there is a search
         if (search) {
-            whereClause.OR = [
-                { client: { name: { contains: search, mode: 'insensitive' } } },
-                { service: { name: { contains: search, mode: 'insensitive' } } },
-            ];
+            const clients = await db.query.client.findMany({
+                where: (model, { ilike }) => ilike(model.name, `%${search}%`),
+                columns: { id: true }
+            });
+            const services = await db.query.service.findMany({
+                where: (model, { ilike }) => ilike(model.name, `%${search}%`),
+                columns: { id: true }
+            });
+            
+            const clientIds = clients.map(c => c.id);
+            const serviceIds = services.map(s => s.id);
+            
+            const searchFilters = [];
+            if (clientIds.length > 0) searchFilters.push(inArray(booking.clientId, clientIds));
+            if (serviceIds.length > 0) searchFilters.push(inArray(booking.serviceId, serviceIds));
+            
+            if (searchFilters.length > 0) {
+                baseWhere = and(baseWhere, or(...searchFilters)) as any;
+            } else {
+                baseWhere = and(baseWhere, sql`1=0`) as any; // Force no results
+            }
         }
 
-        const total = await prisma.booking.count({ where: whereClause });
+        const countResult = await db.select({ count: sql`count(*)` }).from(booking).where(baseWhere);
+        const total = Number(countResult[0].count);
         
-        const data = await prisma.booking.findMany({
-            where: whereClause,
-            skip: (page - 1) * perPage,
-            take: perPage,
-            orderBy: { [sortBy || 'createdAt']: sortOrder },
-            include: {
+        const data = await db.query.booking.findMany({
+            where: baseWhere,
+            offset: (page - 1) * perPage,
+            limit: perPage,
+            orderBy: (model, { asc, desc }) => sortOrder === 'desc' ? desc((model as any)[sortBy || 'createdAt']) : asc((model as any)[sortBy || 'createdAt']),
+            with: {
                 client: true,
-                service: { include: { variants: true } },
-                member: { include: { user: true } },
-                addons: { include: { variants: true } },
+                service: { with: { serviceVariants: true } },
+                member: { with: { user: true } },
+                bookingAddons: { with: { service: { with: { serviceVariants: true } } } },
                 payments: true,
                 photos: true,
             }
@@ -361,21 +416,24 @@ export const getAllBookings = os.booking.getAll.use(authMiddleware).handler(
 export const reassignBooking = os.booking.reassign.use(authMiddleware).handler(
     async ({ input, errors }) => {
         const { bookingId, memberId } = input;
-        const existing = await prisma.booking.findUnique({ where: { id: bookingId }});
+        const existing = await db.query.booking.findFirst({ where: (model, { eq }) => eq(model.id, bookingId) });
         if (!existing) throw errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: bookingId }});
 
-        const data = await prisma.booking.update({
-            where: { id: bookingId },
-            data: { memberId },
-            include: {
+        await db.update(booking).set({ memberId, updatedAt: new Date().toISOString() }).where(eq(booking.id, bookingId));
+        
+        const data = await db.query.booking.findFirst({
+            where: (model, { eq }) => eq(model.id, bookingId),
+            with: {
                 client: true,
-                service: { include: { variants: true } },
-                member: { include: { user: true } },
-                addons: { include: { variants: true } },
+                service: { with: { serviceVariants: true } },
+                member: { with: { user: true } },
+                bookingAddons: { with: { service: { with: { serviceVariants: true } } } },
                 payments: true,
                 photos: true,
             }
         });
+
+        await captureEvent("booking_reassigned", {});
 
         return mapBookingToOutput(data);
     }
@@ -384,21 +442,24 @@ export const reassignBooking = os.booking.reassign.use(authMiddleware).handler(
 export const rescheduleBooking = os.booking.reschedule.use(authMiddleware).handler(
     async ({ input, errors }) => {
         const { bookingId, newDate } = input;
-        const existing = await prisma.booking.findUnique({ where: { id: bookingId }});
+        const existing = await db.query.booking.findFirst({ where: (model, { eq }) => eq(model.id, bookingId) });
         if (!existing) throw errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: bookingId }});
 
-        const data = await prisma.booking.update({
-            where: { id: bookingId },
-            data: { bookingDate: newDate },
-            include: {
+        await db.update(booking).set({ bookingDate: newDate.toISOString(), updatedAt: new Date().toISOString() }).where(eq(booking.id, bookingId));
+        
+        const data = await db.query.booking.findFirst({
+            where: (model, { eq }) => eq(model.id, bookingId),
+            with: {
                 client: true,
-                service: { include: { variants: true } },
-                member: { include: { user: true } },
-                addons: { include: { variants: true } },
+                service: { with: { serviceVariants: true } },
+                member: { with: { user: true } },
+                bookingAddons: { with: { service: { with: { serviceVariants: true } } } },
                 payments: true,
                 photos: true,
             }
         });
+
+        await captureEvent("booking_rescheduled", {});
 
         return mapBookingToOutput(data);
     }
@@ -407,7 +468,7 @@ export const rescheduleBooking = os.booking.reschedule.use(authMiddleware).handl
 export const updateBookingStatus = os.booking.updateStatus.use(authMiddleware).handler(
     async ({ input, errors }) => {
         const { bookingId, bookingStatus, paymentStatus, deliveryStatus } = input;
-        const existing = await prisma.booking.findUnique({ where: { id: bookingId }});
+        const existing = await db.query.booking.findFirst({ where: (model, { eq }) => eq(model.id, bookingId) });
         if (!existing) throw errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: bookingId }});
 
         const updateData: any = {};
@@ -415,17 +476,25 @@ export const updateBookingStatus = os.booking.updateStatus.use(authMiddleware).h
         if (paymentStatus) updateData.paymentStatus = paymentStatus;
         if (deliveryStatus) updateData.deliveryStatus = deliveryStatus;
 
-        const data = await prisma.booking.update({
-            where: { id: bookingId },
-            data: updateData,
-            include: {
+        const { bookingDate, ...restData } = updateData;
+            await db.update(booking).set({ ...restData, updatedAt: new Date().toISOString(), ...(bookingDate ? { bookingDate: bookingDate.toISOString() } : {}) }).where(eq(booking.id, bookingId));
+        
+        const data = await db.query.booking.findFirst({
+            where: (model, { eq }) => eq(model.id, bookingId),
+            with: {
                 client: true,
-                service: { include: { variants: true } },
-                member: { include: { user: true } },
-                addons: { include: { variants: true } },
+                service: { with: { serviceVariants: true } },
+                member: { with: { user: true } },
+                bookingAddons: { with: { service: { with: { serviceVariants: true } } } },
                 payments: true,
                 photos: true,
             }
+        });
+
+        await captureEvent("booking_status_updated", {
+            booking_status_changed: Boolean(bookingStatus),
+            delivery_status_changed: Boolean(deliveryStatus),
+            payment_status_changed: Boolean(paymentStatus),
         });
 
         return mapBookingToOutput(data);
@@ -437,23 +506,23 @@ const PORTAL_URL = process.env.PORTAL_URL!;
 export const createPublicBooking = os.booking.createPublic
     .use(optionalAuthMiddleware)
     .handler(async ({ input, errors }) => {
-        const studio = await prisma.studio.findUnique({
-            where: { id: input.studioId },
-            include: { members: true },
+        const studio = await db.query.studio.findFirst({
+            where: (model, { eq }) => eq(model.id, input.studioId),
+            with: { members: true },
         });
         if (!studio) throw errors.NOT_FOUND({
             data: { resourceType: "Studio", resourceId: input.studioId },
         });
 
-        const service = await prisma.service.findFirst({
-            where: { id: input.selectedServiceId, studioId: input.studioId },
-            include: { variants: true },
+        const service = await db.query.service.findFirst({
+            where: (model, { eq, and }) => and(eq(model.id, input.selectedServiceId), eq(model.studioId, input.studioId)),
+            with: { serviceVariants: true },
         });
         if (!service) throw errors.NOT_FOUND({
             data: { resourceType: "Service", resourceId: input.selectedServiceId },
         });
 
-        const selectedVariant = service.variants.find(v => v.id === input.selectedVariantId);
+        const selectedVariant = service.serviceVariants.find(v => v.id === input.selectedVariantId);
         if (!selectedVariant) throw errors.BAD_REQUEST({ message: "Selected service option is invalid." });
 
         // Fetch selected addons to get their pricing
@@ -466,9 +535,9 @@ export const createPublicBooking = os.booking.createPublic
         const uniqueAddonIds = [...new Set(parsedAddons.map(p => p.addonId))];
 
         if (uniqueAddonIds.length > 0) {
-            const selectedAddons = await prisma.service.findMany({
-                where: { id: { in: uniqueAddonIds }, studioId: input.studioId, isAddon: true },
-                include: { variants: true },
+            const selectedAddons = await db.query.service.findMany({
+                where: (model, { inArray, eq, and }) => and(inArray(model.id, uniqueAddonIds), eq(model.studioId, input.studioId), eq(model.isAddon, true)),
+                with: { serviceVariants: true },
             });
             selectedAddonsMap = Object.fromEntries(selectedAddons.map(addon => [addon.id, addon]));
         }
@@ -485,7 +554,7 @@ export const createPublicBooking = os.booking.createPublic
                 throw errors.BAD_REQUEST({ message: `Addon ${addonId} not found.` });
             }
             
-            const variant = variantId ? addon.variants?.find((v: any) => v.id === variantId) : addon.variants?.[0];
+            const variant = variantId ? addon.serviceVariants?.find((v: any) => v.id === variantId) : addon.serviceVariants?.[0];
             if (!variant) {
                 throw errors.BAD_REQUEST({ message: `Variant for addon ${addon.name} not found.` });
             }
@@ -496,17 +565,11 @@ export const createPublicBooking = os.booking.createPublic
             };
         });
 
-        // Calculate extra pictures cost based on the 'BOTH' variant of the selected service
-        const bothVariant = service.variants.find(v => v.locationType === "BOTH");
-        const extraPicturesCost = bothVariant && input.extraPicturesCount
-            ? Number(bothVariant.basePrice) * input.extraPicturesCount
-            : 0;
-
         const grandTotal = calculateGrandTotal(
             servicePricingObj,
             addonPricingObjs,
             input.sessionCount,
-        ) + extraPicturesCost;
+        );
 
         // Calculate the amount to charge based on payment plan
         const paymentPlan = input.paymentPlan ?? "FULL";
@@ -516,8 +579,8 @@ export const createPublicBooking = os.booking.createPublic
         const reference = `gmax-pub-${uuidv4().slice(0, 8)}`;
 
         // Store intent — nothing else goes to DB yet
-        await prisma.bookingIntent.create({
-            data: {
+        await db.insert(bookingIntent).values({
+                id: uuidv4(),
                 studioId:        input.studioId,
                 clientName:      input.clientName,
                 clientEmail:     input.clientEmail ?? null,
@@ -527,15 +590,19 @@ export const createPublicBooking = os.booking.createPublic
                 serviceVariantId: input.selectedVariantId,
                 addonIds:        input.selectedAddonIds ?? [],
                 sessionCount:    input.sessionCount,
-                extraPicturesCount: input.extraPicturesCount ?? 0,
-                bookingDate:     new Date(input.bookingDate),
+                bookingDate:     new Date(input.bookingDate).toISOString(),
                 notes:           input.notes ?? null,
                 paystackReference: reference,
-                totalAmount:     grandTotal,
-                amount:          chargeAmount,
+                totalAmount:     grandTotal.toString(),
+                amount:          chargeAmount.toString(),
                 paymentPlan,
-                expiresAt:       new Date(Date.now() + 60 * 60 * 1000), // 1 hour
-            },
+                expiresAt:       new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour
+        });
+
+        await captureEvent("public_booking_checkout_started", {
+            addon_count: parsedAddons.length,
+            payment_plan: paymentPlan,
+            session_count: input.sessionCount,
         });
 
         const clientEmail = input.clientEmail;
@@ -550,9 +617,27 @@ export const createPublicBooking = os.booking.createPublic
             };
         }
 
+        // Initialize Paystack
+        const paystack = await paystackFetch<{
+            data?: { authorization_url?: string }
+        }>("/transaction/initialize", {
+            method: "POST",
+            body: JSON.stringify({
+                email:    clientEmail,
+                amount:   Math.round(chargeAmount * 100), // kobo
+                reference,
+                metadata: {
+                    type:     "booking",
+                    studioId: input.studioId,
+                    intentId: reference,
+                },
+                callback_url: `${PORTAL_URL}/booking/verify?reference=${reference}`,
+            }),
+        });
+
         return {
             bookingId:  reference,
-            paymentUrl: null,
+            paymentUrl: paystack.data?.authorization_url ?? null,
             reference,
             amount:     chargeAmount,
         };
@@ -561,13 +646,13 @@ export const createPublicBooking = os.booking.createPublic
 export const checkClient = os.booking.checkClient
     .use(optionalAuthMiddleware)
     .handler(async ({ input }) => {
-        const existing = await prisma.client.findFirst({
-            where: {
-                studioId: input.studioId,
-                name: { equals: input.name, mode: "insensitive" },
-                email: { equals: input.email, mode: "insensitive" },
-            },
-            select: { id: true, name: true, phone: true },
+        const existing = await db.query.client.findFirst({
+            where: (model, { eq, and, ilike }) => and(
+                eq(model.studioId, input.studioId),
+                ilike(model.name, input.name),
+                input.email ? ilike(model.email, input.email) : undefined
+            ),
+            columns: { id: true, name: true, phone: true },
         });
 
         if (!existing) return { exists: false as const };
@@ -587,110 +672,9 @@ export const checkClient = os.booking.checkClient
 export const verifyBooking = os.booking.verifyBooking
     .use(optionalAuthMiddleware)
     .handler(async ({ input }) => {
-        let intent = await prisma.bookingIntent.findUnique({
-            where: { paystackReference: input.reference },
+        let intent = await db.query.bookingIntent.findFirst({
+            where: (model, { eq }) => eq(model.paystackReference, input.reference),
         });
-
-        if (!intent && input.reference.includes("_bal_")) {
-            const bookingId = input.reference.split("_bal_")[0];
-            const booking = await prisma.booking.findUnique({
-                where: { id: bookingId },
-                include: { client: true, service: true, studio: { include: { members: true } }, payments: true }
-            });
-
-            if (!booking) {
-                return {
-                    status: "FAILED" as const,
-                    clientName: "",
-                    serviceName: "",
-                    bookingDate: "",
-                    totalAmount: 0,
-                    amountPaid: 0,
-                    paymentPlan: "FULL" as const,
-                    reference: input.reference,
-                    bookingId: null,
-                };
-            }
-
-            try {
-                const verification = await paystackFetch<{
-                    status: boolean;
-                    data?: { status?: string; amount?: number; currency?: string; reference?: string };
-                }>(`/transaction/verify/${encodeURIComponent(input.reference)}`);
-
-                if (verification.status && verification.data?.status === "success") {
-                    const paidAmount = Number(verification.data.amount ?? 0) / 100;
-                    const paidCurrency = String(verification.data.currency ?? "").toUpperCase();
-
-                    if (paidCurrency === "NGN") {
-                        let isNewPayment = false;
-                        // Create payment if it doesn't exist
-                        await prisma.$transaction(async (tx) => {
-                            const existingPayment = await tx.payment.findUnique({
-                                where: { paystackReference: input.reference }
-                            });
-
-                            if (!existingPayment) {
-                                isNewPayment = true;
-                                const defaultMember = booking.studio?.members.find((m: any) => m.role === "owner") ?? booking.studio?.members[0];
-                                
-                                await tx.payment.create({
-                                    data: {
-                                        amount: paidAmount,
-                                        method: "TRANSFER",
-                                        status: "PAID",
-                                        paystackReference: input.reference,
-                                        paystackResponse: verification.data as any,
-                                        receiptNumber: `RCP-${Date.now()}-${uuidv4().slice(0, 8).toUpperCase()}`,
-                                        bookingId: booking.id,
-                                        recordedById: defaultMember?.userId || booking.createdBy,
-                                        installmentType: "BALANCE",
-                                        sequence: booking.payments.length + 1,
-                                        expectedAmount: paidAmount,
-                                        paymentDate: new Date(),
-                                    },
-                                });
-
-                                const totalPaid = booking.payments
-                                    .filter((p: any) => p.status === "PAID")
-                                    .reduce((sum: number, p: any) => sum + Number(p.amount), 0) + paidAmount;
-                                
-                                await tx.booking.update({
-                                    where: { id: booking.id },
-                                    data: {
-                                        paymentStatus: totalPaid >= Number(booking.totalAmount) ? "PAID" : "PARTIALLY_PAID"
-                                    }
-                                });
-                            }
-                        });
-
-                        if (isNewPayment) {
-                            await notifyAdminsOfPayment(
-                                booking.studioId,
-                                booking.id,
-                                paidAmount,
-                                booking.client.name,
-                                booking.service?.name ?? "Session"
-                            ).catch(console.error);
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error(`[Verify] Paystack balance verification failed for ${input.reference}:`, err);
-            }
-
-            return {
-                status: "COMPLETED" as const,
-                clientName: booking.client.name,
-                serviceName: booking.service?.name ?? "Session",
-                bookingDate: booking.bookingDate.toISOString(),
-                totalAmount: Number(booking.totalAmount),
-                amountPaid: 0, // This will be updated if verification succeeds? Actually just return the balance logic
-                paymentPlan: "FULL" as const,
-                reference: input.reference,
-                bookingId: booking.id,
-            };
-        }
 
         if (!intent) {
             return {
@@ -721,34 +705,30 @@ export const verifyBooking = os.booking.verifyBooking
 
                     if (paidAmount === expectedAmount && paidCurrency === "NGN") {
                         // Process the booking — same logic as webhook
-                        const studio = await prisma.studio.findUnique({
-                            where: { id: intent.studioId },
-                            include: { members: true },
+                        const studio = await db.query.studio.findFirst({
+                            where: (model, { eq }) => eq(model.id, intent!.studioId),
+                            with: { members: true },
                         });
 
                         const defaultMember = studio?.members.find(m => m.role === "owner") ?? studio?.members[0];
 
                         if (studio && defaultMember) {
-                            let newBookingId: string | null = null;
                             try {
-                                await prisma.$transaction(async (tx) => {
+                                await db.transaction(async (tx) => {
                                     // 0. Atomically claim the intent
-                                    const claimResult = await tx.bookingIntent.updateMany({
-                                        where: { 
-                                            paystackReference: input.reference,
-                                            status: "PENDING" 
-                                        },
-                                        data: { status: "COMPLETED" }
-                                    });
+                                    const claimResult = await tx.update(bookingIntent)
+                                        .set({ status: "COMPLETED" })
+                                        .where(and(eq(bookingIntent.paystackReference, input.reference), eq(bookingIntent.status, "PENDING")))
+                                        .returning();
 
-                                    if (claimResult.count === 0) {
+                                    if (claimResult.length === 0) {
                                         // Already processed or being processed by another request
                                         return;
                                     }
 
                                     // Defensively check for existing payment
-                                    const existingPayment = await tx.payment.findUnique({
-                                        where: { paystackReference: input.reference }
+                                    const existingPayment = await tx.query.payment.findFirst({
+                                        where: (model, { eq }) => eq(model.paystackReference, input.reference)
                                     });
 
                                     if (existingPayment) {
@@ -761,43 +741,43 @@ export const verifyBooking = os.booking.verifyBooking
                                         const phone = intent!.clientPhone?.trim() ?? "";
                                         let existing = null;
                                         if (intent!.clientEmail) {
-                                            existing = await tx.client.findFirst({
-                                                where: { studioId: intent!.studioId, email: intent!.clientEmail },
+                                            existing = await tx.query.client.findFirst({
+                                                where: (model, { eq, and }) => and(eq(model.studioId, intent!.studioId), intent!.clientEmail ? eq(model.email, intent!.clientEmail) : undefined),
                                             });
                                         }
                                         if (!existing && phone) {
-                                            existing = await tx.client.findFirst({
-                                                where: { studioId: intent!.studioId, phone },
+                                            existing = await tx.query.client.findFirst({
+                                                where: (model, { eq, and }) => and(eq(model.studioId, intent!.studioId), eq(model.phone, phone)),
                                             });
                                         }
                                         if (existing) {
                                             clientId = existing.id;
                                         } else {
-                                            const client = await tx.client.create({
-                                                data: {
-                                                    name: intent!.clientName,
-                                                    phone,
-                                                    email: intent!.clientEmail ?? null,
-                                                    type: "regular",
-                                                    studioId: intent!.studioId,
-                                                },
-                                            });
-                                            clientId = client.id;
+                                            const [insertedClient] = await tx.insert(client).values({
+                                                id: uuidv4(),
+                                                name: intent!.clientName,
+                                                phone,
+                                                email: intent!.clientEmail ?? null,
+                                                type: "regular",
+                                                studioId: intent!.studioId,
+                                                updatedAt: new Date().toISOString(),
+                                            }).returning();
+                                            clientId = insertedClient.id;
                                         }
                                     }
 
                                     // 2. Create booking
-                                    const service = await tx.service.findUnique({
-                                        where: { id: intent!.serviceId },
-                                        include: { variants: true },
+                                    const service = await tx.query.service.findFirst({
+                                        where: (model, { eq }) => eq(model.id, intent!.serviceId),
+                                        with: { serviceVariants: true },
                                     });
-                                    const booking = await tx.booking.create({
-                                        data: {
-                                            bookingDate: intent!.bookingDate,
+                                    const bookingId = uuidv4();
+                                    await tx.insert(booking).values({
+                                            id: bookingId,
+                                            bookingDate: new Date(intent!.bookingDate).toISOString(),
                                             sessionCount: intent!.sessionCount,
-                                            extraPicturesCount: intent!.extraPicturesCount,
                                             notes: intent!.notes,
-                                            totalAmount: intent!.totalAmount,
+                                            totalAmount: intent!.totalAmount.toString(),
                                             paymentPlan: intent!.paymentPlan,
                                             bookingStatus: "CONFIRMED",
                                             paymentStatus: intent!.paymentPlan === "FULL" ? "PAID" : "PARTIALLY_PAID",
@@ -807,64 +787,46 @@ export const verifyBooking = os.booking.verifyBooking
                                             clientId: clientId!,
                                             memberId: defaultMember.id,
                                             createdBy: defaultMember.userId,
-                                            serviceVariantId: intent!.serviceVariantId ?? service?.variants?.[0]?.id ?? null,
-                                            ...(intent!.addonIds.length > 0 && {
-                                                addons: { connect: [...new Set(intent!.addonIds.map((id: string) => id.split(":")[0]))].map(id => ({ id })) },
-                                            }),
-                                        },
+                                            serviceVariantId: intent!.serviceVariantId ?? service?.serviceVariants?.[0]?.id ?? null,
+                                            updatedAt: new Date().toISOString(),
                                     });
                                     
-                                    newBookingId = booking.id;
+                                    if (intent!.addonIds && intent!.addonIds.length > 0) {
+                                        const uniqueAddonIds = [...new Set(intent!.addonIds.map((id: string) => id.split(":")[0]))];
+                                        await tx.insert(bookingAddons).values(uniqueAddonIds.map(id => ({ a: bookingId, b: id })));
+                                    }
 
                                     // 3. Create payment record
                                     const installmentType = intent!.paymentPlan === "FULL" ? "FULL" : "DEPOSIT";
-                                    await tx.payment.create({
-                                        data: {
-                                            amount: intent!.amount,
+                                    await tx.insert(payment).values({
+                                            id: uuidv4(),
+                                            amount: intent!.amount.toString(),
                                             method: "TRANSFER",
                                             status: "PAID",
                                             paystackReference: input.reference,
                                             paystackResponse: verification.data as any,
                                             receiptNumber: `RCP-${Date.now()}-${uuidv4().slice(0, 8).toUpperCase()}`,
-                                            bookingId: booking.id,
+                                            bookingId: bookingId,
                                             recordedById: defaultMember.userId,
                                             installmentType,
                                             sequence: 1,
-                                            expectedAmount: intent!.amount,
-                                            paymentDate: new Date(),
-                                        },
+                                            expectedAmount: intent!.amount.toString(),
+                                            paymentDate: new Date().toISOString(),
                                     });
 
                                     // 4. Mark intent resolved
-                                    await tx.bookingIntent.update({
-                                        where: { paystackReference: input.reference },
-                                        data: {
+                                    await tx.update(bookingIntent).set({
                                             status: "COMPLETED",
-                                            resolvedBookingId: booking.id,
-                                        },
-                                    });
+                                            resolvedBookingId: bookingId,
+                                        }).where(eq(bookingIntent.paystackReference, input.reference));
                                 });
                             } catch (txErr) {
                                 console.error(`[Verify] Transaction failed for ${input.reference}:`, txErr);
                             }
 
-                            if (newBookingId) {
-                                const service = await prisma.service.findUnique({
-                                    where: { id: intent!.serviceId },
-                                    select: { name: true }
-                                });
-                                await notifyAdminsOfPayment(
-                                    intent!.studioId,
-                                    newBookingId,
-                                    Number(intent!.amount),
-                                    intent!.clientName,
-                                    service?.name ?? "Session"
-                                ).catch(console.error);
-                            }
-
                             // Re-fetch updated intent
-                            intent = await prisma.bookingIntent.findUnique({
-                                where: { paystackReference: input.reference },
+                            intent = await db.query.bookingIntent.findFirst({
+                                where: (model, { eq }) => eq(model.paystackReference, input.reference),
                             });
                         }
                     } else {
@@ -878,21 +840,21 @@ export const verifyBooking = os.booking.verifyBooking
             }
         }
 
-        const service = await prisma.service.findUnique({
-            where: { id: intent!.serviceId },
-            select: { name: true },
+        const serviceRow = await db.query.service.findFirst({
+            where: (model, { eq }) => eq(model.id, intent!.serviceId),
+            columns: { name: true },
         });
 
         // Check if expired
-        const status = intent!.status === "PENDING" && intent!.expiresAt < new Date()
+        const status = intent!.status === "PENDING" && new Date(intent!.expiresAt) < new Date()
             ? "EXPIRED" as const
             : intent!.status as "PENDING" | "COMPLETED" | "EXPIRED" | "FAILED";
 
         return {
             status,
             clientName: intent!.clientName,
-            serviceName: service?.name ?? "Session",
-            bookingDate: intent!.bookingDate.toISOString(),
+            serviceName: serviceRow?.name ?? "Session",
+            bookingDate: new Date(intent!.bookingDate).toISOString(),
             totalAmount: Number(intent!.totalAmount),
             amountPaid: Number(intent!.amount),
             paymentPlan: intent!.paymentPlan,
