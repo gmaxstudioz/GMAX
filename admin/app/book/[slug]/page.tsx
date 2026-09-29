@@ -1,5 +1,4 @@
-import { APP_NAME } from "@/lib/constants";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { BookingWizard } from "./_components/BookingWizard";
@@ -11,15 +10,15 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { slug } = await params;
-    const studio = await prisma.studio.findUnique({
-        where: { slug },
-        select: { name: true },
+    const studio: any = await db.query.studio.findFirst({
+        where: (s, { eq }) => eq(s.slug, slug),
+        columns: { name: true },
     });
 
     return {
         title: studio ? `Book at ${studio.name}` : "Book a Session",
         description: studio
-            ? `Book a photography session at ${studio.name} — ${APP_NAME}`
+            ? `Book a photography session at ${studio.name} — GMAX Studioz`
             : "Book your session online",
     };
 }
@@ -27,26 +26,62 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function StudioBookPage({ params }: Props) {
     const { slug } = await params;
 
-    const studio = await prisma.studio.findUnique({
-        where: { slug },
-        include: {
+    const studio: any = await db.query.studio.findFirst({
+        where: (s, { eq }) => eq(s.slug, slug),
+        with: {
             services: {
-                include: { studioSession: true, variants: true },
-                where: { isAddon: false },
+                with: { studioSession: true, serviceVariants: true },
             },
             studioSessions: true,
+            bookings: {
+                where: (b, { gte, not, and, eq }) => and(
+                    gte(b.bookingDate, new Date().toISOString()),
+                    not(eq(b.bookingStatus, "CANCELLED"))
+                ),
+                with: {
+                    service: { with: { studioSession: true } },
+                },
+            },
         },
     });
 
     if (!studio) return notFound();
 
     // Get addons separately
-    const addons = await prisma.service.findMany({
-        where: { studioId: studio.id, isAddon: true },
-        include: { variants: true },
+    const addons: any = await db.query.service.findMany({
+        where: (s, { eq, and }) => and(eq(s.studioId, studio.id), eq(s.isAddon, true)),
+        with: { serviceVariants: true },
     });
 
     const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
+    const paystackPublicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "";
+
+    // Serialize dates for client
+    const serializedBookings = studio.bookings.map((b: any) => ({
+        id: b.id,
+        bookingDate: typeof b.bookingDate === 'string' ? b.bookingDate : new Date(b.bookingDate).toISOString(),
+        sessionCount: b.sessionCount,
+        service: b.service ? {
+            studioSession: b.service.studioSession ? {
+                duration: b.service.studioSession.duration,
+            } : null,
+        } : null,
+    }));
+
+    const categoriesMap = new Map();
+    for (const s of studio.services) {
+        if (s.isAddon) continue;
+        const catName = s.category;
+        if (!categoriesMap.has(catName)) {
+            categoriesMap.set(catName, {
+                id: catName,
+                name: catName,
+                services: [],
+            });
+        }
+        categoriesMap.get(catName).services.push(s);
+    }
+    const studioCategories = Array.from(categoriesMap.values());
 
     return (
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
@@ -69,27 +104,28 @@ export default async function StudioBookPage({ params }: Props) {
 
             <BookingWizard
                 studioId={studio.id}
-                categories={["PHOTOGRAPHY", "VIDEOGRAPHY", "OTHERS"].map(cat => ({
-                    id: cat,
-                    name: cat,
-                    services: studio.services
-                        .filter(s => s.category === cat && s.variants && s.variants.length > 0)
-                        .map(s => ({
+                categories={studioCategories.map(c => ({
+                    id: c.id,
+                    name: c.name,
+                    services: c.services
+                        .filter((s: any) => s.serviceVariants && s.serviceVariants.length > 0)
+                        .map((s: any) => ({
                             id: s.id,
                             name: s.name,
                             isAddon: s.isAddon,
-                            basePrice: Number(s.variants.find(v => v.locationType.toUpperCase() !== "BOTH")?.basePrice ?? s.variants[0].basePrice),
-                            bothVariantPrice: s.variants.find(v => v.locationType.toUpperCase() === "BOTH") ? Number(s.variants.find(v => v.locationType.toUpperCase() === "BOTH")!.basePrice) : null,
-                            sessionDurationMins: s.variants[0]?.sessionDurationMins ?? 45,
+                            basePrice: Number(s.serviceVariants[0].basePrice),
+                            studioSession: s.studioSession ? { duration: s.studioSession.duration } : null,
                         })),
                 }))}
                 addons={addons
-                    .filter(a => a.variants && a.variants.length > 0)
-                    .map(a => ({
+                    .filter((a: any) => a.serviceVariants && a.serviceVariants.length > 0)
+                    .map((a: any) => ({
                         id: a.id,
                         name: a.name,
-                        basePrice: Number(a.variants.find(v => v.locationType.toUpperCase() !== "BOTH")?.basePrice ?? a.variants[0].basePrice),
+                        basePrice: Number(a.serviceVariants[0].basePrice),
                     }))}
+                existingBookings={serializedBookings}
+                paystackPublicKey={paystackPublicKey}
             />
         </div>
     );

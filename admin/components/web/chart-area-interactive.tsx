@@ -144,7 +144,7 @@ export function ChartAreaInteractive({ data }: { data: ChartDataPoint[] }) {
               tickMargin={8}
               minTickGap={32}
               tickFormatter={(value) => {
-                const date = new Date(value)
+                const date = new Date(value as any)
                 return date.toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
@@ -156,7 +156,7 @@ export function ChartAreaInteractive({ data }: { data: ChartDataPoint[] }) {
               content={
                 <ChartTooltipContent
                   labelFormatter={(value) => {
-                    return new Date(value).toLocaleDateString("en-US", {
+                    return new Date(value as any).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
                       year: "numeric"

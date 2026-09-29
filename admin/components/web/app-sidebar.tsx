@@ -20,7 +20,7 @@ import { headers } from "next/headers"
 import { NavManagement } from "./nav-management"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { School01Icon, ToolsIcon, WarehouseIcon, ShoppingCart01Icon, CreditCardIcon } from "@hugeicons/core-free-icons"
-import { prisma } from "@/lib/prisma"
+import { db } from "@/lib/db"
 import { BriefcaseIcon } from "lucide-react"
 
 const data = {
@@ -115,17 +115,17 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
   let isPhotoVideoRole = false;
 
   if (session?.user) {
-    const userData = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { role: true }
+    const userData = await db.query.user.findFirst({
+      where: (user, { eq }) => eq(user.id, session.user.id),
+      columns: { role: true }
     });
 
     const isAdmin = userData?.role === "admin";
 
     if (!isAdmin) {
-      const members = await prisma.member.findMany({
-        where: { userId: session.user.id },
-        select: { role: true }
+      const members = await db.query.member.findMany({
+        where: (member, { eq }) => eq(member.userId, session.user.id),
+        columns: { role: true }
       });
       
       const adminRoles = ["owner", "developer", "admin"];

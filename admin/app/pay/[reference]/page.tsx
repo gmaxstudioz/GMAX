@@ -1,8 +1,7 @@
-import { APP_NAME } from "@/lib/constants";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
-import { format } from "date-fns";
 import type { Metadata } from "next";
+import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -16,7 +15,7 @@ import {
 import Image from "next/image";
 
 export const metadata: Metadata = {
-    title: `Pay — ${APP_NAME}`,
+    title: "Pay — GMAX Studioz",
     description: "Complete your payment securely",
 };
 
@@ -27,17 +26,19 @@ interface Props {
 export default async function PaymentPage({ params }: Props) {
     const { reference } = await params;
 
-    const payment = await prisma.payment.findFirst({
-        where: { paystackReference: reference },
-        include: {
+    const payment = await db.query.payment.findFirst({
+        where: (p, { eq }) => eq(p.paystackReference, reference),
+        with: {
             booking: {
-                include: {
+                with: {
                     client: true,
                     service: {
-                        include: { studioSession: true },
+                        with: { studioSession: true },
                     },
                     studio: true,
-                    addons: true,
+                    bookingAddons: {
+                        with: { service: true }
+                    },
                 },
             },
         },
@@ -55,6 +56,8 @@ export default async function PaymentPage({ params }: Props) {
 
     const sessionDuration = booking.service?.studioSession?.duration || 45;
     const totalDuration = sessionDuration * booking.sessionCount;
+
+    const addons = booking.bookingAddons?.map(ba => ba.service).filter(Boolean) || [];
 
     const formatCurrency = (v: number) =>
         new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(v);
@@ -115,9 +118,9 @@ export default async function PaymentPage({ params }: Props) {
                                 <p className="text-sm font-medium">{booking.client?.name}</p>
                             </div>
 
-                            {booking.addons.length > 0 && (
+                            {addons.length > 0 && (
                                 <div className="flex flex-wrap gap-1.5 mt-1">
-                                    {booking.addons.map(a => (
+                                    {addons.map((a: any) => (
                                         <Badge key={a.id} variant="outline" className="text-xs">
                                             + {a.name}
                                         </Badge>
@@ -169,7 +172,7 @@ export default async function PaymentPage({ params }: Props) {
 
                 {/* Footer */}
                 <p className="text-center text-xs text-muted-foreground">
-                    © {new Date().getFullYear()} {APP_NAME}. All rights reserved.
+                    © {new Date().getFullYear()} GMAX Studioz. All rights reserved.
                 </p>
             </div>
         </div>
