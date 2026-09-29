@@ -3,7 +3,9 @@
 import { auth } from "../auth";
 import { headers } from "next/headers";
 import { ApiResponse } from "../type";
-import { prisma } from "../prisma";
+import { db } from "../db";
+import { member as memberSchema, user as userSchema } from "../schema";
+import { eq } from "drizzle-orm";
 import type { MemberRole } from "../schemas/studio";
 
 // ── List Members ────────────────────────────────────────────────────
@@ -125,9 +127,9 @@ export async function addMember(
 
 export async function FetchMemberDetails(memberId: string) {
     try {
-        const data = await prisma.member.findUnique({
-            where: { id: memberId },
-            include: { user: true, studio: true, bookings: true },
+        const data = await db.query.member.findFirst({
+            where: eq(memberSchema.id, memberId),
+            with: { user: true, studio: true, bookings: true },
         });
 
         return { status: "success", data };
@@ -140,15 +142,13 @@ export async function FetchMemberDetails(memberId: string) {
 // ── Update Staff Info ───────────────────────────────────────────────
 //
 // Better Auth's updateMemberRole method goes through the auth SDK and
-// cannot be composed into a Prisma $transaction. Instead, we run both
+// cannot be composed into a Drizzle transaction directly easily. Instead, we run both
 // writes concurrently with Promise.all and fail fast if either rejects,
 // then surface a clear error.
 //
 // Limitation: this is not truly atomic. If updateMemberRole succeeds and
-// prisma.user.update fails, the role will have changed but the profile
-// won't update. If this needs strict atomicity, consider bypassing the
-// auth SDK and writing the member role directly via prisma inside a
-// $transaction
+// Drizzle user update fails, the role will have changed but the profile
+// won't update.
 
 export async function updateStaffInfo(
     memberId: string,
@@ -159,13 +159,12 @@ export async function updateStaffInfo(
     try {
         const [roleResult] = await Promise.all([
             updateMemberRole(memberId, data.role, studioId),
-            prisma.user.update({
-                where: { id: userId },
-                data: {
+            db.update(userSchema)
+                .set({
                     name: data.name,
                     phoneNumber: data.phoneNumber || null,
-                },
-            }),
+                })
+                .where(eq(userSchema.id, userId)),
         ]);
 
         // updateMemberRole returns an ApiResponse; check it explicitly

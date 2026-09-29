@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import type { Metadata } from "next";
 import { ClientsView } from "./_components/ClientsView";
 import { auth } from "@/lib/auth";
@@ -9,14 +9,13 @@ export const metadata: Metadata = {
     title: "All Clients",
 };
 
-
 export default async function ClientsPage() {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) redirect("/auth/login");
 
-    const members = await prisma.member.findMany({
-        where: { userId: session.user.id },
-        select: { role: true }
+    const members = await db.query.member.findMany({
+        where: (member, { eq }) => eq(member.userId, session.user.id),
+        columns: { role: true, studioId: true }
     });
     
     const adminRoles = ["owner", "developer", "manager"];
@@ -25,22 +24,20 @@ export default async function ClientsPage() {
         redirect("/my-tasks");
     }
 
-    const studios = await prisma.studio.findMany({
-        where: {
-            members: {
-                some: {
-                    userId: session.user.id
-                }
-            }
-        },
-        select: {
+    const studioIds = members.map(m => m.studioId);
+
+    const studios = studioIds.length > 0 ? await db.query.studio.findMany({
+        where: (studio, { inArray }) => inArray(studio.id, studioIds),
+        columns: {
             id: true,
             slug: true,
             name: true,
+        },
+        with: {
             clients: {
-                include: {
+                with: {
                     bookings: {
-                        select: {
+                        columns: {
                             id: true,
                             bookingStatus: true,
                         }
@@ -48,8 +45,8 @@ export default async function ClientsPage() {
                 }
             }
         },
-        orderBy: { name: "asc" }
-    });
+        orderBy: (studio, { asc }) => [asc(studio.name)]
+    }) : [];
 
     // Shape data grouped by studio
     const studioGroups = studios.map(studio => ({

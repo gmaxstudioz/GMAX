@@ -1,4 +1,6 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import { eq, and, or, inArray, asc, desc, isNull, sql } from "drizzle-orm";
+import * as schema from "@/lib/schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import type { Metadata } from "next";
@@ -27,9 +29,9 @@ import { Camera, Download, Upload } from "@hugeicons/core-free-icons";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { bookingId } = await params;
-    const booking = await prisma.booking.findUnique({
-        where: { id: bookingId },
-        include: { client: true, service: true },
+    const booking = await db.query.booking.findFirst({
+        where: eq(schema.booking.id, bookingId),
+        with: { client: true, service: true },
     });
 
     return {
@@ -86,16 +88,16 @@ export default async function BookingDetailPage({ params }: Props) {
     const session = await auth.api.getSession({ headers: await headers() });
 
     // Verify studio exists
-    const studio = await prisma.studio.findUnique({
-        where: { slug },
-        select: { id: true, name: true, slug: true },
+    const studio = await db.query.studio.findFirst({
+        where: eq(schema.studio.slug, slug),
+        columns: { id: true, name: true, slug: true },
     });
     if (!studio) return notFound();
 
     // Get current user's role in this studio
     const currentMember = session?.user
-        ? await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: studio.id },
+        ? await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, studio.id)),
         })
         : null;
         
@@ -103,32 +105,41 @@ export default async function BookingDetailPage({ params }: Props) {
 
     const isManager = ["owner", "manager", "developer"].includes(currentMember.role);
 
-    const booking = await prisma.booking.findFirst({
-        where: { id: bookingId, studioId: studio.id },
-        include: {
+    const booking = await db.query.booking.findFirst({
+        where: and(eq(schema.booking.id, bookingId), eq(schema.booking.studioId, studio.id)),
+        with: {
             client: true,
             service: {
-                include: {
+                with: {
                     studioSession: true,
-                    category: true,
-                    variants: true,
+                    serviceVariants: true,
                 },
             },
             member: {
-                include: { user: true },
+                with: { user: true },
             },
-            creator: true,
+            user: true, // createdBy maps to user? Let's check schema. booking relations: user is not named createdBy. Wait, relations.ts says user: one(user, { fields: [booking.createdBy] }). relationName is empty. So it's probably "user".
             payments: {
-                orderBy: { paymentDate: "desc" },
+                orderBy: [desc(schema.payment.paymentDate)],
             },
             photos: {
-                orderBy: { uploadedAt: "desc" },
+                orderBy: [desc(schema.photo.uploadedAt)],
             },
-            addons: {
-                include: { variants: true },
+            bookingAddons: {
+                with: { service: { with: { serviceVariants: true } } },
             },
         },
     });
+    
+    // map drizzle relations back to the shape expected by the component
+    if (booking) {
+        (booking as any).createdBy = booking.user;
+        (booking as any).service.serviceVariants = booking.service.serviceVariants;
+        (booking as any).bookingAddons = booking.bookingAddons.map(ba => ({
+            ...ba.service,
+            variants: ba.service.serviceVariants
+        }));
+    }
 
     if (!booking) return notFound();
 
@@ -152,7 +163,7 @@ export default async function BookingDetailPage({ params }: Props) {
         mimeType: p.mimeType,
         approvalStatus: p.approvalStatus,
         rejectionReason: p.rejectionReason,
-        uploadedAt: p.uploadedAt.toISOString(),
+        uploadedAt: p.uploadedAt,
     }));
 
     // Serialize payments for client component
@@ -161,25 +172,32 @@ export default async function BookingDetailPage({ params }: Props) {
         amount: p.amount.toString(),
         method: p.method,
         status: p.status,
-        paymentDate: p.paymentDate.toISOString(),
+        paymentDate: p.paymentDate,
         paystackReference: p.paystackReference,
     }));
 
-    const studioClients = await prisma.client.findMany({
-        where: { studioId: studio.id },
-        select: { id: true, name: true, phone: true, email: true, image: true, type: true }
+    const studioClients = await db.query.client.findMany({
+        where: eq(schema.client.studioId, studio.id),
+        columns: { id: true, name: true, phone: true, email: true, image: true, type: true }
     });
 
-    const studioServicesRaw = await prisma.service.findMany({
-        where: { category: { studioId: studio.id } },
-        include: { variants: { include: { deliverables: true } } }
+    const studioServicesRaw = await db.query.service.findMany({
+        where: eq(schema.service.studioId, studio.id),
+        with: { serviceVariants: { with: { serviceDeliverables: true } } }
+    });
+    
+    studioServicesRaw.forEach(s => {
+        s.serviceVariants = s.serviceVariants;
+        s.serviceVariants.forEach(v => {
+            (v as any).deliverables = v.serviceDeliverables;
+        });
     });
 
     const studioServices = studioServicesRaw.map(s => ({
         id: s.id,
         name: s.name,
         isAddon: s.isAddon,
-        variants: s.variants.map(v => ({
+        variants: s.serviceVariants.map((v: any) => ({
             id: v.id,
             basePrice: v.basePrice.toString(),
             maxPrice: v.maxPrice?.toString() ?? null,
@@ -187,7 +205,7 @@ export default async function BookingDetailPage({ params }: Props) {
             serviceId: v.serviceId,
             sessionDurationMins: v.sessionDurationMins,
             logisticsIncluded: v.logisticsIncluded,
-            deliverables: v.deliverables.map(d => ({
+            deliverables: v.deliverables.map((d: any) => ({
                 id: d.id,
                 label: d.label,
                 quantity: d.quantity ?? undefined,
@@ -197,9 +215,9 @@ export default async function BookingDetailPage({ params }: Props) {
         }))
     }));
 
-    const studioMembers = await prisma.member.findMany({
-        where: { studioId: studio.id },
-        include: { user: { select: { name: true } } }
+    const studioMembers = await db.query.member.findMany({
+        where: eq(schema.member.studioId, studio.id),
+        with: { user: { columns: { name: true } } }
     });
 
     const mappedMembers = studioMembers.map(m => ({
@@ -244,7 +262,7 @@ export default async function BookingDetailPage({ params }: Props) {
                             serviceVariantId: serializedBooking.serviceVariantId ?? undefined,
                             memberId: serializedBooking.memberId || "",
                             bookingDate: serializedBooking.bookingDate,
-                            addonIds: serializedBooking.addons.map((addon: { id: string; variants?: { id: string }[] }) => `${addon.id}:${addon.variants?.[0]?.id}`),
+                            addonIds: serializedBooking.bookingAddons.map((addon: { id: string; serviceVariants?: { id: string }[] }) => `${addon.id}:${addon.serviceVariants?.[0]?.id}`),
                             totalAmount: Number(serializedBooking.totalAmount),
                             paymentPlan: serializedBooking.paymentPlan,
                         }}
@@ -300,10 +318,10 @@ export default async function BookingDetailPage({ params }: Props) {
                                     )}
                                 </div>
                             </InfoRow>
-                            {serializedBooking.addons.length > 0 && (
+                            {serializedBooking.bookingAddons.length > 0 && (
                                 <InfoRow icon={PackageIcon} label="Add-ons">
                                     <div className="flex flex-col gap-1">
-                                        {serializedBooking.addons.map((addon: { id: string; name: string }) => (
+                                        {serializedBooking.bookingAddons.map((addon: { id: string; name: string }) => (
                                             <span key={addon.id}>{addon.name}</span>
                                         ))}
                                     </div>
@@ -414,7 +432,7 @@ export default async function BookingDetailPage({ params }: Props) {
                             </div>
                             <div className="flex justify-between gap-2">
                                 <span className="text-muted-foreground shrink-0">Created By</span>
-                                <span className="text-right">{serializedBooking.creator?.name || "Unknown"}</span>
+                                <span className="text-right">{serializedBooking.createdBy?.name || "Unknown"}</span>
                             </div>
                             <div className="flex justify-between gap-2">
                                 <span className="text-muted-foreground shrink-0">Booking ID</span>

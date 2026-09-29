@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -28,42 +28,40 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) redirect("/auth/login");
 
-    const members = await prisma.member.findMany({
-        where: { userId: session.user.id },
-        select: { role: true, studioId: true }
+    const members = await db.query.member.findMany({
+        where: (member, { eq }) => eq(member.userId, session.user.id),
+        columns: { id: true, role: true, studioId: true }
     });
     
     const adminRoles = ["owner", "developer", "manager"];
     const hasAdminRole = members.some(m => adminRoles.includes(m.role));
 
-    const baseWhere = hasAdminRole 
-        ? { 
-            memberId: null,
-            studioId: { in: members.filter(m => adminRoles.includes(m.role)).map(m => m.studioId) }
-          }
-        : { member: { userId: session.user.id } };
+    const adminStudioIds = members.filter(m => adminRoles.includes(m.role)).map(m => m.studioId);
+    const userMemberIds = members.map(m => m.id);
 
-    const searchFilter = q ? {
-        OR: [
-            { client: { name: { contains: q, mode: 'insensitive' as const } } },
-            { service: { name: { contains: q, mode: 'insensitive' as const } } },
-        ]
-    } : {};
-
-    const myBookings = await prisma.booking.findMany({
-        where: {
-            ...baseWhere,
-            ...searchFilter
+    const allBookings = await db.query.booking.findMany({
+        where: (booking, { eq, inArray, isNull, and, or }) => {
+            if (hasAdminRole) {
+                return adminStudioIds.length > 0 ? and(
+                    isNull(booking.memberId),
+                    inArray(booking.studioId, adminStudioIds)
+                ) : eq(booking.id, 'NO_MATCH');
+            } else {
+                return userMemberIds.length > 0 ? inArray(booking.memberId, userMemberIds) : eq(booking.id, 'NO_MATCH');
+            }
         },
-        include: {
+        with: {
             client: true,
             service: true,
             studio: true
         },
-        orderBy: {
-            bookingDate: "asc"
-        }
+        orderBy: (booking, { asc }) => [asc(booking.bookingDate)]
     });
+
+    const myBookings = q ? allBookings.filter(b => 
+        (b.client?.name && b.client.name.toLowerCase().includes(q.toLowerCase())) ||
+        (b.service?.name && b.service.name.toLowerCase().includes(q.toLowerCase()))
+    ) : allBookings;
 
     const title = hasAdminRole ? "Unassigned Tasks" : "My Tasks";
     const desc = hasAdminRole ? "Manage unassigned bookings across your studios." : "Manage and view your assigned bookings.";
@@ -111,7 +109,7 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
                                 </div>
                                 <CardDescription className="flex flex-col gap-1 mt-2">
                                     <span className="font-semibold text-primary">
-                                        {format(new Date(booking.bookingDate), "MMM do, yyyy 'at' hh:mm a")}
+                                        {format(new Date(booking.bookingDate || ""), "MMM do, yyyy 'at' hh:mm a")}
                                     </span>
                                     <span>{booking.service?.name}</span>
                                 </CardDescription>

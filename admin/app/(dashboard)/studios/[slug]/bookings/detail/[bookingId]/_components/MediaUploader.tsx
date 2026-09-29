@@ -46,7 +46,6 @@ async function uploadSmallFile(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            fileName: item.file.name,
             fileType: item.file.type,
             fileSize: item.file.size,
             isImage: item.file.type.startsWith("image/"),
@@ -87,7 +86,6 @@ async function uploadLargeFile(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            fileName: item.file.name,
             fileType: item.file.type,
             directory: `studio/bookings/${bookingId}/photos`,
         }),
@@ -182,8 +180,8 @@ export function MediaUploader({ bookingId }: MediaUploaderProps) {
                     const { error } = await tryCatch(
                         uploadBookingPhoto({
                             bookingId,
-                            r2Key: key,
                             fileName: item.file.name,
+                            r2Key: key,
                             fileSize: item.file.size,
                             mimeType: item.file.type,
                         })

@@ -5,41 +5,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Prisma } from "@/lib/generated/prisma/client";
+
 import { startOfMonth, subMonths, endOfMonth } from "date-fns";
 import { calcTrend, TrendBadge, TrendFooter } from "@/components/web/trend-indicators";
 
 
-type StudioWithRelations = Prisma.StudioGetPayload<{
-  include: {
-    members: {
-        include: { user: true }
-    },
-    invitations: true,
-    categories: {
-      include: {
-        services: true
-      }
-    },
-    studioSessions: true,
-    clients: {
-        include: {
-            bookings: true
-        }
-    },
-    bookings: {
-      include: {
-        client: true,
-        service: {
-          include: { variants: true }
-        },
-        addons: {
-          include: { variants: true }
-        }
-      }
-    }
-  }
-}>;
+type StudioWithRelations = { bookings: any[], clients: any[] };
 
 
 export function StudioStatsCards({ data }: { data: StudioWithRelations }) {
@@ -57,10 +28,10 @@ export function StudioStatsCards({ data }: { data: StudioWithRelations }) {
                     return sum + Number(b.totalAmount);
                 }
                 
-                const bookedVariant = b.service?.variants?.find(v => v.id === b.serviceVariantId) || b.service?.variants?.[0];
+                const bookedVariant = b.service?.variants?.find((v: any) => v.id === b.serviceVariantId) || b.service?.variants?.[0];
                 const servicePrice = Number(bookedVariant?.basePrice ?? 0);
                 
-                const addonsTotal = (b.addons || []).reduce((acc, addon) => {
+                const addonsTotal = (b.addons || []).reduce((acc: any, addon: any) => {
                     return acc + Number(addon.variants?.[0]?.basePrice ?? 0);
                 }, 0);
                 

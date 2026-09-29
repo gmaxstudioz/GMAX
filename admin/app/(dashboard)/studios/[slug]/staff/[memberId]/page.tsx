@@ -1,6 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import { eq, and, or, inArray, asc, desc, isNull, sql } from "drizzle-orm";
+import * as schema from "@/lib/schema";
 import { getMemberTasks } from "@/lib/actions/task";
 import { CallIcon, House01Icon, Mail01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -16,11 +18,9 @@ interface MemberPageProps {
 export default async function MemberPage({ params }: MemberPageProps) {
     const { memberId, slug } = await params;
 
-    const memberData = await prisma.member.findUnique({
-        where: {
-            id: memberId,
-        },
-        include: {
+    const memberData = await db.query.member.findFirst({
+        where: (m, { eq }) => eq(m.id, memberId),
+        with: {
             user: true,
             studio: true,
             bookings: true,

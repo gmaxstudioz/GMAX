@@ -1,12 +1,13 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
-import { BookingStatus, PaymentStatus, DeliveryStatus } from "@/lib/generated/prisma/client";
+import { db } from "@/lib/db";
+import { booking, member, client, service, user, bookingStatus, paymentStatus, deliveryStatus } from "@/lib/schema";
+import { eq, and, or, ilike, desc } from "drizzle-orm";
 import { requireSession } from "./with-auth";
 
-const validBookingStatuses = Object.values(BookingStatus);
-const validPaymentStatuses = Object.values(PaymentStatus);
-const validDeliveryStatuses = Object.values(DeliveryStatus);
+const validBookingStatuses = bookingStatus.enumValues;
+const validPaymentStatuses = paymentStatus.enumValues;
+const validDeliveryStatuses = deliveryStatus.enumValues;
 
 const ITEMS_PER_PAGE = 12;
 
@@ -22,22 +23,6 @@ function parseFilters(filtersJson: string) {
     }
 }
 
-function buildStatusFilters(filters: Record<string, string>) {
-    const clause: Record<string, string> = {};
-
-    if (filters.booking && filters.booking !== "ALL" && validBookingStatuses.includes(filters.booking as BookingStatus)) {
-        clause.bookingStatus = filters.booking;
-    }
-    if (filters.payment && filters.payment !== "ALL" && validPaymentStatuses.includes(filters.payment as PaymentStatus)) {
-        clause.paymentStatus = filters.payment;
-    }
-    if (filters.delivery && filters.delivery !== "ALL" && validDeliveryStatuses.includes(filters.delivery as DeliveryStatus)) {
-        clause.deliveryStatus = filters.delivery;
-    }
-
-    return clause;
-}
-
 // ── Get Member Tasks ─────────────────────────────────────────────────────────
 
 export async function getMemberTasks(
@@ -51,15 +36,15 @@ export async function getMemberTasks(
     if (sessionResult.status === "error") throw new Error(sessionResult.message);
 
     // Verify the target member exists and get their studioId
-    const targetMember = await prisma.member.findUnique({ where: { id: memberId } });
+    const targetMember = await db.query.member.findFirst({ where: eq(member.id, memberId) });
     if (!targetMember) throw new Error("Member not found");
 
     // Verify caller is a member of that same studio
-    const callerMember = await prisma.member.findFirst({
-        where: {
-            userId: sessionResult.session.user.id,
-            studioId: targetMember.studioId,
-        },
+    const callerMember = await db.query.member.findFirst({
+        where: and(
+            eq(member.userId, sessionResult.session.user.id),
+            eq(member.studioId, targetMember.studioId)
+        )
     });
     if (!callerMember) throw new Error("Unauthorized");
 
@@ -67,27 +52,45 @@ export async function getMemberTasks(
     const skip = validatedPage * ITEMS_PER_PAGE;
     const { filters } = parseFilters(filtersJson);
 
-    const whereClause: Record<string, unknown> = {
-        memberId,
-        ...buildStatusFilters(filters),
-    };
+    const conditions = [eq(booking.memberId, memberId)];
 
-    if (search.trim() !== "") {
-        whereClause.OR = [
-            { client: { name: { contains: search, mode: "insensitive" } } },
-            { service: { name: { contains: search, mode: "insensitive" } } },
-        ];
+    if (filters.booking && filters.booking !== "ALL" && validBookingStatuses.includes(filters.booking as any)) {
+        conditions.push(eq(booking.bookingStatus, filters.booking as any));
+    }
+    if (filters.payment && filters.payment !== "ALL" && validPaymentStatuses.includes(filters.payment as any)) {
+        conditions.push(eq(booking.paymentStatus, filters.payment as any));
+    }
+    if (filters.delivery && filters.delivery !== "ALL" && validDeliveryStatuses.includes(filters.delivery as any)) {
+        conditions.push(eq(booking.deliveryStatus, filters.delivery as any));
     }
 
-    const tasks = await prisma.booking.findMany({
-        where: whereClause,
-        include: { client: true, service: true },
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: ITEMS_PER_PAGE,
-    });
+    if (search.trim() !== "") {
+        conditions.push(
+            or(
+                ilike(client.name, `%${search}%`),
+                ilike(service.name, `%${search}%`)
+            )!
+        );
+    }
 
-    return tasks;
+    const tasksResult = await db.select({
+        booking: booking,
+        client: client,
+        service: service,
+    })
+    .from(booking)
+    .leftJoin(client, eq(booking.clientId, client.id))
+    .leftJoin(service, eq(booking.serviceId, service.id))
+    .where(and(...conditions))
+    .orderBy(desc(booking.createdAt))
+    .limit(ITEMS_PER_PAGE)
+    .offset(skip);
+
+    return tasksResult.map(t => ({
+        ...t.booking,
+        client: t.client,
+        service: t.service
+    }));
 }
 
 // ── Get Client Tasks ─────────────────────────────────────────────────────────
@@ -103,15 +106,15 @@ export async function getClientTasks(
     if (sessionResult.status === "error") throw new Error(sessionResult.message);
 
     // Verify the target client exists and get their studioId
-    const targetClient = await prisma.client.findUnique({ where: { id: clientId } });
+    const targetClient = await db.query.client.findFirst({ where: eq(client.id, clientId) });
     if (!targetClient) throw new Error("Client not found");
 
     // Verify caller is a member of that studio
-    const callerMember = await prisma.member.findFirst({
-        where: {
-            userId: sessionResult.session.user.id,
-            studioId: targetClient.studioId,
-        },
+    const callerMember = await db.query.member.findFirst({
+        where: and(
+            eq(member.userId, sessionResult.session.user.id),
+            eq(member.studioId, targetClient.studioId)
+        )
     });
     if (!callerMember) throw new Error("Unauthorized");
 
@@ -119,27 +122,44 @@ export async function getClientTasks(
     const skip = validatedPage * ITEMS_PER_PAGE;
     const { filters } = parseFilters(filtersJson);
 
-    const whereClause: Record<string, unknown> = {
-        clientId,
-        ...buildStatusFilters(filters),
-    };
+    const conditions = [eq(booking.clientId, clientId)];
 
-    if (search.trim() !== "") {
-        whereClause.OR = [
-            { service: { name: { contains: search, mode: "insensitive" } } },
-        ];
+    if (filters.booking && filters.booking !== "ALL" && validBookingStatuses.includes(filters.booking as any)) {
+        conditions.push(eq(booking.bookingStatus, filters.booking as any));
+    }
+    if (filters.payment && filters.payment !== "ALL" && validPaymentStatuses.includes(filters.payment as any)) {
+        conditions.push(eq(booking.paymentStatus, filters.payment as any));
+    }
+    if (filters.delivery && filters.delivery !== "ALL" && validDeliveryStatuses.includes(filters.delivery as any)) {
+        conditions.push(eq(booking.deliveryStatus, filters.delivery as any));
     }
 
-    const tasks = await prisma.booking.findMany({
-        where: whereClause,
-        include: {
-            service: true,
-            member: { include: { user: true } },
-        },
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: ITEMS_PER_PAGE,
-    });
+    if (search.trim() !== "") {
+        conditions.push(
+            or(
+                ilike(service.name, `%${search}%`)
+            )!
+        );
+    }
 
-    return tasks;
+    const tasksResult = await db.select({
+        booking: booking,
+        service: service,
+        member: member,
+        user: user,
+    })
+    .from(booking)
+    .leftJoin(service, eq(booking.serviceId, service.id))
+    .leftJoin(member, eq(booking.memberId, member.id))
+    .leftJoin(user, eq(member.userId, user.id))
+    .where(and(...conditions))
+    .orderBy(desc(booking.createdAt))
+    .limit(ITEMS_PER_PAGE)
+    .offset(skip);
+
+    return tasksResult.map(t => ({
+        ...t.booking,
+        service: t.service,
+        member: t.member ? { ...t.member, user: t.user } : null
+    }));
 }

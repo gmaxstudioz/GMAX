@@ -1,24 +1,24 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { GlobalBookingsClient } from "./_components/GlobalBookingsClient";
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { CalendarBooking } from "@/lib/schemas/calendar";
+import { inArray } from "drizzle-orm";
 
 export const metadata: Metadata = {
     title: "Global Bookings",
     description: "Manage bookings across all studios.",
 };
 
-
 export default async function GlobalBookingsPage() {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) redirect("/auth/login");
 
-    const members = await prisma.member.findMany({
-        where: { userId: session.user.id },
-        select: { role: true }
+    const members = await db.query.member.findMany({
+        where: (member, { eq }) => eq(member.userId, session.user.id),
+        columns: { role: true, studioId: true }
     });
     
     const adminRoles = ["owner", "developer", "manager"];
@@ -27,22 +27,16 @@ export default async function GlobalBookingsPage() {
         redirect("/my-tasks");
     }
 
+    const studioIds = members.map(m => m.studioId);
+
     // Fetch all bookings across all studios where the user is a member
-    const allBookings = await prisma.booking.findMany({
-        where: {
-            studio: {
-                members: {
-                    some: {
-                        userId: session.user.id
-                    }
-                }
-            }
-        },
-        include: {
+    const allBookings = studioIds.length > 0 ? await db.query.booking.findMany({
+        where: (booking, { inArray }) => inArray(booking.studioId, studioIds),
+        with: {
             client: true,
             service: true
         }
-    });
+    }) : [];
 
     // Serialize Prisma Decimal objects to plain numbers for Client Components
     const serializedBookings = JSON.parse(JSON.stringify(allBookings, (_key, value) =>

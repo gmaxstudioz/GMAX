@@ -1,6 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import { eq, and, or, inArray, asc, desc, isNull, sql } from "drizzle-orm";
+import * as schema from "@/lib/schema";
 import { getClientTasks } from "@/lib/actions/task";
 import { CallIcon, Mail01Icon, Book01Icon, Note01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -21,9 +23,9 @@ export default async function ClientPage({ params }: ClientPageProps) {
     const { clientId, slug } = await params;
 
     // Resolve the studio by slug to authorize access
-    const studio = await prisma.studio.findUnique({
-        where: { slug },
-        select: { id: true },
+    const studio = await db.query.studio.findFirst({
+        where: eq(schema.studio.slug, slug),
+        columns: { id: true },
     });
 
     if (!studio) return notFound();
@@ -31,18 +33,18 @@ export default async function ClientPage({ params }: ClientPageProps) {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) return notFound();
 
-    const currentMember = await prisma.member.findFirst({
-        where: { userId: session.user.id, studioId: studio.id },
+    const currentMember = await db.query.member.findFirst({
+        where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, studio.id)),
     });
 
     if (!currentMember) return notFound();
 
     // Ensure the client belongs to this studio
-    const clientData = await prisma.client.findFirst({
-        where: { id: clientId, studioId: studio.id },
-        include: {
+    const clientData = await db.query.client.findFirst({
+        where: and(eq(schema.client.id, clientId), eq(schema.client.studioId, studio.id)),
+        with: {
             bookings: {
-                include: {
+                with: {
                     payments: true
                 }
             }

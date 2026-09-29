@@ -1,6 +1,8 @@
 "use server"
 
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import { product } from "@/lib/schema";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireSession } from "./with-auth";
 
@@ -11,9 +13,7 @@ export async function deleteProduct(productId: string) {
     }
 
     try {
-        await prisma.product.delete({
-            where: { id: productId }
-        });
+        await db.delete(product).where(eq(product.id, productId));
         
         revalidatePath("/store");
         return { status: "success" as const, message: "Product deleted successfully" };
@@ -30,19 +30,24 @@ export async function FetchProducts() {
     }
 
     try {
-        const products = await prisma.product.findMany({
-            include: {
-                category: true,
-                _count: {
-                    select: { purchases: true }
-                }
+        const products = await db.query.product.findMany({
+            with: {
+                productCategory: true,
+                productAccesses: { columns: { id: true } }
             },
-            orderBy: {
-                createdAt: "desc"
-            }
+            orderBy: (model, { desc }) => [desc(model.createdAt)]
         });
         
-        return { status: "success" as const, data: products };
+        const mapped = products.map(p => {
+            const { productCategory, productAccesses, ...rest } = p;
+            return {
+                ...rest,
+                category: productCategory,
+                _count: { purchases: productAccesses.length }
+            };
+        });
+        
+        return { status: "success" as const, data: mapped };
     } catch (error) {
         console.error("Failed to fetch products:", error);
         return { status: "error" as const, message: "Failed to fetch products" };
@@ -69,25 +74,23 @@ export async function createProduct(data: {
     }
 
     try {
-        const product = await prisma.product.create({
-            data: {
-                id: data.id,
-                title: data.title,
-                description: data.description,
-                price: data.price,
-                salePrice: data.salePrice ?? null,
-                categoryId: data.categoryId ?? null,
-                isPublished: data.isPublished,
-                thumbnailKey: data.thumbnailKey ?? null,
-                r2Key: data.r2Key,
-                fileName: data.fileName,
-                fileSize: data.fileSize,
-                mimeType: data.mimeType,
-            },
-        });
+        const [newProduct] = await db.insert(product).values({
+            id: data.id,
+            title: data.title,
+            description: data.description,
+            price: data.price.toString(),
+            salePrice: data.salePrice?.toString() ?? null,
+            categoryId: data.categoryId ?? null,
+            isPublished: data.isPublished,
+            thumbnailKey: data.thumbnailKey ?? null,
+            r2Key: data.r2Key,
+            fileName: data.fileName,
+            fileSize: data.fileSize,
+            mimeType: data.mimeType,
+        }).returning();
 
         revalidatePath("/store");
-        return { status: "success" as const, data: product };
+        return { status: "success" as const, data: newProduct };
     } catch (error) {
         console.error("Failed to create product:", error);
         return { status: "error" as const, message: "Failed to create product" };
@@ -101,21 +104,26 @@ export async function getProduct(productId: string) {
     }
 
     try {
-        const product = await prisma.product.findUnique({
-            where: { id: productId },
-            include: {
-                category: true,
-                _count: {
-                    select: { purchases: true }
-                }
+        const found = await db.query.product.findFirst({
+            where: eq(product.id, productId),
+            with: {
+                productCategory: true,
+                productAccesses: { columns: { id: true } }
             }
         });
 
-        if (!product) {
+        if (!found) {
             return { status: "error" as const, message: "Product not found" };
         }
 
-        return { status: "success" as const, data: product };
+        const { productCategory, productAccesses, ...rest } = found;
+        const mapped = {
+            ...rest,
+            category: productCategory,
+            _count: { purchases: productAccesses.length }
+        };
+
+        return { status: "success" as const, data: mapped };
     } catch (error) {
         console.error("Failed to fetch product:", error);
         return { status: "error" as const, message: "Failed to fetch product" };
@@ -144,28 +152,25 @@ export async function updateProduct(
     }
 
     try {
-        const product = await prisma.product.update({
-            where: { id: productId },
-            data: {
-                title: data.title,
-                description: data.description,
-                price: data.price,
-                salePrice: data.salePrice ?? null,
-                categoryId: data.categoryId ?? null,
-                isPublished: data.isPublished,
-                thumbnailKey: data.thumbnailKey ?? null,
-                r2Key: data.r2Key,
-                fileName: data.fileName,
-                fileSize: data.fileSize,
-                mimeType: data.mimeType,
-            },
-        });
+        const [updatedProduct] = await db.update(product).set({
+            title: data.title,
+            description: data.description,
+            price: data.price.toString(),
+            salePrice: data.salePrice?.toString() ?? null,
+            categoryId: data.categoryId ?? null,
+            isPublished: data.isPublished,
+            thumbnailKey: data.thumbnailKey ?? null,
+            r2Key: data.r2Key,
+            fileName: data.fileName,
+            fileSize: data.fileSize,
+            mimeType: data.mimeType,
+        }).where(eq(product.id, productId)).returning();
 
         revalidatePath("/store");
         revalidatePath(`/store/${productId}`);
         revalidatePath(`/store/${productId}/edit`);
 
-        return { status: "success" as const, data: product };
+        return { status: "success" as const, data: updatedProduct };
     } catch (error) {
         console.error("Failed to update product:", error);
         return { status: "error" as const, message: "Failed to update product" };
@@ -179,10 +184,7 @@ export async function togglePublish(productId: string, isPublished: boolean) {
     }
 
     try {
-        await prisma.product.update({
-            where: { id: productId },
-            data: { isPublished },
-        });
+        await db.update(product).set({ isPublished }).where(eq(product.id, productId));
 
         revalidatePath("/store");
         revalidatePath(`/store/${productId}`);

@@ -3,8 +3,8 @@ import { db } from "@/lib/db";
 import { v4 as uuidv4 } from "uuid";
 import { sendSMS } from "@/lib/termii";
 import { getPostHogClient } from "@/lib/auth";
-import { bookingIntent, studio, client, service, booking, payment, productAccess, bookingAddons } from "@/lib/schema";
-import { eq, and } from "drizzle-orm";
+import { bookingIntent, client, booking, payment, productAccess, bookingAddons } from "@/lib/schema";
+import { eq } from "drizzle-orm";
 
 async function captureEvent(event: string, properties: Record<string, string | number | boolean>) {
     const posthog = getPostHogClient();

@@ -136,7 +136,7 @@ export function PortfolioView({
             const { data: result, error } = await tryCatch(fetchPortfolioItems());
             if (error) { toast.error("An unexpected error occurred."); return; }
             if (result?.status === "success") {
-                setItems(result.data as PortfolioItemType[]);
+                setItems(result.data as unknown as PortfolioItemType[]);
                 toast.success("Refreshed");
             } else if (result?.status === "error") { toast.error(result.message); }
         });
@@ -532,7 +532,7 @@ function UploadDialog({
                 if (error || result?.status === "error") {
                     toast.error(`Failed to save: ${file.name}`);
                 } else if (result?.status === "success") {
-                    onSuccess(result.data as PortfolioItemType);
+                    onSuccess(result.data as unknown as PortfolioItemType);
                     uploaded++;
                 }
             } catch (err) {

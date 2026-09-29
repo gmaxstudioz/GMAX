@@ -1,4 +1,6 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import { eq, and, or, inArray, asc, desc, isNull, sql } from "drizzle-orm";
+import * as schema from "@/lib/schema";
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -20,9 +22,9 @@ export default async function TransactionsPage() {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) redirect("/auth/login");
 
-    const members = await prisma.member.findMany({
-        where: { userId: session.user.id },
-        select: { role: true, studioId: true }
+    const members = await db.query.member.findMany({
+        where: eq(schema.member.userId, session.user.id),
+        columns: { role: true, studioId: true }
     });
     
     // Check if user is an admin/manager
@@ -39,24 +41,18 @@ export default async function TransactionsPage() {
     const managedStudioIds = members.filter(m => m.role === "manager").map(m => m.studioId);
 
     // Fetch payments
-    const payments = await prisma.payment.findMany({
-        where: isSuperAdmin ? {} : {
+    const payments = (!isSuperAdmin && managedStudioIds.length === 0) ? [] : await db.query.payment.findMany({
+        where: isSuperAdmin ? undefined : inArray(schema.payment.bookingId, db.select({ id: schema.booking.id }).from(schema.booking).where(inArray(schema.booking.studioId, managedStudioIds))),
+        with: {
             booking: {
-                studioId: { in: managedStudioIds }
-            }
-        },
-        include: {
-            booking: {
-                include: {
+                with: {
                     client: true,
                     studio: true,
                     service: true
                 }
             }
         },
-        orderBy: {
-            paymentDate: "desc"
-        }
+        orderBy: [desc(schema.payment.paymentDate)]
     });
 
     // Calculate stats

@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import type { Metadata } from "next";
 import { format, parseISO, startOfDay, endOfDay } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,41 +36,34 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
     const end = endOfDay(targetDate);
 
     // 1. Fetch bookings with comprehensive relations
-    const dailyBookings = await prisma.booking.findMany({
-        where: {
-            bookingDate: {
-                gte: start,
-                lte: end,
-            }
-        },
-        include: {
+    const dailyBookings = await db.query.booking.findMany({
+        where: (booking, { gte, lte, and }) => and(
+            gte(booking.bookingDate, start.toISOString()),
+            lte(booking.bookingDate, end.toISOString())
+        ),
+        with: {
             client: true,
-            addons: true,
+            bookingAddons: true,
             studio: {
-                include: {
+                with: {
                     members: {
-                        include: { user: { select: { name: true, email: true } } }
+                        with: { user: { columns: { name: true, email: true } } }
                     },
                     clients: {
-                        select: { id: true, name: true, phone: true, email: true, image: true, type: true }
+                        columns: { id: true, name: true, phone: true, email: true, image: true, type: true }
                     },
-                    categories: {
-                        include: {
-                            services: { include: { variants: { include: { deliverables: true } } } }
-                        }
+                    services: {
+                        with: { serviceVariants: { with: { serviceDeliverables: true } } }
                     }
                 }
             },
             service: {
-                include: {
+                with: {
                     studioSession: true
                 }
             }
         },
-        orderBy: [
-            { studio: { name: 'asc' } },
-            { bookingDate: 'asc' }
-        ]
+        orderBy: (booking, { asc }) => [asc(booking.studioId), asc(booking.bookingDate)]
     });
 
     // 2. Group bookings by studio and prepare specific lists for UI components
@@ -78,8 +71,7 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
         const studioId = booking.studio.id;
         
         if (!acc[studioId]) {
-            // Flatten services from categories
-            const allServices = booking.studio.categories.flatMap(cat => cat.services);
+            const allServices = booking.studio.services;
             const ownerMember = booking.studio.members.find(m => m.role === "owner");
             
             acc[studioId] = {
@@ -90,8 +82,8 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
                     logo: booking.studio.logo ?? undefined,
                     metadata: booking.studio.metadata as StudioMetadata,
                     ownerId: ownerMember?.userId ?? "",
-                    createdAt: booking.studio.createdAt.toISOString(),
-                    updatedAt: booking.studio.updatedAt.toISOString(),
+                    createdAt: String(booking.studio.createdAt),
+                    updatedAt: String(booking.studio.updatedAt),
                 },
                 bookings: [],
                 totalMinutes: 0,
@@ -108,12 +100,12 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
                     id: s.id,
                     name: s.name,
                     description: s.description,
-                    features: s.features,
+                    features: s.features ?? undefined,
                     isAddon: s.isAddon,
                     isActive: s.isActive,
                     studioSessionId: s.studioSessionId,
-                    categoryId: s.categoryId,
-                    variants: s.variants?.map(v => ({
+                    category: s.category,
+                    serviceVariants: s.serviceVariants?.map(v => ({
                         id: v.id,
                         serviceId: v.serviceId,
                         locationType: v.locationType,
@@ -121,7 +113,7 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
                         maxPrice: v.maxPrice ? Number(v.maxPrice) : undefined,
                         sessionDurationMins: v.sessionDurationMins,
                         logisticsIncluded: v.logisticsIncluded,
-                        deliverables: v.deliverables?.map(d => ({
+                        deliverables: v.serviceDeliverables?.map(d => ({
                             id: d.id,
                             label: d.label,
                             quantity: d.quantity ?? undefined,
@@ -136,8 +128,8 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
                     email: m.user.email,
                     role: m.role as MemberRole,
                     studioId: m.studioId,
-                    createdAt: m.createdAt.toISOString(),
-                    updatedAt: m.createdAt.toISOString()
+                    createdAt: String(m.createdAt),
+                    updatedAt: String(m.createdAt)
                 }))
             };
         }
@@ -216,7 +208,7 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
                                                     <CardContent className="flex flex-col gap-3">
                                                         <div className="flex items-center justify-between">
                                                             <p className="text-sm">Time: {format(new Date(booking.bookingDate), "hh:mm a")}</p>
-                                                            <RescheduleTimePicker bookingId={booking.id} currentDate={booking.bookingDate} />
+                                                            <RescheduleTimePicker bookingId={booking.id} currentDate={new Date(booking.bookingDate)} />
                                                         </div>
                                                         <div>
                                                             <ReassignMemberDropdown 
@@ -254,8 +246,8 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
                                                                 serviceId: booking.serviceId,
                                                                 serviceVariantId: booking.serviceVariantId ?? undefined,
                                                                 memberId: booking.memberId || "",
-                                                                bookingDate: booking.bookingDate.toISOString(),
-                                                                addonIds: booking.addons.map(addon => addon.id),
+                                                                bookingDate: booking.bookingDate || "",
+                                                                addonIds: booking.bookingAddons?.map(addon => addon.b) || [],
                                                                 totalAmount: Number(booking.totalAmount),
                                                                 paymentPlan: booking.paymentPlan,
                                                             }}

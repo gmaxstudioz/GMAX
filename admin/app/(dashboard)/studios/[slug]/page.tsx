@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { StudioStatsCards } from "./_components/StatsCards"
 import { BackButton } from "@/components/web/back-button";
 import StudioData from "./_components/studioData";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import { eq, and, or, inArray, asc, desc, isNull, sql } from "drizzle-orm";
+import * as schema from "@/lib/schema";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -13,9 +15,9 @@ interface StudioDetailsProps {
 
 export async function generateMetadata({ params }: StudioDetailsProps): Promise<Metadata> {
     const { slug } = await params;
-    const studio = await prisma.studio.findUnique({
-        where: { slug },
-        select: { name: true, metadata: true },
+    const studio = await db.query.studio.findFirst({
+        where: eq(schema.studio.slug, slug),
+        columns: { name: true, metadata: true },
     });
 
     const studioName = studio?.name ?? "Studio Details";
@@ -31,30 +33,54 @@ export async function generateMetadata({ params }: StudioDetailsProps): Promise<
 export default async function StudioDetails({ params }: StudioDetailsProps) {
     const { slug } = await params;
 
-    const studioData = await prisma.studio.findUnique({
-        where: {
-            slug: slug
-        },
-        include: {
+    const studioData = await db.query.studio.findFirst({
+        where: eq(schema.studio.slug, slug),
+        with: {
             members: {
-                include: { user: true }
+                with: { user: true }
             },
             invitations: true,
-            categories: {
-                include: { services: { include: { studioSession: true, variants: { include: { deliverables: true } } } } }
+            services: {
+                with: { studioSession: true, serviceVariants: { with: { serviceDeliverables: true } } }
             },
             studioSessions: true,
             clients: {
-                include: { bookings: true }
+                with: { bookings: true }
             },
             bookings: {
-                include: { client: true, service: { include: { variants: { include: { deliverables: true } } } } }
+                with: { client: true, service: { with: { serviceVariants: { with: { serviceDeliverables: true } } } } }
             },
             bookingIntents: {
-                orderBy: { createdAt: 'desc' as const },
+                orderBy: [desc(schema.bookingIntent.createdAt)],
             },
         },
     });
+
+    if (studioData) {
+        // Group services by category to mimic Prisma's 'categories' array
+        const categoryMap = new Map();
+        studioData.services.forEach(s => {
+            s.serviceVariants = s.serviceVariants;
+            if (s.serviceVariants) {
+                s.serviceVariants.forEach(v => (v as any).deliverables = v.serviceDeliverables);
+            }
+            if (!categoryMap.has(s.category)) {
+                categoryMap.set(s.category, { id: s.category, name: s.category, type: 'standard', services: [] });
+            }
+            categoryMap.get(s.category).services.push(s);
+        });
+        (studioData as any).categories = Array.from(categoryMap.values());
+        
+        studioData.bookings.forEach(b => {
+            if (b.service) {
+                b.service.serviceVariants = b.service.serviceVariants;
+                if (b.service.serviceVariants) {
+                    b.service.serviceVariants.forEach(v => (v as any).deliverables = v.serviceDeliverables);
+                }
+            }
+        });
+    }
+
 
     if (!studioData) {
         notFound();
