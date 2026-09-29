@@ -42,6 +42,11 @@ import { Field } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { CreateProductSchema, CreateProductType } from "@/lib/schemas/product";
 import { MultipartUploader }from "@/components/web/file-uploader/MultipartUploader";
+import posthog from "posthog-js";
+
+const posthogEnabled = Boolean(
+    process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && process.env.NEXT_PUBLIC_POSTHOG_HOST,
+);
 
 type Category = {
     id: string;
@@ -100,6 +105,9 @@ export function CreateProductForm({ categories: initialCategories }: CreateProdu
             }
 
             const created = result.data!;
+            if (posthogEnabled) {
+                posthog.capture("product_category_created");
+            }
             setCategories((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
             form.setValue("categoryId", created.id, { shouldValidate: true });
             setNewCategoryName("");
@@ -134,6 +142,13 @@ export function CreateProductForm({ categories: initialCategories }: CreateProdu
                 return;
             }
 
+            if (posthogEnabled) {
+                posthog.capture("product_created", {
+                    has_sale_price: Boolean(values.salePrice),
+                    has_thumbnail: Boolean(values.thumbnailKey),
+                    is_published: values.isPublished,
+                });
+            }
             toast.success("Product created successfully");
             router.push("/store");
         });

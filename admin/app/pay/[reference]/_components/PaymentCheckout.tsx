@@ -6,6 +6,11 @@ import { verifyPayment } from "@/lib/actions/payment";
 import { tryCatch } from "@/hooks/try-catch";
 import { toast } from "sonner";
 import { Loader2, CheckCircle2, PartyPopperIcon, XCircleIcon } from "lucide-react";
+import posthog from "posthog-js";
+
+const posthogEnabled = Boolean(
+    process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && process.env.NEXT_PUBLIC_POSTHOG_HOST,
+);
 
 declare global {
     interface Window {
@@ -62,6 +67,9 @@ export function PaymentCheckout({ reference, email, amount, publicKey }: Payment
                     setStatus("failed");
                     toast.error("Payment verification failed. Please contact support.");
                 } else {
+                    if (posthogEnabled) {
+                        posthog.capture("payment_completed", { amount });
+                    }
                     setStatus("success");
                     toast.success("Payment successful!");
                 }

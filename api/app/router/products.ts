@@ -1,12 +1,13 @@
 import { contract } from "@/app/contract";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { implement } from "@orpc/server";
 import { authMiddleware, optionalAuthMiddleware, BaseContext } from "./middleware";
 import { v4 as uuidv4 } from "uuid";
 import crypto from "crypto";
 import { getPresignedUrl } from "@/lib/r2";
 import { sendAccessLinkEmail, sendSMS } from "@/lib/termii";
-import { Prisma } from "@/lib/generated/prisma/client";
+import { product, buyer, productAccess, payment, buyerAccessToken } from "@/lib/schema";
+import { eq, and, or, inArray, asc, desc, ilike, sql } from "drizzle-orm";
 import { getPostHogClient } from "@/lib/auth";
 
 // Initialize the oRPC implementation builder with the base context
@@ -32,9 +33,9 @@ function generateToken(): string {
     return crypto.randomBytes(32).toString("hex");
 }
 
-function effectivePrice(price: Prisma.Decimal, salePrice: Prisma.Decimal | null | undefined): number {
-    const p = price.toNumber();
-    const sp = salePrice != null ? salePrice.toNumber() : null;
+function effectivePrice(price: string, salePrice: string | null | undefined): number {
+    const p = parseFloat(price);
+    const sp = salePrice != null ? parseFloat(salePrice) : null;
     return sp !== null ? sp : p;
 }
 
@@ -42,18 +43,18 @@ async function mapProductToOutput(data: {
     id: string;
     title: string;
     description: string;
-    price: Prisma.Decimal;         // ✅ Typed as Prisma.Decimal
-    salePrice: Prisma.Decimal | null; // ✅ Typed as Prisma.Decimal
+    price: string;
+    salePrice: string | null;
     categoryId: string | null;
-    category: { id: string; name: string; slug: string } | null;
+    productCategory: { id: string; name: string; slug: string } | null;
     r2Key: string | null;
     fileName: string | null;
     fileSize: number | null;
     mimeType: string | null;
     thumbnailKey: string | null;
     isPublished: boolean;
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt: string;
+    updatedAt: string;
 }, includeDownloadUrl = false) {
     const thumbnailSignedUrl = data.thumbnailKey
         ? await getPresignedUrl(data.thumbnailKey, 3600)
@@ -67,16 +68,16 @@ async function mapProductToOutput(data: {
         id: data.id,
         title: data.title,
         description: data.description,
-        price: data.price.toNumber(),                                     // ✅ Convert to number safely
-        salePrice: data.salePrice != null ? data.salePrice.toNumber() : null, // ✅ Convert to number safely
+        price: parseFloat(data.price),
+        salePrice: data.salePrice != null ? parseFloat(data.salePrice) : null,
         categoryId: data.categoryId,
-        category: data.category,
+        category: data.productCategory,
         fileName: data.fileName,
         fileSize: data.fileSize,
         mimeType: data.mimeType,
         isPublished: data.isPublished,
-        createdAt: data.createdAt.toISOString(),
-        updatedAt: data.updatedAt.toISOString(),
+        createdAt: new Date(data.createdAt).toISOString(),
+        updatedAt: new Date(data.updatedAt).toISOString(),
         signedUrl,
         thumbnailSignedUrl,
     };
@@ -89,8 +90,8 @@ export const createProduct = os.product.create
     .use(authMiddleware)
     .handler(async ({ input, errors }) => {
         // Look up if a product title already exists using a case-insensitive check
-        const existing = await prisma.product.findFirst({
-            where: { title: { equals: input.title, mode: "insensitive" } },
+        const existing = await db.query.product.findFirst({
+            where: (p, { ilike }) => ilike(p.title, input.title),
         });
         
         // Throw bad request error if a title conflict is detected
@@ -99,7 +100,22 @@ export const createProduct = os.product.create
         });
 
         // Insert the new product record and pull structural category relations
-        const data = await prisma.product.create({ data: input, include: { category: true } });
+        const id = uuidv4();
+        const [inserted] = await db.insert(product).values({
+            id,
+            ...input,
+            price: input.price.toString(),
+            salePrice: input.salePrice?.toString() ?? null,
+            updatedAt: new Date().toISOString(),
+        }).returning();
+
+        const data = await db.query.product.findFirst({
+            where: (p, { eq }) => eq(p.id, inserted.id),
+            with: { productCategory: true }
+        });
+
+        if (!data) throw new Error("Failed to retrieve created product");
+
         await captureEvent("product_created", { is_published: data.isPublished });
         return mapProductToOutput(data);
     });
@@ -109,11 +125,13 @@ export const deleteProduct = os.product.delete
     .use(authMiddleware)
     .handler(async ({ input, errors }) => {
         // Verify the product exists prior to executing deletion queries
-        const existing = await prisma.product.findUnique({ where: { id: input.productId } });
+        const existing = await db.query.product.findFirst({ 
+            where: (p, { eq }) => eq(p.id, input.productId) 
+        });
         if (!existing) throw errors.NOT_FOUND({ data: { resourceType: "Product", resourceId: input.productId } });
 
         // Wipe the target record from the database table
-        await prisma.product.delete({ where: { id: input.productId } });
+        await db.delete(product).where(eq(product.id, input.productId));
         await captureEvent("product_deleted", {});
         return { id: input.productId, deleted: true as const };
     });
@@ -125,17 +143,29 @@ export const updateProduct = os.product.update
         const { productId, ...updateData } = input;
         
         // Verify target product profile exists before merging changes
-        const existing = await prisma.product.findUnique({ where: { id: productId } });
+        const existing = await db.query.product.findFirst({ 
+            where: (p, { eq }) => eq(p.id, productId) 
+        });
         if (!existing) throw errors.NOT_FOUND({
             data: { resourceType: "Product", resourceId: productId },
         });
 
+        const updatePayload: any = { ...updateData, updatedAt: new Date().toISOString() };
+        if (updateData.price !== undefined) updatePayload.price = updateData.price.toString();
+        if (updateData.salePrice !== undefined) updatePayload.salePrice = updateData.salePrice?.toString() ?? null;
+
         // Apply changes to the record field keys and return populated mutations
-        const data = await prisma.product.update({
-            where: { id: productId },
-            data: updateData,
-            include: { category: true },
+        await db.update(product)
+            .set(updatePayload)
+            .where(eq(product.id, productId));
+
+        const data = await db.query.product.findFirst({
+            where: (p, { eq }) => eq(p.id, productId),
+            with: { productCategory: true }
         });
+
+        if (!data) throw new Error("Failed to retrieve updated product");
+
         await captureEvent("product_updated", { is_published: data.isPublished });
         return mapProductToOutput(data);
     });
@@ -145,9 +175,9 @@ export const getProductById = os.product.getById
     .use(optionalAuthMiddleware)
     .handler(async ({ input, errors }) => {
         // Query database for a published product entry
-        const data = await prisma.product.findUnique({
-            where: { id: input.productId, isPublished: true },
-            include: { category: true },
+        const data = await db.query.product.findFirst({
+            where: (p, { eq, and }) => and(eq(p.id, input.productId), eq(p.isPublished, true)),
+            with: { productCategory: true },
         });
         
         // Handle scenarios where product ID is missing or unpublished
@@ -162,19 +192,18 @@ export const getAllProducts = os.product.getAll
     .use(optionalAuthMiddleware)
     .handler(async ({ input }) => {
         const { page, perPage } = input;
-        const where = { isPublished: true };
 
         // Query database count and selection windows in parallel loops
-        const [total, items] = await Promise.all([
-            prisma.product.count({ where }),
-            prisma.product.findMany({
-                where,
-                include: { category: true },
-                skip: (page - 1) * perPage,
-                take: perPage,
-                orderBy: { createdAt: "desc" },
-            }),
-        ]);
+        const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(product).where(eq(product.isPublished, true));
+        const total = Number(count);
+        
+        const items = await db.query.product.findMany({
+            where: (p, { eq }) => eq(p.isPublished, true),
+            with: { productCategory: true },
+            offset: (page - 1) * perPage,
+            limit: perPage,
+            orderBy: (p, { desc }) => [desc(p.createdAt)],
+        });
 
         // Formulate mathematical page ceilings
         const pageCount = Math.ceil(total / perPage);
@@ -195,40 +224,42 @@ export const purchaseProduct = os.product.purchase
     .use(optionalAuthMiddleware)
     .handler(async ({ input, errors }) => {
         // Query to check if the target digital item exists and is online
-        const product = await prisma.product.findUnique({
-            where: { id: input.productId, isPublished: true },
+        const productData = await db.query.product.findFirst({
+            where: (p, { eq, and }) => and(eq(p.id, input.productId), eq(p.isPublished, true)),
         });
-        if (!product) throw errors.NOT_FOUND({
+        if (!productData) throw errors.NOT_FOUND({
             data: { resourceType: "Product", resourceId: input.productId },
         });
 
         // Query if client already exists matching either the provided email OR phone string
-        let buyer = await prisma.buyer.findFirst({
-            where: {
-                OR: [
-                    { email: input.buyerEmail },
-                    { phone: input.buyerPhone }
-                ]
-            },
+        let buyerData = await db.query.buyer.findFirst({
+            where: (b, { or, eq }) => or(
+                eq(b.email, input.buyerEmail),
+                eq(b.phone, input.buyerPhone)
+            )
         });
 
         // Insert new client entity if lookup returns empty results
-        if (!buyer) {
-            buyer = await prisma.buyer.create({
-                data: {
-                    name: input.buyerName,
-                    email: input.buyerEmail,
-                    phone: input.buyerPhone,
-                },
-            });
+        if (!buyerData) {
+            const id = uuidv4();
+            const [inserted] = await db.insert(buyer).values({
+                id,
+                name: input.buyerName,
+                email: input.buyerEmail,
+                phone: input.buyerPhone,
+                updatedAt: new Date().toISOString(),
+            }).returning();
+            buyerData = inserted;
         } else {
             const updates: Record<string, string> = {};
-            if (input.buyerName && input.buyerName !== buyer.name) updates.name = input.buyerName;
+            if (input.buyerName && input.buyerName !== buyerData.name) updates.name = input.buyerName;
             
             // Protect against assigning a phone number already registered by another profile
-            if (input.buyerPhone && input.buyerPhone !== buyer.phone) {
-                const phoneOwner = await prisma.buyer.findUnique({ where: { phone: input.buyerPhone } });
-                if (phoneOwner && phoneOwner.id !== buyer.id) {
+            if (input.buyerPhone && input.buyerPhone !== buyerData.phone) {
+                const phoneOwner = await db.query.buyer.findFirst({ 
+                    where: (b, { eq }) => eq(b.phone, input.buyerPhone) 
+                });
+                if (phoneOwner && phoneOwner.id !== buyerData.id) {
                     throw errors.BAD_REQUEST({
                         message: "This phone number is already linked to another registered email profile."
                     });
@@ -238,53 +269,58 @@ export const purchaseProduct = os.product.purchase
 
             // Apply updates to existing buyer reference row if payload details have changed
             if (Object.keys(updates).length > 0) {
-                buyer = await prisma.buyer.update({
-                    where: { id: buyer.id },
-                    data: updates,
-                });
+                updates.updatedAt = new Date().toISOString();
+                const [updated] = await db.update(buyer)
+                    .set(updates)
+                    .where(eq(buyer.id, buyerData.id))
+                    .returning();
+                buyerData = updated;
             }
         }
 
         // Assert customer does not have pre-existing active access to the resource
-        const existingAccess = await prisma.productAccess.findUnique({
-            where: { productId_buyerId: { productId: product.id, buyerId: buyer.id } },
+        const existingAccess = await db.query.productAccess.findFirst({
+            where: (pa, { eq, and }) => and(
+                eq(pa.productId, productData.id), 
+                eq(pa.buyerId, buyerData.id)
+            )
         });
         if (existingAccess) throw errors.BAD_REQUEST({
             message: "You already have access to this product.",
         });
 
         // Calculate checkout pricing context structures
-        const amount = effectivePrice(product.price, product.salePrice);
+        const amount = effectivePrice(productData.price, productData.salePrice);
         const reference = `gmax-shop-${uuidv4().slice(0, 8)}`;
         const receiptNumber = generateReceiptNumber();
 
         // Log a pending payload invoice table record mapping the purchase variables
-        await prisma.payment.create({
-            data: {
-                amount,
-                method: "TRANSFER",
-                status: "PENDING",
-                paystackReference: reference,
-                receiptNumber,
-                recordedById: null,
-                paystackResponse: {
-                    pendingProduct: { title: product.title },
-                    pendingBuyer: { name: buyer.name, email: buyer.email },
-                    productId: product.id,
-                    buyerId: buyer.id,
-                },
+        const paymentId = uuidv4();
+        await db.insert(payment).values({
+            id: paymentId,
+            amount: amount.toString(),
+            method: "TRANSFER",
+            status: "PENDING",
+            paystackReference: reference,
+            receiptNumber,
+            recordedById: null,
+            paystackResponse: {
+                pendingProduct: { title: productData.title },
+                pendingBuyer: { name: buyerData.name, email: buyerData.email },
+                productId: productData.id,
+                buyerId: buyerData.id,
             },
         });
 
         await captureEvent("product_checkout_started", {
-            has_sale_price: product.salePrice !== null,
+            has_sale_price: productData.salePrice !== null,
         });
 
         return {
             paymentUrl: null,
             reference,
             amount,
-            buyerId: buyer.id,
+            buyerId: buyerData.id,
         };
     });
 
@@ -295,30 +331,35 @@ export const requestAccessLink = os.product.requestAccessLink
     .use(optionalAuthMiddleware)
     .handler(async ({ input }) => {
         // Query to match unique buyer profiles linked to the inbound email address
-        const buyer = await prisma.buyer.findUnique({
-            where: { email: input.email },
+        const buyerData = await db.query.buyer.findFirst({
+            where: (b, { eq }) => eq(b.email, input.email),
         });
 
         // Mock confirmation success response immediately to safeguard system records from discovery scanners
-        if (!buyer) return { sent: true };
+        if (!buyerData) return { sent: true };
 
         // Structure a random security link token and calculate an expiry window set to 15 minutes
         const token = generateToken();
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
         // Store access credentials string reference directly inside database records
-        const tokenRecord = await prisma.buyerAccessToken.create({
-            data: { buyerId: buyer.id, token, expiresAt, used: false },
-        });
+        const tokenRecordId = uuidv4();
+        const [tokenRecord] = await db.insert(buyerAccessToken).values({
+            id: tokenRecordId,
+            buyerId: buyerData.id, 
+            token, 
+            expiresAt, 
+            used: false
+        }).returning();
 
         const accessLink = `${PORTAL_URL}/shop/access/${token}`;
         let deliveryMethod: "EMAIL" | "SMS" | null = null;
 
-        if (buyer.email) {
+        if (buyerData.email) {
             try {
                 const emailResult = await sendAccessLinkEmail({
-                    email: buyer.email,
-                    buyerName: buyer.name,
+                    email: buyerData.email,
+                    buyerName: buyerData.name,
                     accessLink,
                 });
                 if (emailResult) {
@@ -329,9 +370,9 @@ export const requestAccessLink = os.product.requestAccessLink
             }
         }
 
-        if (!deliveryMethod && buyer.phone) {
+        if (!deliveryMethod && buyerData.phone) {
             try {
-                await sendSMS(buyer.phone, `Your GMAX access link: ${accessLink}`);
+                await sendSMS(buyerData.phone, `Your GMAX access link: ${accessLink}`);
                 deliveryMethod = "SMS";
             } catch (error) {
                 console.error("[Shop] Access link SMS failed:", error);
@@ -339,7 +380,7 @@ export const requestAccessLink = os.product.requestAccessLink
         }
 
         if (!deliveryMethod) {
-            console.error(`[Shop] No delivery channel available for buyer ${buyer.id}`);
+            console.error(`[Shop] No delivery channel available for buyer ${buyerData.id}`);
             throw new Error("No delivery channel available for access link.");
         }
 
@@ -357,37 +398,44 @@ export const verifyAccessToken = os.product.verifyAccessToken
     .use(optionalAuthMiddleware)
     .handler(async ({ input, errors }) => {
         // Read match configurations and include cascade buyer authorization arrays
-        const record = await prisma.buyerAccessToken.findUnique({
-            where: { token: input.token },
-            include: { buyer: { include: { purchases: { include: { product: true } } } } },
+        const record = await db.query.buyerAccessToken.findFirst({
+            where: (b, { eq }) => eq(b.token, input.token),
+            with: { 
+                buyer: { 
+                    with: { 
+                        productAccesses: { 
+                            with: { product: true } 
+                        } 
+                    } 
+                } 
+            },
         });
 
         // Reject request if access token does not exist, has been flagged used, or timestamp exceeds limits
-        if (!record || record.used || record.expiresAt < new Date()) {
+        if (!record || record.used || new Date(record.expiresAt) < new Date()) {
             throw errors.UNAUTHORIZED({ message: "Invalid or expired access link." });
         }
 
         // Flag the magic link access token within data rows to ensure single-use guarantees
-        await prisma.buyerAccessToken.update({
-            where: { id: record.id },
-            data: { used: true },
-        });
+        await db.update(buyerAccessToken)
+            .set({ used: true })
+            .where(eq(buyerAccessToken.id, record.id));
 
         // Create a new continuous session tracking string valid across 24 hours
         const sessionToken = generateToken();
-        await prisma.buyerAccessToken.create({
-            data: {
-                buyerId: record.buyerId,
-                token: sessionToken,
-                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-                used: false,
-            },
+        const newSessionId = uuidv4();
+        await db.insert(buyerAccessToken).values({
+            id: newSessionId,
+            buyerId: record.buyerId,
+            token: sessionToken,
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            used: false,
         });
 
         return {
             buyerId: record.buyerId,
             sessionToken,
-            purchases: record.buyer.purchases.map((p) => ({
+            purchases: record.buyer.productAccesses.map((p) => ({
                 productId: p.productId,
                 productTitle: p.product.title,
                 downloadCount: p.downloadCount,
@@ -404,29 +452,27 @@ export const requestDownload = os.product.requestDownload
     .use(optionalAuthMiddleware)
     .handler(async ({ input, errors }) => {
         // Check database for active browser session token properties
-        const tokenRecord = await prisma.buyerAccessToken.findUnique({
-            where: { token: input.token },
+        const tokenRecord = await db.query.buyerAccessToken.findFirst({
+            where: (b, { eq }) => eq(b.token, input.token),
         });
 
         // Reject request processing if user credentials fail timestamp thresholds
-        if (!tokenRecord || tokenRecord.used || tokenRecord.expiresAt < new Date()) {
+        if (!tokenRecord || tokenRecord.used || new Date(tokenRecord.expiresAt) < new Date()) {
             throw errors.UNAUTHORIZED({ message: "Invalid or expired session." });
         }
 
         // Check if buyer has verified financial transaction clearance matching the product asset
-        const access = await prisma.productAccess.findUnique({
-            where: {
-                productId_buyerId: {
-                    productId: input.productId,
-                    buyerId: tokenRecord.buyerId,
-                },
-            },
-            include: { product: true },
+        const access = await db.query.productAccess.findFirst({
+            where: (pa, { eq, and }) => and(
+                eq(pa.productId, input.productId),
+                eq(pa.buyerId, tokenRecord.buyerId)
+            ),
+            with: { product: true },
         });
 
         // Handle permissions anomalies or timed resource lockouts
         if (!access) throw errors.FORBIDDEN({ message: "You do not have access to this product." });
-        if (access.expiresAt && access.expiresAt < new Date()) {
+        if (access.expiresAt && new Date(access.expiresAt) < new Date()) {
             throw errors.FORBIDDEN({ message: "Your access to this product has expired." });
         }
         if (!access.product.r2Key) {
@@ -434,13 +480,12 @@ export const requestDownload = os.product.requestDownload
         }
 
         // Advance historical usage matrices counters inside product telemetry tables
-        await prisma.productAccess.update({
-            where: { id: access.id },
-            data: {
-                downloadCount: { increment: 1 },
-                lastDownloadAt: new Date(),
-            },
-        });
+        await db.update(productAccess)
+            .set({
+                downloadCount: access.downloadCount + 1,
+                lastDownloadAt: new Date().toISOString(),
+            })
+            .where(eq(productAccess.id, access.id));
 
         // Generate dynamic asset cloud file endpoints configured to self-destruct in 10 minutes
         const downloadUrl = await getPresignedUrl(access.product.r2Key, 600);

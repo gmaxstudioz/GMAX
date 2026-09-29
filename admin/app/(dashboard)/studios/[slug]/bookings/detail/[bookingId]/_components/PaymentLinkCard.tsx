@@ -20,6 +20,11 @@ import {
     Loader2,
     ExternalLinkIcon,
 } from "lucide-react";
+import posthog from "posthog-js";
+
+const posthogEnabled = Boolean(
+    process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && process.env.NEXT_PUBLIC_POSTHOG_HOST,
+);
 
 interface Payment {
     id: string;
@@ -80,6 +85,11 @@ export function PaymentLinkCard({
                 return;
             }
             if (result?.status === "success" && result.data) {
+                if (posthogEnabled) {
+                    posthog.capture("payment_link_generated", {
+                        balance_due: balanceDue,
+                    });
+                }
                 setPaymentLink(result.data.paymentUrl);
                 toast.success("Payment link generated!");
             } else {

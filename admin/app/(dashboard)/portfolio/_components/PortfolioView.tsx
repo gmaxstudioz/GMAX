@@ -34,6 +34,11 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { toast } from "sonner";
 import Image from "next/image";
 import { SearchIcon, ImageIcon, Trash2, Plus, Eye, EyeOff } from "lucide-react";
+import posthog from "posthog-js";
+
+const posthogEnabled = Boolean(
+    process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && process.env.NEXT_PUBLIC_POSTHOG_HOST,
+);
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -543,6 +548,9 @@ function UploadDialog({
         if (inputRef.current) inputRef.current.value = "";
 
         if (uploaded > 0) {
+            if (posthogEnabled) {
+                posthog.capture("portfolio_items_uploaded", { item_count: uploaded });
+            }
             toast.success(`${uploaded} ${uploaded === 1 ? "image" : "images"} uploaded!`);
             onComplete?.();
         }

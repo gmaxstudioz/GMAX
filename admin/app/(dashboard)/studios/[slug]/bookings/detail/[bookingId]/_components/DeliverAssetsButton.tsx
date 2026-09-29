@@ -5,6 +5,11 @@ import { Button } from "@/components/ui/button";
 import { SendIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { deliverBooking } from "@/lib/actions/delivery";
+import posthog from "posthog-js";
+
+const posthogEnabled = Boolean(
+    process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && process.env.NEXT_PUBLIC_POSTHOG_HOST,
+);
 
 export function DeliverAssetsButton({ bookingId }: { bookingId: string }) {
     const [isPending, setIsPending] = useState(false);
@@ -15,6 +20,9 @@ export function DeliverAssetsButton({ bookingId }: { bookingId: string }) {
         setIsPending(true);
         try {
             await deliverBooking(bookingId);
+            if (posthogEnabled) {
+                posthog.capture("booking_assets_delivered");
+            }
             toast.success("Assets delivered successfully.");
         } catch (error) {
             console.error(error);

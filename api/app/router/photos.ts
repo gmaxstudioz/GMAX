@@ -1,8 +1,10 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { getPresignedUrl } from "@/lib/r2";
 import { BaseContext, optionalAuthMiddleware } from "./middleware";
 import { implement } from "@orpc/server";
 import { contract } from "@/app/contract";
+import { eq, sql } from "drizzle-orm";
+import { photo } from "@/lib/schema";
 
 const os = implement(contract).$context<BaseContext>();
 
@@ -10,14 +12,14 @@ const os = implement(contract).$context<BaseContext>();
 export const clientPhotoAccess = os.photo.clientAccess
     .use(optionalAuthMiddleware)
     .handler(async ({ input, errors }) => {
-        const booking = await prisma.booking.findUnique({
-            where: { id: input.bookingId },
-            include: {
+        const booking = await db.query.booking.findFirst({
+            where: (booking, { eq }) => eq(booking.id, input.bookingId),
+            with: {
                 client: true,
                 service: true,
                 photos: {
-                    where: { approvalStatus: "APPROVED" },
-                    orderBy: { uploadedAt: "asc" },
+                    where: (photo, { eq }) => eq(photo.approvalStatus, "APPROVED"),
+                    orderBy: (photo, { asc }) => [asc(photo.uploadedAt)],
                 },
             },
         });
@@ -35,15 +37,15 @@ export const clientPhotoAccess = os.photo.clientAccess
 
         // Generate presigned thumbnail URLs for all approved photos
         const photos = await Promise.all(
-            booking.photos.map(async (photo) => ({
-                id: photo.id,
-                fileName: photo.fileName,
-                thumbnailUrl: photo.thumbnailKey
-                    ? await getPresignedUrl(photo.thumbnailKey, 3600)
-                    : await getPresignedUrl(photo.r2Key, 3600),
-                approvalStatus: photo.approvalStatus,
-                uploadedAt: photo.uploadedAt.toISOString(),
-                downloadCount: photo.downloadCount,
+            booking.photos.map(async (p) => ({
+                id: p.id,
+                fileName: p.fileName,
+                thumbnailUrl: p.thumbnailKey
+                    ? await getPresignedUrl(p.thumbnailKey, 3600)
+                    : await getPresignedUrl(p.r2Key, 3600),
+                approvalStatus: p.approvalStatus,
+                uploadedAt: new Date(p.uploadedAt).toISOString(),
+                downloadCount: p.downloadCount,
             }))
         );
 
@@ -51,7 +53,7 @@ export const clientPhotoAccess = os.photo.clientAccess
             bookingId: booking.id,
             clientName: booking.client.name,
             serviceName: booking.service.name,
-            bookingDate: booking.bookingDate.toISOString(),
+            bookingDate: new Date(booking.bookingDate).toISOString(),
             photos,
             totalPhotos: photos.length,
         };
@@ -60,9 +62,9 @@ export const clientPhotoAccess = os.photo.clientAccess
 export const clientDownloadPhoto = os.photo.clientDownload
     .use(optionalAuthMiddleware)
     .handler(async ({ input, errors }) => {
-        const booking = await prisma.booking.findUnique({
-            where: { id: input.bookingId },
-            include: { client: true },
+        const booking = await db.query.booking.findFirst({
+            where: (booking, { eq }) => eq(booking.id, input.bookingId),
+            with: { client: true },
         });
 
         if (!booking) throw errors.NOT_FOUND({
@@ -76,32 +78,29 @@ export const clientDownloadPhoto = os.photo.clientDownload
             });
         }
 
-        const photo = await prisma.photo.findUnique({
-            where: { id: input.photoId, bookingId: input.bookingId },
+        const foundPhoto = await db.query.photo.findFirst({
+            where: (photo, { and, eq }) => and(eq(photo.id, input.photoId), eq(photo.bookingId, input.bookingId)),
         });
 
-        if (!photo || photo.approvalStatus !== "APPROVED") {
+        if (!foundPhoto || foundPhoto.approvalStatus !== "APPROVED") {
             throw errors.NOT_FOUND({
                 data: { resourceType: "Photo", resourceId: input.photoId },
             });
         }
 
         // Track download
-        await prisma.photo.update({
-            where: { id: photo.id },
-            data: {
-                downloadCount: { increment: 1 },
-                downloadedAt: new Date(),
-                downloaded: true,
-            },
-        });
+        await db.update(photo).set({
+            downloadCount: sql`${photo.downloadCount} + 1`,
+            downloadedAt: sql`CURRENT_TIMESTAMP`,
+            downloaded: true,
+        }).where(eq(photo.id, foundPhoto.id));
 
-        const downloadUrl = await getPresignedUrl(photo.r2Key, 600);
+        const downloadUrl = await getPresignedUrl(foundPhoto.r2Key, 600);
         const expiresAt = new Date(Date.now() + 600 * 1000);
 
         return {
             downloadUrl,
-            fileName: photo.fileName,
+            fileName: foundPhoto.fileName,
             expiresAt: expiresAt.toISOString(),
         };
     });

@@ -16,6 +16,11 @@ import { Controller, useForm, useFieldArray, Control, useWatch } from "react-hoo
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CategorySchema, CategoryPayload, ServiceSchema, ServicePayload } from "@/lib/schemas/service";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import posthog from "posthog-js";
+
+const posthogEnabled = Boolean(
+    process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && process.env.NEXT_PUBLIC_POSTHOG_HOST,
+);
 
 // ✅ Ensure variants are included in the expected type
 type StudioWithRelations = Prisma.StudioGetPayload<{
@@ -209,6 +214,9 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
             } else {
                 const result = await createCategory({ ...data, studioId: studioData.id });
                 if (result.status === "success") {
+                    if (posthogEnabled) {
+                        posthog.capture("service_category_created", { category_type: data.type });
+                    }
                     toast.success("Category created!");
                     resetCategoryState();
                     setIsCategoryDialogOpen(false);
@@ -248,6 +256,13 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                     categoryId: serviceDialogOpenForCategory
                 });
                 if (result.status === "success") {
+                    if (posthogEnabled) {
+                        posthog.capture("service_created", {
+                            is_active: data.isActive,
+                            is_addon: data.isAddon,
+                            variant_count: data.variants.length,
+                        });
+                    }
                     toast.success("Service added!");
                     resetServiceState();
                     setServiceDialogOpenForCategory(null);
