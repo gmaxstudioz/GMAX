@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import gsap from "gsap";
 import { buttonVariants } from "@/components/ui/button";
-import { ArrowRight, ArrowLeft, CheckCircle2, Calendar, User, CreditCard, Loader2, Building2, Clock } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle2, Calendar, User, CreditCard, Loader2, Building2, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -130,6 +130,7 @@ export default function BookingPage() {
   }, [maxAvailableSessions, watch, setValue]);
 
   const [hasDiscount, setHasDiscount] = useState<boolean>(false);
+  const [rulesExpanded, setRulesExpanded] = useState<boolean>(false);
 
   useEffect(() => {
     getStudios()
@@ -137,12 +138,12 @@ export default function BookingPage() {
         setStudiosList(res.items);
         if (res.items.length > 0) {
           getStudioBySlug(res.items[0].slug).then(st => {
-            const anyServiceDisc = st.categories.some(c => 
-              c.services.some(s => (s.discountPercentage || 0) > 0)
+            const anyServiceDisc = (st.categories || []).some(c => 
+              (c.services || []).some(s => (s.discountPercentage || 0) > 0)
             );
-            const anyAddonDisc = st.addons.some(a => (a.discountPercentage || 0) > 0);
+            const anyAddonDisc = (st.addons || []).some(a => (a.discountPercentage || 0) > 0);
             setHasDiscount(anyServiceDisc || anyAddonDisc);
-          }).catch(() => {});
+          }).catch((e) => console.error("Error checking discounts:", e));
         }
       })
       .catch((err) => {
@@ -170,10 +171,10 @@ export default function BookingPage() {
       const allServices = data.categories.flatMap(c => c.services);
       setServices(allServices);
       
-      const anyServiceDisc = data.categories.some(c => 
-        c.services.some(s => (s.discountPercentage || 0) > 0)
+      const anyServiceDisc = (data.categories || []).some(c => 
+        (c.services || []).some(s => (s.discountPercentage || 0) > 0)
       );
-      const anyAddonDisc = data.addons.some(a => (a.discountPercentage || 0) > 0);
+      const anyAddonDisc = (data.addons || []).some(a => (a.discountPercentage || 0) > 0);
       setHasDiscount(anyServiceDisc || anyAddonDisc);
       setValue("selectedServiceId", "");
       setValue("selectedAddonIds", []);
@@ -304,11 +305,11 @@ export default function BookingPage() {
                           </div>
                         )}
                         <div className="flex-1">
-                          <h4 className="font-semibold text-lg break-words whitespace-normal">{s.name}</h4>
-                          <p className="text-sm text-muted-foreground break-words whitespace-normal">{(s.metadata?.description as string) || "Select this location"}</p>
+                          <h4 className="font-semibold text-lg wrap-break-word whitespace-normal">{s.name}</h4>
+                          <p className="text-sm text-muted-foreground wrap-break-word whitespace-normal">{(s.metadata?.description as string) || "Select this location"}</p>
                           {(() => {
                             const location = [s.metadata?.address, s.metadata?.city, s.metadata?.state].filter(Boolean).join(", ");
-                            return location ? <p className="text-xs text-muted-foreground/80 mt-1 break-words whitespace-normal">{location}</p> : null;
+                            return location ? <p className="text-xs text-muted-foreground/80 mt-1 wrap-break-word whitespace-normal">{location}</p> : null;
                           })()}
                         </div>
                       </div>
@@ -348,7 +349,7 @@ export default function BookingPage() {
                         <SelectTrigger className="h-14 rounded-xl text-base bg-card border-input focus:ring-primary focus:ring-offset-1">
                           <SelectValue placeholder="Select a service..." />
                         </SelectTrigger>
-                        <SelectContent className="max-h-[300px]">
+                        <SelectContent className="max-h-75">
                           {studio?.categories.map(category => (
                             <SelectGroup key={category.id} className="pb-2">
                               <SelectLabel className="text-primary font-bold text-xs uppercase tracking-wider pl-6 mt-2">{category.name}</SelectLabel>
@@ -469,7 +470,7 @@ export default function BookingPage() {
                                       );
                                     })()}
                                   </div>
-                                  {isSelected && <CheckCircle2 className="text-primary w-5 h-5 flex-shrink-0" />}
+                                  {isSelected && <CheckCircle2 className="text-primary w-5 h-5 shrink-0" />}
                                 </div>
                                 
                                 {(addon.description || (addon.features && addon.features.length > 0) || (variant.deliverables && variant.deliverables.length > 0)) && (
@@ -763,7 +764,7 @@ export default function BookingPage() {
             </div>
 
             {/* Amount to Pay Now */}
-            <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-2xl p-6 border border-primary/20">
+            <div className="bg-linear-to-r from-primary/10 via-primary/5 to-transparent rounded-2xl p-6 border border-primary/20">
               <div className="flex justify-between items-center">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Amount to pay now</p>
@@ -810,6 +811,65 @@ export default function BookingPage() {
           )}
         </div>
 
+        {/* Booking Rules and Guidelines */}
+        <div className="bg-muted/30 rounded-2xl p-6 border border-border/50 text-sm mb-12 transition-all duration-300">
+          <div 
+            className={cn("flex flex-col sm:flex-row sm:items-start justify-between gap-4 cursor-pointer", rulesExpanded ? "mb-5" : "mb-0")}
+            onClick={() => setRulesExpanded(!rulesExpanded)}
+          >
+            <div>
+              <h4 className="font-semibold text-xl md:text-2xl text-primary flex items-center gap-2 font-heading">
+                Booking Rules and Guidelines
+              </h4>
+              <p className="text-muted-foreground mt-1">
+                By booking our services, you acknowledge and accept these terms and conditions.
+              </p>
+            </div>
+            <div className="shrink-0 self-end sm:self-center">
+              <button type="button" className="p-2 rounded-full hover:bg-muted bg-background border shadow-sm transition-colors">
+                {rulesExpanded ? <ChevronUp className="w-5 h-5 text-primary" /> : <ChevronDown className="w-5 h-5 text-primary" />}
+              </button>
+            </div>
+          </div>
+          
+          <div className={cn("overflow-hidden transition-all duration-500", rulesExpanded ? "opacity-100 max-h-[1500px]" : "opacity-0 max-h-0")}>
+            <div className="space-y-3 mt-4 pt-4 border-t border-border/50">
+              <div>
+                <span className="font-semibold text-foreground block md:inline">PAYMENT VALIDATES BOOKING:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Secure your booking by paying a non-refundable deposit, and note Picture delivery won’t be possible unless full payment is settled.</span>
+              </div>
+              <div>
+                <span className="font-semibold text-foreground block md:inline">CLIENT COOPERATION:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">To ensure a seamless photo session, clients are kindly expected to provide all necessary information and cooperate throughout the shoot.</span>
+              </div>
+              <div>
+                <span className="font-semibold text-foreground block md:inline">BOOKING AND PAYMENT:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Secure your booking by paying a non-refundable deposit, and make sure the full payment is settled by the date of your photo session or event.</span>
+              </div>
+              <div>
+                <span className="font-semibold text-foreground block md:inline">CANCELLATIONS AND RESCHEDULING:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Notify us in advance about any cancellations or rescheduling and be aware that cancellations within 48 hours might result in the forfeiture of your deposit.</span>
+              </div>
+              <div>
+                <span className="font-semibold text-foreground block md:inline">IMAGE DELIVERY:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Expect your professionally edited images within the agreed-upon timeframe, and we’ll provide you with a download link for your high-resolution pictures.</span>
+              </div>
+              <div>
+                <span className="font-semibold text-foreground block md:inline">DELIVERY ERRORS:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Report any errors or issues with the delivered images within a specified timeframe to allow us address and rectify them promptly.</span>
+              </div>
+              <div>
+                <span className="font-semibold text-foreground block md:inline">ADDITIONAL SERVICES:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Any additional services beyond our initial agreement may incur extra charges.</span>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-border/50 mt-4">
+              <p className="font-medium italic text-muted-foreground">Be rest assure that GMAX Studioz renders the best service as long as these terms are being adhered to. Reach us at any time as we’re always available to be of service to you.</p>
+            </div>
+          </div>
+        </div>
+
         {/* Stepper */}
         <div className="mb-12 relative">
           <div className="absolute top-1/2 left-0 w-full h-0.5 bg-border/50 -translate-y-1/2 z-0 hidden md:block"></div>
@@ -851,10 +911,10 @@ export default function BookingPage() {
         {/* Form Area */}
         <div className="bg-card/50 backdrop-blur-xl border border-border/50 rounded-[2rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
           {/* Subtle gradient background */}
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px] -z-10 pointer-events-none translate-x-1/2 -translate-y-1/2"></div>
+          <div className="absolute top-0 right-0 w-125 h-125 bg-primary/5 rounded-full blur-[100px] -z-10 pointer-events-none translate-x-1/2 -translate-y-1/2"></div>
           
           <form onSubmit={handleSubmit(onSubmit)}>
-            <div ref={formRef} className="min-h-[400px]">
+            <div ref={formRef} className="min-h-100">
               {renderStepContent()}
             </div>
 

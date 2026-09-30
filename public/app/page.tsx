@@ -55,12 +55,12 @@ export default function Home() {
       if (res.items.length > 0) {
         // Just check the first studio
         getStudioBySlug(res.items[0].slug).then(studio => {
-          const anyServiceDiscount = studio.categories.some(c => 
-            c.services.some(s => (s.discountPercentage || 0) > 0)
+          const anyServiceDiscount = (studio.categories || []).some(c => 
+            (c.services || []).some(s => (s.discountPercentage || 0) > 0)
           );
-          const anyAddonDiscount = studio.addons.some(a => (a.discountPercentage || 0) > 0);
+          const anyAddonDiscount = (studio.addons || []).some(a => (a.discountPercentage || 0) > 0);
           setHasDiscount(anyServiceDiscount || anyAddonDiscount);
-        }).catch(() => {});
+        }).catch((e) => console.error("Error checking discounts:", e));
       }
     }).catch(() => {});
   }, []);
