@@ -7,11 +7,23 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { aj } from "@/lib/arcjet";
+import { request } from "@arcjet/next";
 
 export default async function DashboardLayout({ children }: { children: ReactNode}) {
     const session = await auth.api.getSession({
         headers: await headers()
     });
+
+    const req = await request();
+    const decision = await aj.protect(req);
+
+    if (decision.isDenied()) {
+        if (decision.reason.isBot()) {
+            throw new Error("Bot access denied");
+        }
+        throw new Error("Access denied");
+    }
 
     if (!session?.user) {
         redirect("/auth/login");

@@ -1,0 +1,163 @@
+{
+  "version": 1,
+  "runId": "104559e2-4e0c-48c3-ab24-a0a87e41f4e3",
+  "tasks": [
+    {
+      "id": "9329a248-2019-40bc-bcae-976cb7d31910",
+      "type": "capture-exceptions",
+      "label": "Capture unhandled exceptions",
+      "status": "not needed",
+      "dependsOn": [],
+      "inputs": {},
+      "attempts": 1,
+      "maxAttempts": 2,
+      "enqueuedBy": "orchestrator",
+      "createdAt": "2026-09-29T10:28:51.448Z",
+      "startedAt": "2026-09-29T10:29:12.094Z",
+      "skipReason": "agent-not-needed",
+      "notNeededReason": "not-applicable",
+      "handoff": {
+        "goals": "Ensure uncaught Next.js App Router errors reach PostHog through SDK-supported centralized mechanisms, without adding duplicate global listeners or per-component wrappers.",
+        "did": "No files were changed. The existing instrumentation-client.ts already enables the PostHog Web SDK's built-in exception autocapture with capture_exceptions: true. The existing app/global-error.tsx already uses Next.js's framework-level Global Error component and calls posthog.captureException(error), covering errors Next.js catches before browser global handlers fire. Together these are the intended complementary mechanisms and do not register duplicate custom window error or unhandled rejection listeners.",
+        "forNextAgent": "Error tracking is already complete. Preserve the initializer-based approach (do not add a PostHog provider) and keep app/global-error.tsx as the centralized framework boundary. No dependency install, build, lint, tests, or app startup was performed, per task scope.",
+        "evidence": "Read instrumentation-client.ts and app/global-error.tsx. Observed capture_exceptions: true in the guarded posthog.init configuration and posthog.captureException(error) in the Next.js global error boundary.",
+        "assumptions": "The task context states the SDK is installed and initialized; this task intentionally did not re-check dependencies or run verification commands."
+      },
+      "finishedAt": "2026-09-29T10:29:36.768Z"
+    },
+    {
+      "id": "946fbc9c-b218-4003-ada0-e76c78972796",
+      "type": "credentials",
+      "label": "Collect upload credentials",
+      "status": "done",
+      "dependsOn": [],
+      "inputs": {
+        "skillId": "error-tracking-upload-source-maps-nextjs",
+        "displayName": "Next.js"
+      },
+      "attempts": 1,
+      "maxAttempts": 2,
+      "enqueuedBy": "orchestrator",
+      "createdAt": "2026-09-29T10:28:51.449Z",
+      "startedAt": "2026-09-29T10:29:12.096Z",
+      "handoff": {
+        "goals": "Store the PostHog personal API key and source-map upload metadata in the project environment, and document the exact variable names for developers and downstream configuration tasks.",
+        "did": "Installed the `error-tracking-upload-source-maps-nextjs` skill and followed its env credential workflow. Securely collected the user's personal API key through `wizard_ask` and wrote it to the existing root `.env` via `set_env_values`; the secret value was never exposed. Added the project ID and PostHog UI host to the same env file. Updated `.env.example` with safe placeholders for the same contract. Chosen variable set: `POSTHOG_API_KEY`, `POSTHOG_PROJECT_ID`, and `POSTHOG_HOST`. This is the bundler-plugin variable set; `POSTHOG_HOST` intentionally remains separate from the existing `NEXT_PUBLIC_POSTHOG_HOST`, which is the SDK ingestion host. No build configuration was changed.",
+        "forNextAgent": "The configure and CI tasks must use exactly `POSTHOG_API_KEY`, `POSTHOG_PROJECT_ID`, and `POSTHOG_HOST`. The local env file is `.env`. In `next.config.ts`, read the source-map uploader host from `process.env.POSTHOG_HOST`; do not reuse `NEXT_PUBLIC_POSTHOG_HOST`, because that existing variable serves the analytics SDK ingestion endpoint. CI must expose the same three names to the production build. No source-map build or upload verification was performed because this task owns credentials only.",
+        "filesTouched": [
+          ".env",
+          ".env.example"
+        ],
+        "evidence": "`check_env_keys` confirmed all three keys are present in `.env`. A post-edit read confirmed `.env.example` contains `POSTHOG_API_KEY`, `POSTHOG_PROJECT_ID`, and `POSTHOG_HOST` with only placeholder/non-secret documentation values.",
+        "assumptions": "The parallel configure task will use the documented Next.js bundler package and can bind its `host` option to `process.env.POSTHOG_HOST`, preserving the separately configured public ingestion host."
+      },
+      "finishedAt": "2026-09-29T10:32:45.785Z"
+    },
+    {
+      "id": "598eee5f-dac0-460a-ab9d-733f1a1037db",
+      "type": "configure",
+      "label": "Configure source-map upload",
+      "status": "done",
+      "dependsOn": [
+        "9329a248-2019-40bc-bcae-976cb7d31910"
+      ],
+      "inputs": {
+        "skillId": "error-tracking-upload-source-maps-nextjs",
+        "displayName": "Next.js"
+      },
+      "attempts": 1,
+      "maxAttempts": 2,
+      "enqueuedBy": "orchestrator",
+      "createdAt": "2026-09-29T10:28:54.367Z",
+      "startedAt": "2026-09-29T10:29:42.209Z",
+      "handoff": {
+        "goals": "Configure this Next.js production build to generate, inject, upload, and then remove PostHog source maps, with upload credentials available through Next.js's build-time environment loading.",
+        "did": "Installed `@posthog/nextjs-config@latest` with the detected npm package manager (resolved to 1.11.1). Updated `next.config.ts` to wrap the preserved `NextConfig` in `withPostHogConfig`. Added plugin keys `personalApiKey`, `projectId`, `host`, and `sourcemaps`; source maps explicitly use `enabled: true` and `deleteAfterUpload: true`. The config reads `POSTHOG_API_KEY`, `POSTHOG_PROJECT_ID`, and the already-established `NEXT_PUBLIC_POSTHOG_HOST`. Next.js auto-loads `.env`, so no dotenv loader or run-script change was needed. The normal production commands remain `npm run build` and `npm run start`. No test affordance was added.",
+        "forNextAgent": "The credentials task must provide `POSTHOG_API_KEY` (a personal API key with Error Tracking write access) and `POSTHOG_PROJECT_ID`; `NEXT_PUBLIC_POSTHOG_HOST` is already present and reused. CI must expose these exact three names to the production build. Do not use the public project token as `POSTHOG_API_KEY`. Run `npm run build` only after credentials are available; this task intentionally did not run it. After that build, verify a symbol set at https://us.posthog.com/project/628631/settings/error-tracking#symbol-sets (or the project's Error Tracking symbol-sets settings page). The dependency install reported 7 npm audit findings (4 moderate, 2 high, 1 critical); no audit fix was attempted because it is outside this instrumentation task.",
+        "filesTouched": [
+          "next.config.ts",
+          "package.json",
+          "package-lock.json"
+        ],
+        "evidence": "`npm add @posthog/nextjs-config@latest` completed successfully and resolved version 1.11.1. Re-read `next.config.ts`, `package.json`, and the lockfile entry after changes. `npm run lint -- next.config.ts` completed with exit code 0 and no lint findings. `check_env_keys` showed `NEXT_PUBLIC_POSTHOG_HOST` is present while `POSTHOG_API_KEY` and `POSTHOG_PROJECT_ID` are not yet present.",
+        "assumptions": "The existing `NEXT_PUBLIC_POSTHOG_HOST` contains the real configured PostHog host, as required by the established runtime contract. Credential values are owned by the parallel credentials task and were neither read nor written here."
+      },
+      "finishedAt": "2026-09-29T10:31:30.588Z"
+    },
+    {
+      "id": "935506b7-ced8-49fc-9e70-6c920d52100f",
+      "type": "wire-ci",
+      "label": "Wire upload in CI",
+      "status": "not needed",
+      "dependsOn": [
+        "598eee5f-dac0-460a-ab9d-733f1a1037db",
+        "946fbc9c-b218-4003-ada0-e76c78972796"
+      ],
+      "inputs": {
+        "skillId": "error-tracking-upload-source-maps-nextjs",
+        "displayName": "Next.js"
+      },
+      "attempts": 1,
+      "maxAttempts": 2,
+      "enqueuedBy": "orchestrator",
+      "createdAt": "2026-09-29T10:28:57.066Z",
+      "startedAt": "2026-09-29T10:32:49.614Z",
+      "skipReason": "agent-not-needed",
+      "notNeededReason": "not-applicable",
+      "handoff": {
+        "goals": "Wire the existing production build/deploy path so every deployment provides PostHog source-map upload credentials, a resolvable release identity, and the runtime PostHog variables read by the app.",
+        "did": "Installed and read the `error-tracking-upload-source-maps-nextjs` skill, including its “Set up CI for automatic uploads” and “Associate the release with a git commit” guidance. Traced the repository for GitHub Actions, other YAML pipelines, Dockerfiles, Compose files, Vercel/Netlify config, Procfiles, deployment scripts, and documented deploy commands. No project-owned CI, container build, deploy configuration, or startup manifest exists, so the skill explicitly prohibits creating one and there was no valid file to edit. Confirmed the production commands are `npm run build` (`next build`) and `npm run start` (`next start`). Confirmed the app runtime reads `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` and `NEXT_PUBLIC_POSTHOG_HOST`. No analytics events, insights, funnels, or dashboard tiles were changed; this task concerned source-map upload infrastructure only.",
+        "forNextAgent": "The actual hosting/deployment provider remains unknown and must be configured manually. Wherever `npm run build` executes, expose exactly `POSTHOG_API_KEY`, `POSTHOG_PROJECT_ID`, and `POSTHOG_HOST`; create `POSTHOG_API_KEY` in that provider’s secret store using the existing personal API key, and configure the other two as build environment variables. Do not substitute the public project token for `POSTHOG_API_KEY`. Ensure the build environment also has both halves of release identity: for an inline CI build, preserve the provider’s native git metadata; for a Docker build, forward the provider-specific git variables listed by the skill and declare each non-secret git variable as both `ARG` and `ENV`; keep `POSTHOG_API_KEY` in the builder’s secret mechanism, never Docker `ARG`/`ENV`. Because no provider is identifiable, no provider-specific git variable names can safely be prescribed. Wherever `npm run start` runs, expose the exact runtime names `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` and `NEXT_PUBLIC_POSTHOG_HOST`; the public token is not secret, but both values must be set in the hosting environment. Also note an upstream configuration mismatch: `next.config.ts` currently reads the uploader host from `NEXT_PUBLIC_POSTHOG_HOST`, while the credentials handoff established `POSTHOG_HOST`; the owning configuration task should change the uploader’s `host` option to `process.env.POSTHOG_HOST` before CI verification. After deployment wiring is available, run the production build and verify a new symbol set at https://us.posthog.com/project/628631/settings/error-tracking#symbol-sets.",
+        "filesTouched": [],
+        "evidence": "Repository searches found no `.github/workflows/*`, `Dockerfile*`, Compose YAML, other YAML pipeline files, `vercel.json`, `netlify.toml`, or `Procfile`. `package.json` defines `build` as `next build` and `start` as `next start`. Reads of `instrumentation-client.ts` and `instrumentation.ts` confirmed the runtime variable names. The installed skill’s untraceable-setup rule requires no CI changes when no existing deployment file can be traced.",
+        "assumptions": "The production deployment is configured outside version control or has not yet been added to this repository. Its CI provider and whether it crosses a Docker or SSH boundary could not be verified.",
+        "conflict": "The credential contract uses `POSTHOG_HOST`, but `next.config.ts` currently binds the uploader host to `NEXT_PUBLIC_POSTHOG_HOST`; this task did not alter the upstream build configuration."
+      },
+      "finishedAt": "2026-09-29T10:33:30.620Z"
+    },
+    {
+      "id": "8b9c29cb-cc97-4656-a993-9768dc827e0e",
+      "type": "report",
+      "label": "Report error tracking setup",
+      "status": "done",
+      "dependsOn": [
+        "935506b7-ced8-49fc-9e70-6c920d52100f"
+      ],
+      "inputs": {},
+      "attempts": 1,
+      "maxAttempts": 2,
+      "enqueuedBy": "orchestrator",
+      "createdAt": "2026-09-29T10:29:00.604Z",
+      "startedAt": "2026-09-29T10:33:34.752Z",
+      "handoff": {
+        "goals": "Create the top-level error-tracking report that explains current capture behavior, source-map upload status, required follow-up, and PostHog verification links.",
+        "did": "Created `posthog-error-tracking-report.md` with a numbered manual-follow-up section, the existing SDK and Next.js error-capture mechanisms, source-map build details, environment variable names, deployment limitations, and project-specific PostHog verification URLs. No secret values were written to the report.",
+        "forNextAgent": "The report is complete and published. It notes that no repository-owned CI/deployment path exists, that hosting must provide the documented build/runtime variables, and that the uploader host should be aligned with `POSTHOG_HOST` before verification.",
+        "filesTouched": [
+          "posthog-error-tracking-report.md"
+        ],
+        "evidence": "The report was successfully written, and `publish_handoff` returned success. Its verification links target `https://us.posthog.com/project/628631/error_tracking` and `/configuration`.",
+        "assumptions": "The prior task handoffs are authoritative, including the reported uploader-host mismatch and the fact that the personal API key is already stored in local `.env`."
+      },
+      "finishedAt": "2026-09-29T10:34:07.377Z"
+    },
+    {
+      "id": "7b2f8fdc-04bf-40fd-a215-488bc76e0146",
+      "type": "test-setup",
+      "label": "Offer end-to-end test",
+      "status": "running",
+      "dependsOn": [
+        "8b9c29cb-cc97-4656-a993-9768dc827e0e"
+      ],
+      "inputs": {
+        "skillId": "error-tracking-upload-source-maps-nextjs",
+        "displayName": "Next.js"
+      },
+      "attempts": 1,
+      "maxAttempts": 2,
+      "enqueuedBy": "orchestrator",
+      "createdAt": "2026-09-29T10:29:04.891Z",
+      "startedAt": "2026-09-29T10:34:10.017Z"
+    }
+  ]
+}

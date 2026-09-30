@@ -336,11 +336,16 @@ export default function BookingPage() {
                             <SelectGroup key={category.id} className="pb-2">
                               <SelectLabel className="text-primary font-bold text-xs uppercase tracking-wider pl-6 mt-2">{category.name}</SelectLabel>
                               {category.services.flatMap(service => 
-                                service.variants.map((variant: { id: string; locationType: string; basePrice?: string | number | null }) => (
-                                  <SelectItem key={variant.id} value={`${service.id}:${variant.id}`} className="pl-6 py-2.5 cursor-pointer">
-                                    {service.name} ({variant.locationType}) - ₦{Number(variant.basePrice || 0).toLocaleString()}
-                                  </SelectItem>
-                                ))
+                                service.variants.map((variant: { id: string; locationType: string; basePrice?: string | number | null }) => {
+                                  const originalPrice = Number(variant.basePrice || 0);
+                                  const discount = service.discountPercentage || 0;
+                                  const finalPrice = originalPrice - (originalPrice * discount) / 100;
+                                  return (
+                                    <SelectItem key={variant.id} value={`${service.id}:${variant.id}`} className="pl-6 py-2.5 cursor-pointer">
+                                      {service.name} ({variant.locationType}) - ₦{finalPrice.toLocaleString()} {discount > 0 && <span className="line-through text-muted-foreground ml-2 text-xs">₦{originalPrice.toLocaleString()}</span>}
+                                    </SelectItem>
+                                  );
+                                })
                               )}
                             </SelectGroup>
                           ))}
@@ -351,8 +356,18 @@ export default function BookingPage() {
                         <div className="p-6 rounded-xl border border-border/50 bg-primary/5 animate-in fade-in slide-in-from-top-2">
                           <div className="flex justify-between items-start mb-4">
                             <h4 className="font-semibold text-xl">{selectedService.name} {selectedVariant ? `(${selectedVariant.locationType})` : ""}</h4>
-                            {/* ✅ Updated to use selected variant price */}
-                            <span className="text-xl font-bold text-primary">₦{Number(selectedVariant?.basePrice || selectedService.variants[0]?.basePrice || 0).toLocaleString()}</span>
+                            {/* ✅ Updated to use selected variant price with discount */}
+                            {(() => {
+                               const baseP = Number(selectedVariant?.basePrice || selectedService.variants[0]?.basePrice || 0);
+                               const disc = selectedService.discountPercentage || 0;
+                               const finalP = baseP - (baseP * disc) / 100;
+                               return (
+                                 <div className="flex flex-col items-end">
+                                   <span className="text-xl font-bold text-primary">₦{finalP.toLocaleString()}</span>
+                                   {disc > 0 && <span className="text-sm line-through text-muted-foreground">₦{baseP.toLocaleString()}</span>}
+                                 </div>
+                               );
+                            })()}
                           </div>
                           {selectedService.description && (
                             <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{selectedService.description}</p>
@@ -424,8 +439,18 @@ export default function BookingPage() {
                                 <div className="flex justify-between items-start mb-2">
                                   <div>
                                     <span className="font-medium block">{addon.name} ({variant.locationType})</span>
-                                    {/* ✅ Updated to use specific variant price */}
-                                    <span className="text-sm font-semibold text-primary">+₦{Number(variant.basePrice || 0).toLocaleString()}</span>
+                                    {/* ✅ Updated to use specific variant price with discount */}
+                                    {(() => {
+                                      const baseP = Number(variant.basePrice || 0);
+                                      const disc = addon.discountPercentage || 0;
+                                      const finalP = baseP - (baseP * disc) / 100;
+                                      return (
+                                        <div className="flex flex-col">
+                                          <span className="text-sm font-semibold text-primary">+₦{finalP.toLocaleString()}</span>
+                                          {disc > 0 && <span className="text-[10px] line-through text-muted-foreground">₦{baseP.toLocaleString()}</span>}
+                                        </div>
+                                      );
+                                    })()}
                                   </div>
                                   {isSelected && <CheckCircle2 className="text-primary w-5 h-5 flex-shrink-0" />}
                                 </div>
@@ -600,7 +625,9 @@ export default function BookingPage() {
         );
       case 4: {
         const sessionCount = watch("sessionCount") || 1;
-        const servicePrice = Number(selectedVariant?.basePrice || selectedService?.variants[0]?.basePrice || 0);
+        const baseServicePrice = Number(selectedVariant?.basePrice || selectedService?.variants[0]?.basePrice || 0);
+        const serviceDiscount = selectedService?.discountPercentage || 0;
+        const servicePrice = baseServicePrice - (baseServicePrice * serviceDiscount) / 100;
         const serviceTotal = servicePrice * sessionCount;
         const addonsTotal = selectedAddonIds.length > 0 && studio?.addons
           ? selectedAddonIds.reduce((sum, compositeId) => {
@@ -609,7 +636,9 @@ export default function BookingPage() {
               const variant = variantId
                 ? addon?.variants?.find((v: { id: string; basePrice?: string | number | null }) => v.id === variantId)
                 : addon?.variants?.[0];
-              return sum + Number(variant?.basePrice || 0);
+              const addonBasePrice = Number(variant?.basePrice || 0);
+              const addonDiscount = addon?.discountPercentage || 0;
+              return sum + (addonBasePrice - (addonBasePrice * addonDiscount) / 100);
             }, 0)
           : 0;
         const grandTotal = serviceTotal + addonsTotal;

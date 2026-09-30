@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { sql } from "drizzle-orm";
+import { service } from "@/lib/schema";
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -39,7 +40,7 @@ export default async function ServicesPage() {
                 with: {
                 services: {
                     extras: {
-                        bookingsCount: sql<number>`(select count(*)::int from "booking" where "booking"."serviceId" = "service"."id")`.as('bookingsCount')
+                        bookingsCount: sql<number>`(select count(*)::int from "booking" where "booking"."serviceId" = ${service.id})`.as('bookingsCount')
                     },
                     with: {
                         studioSession: {
@@ -57,19 +58,25 @@ export default async function ServicesPage() {
         });
     }
 
-    const studios = studiosRaw.map(s => ({
-        ...s,
-        categories: s.categories.map((c: any) => ({
-            ...c,
-            services: c.services.map((sv: any) => {
-                const { bookingsCount, ...rest } = sv;
-                return {
-                    ...rest,
-                    _count: { bookings: bookingsCount || 0 }
-                };
-            })
-        }))
-    }));
+    const studios = studiosRaw.map(s => {
+        const categoryMap = new Map();
+        (s.services || []).forEach((sv: any) => {
+            const { bookingsCount, ...rest } = sv;
+            const mappedService = {
+                ...rest,
+                _count: { bookings: bookingsCount || 0 }
+            };
+            const cat = sv.category || 'UNCATEGORIZED';
+            if (!categoryMap.has(cat)) {
+                categoryMap.set(cat, { id: cat, name: cat, type: 'standard', services: [] });
+            }
+            categoryMap.get(cat).services.push(mappedService);
+        });
+        return {
+            ...s,
+            categories: Array.from(categoryMap.values())
+        };
+    });
 
     // Shape data grouped by studio
     const studioGroups = studios.map(studio => ({

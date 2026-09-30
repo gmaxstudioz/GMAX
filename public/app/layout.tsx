@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/web/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 
 import Footer from "@/components/web/Footer";
+import { PostHogProvider } from "./PostHogProvider";
 
 const playfairDisplayHeading = Playfair_Display({subsets:['latin'],variable:'--font-heading'});
 
@@ -39,17 +40,19 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <NavBar />
-            {children}
-            <Footer />
-            <Toaster richColors position="top-right" />
-          </ThemeProvider>
+        <PostHogProvider>
+          <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <NavBar />
+              {children}
+              <Footer />
+              <Toaster richColors position="top-right" />
+            </ThemeProvider>
+        </PostHogProvider>
       </body>
     </html>
   );

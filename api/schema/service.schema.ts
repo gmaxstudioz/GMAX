@@ -44,6 +44,7 @@ const ServiceBaseSchema = z.object({
   name: z.string().min(1),
   isAddon: z.boolean().default(false),
   isActive: z.boolean().default(true),
+  discountPercentage: z.number().int().min(0).max(100).default(0),
   description: z.string().min(1),
   features: z.array(z.string()),
   categoryId: z.string(),
