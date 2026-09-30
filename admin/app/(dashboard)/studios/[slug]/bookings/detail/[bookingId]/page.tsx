@@ -197,6 +197,7 @@ export default async function BookingDetailPage({ params }: Props) {
         id: s.id,
         name: s.name,
         isAddon: s.isAddon,
+        discountPercentage: s.discountPercentage || 0,
         variants: s.serviceVariants.map((v: any) => ({
             id: v.id,
             basePrice: v.basePrice.toString(),

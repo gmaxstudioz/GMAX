@@ -23,6 +23,7 @@ export interface PublicServiceOutput {
     isAddon: boolean;
     description: string;
     features: string[];
+    discountPercentage: number;
     variants: ServiceVariantOutput[];
 }
 

@@ -113,6 +113,7 @@ export default async function StudioBookPage({ params }: Props) {
                             id: s.id,
                             name: s.name,
                             isAddon: s.isAddon,
+                            discountPercentage: s.discountPercentage || 0,
                             basePrice: Number(s.serviceVariants[0].basePrice),
                             studioSession: s.studioSession ? { duration: s.studioSession.duration } : null,
                         })),
@@ -122,6 +123,7 @@ export default async function StudioBookPage({ params }: Props) {
                     .map((a: any) => ({
                         id: a.id,
                         name: a.name,
+                        discountPercentage: a.discountPercentage || 0,
                         basePrice: Number(a.serviceVariants[0].basePrice),
                     }))}
                 existingBookings={serializedBookings}

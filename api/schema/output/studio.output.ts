@@ -41,6 +41,7 @@ export const PublicServiceOutputSchema = z.object({
     isAddon: z.boolean(),
     description: z.string(),
     features: z.array(z.string()),
+    discountPercentage: z.number().int(),
     variants: z.array(z.object({
         id: z.string(),
         locationType: z.enum(["STUDIO", "OUTDOOR", "BOTH", "MULTIPLE"]),

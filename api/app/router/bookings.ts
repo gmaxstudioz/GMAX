@@ -199,15 +199,17 @@ export const createBookings = os.booking.create.use(optionalAuthMiddleware).hand
 
         // 2. Build pricing objects for the calculator
         // Use the first available variant (default/primary variant) for pricing calculation
+        const servicePriceRaw = service.serviceVariants?.[0]?.basePrice ? Number(service.serviceVariants[0].basePrice) : 0;
         const servicePricingObj = {
-            price: service.serviceVariants?.[0]?.basePrice ? Number(service.serviceVariants[0].basePrice) : 0,
+            price: servicePriceRaw - (servicePriceRaw * (service.discountPercentage || 0)) / 100,
             salePrice: null
         };
         // Map addon IDs to their pricing in the order they were selected, using the first variant of each addon
         const addonPricingObjs = (addonIds || []).map(addonId => {
             const addon = addonMapById[addonId];
+            const addonPriceRaw = addon?.serviceVariants?.[0]?.basePrice ? Number(addon.serviceVariants[0].basePrice) : 0;
             return {
-                price: addon?.serviceVariants?.[0]?.basePrice ? Number(addon.serviceVariants[0].basePrice) : 0,
+                price: addonPriceRaw - (addonPriceRaw * (addon?.discountPercentage || 0)) / 100,
                 salePrice: null
             };
         });
@@ -543,8 +545,9 @@ export const createPublicBooking = os.booking.createPublic
         }
 
         // Construct pricing objects using the selected variant
+        const servicePriceRaw = Number(selectedVariant.basePrice);
         const servicePricingObj = {
-            price: Number(selectedVariant.basePrice),
+            price: servicePriceRaw - (servicePriceRaw * (service.discountPercentage || 0)) / 100,
             salePrice: null
         };
         // Map selected addon IDs to their pricing in the order they were selected
@@ -559,8 +562,9 @@ export const createPublicBooking = os.booking.createPublic
                 throw errors.BAD_REQUEST({ message: `Variant for addon ${addon.name} not found.` });
             }
 
+            const addonPriceRaw = Number(variant.basePrice);
             return {
-                price: Number(variant.basePrice),
+                price: addonPriceRaw - (addonPriceRaw * (addon.discountPercentage || 0)) / 100,
                 salePrice: null
             };
         });

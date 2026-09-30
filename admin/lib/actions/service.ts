@@ -50,6 +50,7 @@ export async function createService(data: ServicePayload) {
                 name: parsed.data.name,
                 isAddon: parsed.data.isAddon,
                 isActive: parsed.data.isActive,
+                discountPercentage: parsed.data.discountPercentage ?? 0,
                 description: parsed.data.description,
                 features: parsed.data.features ?? [],
                 category: 'OTHERS',
@@ -131,6 +132,7 @@ export async function updateService(id: string, data: ServicePayload) {
                 name: parsed.data.name,
                 isAddon: parsed.data.isAddon,
                 isActive: parsed.data.isActive,
+                discountPercentage: parsed.data.discountPercentage ?? 0,
                 description: parsed.data.description,
                 features: parsed.data.features ?? [],
                 studioSessionId: parsed.data.studioSessionId,
@@ -217,5 +219,23 @@ export async function deleteService(id: string) {
     } catch (error) {
         console.error(error);
         return { status: "error", message: "Error deleting service" };
+    }
+}
+export async function bulkUpdateDiscount(studioId: string, discountPercentage: number) {
+    try {
+        const userSession = await auth.api.getSession({ headers: await headers() });
+        if (!userSession?.user) return { status: "error", message: "Unauthorized" };
+
+        const memberRecord = await db.query.member.findFirst({
+            where: and(eq(member.userId, userSession.user.id), eq(member.studioId, studioId))
+        });
+        if (!memberRecord) return { status: "error", message: "Unauthorized access to studio" };
+
+        await db.update(service).set({ discountPercentage }).where(eq(service.studioId, studioId));
+        revalidatePath(`/studios/[slug]`, "page");
+        return { status: "success", message: `Discount of ${discountPercentage}% applied to all services.` };
+    } catch (error) {
+        console.error(error);
+        return { status: "error", message: "Error updating services" };
     }
 }

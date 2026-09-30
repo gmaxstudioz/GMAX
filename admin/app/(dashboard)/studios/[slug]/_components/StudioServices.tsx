@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { createCategory, deleteCategory, createService, deleteService, updateCategory, updateService } from "@/lib/actions/service";
+import { createCategory, deleteCategory, createService, deleteService, updateCategory, updateService, bulkUpdateDiscount } from "@/lib/actions/service";
 import { Controller, useForm, useFieldArray, Control, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CategorySchema, CategoryPayload, ServiceSchema, ServicePayload } from "@/lib/schemas/service";
@@ -120,6 +120,9 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
     const [serviceDialogOpenForCategory, setServiceDialogOpenForCategory] = useState<string | null>(null);
     const [editModeService, setEditModeService] = useState<string | null>(null);
 
+    const [isBulkDiscountDialogOpen, setIsBulkDiscountDialogOpen] = useState(false);
+    const [bulkDiscountPercentage, setBulkDiscountPercentage] = useState<number>(0);
+
     const categoryForm = useForm<CategoryPayload>({
         resolver: zodResolver(CategorySchema),
         defaultValues: { name: "", type: "standard" }
@@ -132,6 +135,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
             description: "",
             isAddon: false,
             isActive: true,
+            discountPercentage: 0,
             studioSessionId: "",
             features: [""],
             variants: [{
@@ -166,6 +170,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
             description: "",
             isAddon: false,
             isActive: true,
+            discountPercentage: 0,
             studioSessionId: "",
             features: [""],
             variants: [{
@@ -274,6 +279,19 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
         });
     };
 
+    const handleBulkDiscount = () => {
+        startTransition(async () => {
+            if (!studioData.id) return;
+            const result = await bulkUpdateDiscount(studioData.id, bulkDiscountPercentage);
+            if (result.status === "success") {
+                toast.success(result.message);
+                setIsBulkDiscountDialogOpen(false);
+            } else {
+                toast.error(result.message);
+            }
+        });
+    };
+
     return (
         <Card>
             <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -284,18 +302,62 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                     </CardDescription>
                 </div>
 
-                <Button 
-                    variant="default" 
-                    size="sm" 
-                    className="gap-2 shrink-0 w-max"
-                    onClick={() => {
-                        resetCategoryState();
-                        setIsCategoryDialogOpen(true);
-                    }}
-                >
-                    <PlusIcon className="size-4" />
-                    New Category
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="gap-2 shrink-0 w-max"
+                        onClick={() => setIsBulkDiscountDialogOpen(true)}
+                    >
+                        Bulk Discount
+                    </Button>
+                    <Button 
+                        variant="default" 
+                        size="sm" 
+                        className="gap-2 shrink-0 w-max"
+                        onClick={() => {
+                            resetCategoryState();
+                            setIsCategoryDialogOpen(true);
+                        }}
+                    >
+                        <PlusIcon className="size-4" />
+                        New Category
+                    </Button>
+                </div>
+
+                <Dialog open={isBulkDiscountDialogOpen} onOpenChange={setIsBulkDiscountDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Apply Bulk Discount</DialogTitle>
+                            <DialogDescription>
+                                Set a discount percentage to apply to all services in this studio at once.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <Field>
+                                <FieldLabel>Discount Percentage (%)</FieldLabel>
+                                <Input 
+                                    type="number" 
+                                    min="0" 
+                                    max="100" 
+                                    value={bulkDiscountPercentage}
+                                    onChange={(e) => setBulkDiscountPercentage(Number(e.target.value))}
+                                    placeholder="e.g. 10" 
+                                    disabled={isPending} 
+                                />
+                            </Field>
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setIsBulkDiscountDialogOpen(false)} disabled={isPending}>
+                                Cancel
+                            </Button>
+                            <Button type="button" onClick={handleBulkDiscount} disabled={isPending}>
+                                {isPending ? <Loader2Icon className="animate-spin size-4 mr-2" /> : null}
+                                Apply Discount
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
 
                 <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
                     <DialogContent>
@@ -492,6 +554,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                         description: svc.description || "",
                                                                         isAddon: svc.isAddon,
                                                                         isActive: svc.isActive,
+                                                                        discountPercentage: svc.discountPercentage || 0,
                                                                         studioSessionId: svc.studioSessionId || "",
                                                                         features: svcFeatures,
                                                                         variants: mappedVariants
@@ -724,7 +787,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                     );
                                 })}
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
                                 <Controller
                                     name="studioSessionId"
                                     control={serviceForm.control}
@@ -785,6 +848,16 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                 <input type="checkbox" checked={value} onChange={e => onChange(e.target.checked)} disabled={isPending} className="rounded border-muted-foreground/30 text-primary focus:ring-primary size-4" />
                                                 Active (Bookable)
                                             </label>
+                                        </Field>
+                                    )}
+                                />
+                                <Controller
+                                    name="discountPercentage"
+                                    control={serviceForm.control}
+                                    render={({ field: { value, onChange, ...f } }) => (
+                                        <Field>
+                                            <FieldLabel>Discount (%)</FieldLabel>
+                                            <Input {...f} value={value ?? 0} onChange={(e) => onChange(e.target.value === "" ? 0 : Number(e.target.value))} type="number" min="0" max="100" placeholder="e.g. 10" disabled={isPending} />
                                         </Field>
                                     )}
                                 />

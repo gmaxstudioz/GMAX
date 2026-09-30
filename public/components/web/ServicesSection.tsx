@@ -47,10 +47,15 @@ export default function ServicesSection() {
 
   return (
     <section className="relative w-full max-w-7xl mx-auto h-auto py-24 px-4 sm:px-6 flex flex-col gap-9">
-      <div className="flex items-center gap-2">
-        <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-primary"></div>
-        <h1 className="text-4xl font-heading font-bold">What we do</h1>
-        <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-primary"></div>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-primary"></div>
+          <h1 className="text-4xl font-heading font-bold">What we do</h1>
+          <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-primary"></div>
+        </div>
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 text-primary border border-primary/30 w-max">
+          <span className="font-bold tracking-wider text-sm uppercase">Special Discounts Available</span>
+        </div>
       </div>
       <div className="flex flex-col gap-4">
         {servicesData.map((service) => {

@@ -103,6 +103,7 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
                     features: s.features ?? undefined,
                     isAddon: s.isAddon,
                     isActive: s.isActive,
+                    discountPercentage: s.discountPercentage || 0,
                     studioSessionId: s.studioSessionId,
                     category: s.category,
                     serviceVariants: s.serviceVariants?.map(v => ({
