@@ -129,10 +129,21 @@ export default function BookingPage() {
     }
   }, [maxAvailableSessions, watch, setValue]);
 
+  const [hasDiscount, setHasDiscount] = useState<boolean>(false);
+
   useEffect(() => {
     getStudios()
       .then((res) => {
         setStudiosList(res.items);
+        if (res.items.length > 0) {
+          getStudioBySlug(res.items[0].slug).then(st => {
+            const anyServiceDisc = st.categories.some(c => 
+              c.services.some(s => (s.discountPercentage || 0) > 0)
+            );
+            const anyAddonDisc = st.addons.some(a => (a.discountPercentage || 0) > 0);
+            setHasDiscount(anyServiceDisc || anyAddonDisc);
+          }).catch(() => {});
+        }
       })
       .catch((err) => {
         console.error(err);
@@ -158,6 +169,12 @@ export default function BookingPage() {
       setStudio(data);
       const allServices = data.categories.flatMap(c => c.services);
       setServices(allServices);
+      
+      const anyServiceDisc = data.categories.some(c => 
+        c.services.some(s => (s.discountPercentage || 0) > 0)
+      );
+      const anyAddonDisc = data.addons.some(a => (a.discountPercentage || 0) > 0);
+      setHasDiscount(anyServiceDisc || anyAddonDisc);
       setValue("selectedServiceId", "");
       setValue("selectedAddonIds", []);
       setSelectedDate("");
@@ -786,6 +803,11 @@ export default function BookingPage() {
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
             Reserve your spot at {studio?.name || "GMAX Studioz"}. Follow the steps below to customize your experience and secure your session.
           </p>
+          {hasDiscount && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 mt-6 rounded-full bg-primary/20 text-primary border border-primary/30 w-max animate-in fade-in duration-500">
+              <span className="font-bold tracking-wider text-sm uppercase">Special Discounts Available</span>
+            </div>
+          )}
         </div>
 
         {/* Stepper */}
