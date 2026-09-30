@@ -7,6 +7,7 @@ import { headers } from "next/headers"
 import { db } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BriefcaseIcon, CheckCircleIcon, ClockIcon } from "lucide-react"
+import { PostHogErrorTrackingTestButton } from "./_components/PostHogErrorTrackingTestButton"
 
 import { redirect } from "next/navigation";
 
@@ -49,6 +50,7 @@ export default async function Page() {
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">
         <h1 className="text-2xl font-bold">Welcome, {session?.user.name}!</h1>
         <p className="text-muted-foreground">Here is an overview of your tasks and assignments.</p>
+        <PostHogErrorTrackingTestButton />
         
         <div className="grid gap-4 md:grid-cols-3">
           <Card>

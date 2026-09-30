@@ -18,6 +18,7 @@ export const CalendarBookingSchema = BookingSchema.pick({
     clientId:           true,
     createdBy:          true,
 }).extend({
+    bookingDate: z.union([z.date(), z.string()]),
     id:         z.string(),
     memberId:   z.string().nullable().optional(),
     client:     z.object({ name: z.string() }),
@@ -26,7 +27,8 @@ export const CalendarBookingSchema = BookingSchema.pick({
 
 // ── toDateKey ────────────────────────────────────────────────────────────────
 
-export function toDateKey(date: Date): string {
+export function toDateKey(value: Date | string): string {
+    const date = value instanceof Date ? value : new Date(value);
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, "0");
     const d = String(date.getDate()).padStart(2, "0");
