@@ -51,16 +51,29 @@ export default function Home() {
   useEffect(() => {
     getPortfolio().then(data => setPortfolioItems(data.items.slice(0, 8))).catch(() => {});
     
-    getStudios().then(res => {
+    getStudios().then(async res => {
       if (res.items.length > 0) {
-        // Just check the first studio
-        getStudioBySlug(res.items[0].slug).then(studio => {
-          const anyServiceDiscount = (studio.categories || []).some(c => 
-            (c.services || []).some(s => (s.discountPercentage || 0) > 0)
+        try {
+          const studiosData = await Promise.all(
+            res.items.map(item => getStudioBySlug(item.slug))
           );
-          const anyAddonDiscount = (studio.addons || []).some(a => (a.discountPercentage || 0) > 0);
-          setHasDiscount(anyServiceDiscount || anyAddonDiscount);
-        }).catch((e) => console.error("Error checking discounts:", e));
+          
+          let anyDiscount = false;
+          for (const studio of studiosData) {
+            const anyServiceDiscount = (studio.categories || []).some(c => 
+              (c.services || []).some(s => (s.discountPercentage || 0) > 0)
+            );
+            const anyAddonDiscount = (studio.addons || []).some(a => (a.discountPercentage || 0) > 0);
+            
+            if (anyServiceDiscount || anyAddonDiscount) {
+              anyDiscount = true;
+              break;
+            }
+          }
+          setHasDiscount(anyDiscount);
+        } catch (e) {
+          console.error("Error checking discounts:", e);
+        }
       }
     }).catch(() => {});
   }, []);

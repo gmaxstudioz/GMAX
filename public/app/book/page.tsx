@@ -137,13 +137,22 @@ export default function BookingPage() {
       .then((res) => {
         setStudiosList(res.items);
         if (res.items.length > 0) {
-          getStudioBySlug(res.items[0].slug).then(st => {
-            const anyServiceDisc = (st.categories || []).some(c => 
-              (c.services || []).some(s => (s.discountPercentage || 0) > 0)
-            );
-            const anyAddonDisc = (st.addons || []).some(a => (a.discountPercentage || 0) > 0);
-            setHasDiscount(anyServiceDisc || anyAddonDisc);
-          }).catch((e) => console.error("Error checking discounts:", e));
+          Promise.all(res.items.map(item => getStudioBySlug(item.slug)))
+            .then(studiosData => {
+              let anyDiscount = false;
+              for (const st of studiosData) {
+                const anyServiceDisc = (st.categories || []).some(c => 
+                  (c.services || []).some(s => (s.discountPercentage || 0) > 0)
+                );
+                const anyAddonDisc = (st.addons || []).some(a => (a.discountPercentage || 0) > 0);
+                if (anyServiceDisc || anyAddonDisc) {
+                  anyDiscount = true;
+                  break;
+                }
+              }
+              setHasDiscount(anyDiscount);
+            })
+            .catch((e) => console.error("Error checking discounts:", e));
         }
       })
       .catch((err) => {
