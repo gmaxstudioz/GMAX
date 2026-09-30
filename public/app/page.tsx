@@ -10,7 +10,7 @@ import Magnetic from "@/components/ui/magnetic";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import ServicesSection from "@/components/web/ServicesSection";
-import { getPortfolio, type PortfolioItem } from "@/lib/api";
+import { getPortfolio, getStudios, getStudioBySlug, type PortfolioItem } from "@/lib/api";
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
 
@@ -43,12 +43,26 @@ export default function Home() {
   const worksBtnRef = useRef<HTMLDivElement>(null);
   const [activeWorkIndex, setActiveWorkIndex] = useState<number | null>(null);
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
+  const [hasDiscount, setHasDiscount] = useState<boolean>(false);
 
   const footerText = "We masterfully blur the line between reality and art, crafting cinematic legacies and luxury imagery that command attention and stand the test of time.";
   const footerWords = footerText.split(" ");
 
   useEffect(() => {
     getPortfolio().then(data => setPortfolioItems(data.items.slice(0, 8))).catch(() => {});
+    
+    getStudios().then(res => {
+      if (res.items.length > 0) {
+        // Just check the first studio
+        getStudioBySlug(res.items[0].slug).then(studio => {
+          const anyServiceDiscount = studio.categories.some(c => 
+            c.services.some(s => (s.discountPercentage || 0) > 0)
+          );
+          const anyAddonDiscount = studio.addons.some(a => (a.discountPercentage || 0) > 0);
+          setHasDiscount(anyServiceDiscount || anyAddonDiscount);
+        }).catch(() => {});
+      }
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -212,6 +226,11 @@ export default function Home() {
             ))}
 
             <div className="relative z-10 flex flex-col items-center justify-center h-screen text-center mt-[-20vh]">
+                {hasDiscount && (
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 text-primary border border-primary/30 w-max mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        <span className="font-bold tracking-wider text-sm uppercase">Special Discounts Available</span>
+                    </div>
+                )}
                 <div className="flex items-center justify-center gap-6 md:gap-12">
                     <div className="w-4 h-4 md:w-8 md:h-8 rounded-full bg-primary"></div>
                     <h1 className="font-extrabold font-heading text-9xl text-center">GMAX</h1>
