@@ -1,7 +1,9 @@
 "use server";
 
 import z from "zod";
-import { prisma } from "../prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { and, eq, gte, lte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { CalendarBookingSchema } from "../schemas/calendar";
 import { requireStudioMember, requireBookingAccess } from "./with-auth";
@@ -15,12 +17,13 @@ export async function getBookingsPerMonth(studioId: string, year: number, month:
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0, 23, 59, 59);
 
-    const rawBookings = await prisma.booking.findMany({
-        where: {
-            studioId,
-            bookingDate: { gte: firstDay, lte: lastDay },
-        },
-        select: {
+    const rawBookings = await db.query.booking.findMany({
+        where: and(
+            eq(schema.booking.studioId, studioId),
+            gte(schema.booking.bookingDate, firstDay.toISOString()),
+            lte(schema.booking.bookingDate, lastDay.toISOString())
+        ),
+        columns: {
             id: true,
             bookingDate: true,
             sessionCount: true,
@@ -33,8 +36,10 @@ export async function getBookingsPerMonth(studioId: string, year: number, month:
             clientId: true,
             createdBy: true,
             memberId: true,
-            client: { select: { name: true } },
-            service: { select: { name: true } },
+        },
+        with: {
+            client: { columns: { name: true } },
+            service: { columns: { name: true } },
         },
     });
 
@@ -51,10 +56,9 @@ export async function moveBooking(bookingId: string, newDateKey: string) {
 
     const newDate = new Date(Date.UTC(y, m - 1, d));
 
-    await prisma.booking.update({
-        where: { id: bookingId },
-        data: { bookingDate: newDate },
-    });
+    await db.update(schema.booking)
+        .set({ bookingDate: newDate.toISOString() })
+        .where(eq(schema.booking.id, bookingId));
 
     revalidatePath("/studios", "layout");
 }

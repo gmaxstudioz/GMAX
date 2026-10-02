@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq } from "drizzle-orm";
 
 export async function POST(req: Request) {
     try {
@@ -22,14 +24,17 @@ export async function POST(req: Request) {
             notificationStatus = "FAILED";
         }
 
-        const notification = await prisma.notification.update({
-            where: { providerId: message_id },
-            data: { status: notificationStatus },
+        await db.update(schema.notification)
+            .set({ status: notificationStatus })
+            .where(eq(schema.notification.providerId, message_id));
+
+        const notification = await db.query.notification.findFirst({
+            where: eq(schema.notification.providerId, message_id)
         });
 
         console.log(`[Termii Webhook] Updated notification ${message_id} to ${notificationStatus}`);
 
-        return NextResponse.json({ success: true, notificationId: notification.id });
+        return NextResponse.json({ success: true, notificationId: notification?.id });
     } catch (error) {
         console.error("[Termii Webhook] Error processing webhook:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

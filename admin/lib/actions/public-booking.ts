@@ -1,6 +1,8 @@
 "use server";
 
-import { prisma } from "../prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, and, ilike, inArray, gte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
 
@@ -38,12 +40,12 @@ function generateReceiptNumber(): string {
 
 export async function checkClientName(studioId: string, name: string) {
     try {
-        const existing = await prisma.client.findFirst({
-            where: {
-                studioId,
-                name: { equals: name, mode: "insensitive" },
-            },
-            select: { id: true, name: true, phone: true },
+        const existing = await db.query.client.findFirst({
+            where: and(
+                eq(schema.client.studioId, studioId),
+                ilike(schema.client.name, name)
+            ),
+            columns: { id: true, name: true, phone: true }
         });
 
         if (existing) {
@@ -88,23 +90,24 @@ export async function createPublicBooking(data: {
     notes?: string;
 }) {
     try {
-        const studio = await prisma.studio.findUnique({
-            where: { id: data.studioId },
-            include: { members: true },
+        const studio = await db.query.studio.findFirst({
+            where: eq(schema.studio.id, data.studioId),
+            with: { members: true },
         });
         if (!studio) return { status: "error", message: "Studio not found" };
 
         // Check for an existing PENDING booking for the same client+service+date
         // created in the last 5 minutes to catch double-submits and basic bots.
         if (data.existingClientId) {
-            const recentDuplicate = await prisma.booking.findFirst({
-                where: {
-                    studioId: data.studioId,
-                    clientId: data.existingClientId,
-                    serviceId: data.serviceId,
-                    bookingStatus: "PENDING",
-                    createdAt: { gte: new Date(Date.now() - 5 * 60 * 1000) },
-                },
+            const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+            const recentDuplicate = await db.query.booking.findFirst({
+                where: and(
+                    eq(schema.booking.studioId, data.studioId),
+                    eq(schema.booking.clientId, data.existingClientId),
+                    eq(schema.booking.serviceId, data.serviceId),
+                    eq(schema.booking.bookingStatus, "PENDING"),
+                    gte(schema.booking.createdAt, fiveMinsAgo)
+                )
             });
 
             if (recentDuplicate) {
@@ -119,15 +122,15 @@ export async function createPublicBooking(data: {
         let clientId = data.existingClientId;
 
         if (!clientId) {
-            const client = await prisma.client.create({
-                data: {
-                    name: data.clientName,
-                    phone: data.clientPhone.trim(),
-                    email: data.clientEmail || null,
-                    type: "regular",
-                    studioId: data.studioId,
-                },
-            });
+            const client = await db.insert(schema.client).values({
+                id: uuidv4(),
+                name: data.clientName,
+                phone: data.clientPhone.trim(),
+                email: data.clientEmail || null,
+                type: "regular",
+                studioId: data.studioId,
+            }).returning().then(res => res[0]);
+            
             clientId = client.id;
         }
 
@@ -139,12 +142,15 @@ export async function createPublicBooking(data: {
         const [y, m, d] = data.bookingDate.split("-").map(Number);
         const bookingDateUTC = new Date(Date.UTC(y, m - 1, d));
 
-        const service = await prisma.service.findUnique({ where: { id: data.serviceId }, include: { variants: true } });
+        const service = await db.query.service.findFirst({
+            where: eq(schema.service.id, data.serviceId),
+            with: { serviceVariants: true }
+        });
         if (!service) throw new Error("Service not found");
 
         const selectedVariant = data.selectedVariantId 
-            ? service.variants.find((v: any) => v.id === data.selectedVariantId) 
-            : service.variants[0];
+            ? service.serviceVariants.find((v: any) => v.id === data.selectedVariantId) 
+            : service.serviceVariants[0];
             
         if (!selectedVariant) throw new Error("Invalid service variant selected");
 
@@ -154,7 +160,10 @@ export async function createPublicBooking(data: {
             return { addonId: parts[0], variantId: parts[1] };
         });
         const cleanAddonIds = [...new Set(parsedAddons.map(p => p.addonId))];
-        const addonsList = cleanAddonIds.length ? await prisma.service.findMany({ where: { id: { in: cleanAddonIds } }, include: { variants: true } }) : [];
+        const addonsList = cleanAddonIds.length ? await db.query.service.findMany({ 
+            where: inArray(schema.service.id, cleanAddonIds), 
+            with: { serviceVariants: true } 
+        }) : [];
 
         const servicePrice = Number(selectedVariant.basePrice);
         const sessionTotal = servicePrice * data.sessionCount;
@@ -163,7 +172,7 @@ export async function createPublicBooking(data: {
             const addon = addonsList.find((a: any) => a.id === p.addonId);
             if (!addon) throw new Error(`Addon not found: ${p.addonId}`);
             
-            const variant = p.variantId ? addon.variants.find((v: any) => v.id === p.variantId) : addon.variants[0];
+            const variant = p.variantId ? addon.serviceVariants.find((v: any) => v.id === p.variantId) : addon.serviceVariants[0];
             if (!variant) throw new Error(`Invalid variant for addon: ${addon.name}`);
             
             return sum + Number(variant.basePrice);
@@ -171,42 +180,53 @@ export async function createPublicBooking(data: {
         
         const grandTotal = sessionTotal + addonsTotal;
 
-        const booking = await prisma.booking.create({
-            data: {
-                bookingDate: bookingDateUTC,
-                sessionCount: data.sessionCount,
-                notes: data.notes || null,
-                totalAmount: grandTotal,
-                bookingStatus: "PENDING",
-                paymentStatus: "PENDING",
-                deliveryStatus: "PENDING",
-                serviceId: data.serviceId,
-                serviceVariantId: data.selectedVariantId || selectedVariant?.id || null,
-                studioId: data.studioId,
-                clientId,
-                memberId: defaultMember.id,
-                createdBy: defaultMember.userId,
-                addons: cleanAddonIds.length
-                    ? { connect: cleanAddonIds.map((id) => ({ id })) }
-                    : undefined,
-            },
-            include: { client: true },
+        const bookingId = uuidv4();
+        await db.insert(schema.booking).values({
+            id: bookingId,
+            bookingDate: bookingDateUTC.toISOString(),
+            sessionCount: data.sessionCount,
+            notes: data.notes || null,
+            totalAmount: grandTotal.toString(),
+            bookingStatus: "PENDING",
+            paymentStatus: "PENDING",
+            deliveryStatus: "PENDING",
+            serviceId: data.serviceId,
+            serviceVariantId: data.selectedVariantId || selectedVariant?.id || null,
+            studioId: data.studioId,
+            clientId: clientId as string,
+            memberId: defaultMember.id,
+            createdBy: defaultMember.userId,
         });
+
+        if (cleanAddonIds.length > 0) {
+            await db.insert(schema.bookingAddons).values(
+                cleanAddonIds.map(addonId => ({
+                    a: bookingId,
+                    b: addonId
+                }))
+            );
+        }
+
+        const booking = await db.query.booking.findFirst({
+            where: eq(schema.booking.id, bookingId),
+            with: { client: true }
+        });
+
+        if (!booking) throw new Error("Failed to create booking");
 
         const reference = `gmax-pub-${uuidv4().slice(0, 8)}`;
         const receiptNumber = generateReceiptNumber();
 
-        const payment = await prisma.payment.create({
-            data: {
-                amount: grandTotal,
-                method: "TRANSFER",
-                status: "PENDING",
-                paystackReference: reference,
-                receiptNumber,
-                bookingId: booking.id,
-                recordedById: defaultMember.userId,
-            },
-        });
+        const payment = await db.insert(schema.payment).values({
+            id: uuidv4(),
+            amount: grandTotal.toString(),
+            method: "TRANSFER",
+            status: "PENDING",
+            paystackReference: reference,
+            receiptNumber,
+            bookingId: booking.id,
+            recordedById: defaultMember.userId,
+        }).returning().then(res => res[0]);
         
         const clientEmail = data.clientEmail ?? booking.client?.email;
 

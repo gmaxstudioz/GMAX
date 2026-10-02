@@ -1,9 +1,12 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "../auth";
 import { headers } from "next/headers";
+import { v4 as uuidv4 } from "uuid";
 
 async function requireAdmin() {
     const session = await auth.api.getSession({
@@ -12,9 +15,9 @@ async function requireAdmin() {
     if (!session?.user) {
         throw new Error("Unauthorized");
     }
-    const dbUser = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { role: true }
+    const dbUser = await db.query.user.findFirst({
+        where: eq(schema.user.id, session.user.id),
+        columns: { role: true }
     });
     if (dbUser?.role !== "admin") {
         throw new Error("Unauthorized");
@@ -32,17 +35,16 @@ export async function createCourse(data: {
 }) {
     await requireAdmin();
 
-    const course = await prisma.academyCourse.create({
-        data: {
-            title: data.title,
-            description: data.description,
-            price: data.price,
-            duration: data.duration,
-            location: data.location,
-            thumbnail: data.thumbnail,
-            isPublished: data.isPublished ?? false,
-        },
-    });
+    const [course] = await db.insert(schema.academyCourse).values({
+        id: uuidv4(),
+        title: data.title,
+        description: data.description,
+        price: data.price.toString(),
+        duration: data.duration,
+        location: data.location,
+        thumbnail: data.thumbnail,
+        isPublished: data.isPublished ?? false,
+    }).returning();
 
     revalidatePath("/academy");
     return course;
@@ -59,10 +61,15 @@ export async function updateCourse(id: string, data: {
 }) {
     await requireAdmin();
 
-    const course = await prisma.academyCourse.update({
-        where: { id },
-        data,
-    });
+    const updateData: any = { ...data };
+    if (data.price !== undefined) {
+        updateData.price = data.price.toString();
+    }
+
+    const [course] = await db.update(schema.academyCourse)
+        .set(updateData)
+        .where(eq(schema.academyCourse.id, id))
+        .returning();
 
     revalidatePath("/academy");
     return course;
@@ -77,14 +84,14 @@ export async function createBatch(data: {
     endDate: string;
 }) {
     await requireAdmin();
-    const batch = await prisma.academyBatch.create({
-        data: {
-            courseId: data.courseId,
-            name: data.name,
-            startDate: new Date(data.startDate),
-            endDate: new Date(data.endDate),
-        },
-    });
+    const [batch] = await db.insert(schema.academyBatch).values({
+        id: uuidv4(),
+        courseId: data.courseId,
+        name: data.name,
+        startDate: new Date(data.startDate).toISOString(),
+        endDate: new Date(data.endDate).toISOString(),
+    }).returning();
+    
     revalidatePath("/academy");
     return batch;
 }
@@ -95,27 +102,30 @@ export async function updateBatch(id: string, data: {
     endDate?: string;
 }) {
     await requireAdmin();
-    const batch = await prisma.academyBatch.update({
-        where: { id },
-        data: {
-            name: data.name,
-            ...(data.startDate && { startDate: new Date(data.startDate) }),
-            ...(data.endDate && { endDate: new Date(data.endDate) }),
-        },
-    });
+    
+    const updateData: any = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.startDate !== undefined) updateData.startDate = new Date(data.startDate).toISOString();
+    if (data.endDate !== undefined) updateData.endDate = new Date(data.endDate).toISOString();
+
+    const [batch] = await db.update(schema.academyBatch)
+        .set(updateData)
+        .where(eq(schema.academyBatch.id, id))
+        .returning();
+        
     revalidatePath("/academy");
     return batch;
 }
 
 export async function deleteBatch(id: string) {
     await requireAdmin();
-    await prisma.academyBatch.delete({ where: { id } });
+    await db.delete(schema.academyBatch).where(eq(schema.academyBatch.id, id));
     revalidatePath("/academy");
 }
 
 export async function deleteCourse(id: string) {
     await requireAdmin();
-    await prisma.academyCourse.delete({ where: { id } });
+    await db.delete(schema.academyCourse).where(eq(schema.academyCourse.id, id));
     revalidatePath("/academy");
 }
 
@@ -127,14 +137,13 @@ export async function createModule(data: {
 }) {
     await requireAdmin();
 
-    const newModule = await prisma.academyModule.create({
-        data: {
-            courseId: data.courseId,
-            title: data.title,
-            description: data.description,
-            sortOrder: data.sortOrder ?? 0,
-        },
-    });
+    const [newModule] = await db.insert(schema.academyModule).values({
+        id: uuidv4(),
+        courseId: data.courseId,
+        title: data.title,
+        description: data.description,
+        sortOrder: data.sortOrder ?? 0,
+    }).returning();
 
     revalidatePath("/academy");
     return newModule;
@@ -147,10 +156,10 @@ export async function updateModule(id: string, data: {
 }) {
     await requireAdmin();
 
-    const updated = await prisma.academyModule.update({
-        where: { id },
-        data,
-    });
+    const [updated] = await db.update(schema.academyModule)
+        .set(data)
+        .where(eq(schema.academyModule.id, id))
+        .returning();
 
     revalidatePath("/academy");
     return updated;
@@ -158,6 +167,6 @@ export async function updateModule(id: string, data: {
 
 export async function deleteModule(id: string) {
     await requireAdmin();
-    await prisma.academyModule.delete({ where: { id } });
+    await db.delete(schema.academyModule).where(eq(schema.academyModule.id, id));
     revalidatePath("/academy");
 }

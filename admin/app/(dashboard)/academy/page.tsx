@@ -1,5 +1,7 @@
 import { Metadata } from "next";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq } from "drizzle-orm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AcademyCoursesTable } from "./_components/AcademyCoursesTable";
@@ -20,9 +22,9 @@ export default async function AcademyPage() {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) redirect("/auth/login");
 
-    const members = await prisma.member.findMany({
-        where: { userId: session.user.id },
-        select: { role: true }
+    const members = await db.query.member.findMany({
+        where: eq(schema.member.userId, session.user.id),
+        columns: { role: true }
     });
     
     const adminRoles = ["owner", "developer"];
@@ -32,25 +34,39 @@ export default async function AcademyPage() {
     }
 
     // Fetch courses with their module count and student count
-    const courses = await prisma.academyCourse.findMany({
-        include: {
-            _count: {
-                select: { modules: true, students: true }
+    const drizzleCourses = await db.query.academyCourse.findMany({
+        with: {
+            academyModules: {
+                orderBy: (modules, { asc }) => [asc(modules.sortOrder)]
             },
-            modules: {
-                orderBy: { sortOrder: "asc" }
+            academyBatches: {
+                orderBy: (batches, { asc }) => [asc(batches.startDate)]
             },
-            batches: {
-                orderBy: { startDate: "asc" }
-            }
+            academyStudents: true
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: (courses, { desc }) => [desc(courses.createdAt)],
     });
 
-    const students = await prisma.academyStudent.findMany({
-        include: { course: true, batch: true },
-        orderBy: { createdAt: "desc" },
+    const courses = drizzleCourses.map((c: any) => ({
+        ...c,
+        modules: c.academyModules,
+        batches: c.academyBatches,
+        _count: {
+            modules: c.academyModules?.length || 0,
+            students: c.academyStudents?.length || 0
+        }
+    }));
+
+    const studentsRaw = await db.query.academyStudent.findMany({
+        with: { academyCourse: true, academyBatch: true },
+        orderBy: (students, { desc }) => [desc(students.createdAt)],
     });
+
+    const students = studentsRaw.map((s: any) => ({
+        ...s,
+        course: s.academyCourse,
+        batch: s.academyBatch
+    }));
 
     // Calculate metrics
     const totalStudents = students.filter((s: any) => s.paymentStatus === "SUCCESS").length;
@@ -112,7 +128,7 @@ export default async function AcademyPage() {
                     <AcademyCoursesTable courses={courses.map((c: any) => ({...c, price: Number(c.price)}))} />
                 </TabsContent>
                 <TabsContent value="students" className="space-y-4">
-                    <AcademyStudentsTable students={students.map((s: any) => ({...s, amountPaid: Number(s.amountPaid), course: { ...s.course, price: Number(s.course.price) }}))} />
+                    <AcademyStudentsTable students={students.map((s: any) => ({...s, amountPaid: Number(s.amountPaid), course: { ...s.course, price: Number(s.course?.price) }}))} />
                 </TabsContent>
             </Tabs>
         </div>

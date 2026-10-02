@@ -1,4 +1,6 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, and, gte, lte, asc } from "drizzle-orm";
 import type { Metadata } from "next";
 import { format, parseISO, startOfDay, endOfDay } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,11 +44,11 @@ export default async function StudioDailyBookingsPage({ params, searchParams }: 
     const end = endOfDay(targetDate);
 
     // Fetch the studio to confirm it exists and get its ID
-    const studio = await prisma.studio.findUnique({
-        where: { slug },
-        include: {
+    const studio = await db.query.studio.findFirst({
+        where: eq(schema.studio.slug, slug),
+        with: {
             members: {
-                include: {
+                with: {
                     user: true
                 }
             }
@@ -79,30 +81,26 @@ export default async function StudioDailyBookingsPage({ params, searchParams }: 
     }));
 
     // Fetch bookings for that day
-    const dailyBookings = await prisma.booking.findMany({
-        where: {
-            studioId: studio.id,
-            bookingDate: {
-                gte: start,
-                lte: end,
-            }
-        },
-        include: {
+    const dailyBookings = await db.query.booking.findMany({
+        where: and(
+            eq(schema.booking.studioId, studio.id),
+            gte(schema.booking.bookingDate, start.toISOString()),
+            lte(schema.booking.bookingDate, end.toISOString())
+        ),
+        with: {
             client: true,
             service: {
-                include: {
+                with: {
                     studioSession: true
                 }
             },
             member: {
-                include: {
+                with: {
                     user: true
                 }
             }
         },
-        orderBy: {
-            bookingDate: 'asc'
-        }
+        orderBy: [asc(schema.booking.bookingDate)]
     });
 
     // Calculate total consumed minutes
@@ -112,9 +110,9 @@ export default async function StudioDailyBookingsPage({ params, searchParams }: 
     }, 0);
 
     // Fetch all services for this studio to calculate possible slots
-    const studioSessions = await prisma.studio.findUnique({
-        where: { id: studio.id },
-        include: { 
+    const studioSessions = await db.query.studio.findFirst({
+        where: eq(schema.studio.id, studio.id),
+        with: { 
             studioSessions: true 
         }
     });

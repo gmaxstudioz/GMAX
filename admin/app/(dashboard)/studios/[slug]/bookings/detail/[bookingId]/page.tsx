@@ -1,4 +1,6 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, and } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import type { Metadata } from "next";
@@ -27,9 +29,9 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Camera, Download, Upload } from "@hugeicons/core-free-icons";
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { bookingId } = await params;
-    const booking = await prisma.booking.findUnique({
-        where: { id: bookingId },
-        include: { client: true, service: true },
+    const booking = await db.query.booking.findFirst({
+        where: eq(schema.booking.id, bookingId),
+        with: { client: true, service: true },
     });
 
     return {
@@ -86,16 +88,16 @@ export default async function BookingDetailPage({ params }: Props) {
     const session = await auth.api.getSession({ headers: await headers() });
 
     // Verify studio exists
-    const studio = await prisma.studio.findUnique({
-        where: { slug },
-        select: { id: true, name: true, slug: true },
+    const studio = await db.query.studio.findFirst({
+        where: eq(schema.studio.slug, slug),
+        columns: { id: true, name: true, slug: true },
     });
     if (!studio) return notFound();
 
     // Get current user's role in this studio
     const currentMember = session?.user
-        ? await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: studio.id },
+        ? await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, studio.id)),
         })
         : null;
         
@@ -106,28 +108,28 @@ export default async function BookingDetailPage({ params }: Props) {
     const canViewFinancials = ["owner", "admin", "manager", "receptionist", "developer"].includes(currentMember.role);
     const canDeliver = ["owner", "admin", "manager", "developer"].includes(currentMember.role);
 
-    const booking = await prisma.booking.findFirst({
-        where: { id: bookingId, studioId: studio.id },
-        include: {
+    const booking = await db.query.booking.findFirst({
+        where: and(eq(schema.booking.id, bookingId), eq(schema.booking.studioId, studio.id)),
+        with: {
             client: true,
             service: {
-                include: {
+                with: {
                     studioSession: true,
-                    variants: true,
+                    serviceVariants: true,
                 },
             },
             member: {
-                include: { user: true },
+                with: { user: true },
             },
-            creator: true,
+            user: true,
             payments: {
-                orderBy: { paymentDate: "desc" },
+                orderBy: (payments, { desc }) => [desc(payments.paymentDate)],
             },
             photos: {
-                orderBy: { uploadedAt: "desc" },
+                orderBy: (photos, { desc }) => [desc(photos.uploadedAt)],
             },
-            addons: {
-                include: { variants: true },
+            bookingAddons: {
+                with: { service: { with: { serviceVariants: true } } },
             },
         },
     });
@@ -167,21 +169,21 @@ export default async function BookingDetailPage({ params }: Props) {
         paystackReference: p.paystackReference,
     }));
 
-    const studioClients = await prisma.client.findMany({
-        where: { studioId: studio.id },
-        select: { id: true, name: true, phone: true, email: true, image: true, type: true }
+    const studioClients = await db.query.client.findMany({
+        where: eq(schema.client.studioId, studio.id),
+        columns: { id: true, name: true, phone: true, email: true, image: true, type: true }
     });
 
-    const studioServicesRaw = await prisma.service.findMany({
-        where: { studioId: studio.id },
-        include: { variants: { include: { deliverables: true } } }
+    const studioServicesRaw = await db.query.service.findMany({
+        where: eq(schema.service.studioId, studio.id),
+        with: { serviceVariants: { with: { serviceDeliverables: true } } }
     });
 
     const studioServices = studioServicesRaw.map((s: any) => ({
         id: s.id,
         name: s.name,
         isAddon: s.isAddon,
-        variants: s.variants.map((v: any) => ({
+        variants: s.serviceVariants.map((v: any) => ({
             id: v.id,
             basePrice: v.basePrice.toString(),
             maxPrice: v.maxPrice?.toString() ?? null,
@@ -189,7 +191,7 @@ export default async function BookingDetailPage({ params }: Props) {
             serviceId: v.serviceId,
             sessionDurationMins: v.sessionDurationMins,
             logisticsIncluded: v.logisticsIncluded,
-            deliverables: v.deliverables.map((d: any) => ({
+            deliverables: v.serviceDeliverables.map((d: any) => ({
                 id: d.id,
                 label: d.label,
                 quantity: d.quantity ?? undefined,
@@ -199,9 +201,9 @@ export default async function BookingDetailPage({ params }: Props) {
         }))
     }));
 
-    const studioMembers = await prisma.member.findMany({
-        where: { studioId: studio.id },
-        include: { user: { select: { name: true } } }
+    const studioMembers = await db.query.member.findMany({
+        where: eq(schema.member.studioId, studio.id),
+        with: { user: { columns: { name: true } } }
     });
 
     const mappedMembers = studioMembers.map((m: any) => ({

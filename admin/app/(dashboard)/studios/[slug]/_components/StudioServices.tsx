@@ -1,7 +1,6 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Prisma } from "@/lib/generated/prisma/client";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
@@ -21,12 +20,7 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { z } from "zod";
 
-type StudioWithRelations = Prisma.StudioGetPayload<{
-    include: {
-        services: { include: { variants: { include: { deliverables: true } } } },
-        studioSessions: true,
-    }
-}>;
+type StudioWithRelations = any;
 
 const CATEGORIES = ["PHOTOGRAPHY", "VIDEOGRAPHY", "OTHERS"];
 

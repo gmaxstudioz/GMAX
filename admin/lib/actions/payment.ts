@@ -1,7 +1,9 @@
 "use server";
 import { APP_NAME } from "@/lib/constants";
 
-import { prisma } from "../prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, and, or, inArray, desc } from "drizzle-orm";
 import { auth } from "../auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -42,32 +44,27 @@ export async function initializePayment(bookingId: string) {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const booking = await prisma.booking.findUnique({
-            where: { id: bookingId },
-            include: {
+        const booking = await db.query.booking.findFirst({ where: eq(schema.booking.id, bookingId), with: {
                 client: true,
-                service: { include: { variants: true } },
+                service: { with: { serviceVariants: true } },
                 payments: true,
-                addons: { include: { variants: true } },
+                bookingAddons: { with: { service: { with: { serviceVariants: true } } } },
                 studio: true,
-            },
-        });
+            }});
 
         if (!booking) return { status: "error", message: "Booking not found" };
 
         // Verify the caller is a member of this booking's studio
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: booking.studioId },
-        });
+        const member = await db.query.member.findFirst({ where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId)) });
         if (!member) return { status: "error", message: "Unauthorized access to this booking" };
 
         // Calculate balance due
-        const servicePrice = Number(booking.service?.variants?.find((v: any) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.variants?.[0]?.basePrice ?? 0);
+        const servicePrice = Number(booking.service?.serviceVariants?.find((v: any) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.serviceVariants?.[0]?.basePrice ?? 0);
         const sessionTotal = servicePrice * booking.sessionCount;
-        const addonsTotal = booking.addons.reduce((sum: any, a: any) => {
+        const addonsTotal = (booking.bookingAddons || []).reduce((sum: any, a: any) => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const variantId = (a as any).addonVariantId;
-            const variant = variantId ? a.variants?.find((v: any) => v.id === variantId) : a.variants?.[0];
+            const addonService = (a as any).service || a; const variantId = (addonService as any).addonVariantId;
+            const variant = variantId ? addonService.serviceVariants?.find((v: any) => v.id === variantId) : addonService.serviceVariants?.[0];
             return sum + Number(variant?.basePrice ?? 0);
         }, 0);
         const grandTotal = booking.totalAmount != null ? Number(booking.totalAmount) : (sessionTotal + addonsTotal);
@@ -86,17 +83,15 @@ export async function initializePayment(bookingId: string) {
         const receiptNumber = generateReceiptNumber();
 
         // Create a pending Payment record
-        const payment = await prisma.payment.create({
-            data: {
-                amount: balanceDue,
+        const payment = await db.insert(schema.payment).values({ id: uuidv4(), 
+                amount: balanceDue.toString(),
                 method: "TRANSFER",
                 status: "PENDING",
                 paystackReference: reference,
                 receiptNumber,
                 bookingId: booking.id,
                 recordedById: session.user.id,
-            },
-        });
+             }).returning().then(res => res[0]);
 
         // Paystack requires a real email — fall back only as a last resort and
         // flag clearly in logs so the team knows a receipt won't be delivered.
@@ -183,14 +178,11 @@ export async function verifyPayment(reference: string) {
             return { status: "error", message: "Payment not confirmed by Paystack" };
         }
 
-        const payment = await prisma.payment.findFirst({
-            where: { paystackReference: reference },
-            include: {
+        const payment = await db.query.payment.findFirst({ where: eq(schema.payment.paystackReference, reference), with: {
                 booking: {
-                    include: { payments: true, service: { include: { variants: true } }, addons: { include: { variants: true } } },
+                    with: { payments: true, service: { with: { serviceVariants: true } }, bookingAddons: { with: { service: { with: { serviceVariants: true } } } } },
                 },
-            },
-        });
+            }});
 
         if (!payment) return { status: "error", message: "Payment record not found" };
 
@@ -218,34 +210,29 @@ export async function verifyPayment(reference: string) {
         // Atomic transaction — update payment and booking status together.
         // All reads within this block see a consistent snapshot; concurrent
         // transactions targeting the same booking row will serialize correctly.
-        await prisma.$transaction(async (tx: any) => {
+        await db.transaction(async (tx: any) => {
             // Step 1: Mark this payment as PAID
-            await tx.payment.update({
-                where: { id: payment.id },
-                data: {
+            await tx.update(schema.payment).set({
                     status: "PAID",
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     paystackResponse: paystackRes.data as any,
-                },
-            });
+                }).where(eq(schema.payment.id, payment.id));
 
             if (!payment.bookingId) return;
 
             // Step 2: Re-read ALL payments for this booking within the transaction.
             // The payment updated above will already show PAID in this read.
-            const allPayments = await tx.payment.findMany({
-                where: { bookingId: payment.bookingId },
-            });
+            const allPayments = await tx.query.payment.findMany({ where: eq(schema.payment.bookingId, payment.bookingId) });
 
-            const booking = payment.booking;
+            const booking = (payment as any).booking;
             if (!booking) return;
 
-            const servicePrice = Number(booking.service?.variants?.find((v: any) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.variants?.[0]?.basePrice ?? 0);
+            const servicePrice = Number(booking.service?.serviceVariants?.find((v: any) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.serviceVariants?.[0]?.basePrice ?? 0);
             const sessionTotal = servicePrice * booking.sessionCount;
-            const addonsTotal = booking.addons.reduce((sum: any, a: any) => {
+            const addonsTotal = (booking.bookingAddons || []).reduce((sum: any, a: any) => {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const variantId = (a as any).addonVariantId;
-                const variant = variantId ? a.variants?.find((v: any) => v.id === variantId) : a.variants?.[0];
+                const addonService = (a as any).service || a; const variantId = (addonService as any).addonVariantId;
+                const variant = variantId ? addonService.serviceVariants?.find((v: any) => v.id === variantId) : addonService.serviceVariants?.[0];
                 return sum + Number(variant?.basePrice ?? 0);
             }, 0);
             const grandTotal = booking.totalAmount != null ? Number(booking.totalAmount) : (sessionTotal + addonsTotal);
@@ -258,10 +245,7 @@ export async function verifyPayment(reference: string) {
             const newPaymentStatus = totalPaid >= grandTotal ? "PAID" : "PARTIALLY_PAID";
 
             // Step 4: Update booking status atomically
-            await tx.booking.update({
-                where: { id: payment.bookingId },
-                data: { paymentStatus: newPaymentStatus },
-            });
+            await tx.update(schema.booking).set({ paymentStatus: newPaymentStatus }).where(eq(schema.booking.id, payment.bookingId));
         });
 
         revalidatePath("/studios", "layout");
@@ -279,28 +263,23 @@ export async function markAsPaidManually(bookingId: string) {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const booking = await prisma.booking.findUnique({
-            where: { id: bookingId },
-            include: {
+        const booking = await db.query.booking.findFirst({ where: eq(schema.booking.id, bookingId), with: {
                 payments: true,
-                service: { include: { variants: true } },
-                addons: { include: { variants: true } },
-            },
-        });
+                service: { with: { serviceVariants: true } },
+                bookingAddons: { with: { service: { with: { serviceVariants: true } } } },
+            }});
 
         if (!booking) return { status: "error", message: "Booking not found" };
 
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: booking.studioId },
-        });
+        const member = await db.query.member.findFirst({ where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId)) });
         if (!member) return { status: "error", message: "Unauthorized access to this booking" };
 
-        const servicePrice = Number(booking.service?.variants?.find((v: any) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.variants?.[0]?.basePrice ?? 0);
+        const servicePrice = Number(booking.service?.serviceVariants?.find((v: any) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.serviceVariants?.[0]?.basePrice ?? 0);
         const sessionTotal = servicePrice * booking.sessionCount;
-        const addonsTotal = booking.addons.reduce((sum: any, a: any) => {
+        const addonsTotal = (booking.bookingAddons || []).reduce((sum: any, a: any) => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const variantId = (a as any).addonVariantId;
-            const variant = variantId ? a.variants?.find((v: any) => v.id === variantId) : a.variants?.[0];
+            const addonService = (a as any).service || a; const variantId = (addonService as any).addonVariantId;
+            const variant = variantId ? addonService.serviceVariants?.find((v: any) => v.id === variantId) : addonService.serviceVariants?.[0];
             return sum + Number(variant?.basePrice ?? 0);
         }, 0);
         const grandTotal = booking.totalAmount != null ? Number(booking.totalAmount) : (sessionTotal + addonsTotal);
@@ -317,33 +296,26 @@ export async function markAsPaidManually(bookingId: string) {
 
         const receiptNumber = generateReceiptNumber();
 
-        await prisma.$transaction(async (tx: any) => {
+        await db.transaction(async (tx: any) => {
             // Create a manual PAID payment
-            await tx.payment.create({
-                data: {
+            await tx.insert(schema.payment).values({ id: uuidv4(), 
                     amount: balanceDue,
                     method: "CASH", // Default to CASH for manual entry, could be TRANSFER too
                     status: "PAID",
                     receiptNumber,
                     bookingId: booking.id,
                     recordedById: session.user.id,
-                },
-            });
+                 }).returning();
 
             // Re-calculate and update booking
-            const allPayments = await tx.payment.findMany({
-                where: { bookingId: booking.id },
-            });
+            const allPayments = await tx.query.payment.findMany({ where: eq(schema.payment.bookingId, booking.id) });
             const newTotalPaid = allPayments
                 .filter((p: any) => p.status === "PAID")
                 .reduce((sum: any, p: any) => sum + Number(p.amount), 0);
             
             const newPaymentStatus = newTotalPaid >= grandTotal ? "PAID" : "PARTIALLY_PAID";
 
-            await tx.booking.update({
-                where: { id: booking.id },
-                data: { paymentStatus: newPaymentStatus },
-            });
+            await tx.update(schema.booking).set({ paymentStatus: newPaymentStatus }).where(eq(schema.booking.id, booking.id));
         });
 
         revalidatePath("/studios", "layout");

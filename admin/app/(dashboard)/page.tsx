@@ -4,9 +4,9 @@ import { DataTable } from "@/components/web/data-table"
 import { SectionCards } from "@/components/web/section-cards"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
-import { prisma } from "@/lib/prisma"
-
-
+import { db } from "@/lib/db"
+import * as schema from "@/lib/schema"
+import { eq, inArray, and, not, gte, desc } from "drizzle-orm"
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -24,9 +24,9 @@ export default async function Page() {
     redirect("/auth/login");
   }
 
-  const members = await prisma.member.findMany({
-    where: { userId: session.user.id },
-    select: { role: true, studioId: true }
+  const members = await db.query.member.findMany({
+    where: eq(schema.member.userId, session.user.id),
+    columns: { role: true, studioId: true }
   });
   
   const adminRoles = ["owner", "developer"];
@@ -43,7 +43,9 @@ export default async function Page() {
 
     if (members.length > 0) {
       const primaryStudioId = members[0].studioId;
-      const studio = await prisma.studio.findUnique({ where: { id: primaryStudioId } });
+      const studio = await db.query.studio.findFirst({
+        where: eq(schema.studio.id, primaryStudioId)
+      });
       if (studio) {
         redirect(`/studios/${studio.slug}`);
       }
@@ -61,10 +63,16 @@ export default async function Page() {
   const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
 
   // Fetch all bookings for metrics (exclude cancelled ones from positive metrics if desired, but let's include all non-cancelled)
-  const allRelevantBookings = await prisma.booking.findMany({
-    where: { studioId: { in: studioIds }, bookingStatus: { not: "CANCELLED" } },
-    include: { client: true, service: true }
-  });
+  let allRelevantBookings: any[] = [];
+  if (studioIds.length > 0) {
+    allRelevantBookings = await db.query.booking.findMany({
+      where: and(
+        inArray(schema.booking.studioId, studioIds),
+        not(eq(schema.booking.bookingStatus, "CANCELLED"))
+      ),
+      with: { client: true, service: true }
+    });
+  }
 
   const recentBookings = allRelevantBookings.filter((b: any) => b.createdAt >= thirtyDaysAgo);
   const previousBookings = allRelevantBookings.filter((b: any) => b.createdAt >= sixtyDaysAgo && b.createdAt < thirtyDaysAgo);
@@ -120,12 +128,15 @@ export default async function Page() {
       .sort((a, b) => a.date.localeCompare(b.date));
 
   // Recent Bookings for Data Table
-  const rawRecentBookings = await prisma.booking.findMany({
-      where: { studioId: { in: studioIds } },
-      orderBy: { createdAt: 'desc' },
-      take: 10,
-      include: { client: true, service: true }
-  });
+  let rawRecentBookings: any[] = [];
+  if (studioIds.length > 0) {
+    rawRecentBookings = await db.query.booking.findMany({
+      where: inArray(schema.booking.studioId, studioIds),
+      orderBy: [desc(schema.booking.createdAt)],
+      limit: 10,
+      with: { client: true, service: true }
+    });
+  }
 
   const tableData = rawRecentBookings.map((b: any) => ({
       id: b.id,

@@ -1,6 +1,9 @@
 "use server"
 
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, desc, asc } from "drizzle-orm";
+import { v4 as uuidv4 } from "uuid";
 import { revalidatePath } from "next/cache";
 import { requireSession } from "./with-auth";
 
@@ -11,8 +14,8 @@ export async function fetchPortfolioItems() {
     }
 
     try {
-        const items = await prisma.portfolioItem.findMany({
-            orderBy: { sortOrder: "asc" },
+        const items = await db.query.portfolioItem.findMany({
+            orderBy: [asc(schema.portfolioItem.sortOrder)],
         });
         return { status: "success" as const, data: items };
     } catch (error) {
@@ -37,16 +40,15 @@ export async function createPortfolioItem(data: {
     }
 
     try {
-        const item = await prisma.$transaction(async (tx: any) => {
-            const lastItem = await tx.portfolioItem.findFirst({
-                orderBy: { sortOrder: 'desc' },
-                select: { sortOrder: true }
+        const item = await db.transaction(async (tx: any) => {
+            const lastItem = await tx.query.portfolioItem.findFirst({
+                orderBy: [desc(schema.portfolioItem.sortOrder)],
+                columns: { sortOrder: true }
             });
 
             const sortOrder = (lastItem?.sortOrder ?? 0) + 1;
 
-            return await tx.portfolioItem.create({
-                data: {
+            return await tx.insert(schema.portfolioItem).values({ id: uuidv4(), 
                     title: data.title || null,
                     category: data.category,
                     r2Key: data.r2Key,
@@ -56,8 +58,7 @@ export async function createPortfolioItem(data: {
                     thumbnailKey: data.thumbnailKey || null,
                     isPublished: data.isPublished ?? true,
                     sortOrder,
-                },
-            });
+                 }).returning().then((res: any[]) => res[0]);
         });
 
         revalidatePath("/portfolio");
@@ -83,15 +84,12 @@ export async function updatePortfolioItem(
     }
 
     try {
-        const item = await prisma.portfolioItem.update({
-            where: { id },
-            data: {
+        const item = await db.update(schema.portfolioItem).set({
                 ...(data.title !== undefined && { title: data.title || null }),
                 ...(data.category !== undefined && { category: data.category }),
                 ...(data.isPublished !== undefined && { isPublished: data.isPublished }),
                 ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
-            },
-        });
+            }).where(eq(schema.portfolioItem.id, id)).returning().then((res: any[]) => res[0]);
 
         revalidatePath("/portfolio");
         return { status: "success" as const, data: item };
@@ -108,7 +106,7 @@ export async function deletePortfolioItem(id: string) {
     }
 
     try {
-        await prisma.portfolioItem.delete({ where: { id } });
+        await db.delete(schema.portfolioItem).where(eq(schema.portfolioItem.id, id));
         revalidatePath("/portfolio");
         return { status: "success" as const, message: "Deleted successfully" };
     } catch (error) {
@@ -124,10 +122,7 @@ export async function togglePortfolioPublish(id: string, isPublished: boolean) {
     }
 
     try {
-        await prisma.portfolioItem.update({
-            where: { id },
-            data: { isPublished },
-        });
+        await db.update(schema.portfolioItem).set({ isPublished }).where(eq(schema.portfolioItem.id, id)).returning().then((res: any[]) => res[0]);
         revalidatePath("/portfolio");
         return { status: "success" as const };
     } catch (error) {

@@ -1,6 +1,9 @@
 "use server"
 
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, or, ilike } from "drizzle-orm";
+import { v4 as uuidv4 } from "uuid";
 import { revalidatePath } from "next/cache";
 import { requireSession } from "./with-auth";
 
@@ -11,14 +14,21 @@ export async function getProductCategories() {
     }
 
     try {
-        const categories = await prisma.productCategory.findMany({
-            orderBy: { name: "asc" },
-            include: {
-                _count: { select: { products: true } },
+        const categories = await db.query.productCategory.findMany({
+            orderBy: (productCategory, { asc }) => [asc(productCategory.name)],
+            with: {
+                products: {
+                    columns: { id: true },
+                },
             },
         });
 
-        return { status: "success" as const, data: categories };
+        const mapped = categories.map(c => ({
+            ...c,
+            _count: { products: c.products.length }
+        }));
+
+        return { status: "success" as const, data: mapped as any };
     } catch (error) {
         console.error("Failed to fetch product categories:", error);
         return { status: "error" as const, message: "Failed to fetch categories" };
@@ -38,22 +48,22 @@ export async function createProductCategory(data: { name: string }) {
             .replace(/[^a-z0-9]+/g, "-")
             .replace(/(^-|-$)/g, "");
 
-        const existing = await prisma.productCategory.findFirst({
-            where: {
-                OR: [
-                    { name: { equals: data.name, mode: "insensitive" } },
-                    { slug },
-                ],
-            },
+        const existing = await db.query.productCategory.findFirst({
+            where: or(
+                ilike(schema.productCategory.name, data.name),
+                eq(schema.productCategory.slug, slug)
+            )
         });
 
         if (existing) {
             return { status: "error" as const, message: "A category with this name already exists" };
         }
 
-        const category = await prisma.productCategory.create({
-            data: { name: data.name, slug },
-        });
+        const category = await db.insert(schema.productCategory).values({
+            id: uuidv4(),
+            name: data.name,
+            slug
+        }).returning().then(res => res[0]);
 
         revalidatePath("/store");
         return { status: "success" as const, data: category };
@@ -70,9 +80,7 @@ export async function deleteProductCategory(categoryId: string) {
     }
 
     try {
-        await prisma.productCategory.delete({
-            where: { id: categoryId },
-        });
+        await db.delete(schema.productCategory).where(eq(schema.productCategory.id, categoryId));
 
         revalidatePath("/store");
         return { status: "success" as const, message: "Category deleted" };

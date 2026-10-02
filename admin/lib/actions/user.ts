@@ -1,6 +1,8 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -20,13 +22,16 @@ export async function updateUserProfile(data: z.infer<typeof UpdateProfileSchema
 
     const validatedData = UpdateProfileSchema.parse(data);
 
-    const user = await prisma.user.update({
-        where: { id: session.user.id },
-        data: {
+    await db.update(schema.user)
+        .set({
             name: validatedData.name,
             image: validatedData.image || null,
             phoneNumber: validatedData.phoneNumber || null,
-        },
+        })
+        .where(eq(schema.user.id, session.user.id));
+
+    const user = await db.query.user.findFirst({
+        where: eq(schema.user.id, session.user.id)
     });
 
     revalidatePath("/profile");

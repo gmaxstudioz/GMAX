@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, asc } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect, notFound } from "next/navigation";
@@ -11,9 +13,9 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { productId } = await params;
-    const product = await prisma.product.findUnique({
-        where: { id: productId },
-        select: { title: true },
+    const product = await db.query.product.findFirst({
+        where: eq(schema.product.id, productId),
+        columns: { title: true },
     });
     return { title: product ? `Edit — ${product.title}` : "Edit Product" };
 }
@@ -24,9 +26,9 @@ export default async function EditProductPage({ params }: Props) {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) redirect("/auth/login");
 
-    const members = await prisma.member.findMany({
-        where: { userId: session.user.id },
-        select: { role: true },
+    const members = await db.query.member.findMany({
+        where: eq(schema.member.userId, session.user.id),
+        columns: { role: true },
     });
 
     const adminRoles = ["owner", "developer"];
@@ -34,14 +36,17 @@ export default async function EditProductPage({ params }: Props) {
     if (members.length > 0 && !hasAdminRole) redirect("/my-tasks");
 
     const [product, categories] = await Promise.all([
-        prisma.product.findUnique({
-            where: { id: productId },
-            include: { category: true },
+        db.query.product.findFirst({
+            where: eq(schema.product.id, productId),
+            with: { productCategory: true },
         }),
-        prisma.productCategory.findMany({ orderBy: { name: "asc" } }),
+        db.query.productCategory.findMany({
+            orderBy: [asc(schema.productCategory.name)],
+        }),
     ]);
 
     if (!product) notFound();
+    (product as any).category = (product as any).productCategory;
 
     // Serialize Prisma Decimal objects to plain numbers for Client Components
     const serializedProduct = JSON.parse(JSON.stringify(product, (_key, value) =>

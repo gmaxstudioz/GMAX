@@ -1,4 +1,6 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, and, gte, lte, asc } from "drizzle-orm";
 import type { Metadata } from "next";
 import { format, parseISO, startOfDay, endOfDay } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,43 +55,42 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
         return <div>Unauthorized</div>;
     }
 
-    const myMemberships = await prisma.member.findMany({
-        where: { userId: session.user.id }
+    const myMemberships = await db.query.member.findMany({
+        where: eq(schema.member.userId, session.user.id)
     });
 
     // 1. Fetch bookings with comprehensive relations
-    const dailyBookings = await prisma.booking.findMany({
-        where: {
-            bookingDate: {
-                gte: start,
-                lte: end,
-            }
-        },
-        include: {
+    const dailyBookings = await db.query.booking.findMany({
+        where: and(
+            gte(schema.booking.bookingDate, start.toISOString()),
+            lte(schema.booking.bookingDate, end.toISOString())
+        ),
+        with: {
             client: true,
-            addons: true,
+            bookingAddons: true,
             studio: {
-                include: {
+                with: {
                     members: {
-                        include: { user: { select: { name: true, email: true } } }
+                        with: { user: { columns: { name: true, email: true } } }
                     },
                     clients: {
-                        select: { id: true, name: true, phone: true, email: true, image: true, type: true }
+                        columns: { id: true, name: true, phone: true, email: true, image: true, type: true }
                     },
-                    services: { include: { variants: { include: { deliverables: true } } } }
+                    services: { with: { serviceVariants: { with: { serviceDeliverables: true } } } }
                 }
             },
             service: {
-                include: {
+                with: {
                     studioSession: true
                 }
             }
         },
         orderBy: [
-            { studio: { name: 'asc' } },
-            { bookingDate: 'asc' }
+            asc(schema.booking.studioId), // Simple ordering for DB, will sort by name in memory if needed
+            asc(schema.booking.bookingDate)
         ]
     });
+
 
     // 2. Group bookings by studio and prepare specific lists for UI components
     const groupedBookings = dailyBookings.reduce((acc: any, booking: any) => {
@@ -132,7 +133,7 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
                     studioSessionId: s.studioSessionId,
                     category: s.category,
                     studioId: s.studioId,
-                    variants: s.variants?.map((v: any) => ({
+                    variants: s.serviceVariants?.map((v: any) => ({
                         id: v.id,
                         serviceId: v.serviceId,
                         locationType: v.locationType,
@@ -140,7 +141,7 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
                         maxPrice: v.maxPrice ? Number(v.maxPrice) : undefined,
                         sessionDurationMins: v.sessionDurationMins,
                         logisticsIncluded: v.logisticsIncluded,
-                        deliverables: v.deliverables?.map((d: any) => ({
+                        deliverables: v.serviceDeliverables?.map((d: any) => ({
                             id: d.id,
                             label: d.label,
                             quantity: d.quantity ?? undefined,

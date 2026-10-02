@@ -1,4 +1,6 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, inArray, or, and, notInArray, ilike } from "drizzle-orm";
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -34,56 +36,81 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) redirect("/auth/login");
 
-    const members = await prisma.member.findMany({
-        where: { userId: session.user.id },
-        select: { role: true, studioId: true }
+    const members = await db.query.member.findMany({
+        where: eq(schema.member.userId, session.user.id),
+        columns: { role: true, studioId: true }
     });
     
     const adminRoles = ["owner", "admin", "developer", "manager", "receptionist"];
     const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
     const canReassign = members.some((m: any) => ["owner", "admin", "developer", "manager"].includes(m.role));
 
-    const baseWhere = hasAdminRole 
-        ? { 
-            OR: [
-                { memberId: null, studioId: { in: members.filter((m: any) => adminRoles.includes(m.role)).map((m: any) => m.studioId) } },
-                { member: { userId: session.user.id } }
-            ]
-          }
-        : { member: { userId: session.user.id } };
+    // For Drizzle, we will do the query slightly differently or manually filter if relations are complex.
+    // Wait, Drizzle doesn't have deep ILIKE directly in `findMany` across relation tables easily without manual joins,
+    // but we can query `booking` and just do the base conditions, then filter in memory for search, or do a joined query.
+    // Since this is for tasks, let's just use `db.query.booking.findMany` and fetch, then filter `q` in memory to be safe 
+    // and keep it simple for Drizzle's relational query API.
 
-    const searchFilter = q ? {
-        OR: [
-            { client: { name: { contains: q, mode: 'insensitive' as const } } },
-            { service: { name: { contains: q, mode: 'insensitive' as const } } },
-        ]
-    } : {};
+    const adminStudioIds = members.filter((m: any) => adminRoles.includes(m.role)).map((m: any) => m.studioId);
+    
+    const condition = hasAdminRole
+        ? or(
+            and(
+                eq(schema.booking.memberId, ""), // Drizzle null check or empty check? It's likely a null or empty string, let's just fetch both if possible, actually let's use a function to filter in memory for now to guarantee no errors, or just let Drizzle do it.
+                adminStudioIds.length > 0 ? inArray(schema.booking.studioId, adminStudioIds) : undefined
+            ),
+            inArray(schema.booking.studioId, members.map((m: any) => m.studioId)) // A bit broader, we'll filter in JS to be exactly correct based on memberId.
+        )
+        : undefined; // We will fetch the user's bookings. Wait, `member: { userId: session.user.id }` means we need to find bookings where `memberId` is in the user's member IDs.
+    
+    const userMemberIds = members.map((m: any) => m.id);
 
-    const myBookings = await prisma.booking.findMany({
-        where: {
-            ...baseWhere,
-            ...searchFilter,
-            bookingStatus: {
-                notIn: ["COMPLETED", "CANCELLED"]
-            },
-            deliveryStatus: {
-                notIn: ["DELIVERED"]
-            }
-        },
-        include: {
+    // Let's do a simpler approach: fetch all bookings for studios the user is in, and then filter.
+    const allStudioIds = members.map((m: any) => m.studioId);
+    
+    const allBookings = allStudioIds.length > 0 ? await db.query.booking.findMany({
+        where: and(
+            inArray(schema.booking.studioId, allStudioIds),
+            notInArray(schema.booking.bookingStatus, ["COMPLETED", "CANCELLED"]),
+            notInArray(schema.booking.deliveryStatus, ["DELIVERED"])
+        ),
+        with: {
             client: true,
             service: true,
             studio: {
-                include: {
+                with: {
                     members: {
-                        include: { user: true }
+                        with: { user: true }
                     }
                 }
             }
         },
-        orderBy: {
-            bookingDate: "asc"
+        orderBy: (bookings, { asc }) => [asc(bookings.bookingDate)]
+    }) : [];
+
+    // Memory filter
+    const myBookings = allBookings.filter((b: any) => {
+        // Base where:
+        let matchesBase = false;
+        if (hasAdminRole) {
+            const isUnassignedInAdminStudio = (!b.memberId) && adminStudioIds.includes(b.studioId);
+            const isAssignedToMe = userMemberIds.includes(b.memberId);
+            matchesBase = isUnassignedInAdminStudio || isAssignedToMe;
+        } else {
+            matchesBase = userMemberIds.includes(b.memberId);
         }
+
+        if (!matchesBase) return false;
+
+        // Search filter
+        if (q) {
+            const qLower = q.toLowerCase();
+            const clientMatch = b.client?.name?.toLowerCase().includes(qLower);
+            const serviceMatch = b.service?.name?.toLowerCase().includes(qLower);
+            if (!clientMatch && !serviceMatch) return false;
+        }
+
+        return true;
     });
 
     const title = hasAdminRole ? "Studio Tasks" : "My Tasks";
@@ -165,15 +192,15 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
                                                         bookingId={booking.id} 
                                                         currentMemberId={booking.memberId} 
                                                         members={booking.studio?.members.map((m: any) => {
-                                                            const member = m as { id: string; role: string; studioId: string; createdAt: Date; user: { name: string; email: string; } };
+                                                            const member = m as { id: string; role: string; studioId: string; createdAt: Date | string; user: { name: string; email: string; } };
                                                             return {
                                                                 id: member.id,
                                                                 name: member.user.name,
                                                                 email: member.user.email,
                                                                 role: member.role as MemberRole,
                                                                 studioId: member.studioId,
-                                                                createdAt: member.createdAt.toISOString(),
-                                                                updatedAt: member.createdAt.toISOString()
+                                                                createdAt: typeof member.createdAt === 'string' ? member.createdAt : member.createdAt.toISOString(),
+                                                                updatedAt: typeof member.createdAt === 'string' ? member.createdAt : member.createdAt.toISOString()
                                                             }
                                                         }) || []} 
                                                         disabled={!canReassign}
@@ -221,15 +248,15 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
                                                     bookingId={booking.id} 
                                                     currentMemberId={booking.memberId} 
                                                     members={booking.studio?.members.map((m: any) => {
-                                                        const member = m as { id: string; role: string; studioId: string; createdAt: Date; user: { name: string; email: string; } };
+                                                        const member = m as { id: string; role: string; studioId: string; createdAt: Date | string; user: { name: string; email: string; } };
                                                         return {
                                                             id: member.id,
                                                             name: member.user.name,
                                                             email: member.user.email,
                                                             role: member.role as MemberRole,
                                                             studioId: member.studioId,
-                                                            createdAt: member.createdAt.toISOString(),
-                                                            updatedAt: member.createdAt.toISOString()
+                                                            createdAt: typeof member.createdAt === 'string' ? member.createdAt : member.createdAt.toISOString(),
+                                                            updatedAt: typeof member.createdAt === 'string' ? member.createdAt : member.createdAt.toISOString()
                                                         }
                                                     }) || []} 
                                                     disabled={!canReassign}

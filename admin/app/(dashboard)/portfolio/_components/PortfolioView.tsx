@@ -133,7 +133,7 @@ export function PortfolioView({
             const { data: result, error } = await tryCatch(fetchPortfolioItems());
             if (error) { toast.error("An unexpected error occurred."); return; }
             if (result?.status === "success") {
-                setItems(result.data as PortfolioItemType[]);
+                setItems(result.data as unknown as PortfolioItemType[]);
                 toast.success("Refreshed");
             } else if (result?.status === "error") { toast.error(result.message); }
         });

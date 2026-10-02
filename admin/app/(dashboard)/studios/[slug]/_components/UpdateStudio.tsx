@@ -35,31 +35,12 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { updateStudio } from "@/lib/actions/organization";
 import { createStudioSession, deleteStudioSession } from "@/lib/actions/session";
-import { Prisma } from "@/lib/generated/prisma/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { PlusIcon, Trash } from "lucide-react";
 
-type StudioWithRelations = Prisma.StudioGetPayload<{
-  include: {
-    members: {
-        include: { user: true }
-    },
-    invitations: true,
-    studioSessions: true,
-    clients: {
-        include: {
-            bookings: true
-        }
-    },
-    bookings: {
-      include: {
-        client: true
-      }
-    },
-  }
-}>;
+type StudioWithRelations = any;
 
 interface UpdateStudioProps extends React.ComponentProps<"div"> {
     studioData: StudioWithRelations;

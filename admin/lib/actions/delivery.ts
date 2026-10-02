@@ -1,11 +1,14 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { sendDeliveryEmail, sendDeliverySMS, sendDeliveryWhatsApp } from "@/lib/termii";
 import crypto from "crypto";
 import { auth } from "../auth";
 import { headers } from "next/headers";
+import { v4 as uuidv4 } from "uuid";
 
 export async function deliverBooking(bookingId: string) {
     const session = await auth.api.getSession({
@@ -16,9 +19,9 @@ export async function deliverBooking(bookingId: string) {
         throw new Error("Unauthorized");
     }
 
-    const booking = await prisma.booking.findUnique({
-        where: { id: bookingId },
-        include: {
+    const booking = await db.query.booking.findFirst({
+        where: eq(schema.booking.id, bookingId),
+        with: {
             client: true,
             studio: true,
         },
@@ -28,8 +31,8 @@ export async function deliverBooking(bookingId: string) {
         throw new Error("Booking not found");
     }
 
-    const member = await prisma.member.findFirst({
-        where: { userId: session.user.id, studioId: booking.studioId }
+    const member = await db.query.member.findFirst({
+        where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
     });
 
     if (!member) {
@@ -62,31 +65,27 @@ export async function deliverBooking(bookingId: string) {
 
             try {
                 // Mark as delivered and set access code
-                await prisma.booking.update({
-                    where: { id: bookingId, deliveryStatus: { not: "DELIVERED" } },
-                    data: { 
-                        deliveryStatus: "DELIVERED",
-                        deliveredAt: new Date(),
-                        ...(isNewAccessCode && { accessCode })
-                    },
-                });
+                const updateData: any = { 
+                    deliveryStatus: "DELIVERED",
+                    deliveredAt: new Date().toISOString(),
+                };
+                if (isNewAccessCode) {
+                    updateData.accessCode = accessCode;
+                }
+
+                await db.update(schema.booking)
+                    .set(updateData)
+                    .where(eq(schema.booking.id, bookingId));
 
                 // Update expiresAt for all photos to 5 days from now
-                await prisma.photo.updateMany({
-                    where: { bookingId },
-                    data: {
-                        expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)
-                    }
-                });
+                await db.update(schema.photo)
+                    .set({ expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString() })
+                    .where(eq(schema.photo.bookingId, bookingId));
 
                 updated = true;
             } catch (err: unknown) {
                 const error = err as { code?: string };
-                if (error?.code === 'P2025') {
-                    // Record to update not found. Could mean it was already delivered by a concurrent request.
-                    break;
-                }
-                if (isNewAccessCode && error?.code === 'P2002') {
+                if (error?.code === '23505') { // postgres unique violation is typically 23505
                     attempts++;
                     if (attempts >= maxAttempts) {
                         throw new Error("Failed to generate a unique access code after multiple attempts");
@@ -98,17 +97,17 @@ export async function deliverBooking(bookingId: string) {
         }
     }
 
-    const downloadLink = `${publicDomain}/booking/${bookingId}/deliverables?code=${accessCode}`;
+    const downloadLink = `\${publicDomain}/booking/\${bookingId}/deliverables?code=\${accessCode}`;
 
     const promises = [];
 
     // Email
-    if (booking.client.email) {
+    if (booking.client?.email) {
         promises.push(
             sendDeliveryEmail({
                 email: booking.client.email,
                 clientName: booking.client.name,
-                studioName: booking.studio.name,
+                studioName: booking.studio?.name || "",
                 downloadLink,
                 accessCode: accessCode ?? "",
             })
@@ -116,28 +115,27 @@ export async function deliverBooking(bookingId: string) {
     }
 
     // SMS
-    if (booking.client.phone) {
+    if (booking.client?.phone) {
         const smsRes = await sendDeliverySMS({
             phone: booking.client.phone,
             clientName: booking.client.name,
-            studioName: booking.studio.name,
+            studioName: booking.studio?.name || "",
             downloadLink,
-            accessCode,
+            accessCode: accessCode ?? "",
         }).catch(e => { console.error("Termii Delivery SMS failed", e); return null; });
 
         if (smsRes && smsRes.message_id) {
-            await prisma.notification.create({
-                data: {
-                    type: "PHOTOS_READY",
-                    channel: ["SMS"],
-                    clientPhone: booking.client.phone,
-                    clientEmail: booking.client.email,
-                    clientName: booking.client.name,
-                    message: "Photos are ready for download",
-                    status: "SENT",
-                    providerId: smsRes.message_id,
-                    bookingId: booking.id,
-                }
+            await db.insert(schema.notification).values({
+                id: uuidv4(),
+                type: "PHOTOS_READY",
+                channel: ["SMS"],
+                clientPhone: booking.client.phone,
+                clientEmail: booking.client.email,
+                clientName: booking.client.name,
+                message: "Photos are ready for download",
+                status: "SENT",
+                providerId: smsRes.message_id,
+                bookingId: booking.id,
             }).catch((e: any) => console.error("[Delivery] Failed to save SMS notification:", e));
         }
 
@@ -145,30 +143,29 @@ export async function deliverBooking(bookingId: string) {
             const waRes = await sendDeliveryWhatsApp({
                 phone: booking.client.phone,
                 clientName: booking.client.name,
-                studioName: booking.studio.name,
+                studioName: booking.studio?.name || "",
                 downloadLink,
-                accessCode,
+                accessCode: accessCode ?? "",
             }).catch(e => { console.error("Termii Delivery WhatsApp failed", e); return null; });
 
             if (waRes && waRes.message_id) {
-                await prisma.notification.create({
-                    data: {
-                        type: "PHOTOS_READY",
-                        channel: ["WHATSAPP"],
-                        clientPhone: booking.client.phone,
-                        clientEmail: booking.client.email,
-                        clientName: booking.client.name,
-                        message: "Photos are ready for download",
-                        status: "SENT",
-                        providerId: waRes.message_id,
-                        bookingId: booking.id,
-                    }
+                await db.insert(schema.notification).values({
+                    id: uuidv4(),
+                    type: "PHOTOS_READY",
+                    channel: ["WHATSAPP"],
+                    clientPhone: booking.client.phone,
+                    clientEmail: booking.client.email,
+                    clientName: booking.client.name,
+                    message: "Photos are ready for download",
+                    status: "SENT",
+                    providerId: waRes.message_id,
+                    bookingId: booking.id,
                 }).catch((e: any) => console.error("[Delivery] Failed to save WA notification:", e));
             }
         }
     }
 
-    revalidatePath(`/studios/${booking.studio.slug}/bookings/detail/${bookingId}`);
+    revalidatePath(`/studios/\${booking.studio?.slug}/bookings/detail/\${bookingId}`);
     return { success: true, accessCode };
 }
 
@@ -181,13 +178,12 @@ export async function sendBalanceDueReminder(bookingId: string) {
         throw new Error("Unauthorized");
     }
 
-    const booking = await prisma.booking.findUnique({
-        where: { id: bookingId },
-        include: {
+    const booking = await db.query.booking.findFirst({
+        where: eq(schema.booking.id, bookingId),
+        with: {
             client: true,
             studio: true,
             service: true,
-            payments: true,
         },
     });
 
@@ -195,8 +191,12 @@ export async function sendBalanceDueReminder(bookingId: string) {
         throw new Error("Booking not found");
     }
 
-    const member = await prisma.member.findFirst({
-        where: { userId: session.user.id, studioId: booking.studioId }
+    const payments = await db.query.payment.findMany({
+        where: eq(schema.payment.bookingId, bookingId)
+    });
+
+    const member = await db.query.member.findFirst({
+        where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
     });
 
     if (!member) {
@@ -212,7 +212,7 @@ export async function sendBalanceDueReminder(bookingId: string) {
         throw new Error("NEXT_PUBLIC_APP_URL environment variable is missing");
     }
 
-    const totalPaid = booking.payments
+    const totalPaid = payments
         .filter((p: any) => p.status === "PAID")
         .reduce((sum: any, p: any) => sum + Number(p.amount), 0);
     const grandTotal = Number(booking.totalAmount);
@@ -223,18 +223,18 @@ export async function sendBalanceDueReminder(bookingId: string) {
     }
 
 
-    const paymentLink = `${publicDomain}/pay/${booking.id}`;
+    const paymentLink = `\${publicDomain}/pay/\${booking.id}`;
 
     const { sendPaymentLinkSMS, sendPaymentLinkWhatsApp } = await import("@/lib/termii");
 
     const promises = [];
 
-    if (booking.client.phone) {
+    if (booking.client?.phone) {
         promises.push(
             sendPaymentLinkSMS({
                 phone: booking.client.phone,
                 clientName: booking.client.name,
-                studioName: booking.studio.name,
+                studioName: booking.studio?.name || "",
                 amount: balanceDue,
                 paymentLink: paymentLink
             }).catch(err => console.error("Balance Due SMS failed:", err))
@@ -244,7 +244,7 @@ export async function sendBalanceDueReminder(bookingId: string) {
             sendPaymentLinkWhatsApp({
                 phone: booking.client.phone,
                 clientName: booking.client.name,
-                studioName: booking.studio.name,
+                studioName: booking.studio?.name || "",
                 amount: balanceDue,
                 paymentLink: paymentLink
             }).catch(err => console.error("Balance Due WhatsApp failed:", err))
@@ -253,6 +253,6 @@ export async function sendBalanceDueReminder(bookingId: string) {
 
     await Promise.allSettled(promises);
 
-    revalidatePath(`/studios/${booking.studio.slug}/bookings/detail/${bookingId}`);
+    revalidatePath(`/studios/\${booking.studio?.slug}/bookings/detail/\${bookingId}`);
     return { success: true };
 }

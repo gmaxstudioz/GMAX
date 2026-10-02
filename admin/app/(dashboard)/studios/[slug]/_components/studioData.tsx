@@ -14,7 +14,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authClient } from "@/lib/auth-client";
-import { Prisma } from "@/lib/generated/prisma/client";
 import { InviteMemberInput, InviteMemberSchema } from "@/lib/schemas/studio";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Filter, Loading, MoreVerticalIcon, Refresh01Icon } from "@hugeicons/core-free-icons";
@@ -92,33 +91,7 @@ function mapPrismaBookingToCalendarBooking(b: any): CalendarBooking {
     } as CalendarBooking;
 }
 
-type StudioWithRelations = Prisma.StudioGetPayload<{
-  include: {
-    members: {
-        include: { user: true }
-    },
-    invitations: true,
-    services: {
-        include: { 
-            studioSession: true,
-            variants: { include: { deliverables: true } }
-        }
-    },
-    studioSessions: true,
-    clients: {
-        include: {
-            bookings: true
-        }
-    },
-    bookings: {
-      include: {
-        client: true,
-        service: true
-      }
-    },
-    bookingIntents: true,
-  }
-}>;
+type StudioWithRelations = any;
 
 function Overview({ data, setActiveTab, userRole }: { data: StudioWithRelations, setActiveTab: (v: string) => void, userRole: string }) {
     if (userRole === "receptionist") {

@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { StudioStatsCards } from "./_components/StatsCards"
 import { BackButton } from "@/components/web/back-button";
 import StudioData from "./_components/studioData";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -13,9 +15,9 @@ interface StudioDetailsProps {
 
 export async function generateMetadata({ params }: StudioDetailsProps): Promise<Metadata> {
     const { slug } = await params;
-    const studio = await prisma.studio.findUnique({
-        where: { slug },
-        select: { name: true, metadata: true },
+    const studio = await db.query.studio.findFirst({
+        where: eq(schema.studio.slug, slug),
+        columns: { name: true, metadata: true },
     });
 
     const studioName = studio?.name ?? "Studio Details";
@@ -31,27 +33,25 @@ export async function generateMetadata({ params }: StudioDetailsProps): Promise<
 export default async function StudioDetails({ params }: StudioDetailsProps) {
     const { slug } = await params;
 
-    const studioData = await prisma.studio.findUnique({
-        where: {
-            slug: slug
-        },
-        include: {
+    const studioData = await db.query.studio.findFirst({
+        where: eq(schema.studio.slug, slug),
+        with: {
             members: {
-                include: { user: true }
+                with: { user: true }
             },
             invitations: true,
             services: {
-                include: { studioSession: true, variants: { include: { deliverables: true } } }
+                with: { studioSession: true, serviceVariants: { with: { serviceDeliverables: true } } }
             },
             studioSessions: true,
             clients: {
-                include: { bookings: true }
+                with: { bookings: true }
             },
             bookings: {
-                include: { client: true, service: { include: { variants: { include: { deliverables: true } } } }, revisionRequests: true }
+                with: { client: true, service: { with: { serviceVariants: { with: { serviceDeliverables: true } } } }, revisionRequests: true }
             },
             bookingIntents: {
-                orderBy: { createdAt: 'desc' as const },
+                orderBy: (intents, { desc }) => [desc(intents.createdAt)],
             },
         },
     });

@@ -43,7 +43,7 @@ export function NotificationArea() {
         setIsLoading(true);
         const { data } = await getUserNotifications();
         if (data) {
-            setNotifications(data as Notification[]);
+            setNotifications(data as unknown as Notification[]);
         }
         setIsLoading(false);
     };

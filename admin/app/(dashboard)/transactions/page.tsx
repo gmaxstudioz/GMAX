@@ -1,4 +1,6 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, inArray } from "drizzle-orm";
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -20,9 +22,9 @@ export default async function TransactionsPage() {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) redirect("/auth/login");
 
-    const members = await prisma.member.findMany({
-        where: { userId: session.user.id },
-        select: { role: true, studioId: true }
+    const members = await db.query.member.findMany({
+        where: eq(schema.member.userId, session.user.id),
+        columns: { role: true, studioId: true }
     });
     
     // Check if user is an admin/manager
@@ -39,25 +41,43 @@ export default async function TransactionsPage() {
     const managedStudioIds = members.filter((m: any) => m.role === "manager").map((m: any) => m.studioId);
 
     // Fetch payments
-    const payments = await prisma.payment.findMany({
-        where: isSuperAdmin ? {} : {
-            booking: {
-                studioId: { in: managedStudioIds }
-            }
-        },
-        include: {
-            booking: {
-                include: {
-                    client: true,
-                    studio: true,
-                    service: true
+    let payments: any[] = [];
+    if (isSuperAdmin || managedStudioIds.length === 0) {
+        payments = await db.query.payment.findMany({
+            with: {
+                booking: {
+                    with: {
+                        client: true,
+                        studio: true,
+                        service: true
+                    }
                 }
-            }
-        },
-        orderBy: {
-            paymentDate: "desc"
+            },
+            orderBy: (payments, { desc }) => [desc(payments.paymentDate)]
+        });
+    } else {
+        const filteredBookings = await db.query.booking.findMany({
+            where: inArray(schema.booking.studioId, managedStudioIds),
+            columns: { id: true }
+        });
+        const bookingIds = filteredBookings.map((b: any) => b.id);
+        
+        if (bookingIds.length > 0) {
+            payments = await db.query.payment.findMany({
+                where: inArray(schema.payment.bookingId, bookingIds),
+                with: {
+                    booking: {
+                        with: {
+                            client: true,
+                            studio: true,
+                            service: true
+                        }
+                    }
+                },
+                orderBy: (payments, { desc }) => [desc(payments.paymentDate)]
+            });
         }
-    });
+    }
 
     // Calculate stats
     const paidCount = payments.filter((p: any) => p.status === "PAID").length;

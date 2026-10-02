@@ -1,10 +1,13 @@
 "use server";
 
-import { prisma } from "../prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, and, or, inArray, desc, gte, lte, ne } from "drizzle-orm";
 import { auth } from "../auth";
 import { headers } from "next/headers";
 import { CreateBookingInput, PaymentPlan } from "../schemas/booking";
 import { revalidatePath } from "next/cache";
+import { v4 as uuidv4 } from "uuid";
 
 import { startOfDay, endOfDay } from "date-fns";
 
@@ -18,8 +21,8 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
             return { status: "error", message: "Unauthorized" };
         }
 
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId }
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, studioId))
         });
         if (!member) {
             return { status: "error", message: "Unauthorized access to studio" };
@@ -37,9 +40,9 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
         const start = startOfDay(targetDate);
         const end = endOfDay(targetDate);
 
-        const targetService = await prisma.service.findUnique({
-            where: { id: bookingData.serviceId },
-            include: { studioSession: true }
+        const targetService = await db.query.service.findFirst({
+            where: eq(schema.service.id, bookingData.serviceId),
+            with: { studioSession: true }
         });
 
         if (!targetService) return { status: "error", message: "Service not found." };
@@ -48,12 +51,13 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
         const proposedStart = targetDate.getTime();
         const proposedEnd = proposedStart + (proposedDuration * 60 * 1000);
 
-        const dailyBookings = await prisma.booking.findMany({
-            where: {
-                studioId,
-                bookingDate: { gte: start, lte: end }
-            },
-            include: { service: { include: { studioSession: true } } }
+        const dailyBookings = await db.query.booking.findMany({
+            where: and(
+                eq(schema.booking.studioId, studioId),
+                gte(schema.booking.bookingDate, start.toISOString()),
+                lte(schema.booking.bookingDate, end.toISOString())
+            ),
+            with: { service: { with: { studioSession: true } } }
         });
 
         let hasOverlap = false;
@@ -80,18 +84,21 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
 
         if (hasOverlap) {
             // Find an alternative studio
-            const currentStudio = await prisma.studio.findUnique({ where: { id: studioId } });
+            const currentStudio = await db.query.studio.findFirst({ where: eq(schema.studio.id, studioId) });
             const myCity = (currentStudio?.metadata as { city?: string })?.city;
 
             let altMessage = `The selected time slot is fully booked or outside operating hours. Please choose another time or day.`;
 
             if (myCity) {
                 // Fetch all other studios to find a location match with capacity
-                const allStudios = await prisma.studio.findMany({ 
-                    include: { 
+                const allStudios = await db.query.studio.findMany({ 
+                    with: { 
                         bookings: { 
-                            where: { bookingDate: { gte: start, lte: end } }, 
-                            include: { service: { include: { studioSession: true } } } 
+                            where: (bookings, { and, gte, lte }) => and(
+                                gte(bookings.bookingDate, start.toISOString()),
+                                lte(bookings.bookingDate, end.toISOString())
+                            ),
+                            with: { service: { with: { studioSession: true } } } 
                         } 
                     } 
                 });
@@ -119,18 +126,27 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
             return { status: "error", message: altMessage };
         }
 
-        const booking = await prisma.booking.create({
-            data: {
-                ...bookingData,
-                studioId,
-                createdBy: session.user.id,
-                ...(addonIds && addonIds.length > 0 && {
-                    addons: {
-                        connect: addonIds.map(id => ({ id: id.split(":")[0] })),
-                    },
-                }),
-            }
-        });
+        const bookingId = uuidv4();
+        const [booking] = await db.insert(schema.booking).values({
+            id: bookingId,
+            ...bookingData,
+            bookingDate: bookingData.bookingDate.toISOString(),
+            totalAmount: bookingData.totalAmount.toString(),
+            studioId,
+            createdBy: session.user.id,
+        }).returning();
+
+        if (addonIds && addonIds.length > 0) {
+            await Promise.all(
+                addonIds.map(async (id) => {
+                    const addonId = id.split(":")[0];
+                    await db.insert(schema.bookingAddons).values({
+                        a: bookingId,
+                        b: addonId
+                    });
+                })
+            );
+        }
 
         revalidatePath(`/studios`, "layout");
         return { status: "success", data: booking };
@@ -150,25 +166,23 @@ export async function reassignBooking(bookingId: string, memberId: string) {
             return { status: "error", message: "Unauthorized" };
         }
 
-        const booking = await prisma.booking.findUnique({
-            where: { id: bookingId }
+        const booking = await db.query.booking.findFirst({
+            where: eq(schema.booking.id, bookingId)
         });
 
         if (!booking) return { status: "error", message: "Booking not found" };
 
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: booking.studioId }
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
         });
 
         if (!member || !["owner", "manager", "admin", "developer"].includes(member.role)) {
             return { status: "error", message: "Unauthorized" };
         }
 
-
-        await prisma.booking.update({
-            where: { id: bookingId },
-            data: { memberId }
-        });
+        await db.update(schema.booking)
+            .set({ memberId })
+            .where(eq(schema.booking.id, bookingId));
 
         revalidatePath("/studios", "layout");
         return { status: "success" };
@@ -188,21 +202,21 @@ export async function rescheduleBooking(bookingId: string, newDate: string) {
             return { status: "error", message: "Unauthorized" };
         }
 
-        const booking = await prisma.booking.findUnique({
-            where: { id: bookingId },
-            include: {
+        const booking = await db.query.booking.findFirst({
+            where: eq(schema.booking.id, bookingId),
+            with: {
                 client: true,
                 studio: true,
                 service: {
-                    include: { studioSession: true }
+                    with: { studioSession: true }
                 }
             }
         });
 
         if (!booking) return { status: "error", message: "Booking not found" };
 
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: booking.studioId }
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
         });
         if (!member || member.role === "receptionist") {
             return { status: "error", message: "Unauthorized: Receptionists cannot reschedule bookings" };
@@ -225,13 +239,14 @@ export async function rescheduleBooking(bookingId: string, newDate: string) {
         }
 
         // Check for overlaps with other bookings (exclude this booking)
-        const dailyBookings = await prisma.booking.findMany({
-            where: {
-                studioId: booking.studioId,
-                bookingDate: { gte: start, lte: end },
-                id: { not: bookingId }
-            },
-            include: { service: { include: { studioSession: true } } }
+        const dailyBookings = await db.query.booking.findMany({
+            where: and(
+                eq(schema.booking.studioId, booking.studioId),
+                gte(schema.booking.bookingDate, start.toISOString()),
+                lte(schema.booking.bookingDate, end.toISOString()),
+                ne(schema.booking.id, bookingId)
+            ),
+            with: { service: { with: { studioSession: true } } }
         });
 
         for (const b of dailyBookings) {
@@ -244,10 +259,9 @@ export async function rescheduleBooking(bookingId: string, newDate: string) {
             }
         }
 
-        await prisma.booking.update({
-            where: { id: bookingId },
-            data: { bookingDate: targetDate }
-        });
+        await db.update(schema.booking)
+            .set({ bookingDate: targetDate.toISOString() })
+            .where(eq(schema.booking.id, bookingId));
 
         if (booking.client?.phone) {
             try {
@@ -260,19 +274,18 @@ export async function rescheduleBooking(bookingId: string, newDate: string) {
                     minute: "2-digit"
                 }).format(targetDate);
 
-                const message = `Hi ${booking.client.name}, your booking for ${booking.service.name} at ${booking.studio.name} has been rescheduled to ${formattedDate}.`;
+                const message = `Hi \${booking.client.name}, your booking for \${booking.service?.name} at \${booking.studio?.name} has been rescheduled to \${formattedDate}.`;
                 await sendSMS(booking.client.phone, message);
 
-                await prisma.notification.create({
-                    data: {
-                        clientPhone: booking.client.phone,
-                        clientName: booking.client.name,
-                        type: "BOOKING_CONFIRMATION",
-                        message: message,
-                        channel: ["SMS"],
-                        status: "SENT",
-                        bookingId: bookingId
-                    }
+                await db.insert(schema.notification).values({
+                    id: uuidv4(),
+                    clientPhone: booking.client.phone,
+                    clientName: booking.client.name,
+                    type: "BOOKING_CONFIRMATION",
+                    message: message,
+                    channel: ["SMS"],
+                    status: "SENT",
+                    bookingId: bookingId
                 });
             } catch (smsError) {
                 console.error("Failed to send reschedule SMS:", smsError);
@@ -294,37 +307,36 @@ export async function updateBookingInfo(
     data: {
         notes?: string;
         sessionCount?: number;
-        bookingStatus?: string;
-        paymentStatus?: string;
-        deliveryStatus?: string;
+        bookingStatus?: any;
+        paymentStatus?: any;
+        deliveryStatus?: any;
     }
 ) {
     try {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+        const booking = await db.query.booking.findFirst({ where: eq(schema.booking.id, bookingId) });
         if (!booking) return { status: "error", message: "Booking not found" };
 
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: booking.studioId }
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
         });
         const disallowedRoles = ["receptionist", "photographer", "videographer"];
         if (!member || disallowedRoles.includes(member.role)) {
             return { status: "error", message: "Unauthorized: You do not have permission to update bookings" };
         }
 
-        const updateData: Record<string, unknown> = {};
+        const updateData: Record<string, any> = {};
         if (data.notes !== undefined) updateData.notes = data.notes;
         if (data.sessionCount !== undefined) updateData.sessionCount = Math.max(1, data.sessionCount);
         if (data.bookingStatus) updateData.bookingStatus = data.bookingStatus;
         if (data.paymentStatus) updateData.paymentStatus = data.paymentStatus;
         if (data.deliveryStatus) updateData.deliveryStatus = data.deliveryStatus;
 
-        await prisma.booking.update({
-            where: { id: bookingId },
-            data: updateData,
-        });
+        await db.update(schema.booking)
+            .set(updateData)
+            .where(eq(schema.booking.id, bookingId));
 
         revalidatePath("/studios", "layout");
         return { status: "success", message: "Booking updated successfully" };
@@ -347,11 +359,11 @@ export async function uploadBookingPhoto(data: {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const booking = await prisma.booking.findUnique({ where: { id: data.bookingId } });
+        const booking = await db.query.booking.findFirst({ where: eq(schema.booking.id, data.bookingId) });
         if (!booking) return { status: "error", message: "Booking not found" };
 
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: booking.studioId }
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
         });
         if (!member) return { status: "error", message: "Unauthorized" };
 
@@ -359,41 +371,41 @@ export async function uploadBookingPhoto(data: {
         const autoApproveRoles = ["admin", "manager", "owner"];
         const isAutoApproved = autoApproveRoles.includes(member.role);
 
-        const photo = await prisma.photo.create({
-            data: {
-                bookingId: data.bookingId,
-                r2Key: data.r2Key,
-                fileName: data.fileName,
-                fileSize: data.fileSize,
-                mimeType: data.mimeType,
-                expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-                uploadedById: session.user.id,
-                approvalStatus: isAutoApproved ? "APPROVED" : "PENDING_REVIEW",
-                approvedAt: isAutoApproved ? new Date() : undefined,
-                approvedById: isAutoApproved ? session.user.id : undefined,
-            },
-        });
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+        const [photo] = await db.insert(schema.photo).values({
+            id: uuidv4(),
+            bookingId: data.bookingId,
+            r2Key: data.r2Key,
+            fileName: data.fileName,
+            fileSize: data.fileSize,
+            mimeType: data.mimeType,
+            expiresAt,
+            uploadedById: session.user.id,
+            approvalStatus: isAutoApproved ? "APPROVED" : "PENDING_REVIEW",
+            approvedAt: isAutoApproved ? new Date().toISOString() : undefined,
+            approvedById: isAutoApproved ? session.user.id : undefined,
+        }).returning();
 
         if (["photographer", "videographer"].includes(member.role)) {
-            const admins = await prisma.member.findMany({
-                where: { studioId: booking.studioId, role: { in: ["admin", "owner", "manager"] } },
-                include: { user: true }
+            const admins = await db.query.member.findMany({
+                where: and(eq(schema.member.studioId, booking.studioId), inArray(schema.member.role, ["admin", "owner", "manager"])),
+                with: { user: true }
             });
 
             const { sendSMS } = await import("../termii");
             for (const admin of admins) {
-                await prisma.userNotification.create({
-                    data: {
-                        userId: admin.userId,
-                        title: "New Photo Uploaded",
-                        message: `A new photo was uploaded for a booking by ${session.user.name || "staff"}.`,
-                        type: "PHOTO_UPLOAD",
-                        bookingId: booking.id
-                    }
+                await db.insert(schema.userNotification).values({
+                    id: uuidv4(),
+                    userId: admin.userId,
+                    title: "New Photo Uploaded",
+                    message: `A new photo was uploaded for a booking by \${session.user.name || "staff"}.`,
+                    type: "PHOTO_UPLOAD",
+                    bookingId: booking.id
                 });
-                if (admin.user.phoneNumber) {
+                if (admin.user?.phoneNumber) {
                     try {
-                        await sendSMS(admin.user.phoneNumber, `GMAX Studio: A new photo was uploaded for a booking by ${session.user.name || "staff"}. Please review it.`);
+                        await sendSMS(admin.user.phoneNumber, `GMAX Studio: A new photo was uploaded for a booking by \${session.user.name || "staff"}. Please review it.`);
                     } catch (err) {
                         console.error("SMS failed", err);
                     }
@@ -416,36 +428,35 @@ export async function approvePhoto(photoId: string) {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const photo = await prisma.photo.findUnique({
-            where: { id: photoId },
-            include: { booking: { include: { client: true, studio: true } } },
+        const photo = await db.query.photo.findFirst({
+            where: eq(schema.photo.id, photoId),
+            with: { booking: { with: { client: true, studio: true } } },
         });
         if (!photo) return { status: "error", message: "Photo not found" };
 
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: photo.booking.studioId }
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, photo.booking?.studioId!))
         });
         if (!member || !["admin", "manager", "owner"].includes(member.role)) {
             return { status: "error", message: "Only managers can approve photos" };
         }
 
-        await prisma.photo.update({
-            where: { id: photoId },
-            data: {
+        await db.update(schema.photo)
+            .set({
                 approvalStatus: "APPROVED",
-                approvedAt: new Date(),
+                approvedAt: new Date().toISOString(),
                 approvedById: session.user.id,
-            },
-        });
+            })
+            .where(eq(schema.photo.id, photoId));
 
         // Notify client via Termii
-        const client = photo.booking.client;
-        const studioName = photo.booking.studio?.name || "Studio";
+        const client = photo.booking?.client;
+        const studioName = photo.booking?.studio?.name || "Studio";
         if (client?.phone?.length > 0) {
             const { sendSMS } = await import("../termii");
-            const message = `Hi ${client.name}! Your photos from ${studioName} are ready for viewing and download. Visit your booking page to access them.`;
+            const message = `Hi \${client.name}! Your photos from \${studioName} are ready for viewing and download. Visit your booking page to access them.`;
             try {
-                await sendSMS(client.phone[0], message);
+                await sendSMS(client.phone, message);
             } catch (err) {
                 console.error("[Termii] Failed to notify client:", err);
             }
@@ -466,43 +477,41 @@ export async function rejectPhoto(photoId: string, reason?: string) {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const photo = await prisma.photo.findUnique({
-            where: { id: photoId },
-            include: { booking: true },
+        const photo = await db.query.photo.findFirst({
+            where: eq(schema.photo.id, photoId),
+            with: { booking: true },
         });
         if (!photo) return { status: "error", message: "Photo not found" };
 
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: photo.booking.studioId }
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, photo.booking?.studioId!))
         });
         if (!member || !["admin", "manager", "owner"].includes(member.role)) {
             return { status: "error", message: "Only managers can reject photos" };
         }
 
-        await prisma.photo.update({
-            where: { id: photoId },
-            data: {
+        await db.update(schema.photo)
+            .set({
                 approvalStatus: "REJECTED",
                 rejectionReason: reason || undefined,
-            },
-        });
+            })
+            .where(eq(schema.photo.id, photoId));
 
-        const uploader = await prisma.user.findUnique({ where: { id: photo.uploadedById }});
+        const uploader = await db.query.user.findFirst({ where: eq(schema.user.id, photo.uploadedById) });
         if (uploader) {
-            await prisma.userNotification.create({
-                data: {
-                    userId: uploader.id,
-                    title: "Photo Rejected",
-                    message: `Your photo upload for a booking was rejected. Reason: ${reason || "No reason provided"}`,
-                    type: "PHOTO_REJECTED",
-                    bookingId: photo.bookingId
-                }
+            await db.insert(schema.userNotification).values({
+                id: uuidv4(),
+                userId: uploader.id,
+                title: "Photo Rejected",
+                message: `Your photo upload for a booking was rejected. Reason: \${reason || "No reason provided"}`,
+                type: "PHOTO_REJECTED",
+                bookingId: photo.bookingId
             });
 
             if (uploader.phoneNumber) {
                 const { sendSMS } = await import("../termii");
                 try {
-                    await sendSMS(uploader.phoneNumber, `GMAX Studio: Your photo upload was rejected. Reason: ${reason || "Please check dashboard"}`);
+                    await sendSMS(uploader.phoneNumber, `GMAX Studio: Your photo upload was rejected. Reason: \${reason || "Please check dashboard"}`);
                 } catch(e){
                     console.error("SMS failed", e);
                 }
@@ -524,14 +533,14 @@ export async function deletePhoto(photoId: string) {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const photo = await prisma.photo.findUnique({
-            where: { id: photoId },
-            include: { booking: true },
+        const photo = await db.query.photo.findFirst({
+            where: eq(schema.photo.id, photoId),
+            with: { booking: true },
         });
         if (!photo) return { status: "error", message: "Photo not found" };
 
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: photo.booking.studioId }
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, photo.booking?.studioId!))
         });
         if (!member || !["admin", "manager", "owner", "receptionist"].includes(member.role)) {
             return { status: "error", message: "You don't have permission to delete photos" };
@@ -540,7 +549,7 @@ export async function deletePhoto(photoId: string) {
         // Delete from R2 storage
         try {
             const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-            await fetch(`${baseUrl}/api/s3/delete`, {
+            await fetch(`\${baseUrl}/api/s3/delete`, {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ key: photo.r2Key }),
@@ -551,7 +560,7 @@ export async function deletePhoto(photoId: string) {
         }
 
         // Delete from database
-        await prisma.photo.delete({ where: { id: photoId } });
+        await db.delete(schema.photo).where(eq(schema.photo.id, photoId));
 
         revalidatePath("/studios", "layout");
         return { status: "success", message: "Photo deleted successfully" };
@@ -568,14 +577,14 @@ export async function deleteBooking(bookingId: string) {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const booking = await prisma.booking.findUnique({
-            where: { id: bookingId },
-            include: { photos: true },
+        const booking = await db.query.booking.findFirst({
+            where: eq(schema.booking.id, bookingId),
+            with: { photos: true },
         });
         if (!booking) return { status: "error", message: "Booking not found" };
 
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: booking.studioId }
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
         });
         if (!member || !["admin", "manager", "owner", "receptionist"].includes(member.role)) {
             return { status: "error", message: "You don't have permission to delete bookings" };
@@ -583,20 +592,22 @@ export async function deleteBooking(bookingId: string) {
 
         // Delete all associated photos from R2 storage
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-        for (const photo of booking.photos) {
-            try {
-                await fetch(`${baseUrl}/api/s3/delete`, {
-                    method: "DELETE",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ key: photo.r2Key }),
-                });
-            } catch (r2Error) {
-                console.error(`[R2] Failed to delete photo ${photo.r2Key}:`, r2Error);
+        if (booking.photos) {
+            for (const photo of booking.photos) {
+                try {
+                    await fetch(`\${baseUrl}/api/s3/delete`, {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ key: photo.r2Key }),
+                    });
+                } catch (r2Error) {
+                    console.error(`[R2] Failed to delete photo \${photo.r2Key}:`, r2Error);
+                }
             }
         }
 
         // Cascade delete handles payments, photos, addon relations
-        await prisma.booking.delete({ where: { id: bookingId } });
+        await db.delete(schema.booking).where(eq(schema.booking.id, bookingId));
 
         revalidatePath("/studios", "layout");
         return { status: "success", message: "Booking deleted successfully" };
@@ -618,9 +629,9 @@ export async function updateBookingFull(
         bookingDate?: string;
         sessionCount?: number;
         notes?: string;
-        bookingStatus?: string;
-        paymentStatus?: string;
-        deliveryStatus?: string;
+        bookingStatus?: any;
+        paymentStatus?: any;
+        deliveryStatus?: any;
         addonIds?: string[];
         totalAmount?: number;
         paymentPlan?: PaymentPlan;
@@ -631,17 +642,16 @@ export async function updateBookingFull(
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const booking = await prisma.booking.findUnique({
-            where: { id: bookingId },
-            include: {
-                service: { include: { studioSession: true } },
-                addons: true,
+        const booking = await db.query.booking.findFirst({
+            where: eq(schema.booking.id, bookingId),
+            with: {
+                service: { with: { studioSession: true } }
             },
         });
         if (!booking) return { status: "error", message: "Booking not found" };
 
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: booking.studioId }
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
         });
         const disallowedRoles = ["receptionist", "photographer", "videographer"];
         if (!member || disallowedRoles.includes(member.role)) {
@@ -649,12 +659,12 @@ export async function updateBookingFull(
         }
 
         // Build update data
-        const updateData: Record<string, unknown> = {};
+        const updateData: Record<string, any> = {};
 
-        if (data.clientId) updateData.client = { connect: { id: data.clientId } };
-        if (data.serviceId) updateData.service = { connect: { id: data.serviceId } };
-        if (data.serviceVariantId) updateData.serviceVariant = { connect: { id: data.serviceVariantId } };
-        if (data.memberId) updateData.member = { connect: { id: data.memberId } };
+        if (data.clientId) updateData.clientId = data.clientId;
+        if (data.serviceId) updateData.serviceId = data.serviceId;
+        if (data.serviceVariantId) updateData.serviceVariantId = data.serviceVariantId;
+        if (data.memberId) updateData.memberId = data.memberId;
         if (data.notes !== undefined) updateData.notes = data.notes;
         if (data.sessionCount !== undefined) updateData.sessionCount = Math.max(1, data.sessionCount);
         if (data.extraPicturesCount !== undefined) updateData.extraPicturesCount = Math.max(0, data.extraPicturesCount);
@@ -665,12 +675,12 @@ export async function updateBookingFull(
         let priceChangeNotificationNeeded = false;
         if (data.totalAmount !== undefined && data.totalAmount !== Number(booking.totalAmount)) {
             if (member.role === "manager") {
-                updateData.pendingTotalAmount = data.totalAmount;
+                updateData.pendingTotalAmount = data.totalAmount.toString();
                 updateData.priceApprovalStatus = "PENDING_APPROVAL";
                 updateData.priceChangedBy = member.id;
                 priceChangeNotificationNeeded = true;
             } else {
-                updateData.totalAmount = data.totalAmount;
+                updateData.totalAmount = data.totalAmount.toString();
                 updateData.priceApprovalStatus = "APPROVED";
                 updateData.pendingTotalAmount = null;
             }
@@ -684,7 +694,7 @@ export async function updateBookingFull(
 
             // Get the service for duration calculation
             const serviceForDuration = data.serviceId
-                ? await prisma.service.findUnique({ where: { id: data.serviceId }, include: { studioSession: true } })
+                ? await db.query.service.findFirst({ where: eq(schema.service.id, data.serviceId), with: { studioSession: true } })
                 : booking.service;
 
             const sessionCount = data.sessionCount ?? booking.sessionCount;
@@ -703,13 +713,14 @@ export async function updateBookingFull(
             }
 
             // Check overlaps
-            const dailyBookings = await prisma.booking.findMany({
-                where: {
-                    studioId: booking.studioId,
-                    bookingDate: { gte: start, lte: end },
-                    id: { not: bookingId },
-                },
-                include: { service: { include: { studioSession: true } } },
+            const dailyBookings = await db.query.booking.findMany({
+                where: and(
+                    eq(schema.booking.studioId, booking.studioId),
+                    gte(schema.booking.bookingDate, start.toISOString()),
+                    lte(schema.booking.bookingDate, end.toISOString()),
+                    ne(schema.booking.id, bookingId)
+                ),
+                with: { service: { with: { studioSession: true } } },
             });
 
             for (const b of dailyBookings) {
@@ -721,35 +732,42 @@ export async function updateBookingFull(
                 }
             }
 
-            updateData.bookingDate = targetDate;
+            updateData.bookingDate = targetDate.toISOString();
         }
+
+        await db.update(schema.booking)
+            .set(updateData)
+            .where(eq(schema.booking.id, bookingId));
 
         // Handle addon updates
         if (data.addonIds !== undefined) {
-            updateData.addons = {
-                set: data.addonIds.map(id => ({ id: id.split(":")[0] })),
-            };
+            await db.delete(schema.bookingAddons).where(eq(schema.bookingAddons.a, bookingId));
+            if (data.addonIds.length > 0) {
+                await Promise.all(
+                    data.addonIds.map(async (id) => {
+                        const addonId = id.split(":")[0];
+                        await db.insert(schema.bookingAddons).values({
+                            a: bookingId,
+                            b: addonId
+                        });
+                    })
+                );
+            }
         }
 
-        await prisma.booking.update({
-            where: { id: bookingId },
-            data: updateData,
-        });
-
         if (priceChangeNotificationNeeded) {
-            const admins = await prisma.member.findMany({
-                where: { studioId: booking.studioId, role: { in: ["admin", "owner", "developer"] } },
-                include: { user: true }
+            const admins = await db.query.member.findMany({
+                where: and(eq(schema.member.studioId, booking.studioId), inArray(schema.member.role, ["admin", "owner", "developer"])),
+                with: { user: true }
             });
             for (const admin of admins) {
-                await prisma.userNotification.create({
-                    data: {
-                        userId: admin.userId,
-                        title: "Price Approval Required",
-                        message: `Manager ${session.user.name || "staff"} requested a price change to ₦${data.totalAmount} for a booking.`,
-                        type: "SYSTEM",
-                        bookingId: booking.id
-                    }
+                await db.insert(schema.userNotification).values({
+                    id: uuidv4(),
+                    userId: admin.userId,
+                    title: "Price Approval Required",
+                    message: `Manager \${session.user.name || "staff"} requested a price change to ₦\${data.totalAmount} for a booking.`,
+                    type: "SYSTEM",
+                    bookingId: booking.id
                 });
             }
         }
@@ -769,13 +787,13 @@ export async function markTaskCompleted(bookingId: string) {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const booking = await prisma.booking.findUnique({
-            where: { id: bookingId }
+        const booking = await db.query.booking.findFirst({
+            where: eq(schema.booking.id, bookingId)
         });
         if (!booking) return { status: "error", message: "Booking not found" };
 
-        const member = await prisma.member.findFirst({
-            where: { userId: session.user.id, studioId: booking.studioId }
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
         });
         
         if (!member) {
@@ -790,10 +808,9 @@ export async function markTaskCompleted(bookingId: string) {
             return { status: "error", message: "Unauthorized: You can only complete tasks assigned to you" };
         }
 
-        await prisma.booking.update({
-            where: { id: bookingId },
-            data: { bookingStatus: "COMPLETED" }
-        });
+        await db.update(schema.booking)
+            .set({ bookingStatus: "COMPLETED" })
+            .where(eq(schema.booking.id, bookingId));
 
         revalidatePath("/studios", "layout");
         revalidatePath("/my-tasks");
@@ -803,4 +820,3 @@ export async function markTaskCompleted(bookingId: string) {
         return { status: "error", message: "Internal server error" };
     }
 }
-

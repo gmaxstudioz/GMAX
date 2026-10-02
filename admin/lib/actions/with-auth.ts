@@ -2,7 +2,9 @@
 
 import { auth } from "../auth";
 import { headers } from "next/headers";
-import { prisma } from "../prisma";
+import { db } from "../db";
+import * as schema from "../schema";
+import { eq, and } from "drizzle-orm";
 
 
 // ── Raw session fetch ────────────────────────────────────────────────────────
@@ -40,18 +42,18 @@ export async function requireStudioMember(studioId: string): Promise<
     {
         status: "ok";
         session: NonNullable<Awaited<ReturnType<typeof getAuthSession>>>;
-        member: NonNullable<Awaited<ReturnType<typeof prisma.member.findFirst>>>;
+        member: any;
     } |
     { status: "error"; message: string }
 > {
     const sessionResult = await requireSession();
     if (sessionResult.status === "error") return sessionResult;
 
-    const member = await prisma.member.findFirst({
-        where: {
-            userId: sessionResult.session.user.id,
-            studioId,
-        },
+    const member = await db.query.member.findFirst({
+        where: and(
+            eq(schema.member.userId, sessionResult.session.user.id),
+            eq(schema.member.studioId, studioId)
+        ),
     });
 
     if (!member) return { status: "error", message: "Unauthorized access to studio" };
@@ -67,22 +69,22 @@ export async function requireBookingAccess(bookingId: string): Promise<
     {
         status: "ok";
         session: NonNullable<Awaited<ReturnType<typeof getAuthSession>>>;
-        member: NonNullable<Awaited<ReturnType<typeof prisma.member.findFirst>>>;
-        booking: NonNullable<Awaited<ReturnType<typeof prisma.booking.findUnique>>>;
+        member: any;
+        booking: any;
     } |
     { status: "error"; message: string }
 > {
     const sessionResult = await requireSession();
     if (sessionResult.status === "error") return sessionResult;
 
-    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+    const booking = await db.query.booking.findFirst({ where: eq(schema.booking.id, bookingId) });
     if (!booking) return { status: "error", message: "Booking not found" };
 
-    const member = await prisma.member.findFirst({
-        where: {
-            userId: sessionResult.session.user.id,
-            studioId: booking.studioId,
-        },
+    const member = await db.query.member.findFirst({
+        where: and(
+            eq(schema.member.userId, sessionResult.session.user.id),
+            eq(schema.member.studioId, booking.studioId)
+        ),
     });
 
     if (!member) return { status: "error", message: "Unauthorized access to this booking" };

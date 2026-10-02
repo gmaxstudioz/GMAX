@@ -5,42 +5,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Prisma } from "@/lib/generated/prisma/client";
 import { startOfMonth, subMonths, endOfMonth } from "date-fns";
 import { calcTrend, TrendBadge, TrendFooter } from "@/components/web/trend-indicators";
 
-
-type StudioWithRelations = Prisma.StudioGetPayload<{
-  include: {
-    members: {
-        include: { user: true }
-    },
-    invitations: true,
-    categories: {
-      include: {
-        services: true
-      }
-    },
-    studioSessions: true,
-    clients: {
-        include: {
-            bookings: true
-        }
-    },
-    bookings: {
-      include: {
-        client: true,
-        service: {
-          include: { variants: true }
-        },
-        addons: {
-          include: { variants: true }
-        }
-      }
-    }
-  }
-}>;
-
+type StudioWithRelations = any;
 
 export function StudioStatsCards({ data }: { data: StudioWithRelations }) {
     const now = new Date();

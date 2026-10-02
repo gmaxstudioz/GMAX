@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, inArray } from "drizzle-orm";
 import { RenderEmptyState, RenderStudios } from "./_components/RenderSate";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -18,28 +20,42 @@ export default async function StudiosPage(props: { searchParams: Promise<{ [key:
 
     // 1. Fetch User and Memberships
     const [user, members] = await Promise.all([
-        prisma.user.findUnique({ where: { id: session.user.id } }),
-        prisma.member.findMany({ where: { userId: session.user.id } })
+        db.query.user.findFirst({ where: eq(schema.user.id, session.user.id) }),
+        db.query.member.findMany({ where: eq(schema.member.userId, session.user.id) })
     ]);
 
     const isPlatformAdmin = user?.role === "admin";
     const hasAdminRole = isPlatformAdmin || members.some((m: any) => ["owner", "developer"].includes(m.role));
 
     // 2. Optimized Studio Query
-    // Note: We use 'creator' as defined in your Booking model relation
-    const studioData = await prisma.studio.findMany({
-        where: isPlatformAdmin ? {} : {
-            members: { some: { userId: session.user.id } }
-        },
-        orderBy: { createdAt: "desc" },
-        include: {
-            members: true,
-            services: { include: { variants: true } },
-            studioSessions: true,
-            clients: true,
-            bookings: { include: { creator: true, service: { include: { variants: true } } } } // Explicitly include the 'creator' and 'service' relation for revenue calculation
-        },
-    });
+    let studioData: any[] = [];
+    if (isPlatformAdmin) {
+        studioData = await db.query.studio.findMany({
+            orderBy: (studios, { desc }) => [desc(studios.createdAt)],
+            with: {
+                members: true,
+                services: { with: { serviceVariants: true } },
+                studioSessions: true,
+                clients: true,
+                bookings: { with: { user: true, service: { with: { serviceVariants: true } } } }
+            },
+        });
+    } else {
+        const studioIds = members.map((m: any) => m.studioId);
+        if (studioIds.length > 0) {
+            studioData = await db.query.studio.findMany({
+                where: inArray(schema.studio.id, studioIds),
+                orderBy: (studios, { desc }) => [desc(studios.createdAt)],
+                with: {
+                    members: true,
+                    services: { with: { serviceVariants: true } },
+                    studioSessions: true,
+                    clients: true,
+                    bookings: { with: { user: true, service: { with: { serviceVariants: true } } } }
+                },
+            });
+        }
+    }
 
     // 3. Logic: Redirect non-admins to their specific studio dashboard
     if (!hasAdminRole && studioData.length > 0) {

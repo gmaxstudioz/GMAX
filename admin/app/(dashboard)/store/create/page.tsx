@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, asc } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -14,9 +16,9 @@ export default async function Page() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) redirect("/auth/login");
 
-  const members = await prisma.member.findMany({
-      where: { userId: session.user.id },
-      select: { role: true }
+  const members = await db.query.member.findMany({
+      where: eq(schema.member.userId, session.user.id),
+      columns: { role: true }
   });
   
   // Only users with some administrative role should access the store manager
@@ -26,8 +28,8 @@ export default async function Page() {
       redirect("/my-tasks");
   }
 
-  const categories = await prisma.productCategory.findMany({
-      orderBy: { name: "asc" },
+  const categories = await db.query.productCategory.findMany({
+      orderBy: [asc(schema.productCategory.name)],
   });
 
   return (

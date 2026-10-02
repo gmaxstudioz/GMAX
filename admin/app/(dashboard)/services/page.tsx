@@ -1,4 +1,6 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, inArray } from "drizzle-orm";
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -13,9 +15,9 @@ export default async function ServicesPage() {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) redirect("/auth/login");
 
-    const members = await prisma.member.findMany({
-        where: { userId: session.user.id },
-        select: { role: true }
+    const members = await db.query.member.findMany({
+        where: eq(schema.member.userId, session.user.id),
+        columns: { role: true, studioId: true }
     });
     
     const adminRoles = ["owner", "developer"];
@@ -24,44 +26,46 @@ export default async function ServicesPage() {
         redirect("/my-tasks");
     }
 
-    const studios = await prisma.studio.findMany({
-        where: {
-            members: {
-                some: {
-                    userId: session.user.id
-                }
-            }
-        },
-        select: {
+    const studioIds = members.map((m: any) => m.studioId);
+
+    const studios = studioIds.length > 0 ? await db.query.studio.findMany({
+        where: inArray(schema.studio.id, studioIds),
+        columns: {
             id: true,
             slug: true,
             name: true,
+        },
+        with: {
             services: {
-                include: {
+                with: {
                     studioSession: {
-                        select: {
+                        columns: {
                             id: true,
                             name: true,
                             duration: true,
                         }
                     },
-                    variants: true,
-                    _count: {
-                        select: {
-                            bookings: true,
-                        }
+                    serviceVariants: true,
+                    bookings: {
+                        columns: { id: true }
                     }
                 }
             }
         },
-        orderBy: { name: "asc" }
-    });
+        orderBy: (studios, { asc }) => [asc(studios.name)]
+    }) : [];
 
     const studioGroups = studios.map((studio: any) => {
+        const mappedServices = studio.services.map((s: any) => ({
+            ...s,
+            variants: s.serviceVariants,
+            _count: { bookings: s.bookings?.length || 0 }
+        }));
+        
         const groupedServices = {
-            PHOTOGRAPHY: studio.services.filter((s: any) => s.category === "PHOTOGRAPHY"),
-            VIDEOGRAPHY: studio.services.filter((s: any) => s.category === "VIDEOGRAPHY"),
-            OTHERS: studio.services.filter((s: any) => s.category === "OTHERS"),
+            PHOTOGRAPHY: mappedServices.filter((s: any) => s.category === "PHOTOGRAPHY"),
+            VIDEOGRAPHY: mappedServices.filter((s: any) => s.category === "VIDEOGRAPHY"),
+            OTHERS: mappedServices.filter((s: any) => s.category === "OTHERS"),
         };
         
         return {
