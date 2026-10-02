@@ -62,19 +62,19 @@ export async function initializePayment(bookingId: string) {
         if (!member) return { status: "error", message: "Unauthorized access to this booking" };
 
         // Calculate balance due
-        const servicePrice = Number(booking.service?.variants?.find((v) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.variants?.[0]?.basePrice ?? 0);
+        const servicePrice = Number(booking.service?.variants?.find((v: any) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.variants?.[0]?.basePrice ?? 0);
         const sessionTotal = servicePrice * booking.sessionCount;
-        const addonsTotal = booking.addons.reduce((sum, a) => {
+        const addonsTotal = booking.addons.reduce((sum: any, a: any) => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const variantId = (a as any).addonVariantId;
-            const variant = variantId ? a.variants?.find((v) => v.id === variantId) : a.variants?.[0];
+            const variant = variantId ? a.variants?.find((v: any) => v.id === variantId) : a.variants?.[0];
             return sum + Number(variant?.basePrice ?? 0);
         }, 0);
         const grandTotal = booking.totalAmount != null ? Number(booking.totalAmount) : (sessionTotal + addonsTotal);
 
         const totalPaid = booking.payments
-            .filter((p) => p.status === "PAID")
-            .reduce((sum, p) => sum + Number(p.amount), 0);
+            .filter((p: any) => p.status === "PAID")
+            .reduce((sum: any, p: any) => sum + Number(p.amount), 0);
 
         const balanceDue = Math.max(0, grandTotal - totalPaid);
 
@@ -218,7 +218,7 @@ export async function verifyPayment(reference: string) {
         // Atomic transaction — update payment and booking status together.
         // All reads within this block see a consistent snapshot; concurrent
         // transactions targeting the same booking row will serialize correctly.
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: any) => {
             // Step 1: Mark this payment as PAID
             await tx.payment.update({
                 where: { id: payment.id },
@@ -240,20 +240,20 @@ export async function verifyPayment(reference: string) {
             const booking = payment.booking;
             if (!booking) return;
 
-            const servicePrice = Number(booking.service?.variants?.find((v) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.variants?.[0]?.basePrice ?? 0);
+            const servicePrice = Number(booking.service?.variants?.find((v: any) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.variants?.[0]?.basePrice ?? 0);
             const sessionTotal = servicePrice * booking.sessionCount;
-            const addonsTotal = booking.addons.reduce((sum, a) => {
+            const addonsTotal = booking.addons.reduce((sum: any, a: any) => {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const variantId = (a as any).addonVariantId;
-                const variant = variantId ? a.variants?.find((v) => v.id === variantId) : a.variants?.[0];
+                const variant = variantId ? a.variants?.find((v: any) => v.id === variantId) : a.variants?.[0];
                 return sum + Number(variant?.basePrice ?? 0);
             }, 0);
             const grandTotal = booking.totalAmount != null ? Number(booking.totalAmount) : (sessionTotal + addonsTotal);
 
             // Step 3: Recalculate with the freshly updated payment included
             const totalPaid = allPayments
-                .filter((p) => p.status === "PAID")
-                .reduce((sum, p) => sum + Number(p.amount), 0);
+                .filter((p: any) => p.status === "PAID")
+                .reduce((sum: any, p: any) => sum + Number(p.amount), 0);
 
             const newPaymentStatus = totalPaid >= grandTotal ? "PAID" : "PARTIALLY_PAID";
 
@@ -295,19 +295,19 @@ export async function markAsPaidManually(bookingId: string) {
         });
         if (!member) return { status: "error", message: "Unauthorized access to this booking" };
 
-        const servicePrice = Number(booking.service?.variants?.find((v) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.variants?.[0]?.basePrice ?? 0);
+        const servicePrice = Number(booking.service?.variants?.find((v: any) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.variants?.[0]?.basePrice ?? 0);
         const sessionTotal = servicePrice * booking.sessionCount;
-        const addonsTotal = booking.addons.reduce((sum, a) => {
+        const addonsTotal = booking.addons.reduce((sum: any, a: any) => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const variantId = (a as any).addonVariantId;
-            const variant = variantId ? a.variants?.find((v) => v.id === variantId) : a.variants?.[0];
+            const variant = variantId ? a.variants?.find((v: any) => v.id === variantId) : a.variants?.[0];
             return sum + Number(variant?.basePrice ?? 0);
         }, 0);
         const grandTotal = booking.totalAmount != null ? Number(booking.totalAmount) : (sessionTotal + addonsTotal);
 
         const totalPaid = booking.payments
-            .filter((p) => p.status === "PAID")
-            .reduce((sum, p) => sum + Number(p.amount), 0);
+            .filter((p: any) => p.status === "PAID")
+            .reduce((sum: any, p: any) => sum + Number(p.amount), 0);
 
         const balanceDue = Math.max(0, grandTotal - totalPaid);
 
@@ -317,7 +317,7 @@ export async function markAsPaidManually(bookingId: string) {
 
         const receiptNumber = generateReceiptNumber();
 
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: any) => {
             // Create a manual PAID payment
             await tx.payment.create({
                 data: {
@@ -335,8 +335,8 @@ export async function markAsPaidManually(bookingId: string) {
                 where: { bookingId: booking.id },
             });
             const newTotalPaid = allPayments
-                .filter((p) => p.status === "PAID")
-                .reduce((sum, p) => sum + Number(p.amount), 0);
+                .filter((p: any) => p.status === "PAID")
+                .reduce((sum: any, p: any) => sum + Number(p.amount), 0);
             
             const newPaymentStatus = newTotalPaid >= grandTotal ? "PAID" : "PARTIALLY_PAID";
 

@@ -138,15 +138,15 @@ export default async function BookingDetailPage({ params }: Props) {
     const totalDuration = sessionDuration * booking.sessionCount;
 
     const totalPaid = booking.payments
-        .filter((p) => p.status === "PAID")
-        .reduce((sum, p) => sum + Number(p.amount), 0);
+        .filter((p: any) => p.status === "PAID")
+        .reduce((sum: any, p: any) => sum + Number(p.amount), 0);
     const grandTotal = Number(booking.totalAmount);
     const balanceDue = Math.max(0, grandTotal - totalPaid);
 
     const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
 
     // Serialize photos for client components
-    const serializedPhotos = booking.photos.map(p => ({
+    const serializedPhotos = booking.photos.map((p: any) => ({
         id: p.id,
         r2Key: p.r2Key,
         fileName: p.fileName,
@@ -158,7 +158,7 @@ export default async function BookingDetailPage({ params }: Props) {
     }));
 
     // Serialize payments for client component
-    const serializedPayments = booking.payments.map(p => ({
+    const serializedPayments = booking.payments.map((p: any) => ({
         id: p.id,
         amount: p.amount.toString(),
         method: p.method,
@@ -177,11 +177,11 @@ export default async function BookingDetailPage({ params }: Props) {
         include: { variants: { include: { deliverables: true } } }
     });
 
-    const studioServices = studioServicesRaw.map(s => ({
+    const studioServices = studioServicesRaw.map((s: any) => ({
         id: s.id,
         name: s.name,
         isAddon: s.isAddon,
-        variants: s.variants.map(v => ({
+        variants: s.variants.map((v: any) => ({
             id: v.id,
             basePrice: v.basePrice.toString(),
             maxPrice: v.maxPrice?.toString() ?? null,
@@ -189,7 +189,7 @@ export default async function BookingDetailPage({ params }: Props) {
             serviceId: v.serviceId,
             sessionDurationMins: v.sessionDurationMins,
             logisticsIncluded: v.logisticsIncluded,
-            deliverables: v.deliverables.map(d => ({
+            deliverables: v.deliverables.map((d: any) => ({
                 id: d.id,
                 label: d.label,
                 quantity: d.quantity ?? undefined,
@@ -204,7 +204,7 @@ export default async function BookingDetailPage({ params }: Props) {
         include: { user: { select: { name: true } } }
     });
 
-    const mappedMembers = studioMembers.map(m => ({
+    const mappedMembers = studioMembers.map((m: any) => ({
         id: m.id,
         name: m.user.name,
         role: m.role

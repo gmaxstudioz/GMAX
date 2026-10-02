@@ -482,7 +482,14 @@ export default function BookingPage() {
                               >
                                 {isSelected && <CheckCircle2 className="absolute top-4 right-4 w-5 h-5 text-primary" />}
                                 <div className="pr-8">
-                                  <h4 className="font-heading font-bold text-lg leading-snug">{service.name}</h4>
+                                  <h4 className="font-heading font-bold text-lg leading-snug">
+            {service.name}
+            {service.discountPercentage && service.discountPercentage > 0 ? (
+                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-500/20 text-green-600 uppercase tracking-wider align-middle">
+                    {service.discountPercentage}% OFF
+                </span>
+            ) : null}
+        </h4>
                                   {service.description && <p className="text-sm text-muted-foreground mt-2 line-clamp-2 leading-relaxed">{service.description}</p>}
                                   {service.features && service.features.length > 0 && (
                                     <ul className="mt-3 space-y-1">
@@ -767,7 +774,14 @@ export default function BookingPage() {
                               >
                                 <div className="flex justify-between items-center">
                                   <div>
-                                    <span className="font-semibold text-base block">{addon.name}</span>
+                                    <span className="font-semibold text-base block">
+            {addon.name}
+            {addon.discountPercentage && addon.discountPercentage > 0 ? (
+                <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-500/20 text-green-600 uppercase tracking-wider align-middle">
+                    {addon.discountPercentage}% OFF
+                </span>
+            ) : null}
+        </span>
                                     {addon.variants.length > 1 && (
                                        <span className="text-xs text-muted-foreground uppercase tracking-wider block mt-0.5">{variant.locationType}</span>
                                     )}

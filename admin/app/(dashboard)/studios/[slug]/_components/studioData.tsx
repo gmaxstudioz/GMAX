@@ -124,9 +124,9 @@ function Overview({ data, setActiveTab, userRole }: { data: StudioWithRelations,
     if (userRole === "receptionist") {
         const todayStart = startOfDay(new Date());
         const todayEnd = endOfDay(new Date());
-        const bookingsCompleted = data.bookings.filter(b => b.bookingStatus === "COMPLETED").length;
-        const paymentsCompleted = data.bookings.filter(b => b.paymentStatus === "PAID").length;
-        const intentsToday = data.bookingIntents.filter(i => {
+        const bookingsCompleted = data.bookings.filter((b: any) => b.bookingStatus === "COMPLETED").length;
+        const paymentsCompleted = data.bookings.filter((b: any) => b.paymentStatus === "PAID").length;
+        const intentsToday = data.bookingIntents.filter((i: any) => {
             const d = new Date(i.createdAt);
             return d >= todayStart && d <= todayEnd;
         }).length;
@@ -305,7 +305,7 @@ function Clients({ studioData, userRole }: { studioData: StudioWithRelations, us
         return () => clearTimeout(t);
     }, [debouncedSearch, filterType]);
 
-    const filteredClients = studioData.clients.filter((client) => {
+    const filteredClients = studioData.clients.filter((client: any) => {
         const query = debouncedSearch.toLowerCase();
         const matchesSearch = client.name.toLowerCase().includes(query) || 
                               (client.email && client.email.toLowerCase().includes(query)) ||
@@ -317,7 +317,7 @@ function Clients({ studioData, userRole }: { studioData: StudioWithRelations, us
     const totalClients = filteredClients.length;
     const totalPages = Math.ceil(totalClients / ITEMS_PER_PAGE);
     const paginatedClients = filteredClients.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
-    const allTypes = Array.from(new Set(studioData.clients.map(c => c.type)));
+    const allTypes = Array.from(new Set(studioData.clients.map((c: any) => c.type)));
 
     const isListView = searchParamsHooks.get("view") !== "grid";
 
@@ -356,7 +356,7 @@ function Clients({ studioData, userRole }: { studioData: StudioWithRelations, us
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => setFilterType("ALL")}>All Types</DropdownMenuItem>
-                            {allTypes.map(t => (
+                            {allTypes.map((t: any) => (
                                 <DropdownMenuItem key={t} onClick={() => setFilterType(t)}>{t}</DropdownMenuItem>
                             ))}
                         </DropdownMenuContent>
@@ -391,7 +391,7 @@ function Clients({ studioData, userRole }: { studioData: StudioWithRelations, us
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {paginatedClients.map((client) => (
+                                        {paginatedClients.map((client: any) => (
                                             <TableRow key={client.id}>
                                                 <TableCell>
                                                     <div className="font-medium">{client.name}</div>
@@ -405,7 +405,7 @@ function Clients({ studioData, userRole }: { studioData: StudioWithRelations, us
                                                 <TableCell>
                                                     <div className="flex items-center gap-2 text-xs">
                                                         <span className="font-bold text-primary">{client.bookings?.length || 0} Total</span>
-                                                        <span className="text-muted-foreground">({client.bookings?.filter(b => b.bookingStatus === "COMPLETED").length || 0} Done)</span>
+                                                        <span className="text-muted-foreground">({client.bookings?.filter((b: any) => b.bookingStatus === "COMPLETED").length || 0} Done)</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
@@ -444,7 +444,7 @@ function Clients({ studioData, userRole }: { studioData: StudioWithRelations, us
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 gap-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
-                                {paginatedClients.map((client) => (
+                                {paginatedClients.map((client: any) => (
                                     <ContextMenu key={client.id}>
                                         <ContextMenuTrigger>
                                             <Card className="@container/card">
@@ -467,11 +467,11 @@ function Clients({ studioData, userRole }: { studioData: StudioWithRelations, us
                                                             </div>
                                                             <div className="rounded w-full bg-accent p-2">
                                                                 <p className="text-xs">Completed</p>
-                                                                <p className="font-bold text-primary">{client.bookings?.filter((booking) => booking.bookingStatus === "COMPLETED").length || 0}</p>
+                                                                <p className="font-bold text-primary">{client.bookings?.filter((booking: any) => booking.bookingStatus === "COMPLETED").length || 0}</p>
                                                             </div>
                                                             <div className="rounded w-full bg-accent p-2">
                                                                 <p className="text-xs">Cancelled</p>
-                                                                <p className="font-bold text-primary">{client.bookings?.filter((booking) => booking.bookingStatus === "CANCELLED").length || 0}</p>
+                                                                <p className="font-bold text-primary">{client.bookings?.filter((booking: any) => booking.bookingStatus === "CANCELLED").length || 0}</p>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -690,7 +690,7 @@ function Staffs({studioData}: {studioData: StudioWithRelations}) {
             <CardContent>
                 <div className="flex flex-col gap-4">
                     <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
-                        {paginatedStaff.map((member) => (
+                        {paginatedStaff.map((member: any) => (
                             <ContextMenu key={member.id}>
                                 <ContextMenuTrigger>
                                     <Card className="@container/card">
@@ -822,20 +822,20 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
     const allServices = useMemo(() => studioData.services, [studioData.services]);
 
     // Split into main services and addons
-    const mainServices = useMemo(() => allServices.filter(s => !s.isAddon), [allServices]);
-    const addonServices = useMemo(() => allServices.filter(s => s.isAddon), [allServices]);
+    const mainServices = useMemo(() => allServices.filter((s: any) => !s.isAddon), [allServices]);
+    const addonServices = useMemo(() => allServices.filter((s: any) => s.isAddon), [allServices]);
 
     // Filter services by search
     const filteredMainServices = useMemo(() => {
         if (!serviceSearch.trim()) return mainServices;
         const q = serviceSearch.toLowerCase();
-        return mainServices.filter(s => s.name.toLowerCase().includes(q));
+        return mainServices.filter((s: any) => s.name.toLowerCase().includes(q));
     }, [mainServices, serviceSearch]);
 
     // Flatten addons into variants
     const flattenedAddons = useMemo(() => {
-        return addonServices.flatMap(addon => 
-            (addon.variants || []).map((variant) => ({
+        return addonServices.flatMap((addon: any) => 
+            (addon.variants || []).map((variant: any) => ({
                 compositeId: `${addon.id}:${variant.id}`,
                 addon,
                 variant
@@ -846,14 +846,14 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
     const filteredAddonVariants = useMemo(() => {
         if (!serviceSearch.trim()) return flattenedAddons;
         const q = serviceSearch.toLowerCase();
-        return flattenedAddons.filter(a => a.addon.name.toLowerCase().includes(q) || a.variant.locationType.toLowerCase().includes(q));
+        return flattenedAddons.filter((a: any) => a.addon.name.toLowerCase().includes(q) || a.variant.locationType.toLowerCase().includes(q));
     }, [flattenedAddons, serviceSearch]);
 
     // Filter clients by search
     const filteredClients = useMemo(() => {
         if (!clientSearch.trim()) return studioData.clients;
         const q = clientSearch.toLowerCase();
-        return studioData.clients.filter(c => c.name.toLowerCase().includes(q) || c.phone.includes(q));
+        return studioData.clients.filter((c: any) => c.name.toLowerCase().includes(q) || c.phone.includes(q));
     }, [studioData.clients, clientSearch]);
 
     // Watch reactive values for price calculation
@@ -864,14 +864,14 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
     const watchedPaymentPlan    = useWatch({ control: form.control, name: "paymentPlan" }) ?? "FULL";
     const watchedTotalAmount    = useWatch({ control: form.control, name: "totalAmount" }) ?? 0;
 
-    const selectedService = useMemo(() => allServices.find(s => s.id === watchedServiceId), [allServices, watchedServiceId]);
-    const selectedVariant = useMemo(() => selectedService?.variants?.find((v) => v.id === watchedServiceVariantId), [selectedService, watchedServiceVariantId]);
-    const selectedClient = useMemo(() => studioData.clients.find(c => c.id === watchedClientId), [studioData.clients, watchedClientId]);
-    const selectedAddonVariants = useMemo(() => flattenedAddons.filter(a => selectedAddonIds.includes(a.compositeId)), [flattenedAddons, selectedAddonIds]);
+    const selectedService = useMemo(() => allServices.find((s: any) => s.id === watchedServiceId), [allServices, watchedServiceId]);
+    const selectedVariant = useMemo(() => selectedService?.variants?.find((v: any) => v.id === watchedServiceVariantId), [selectedService, watchedServiceVariantId]);
+    const selectedClient = useMemo(() => studioData.clients.find((c: any) => c.id === watchedClientId), [studioData.clients, watchedClientId]);
+    const selectedAddonVariants = useMemo(() => flattenedAddons.filter((a: any) => selectedAddonIds.includes(a.compositeId)), [flattenedAddons, selectedAddonIds]);
 
     const servicePrice = selectedVariant?.basePrice ? Number(selectedVariant.basePrice) : 0;
     const sessionTotal = servicePrice * (watchedSessionCount || 1);
-    const addonsTotal = selectedAddonVariants.reduce((sum, a) => sum + Number(a.variant.basePrice || 0), 0);
+    const addonsTotal = selectedAddonVariants.reduce((sum: any, a: any) => sum + Number(a.variant.basePrice || 0), 0);
     const grandTotal = sessionTotal + addonsTotal;
 
     useEffect(() => {
@@ -974,7 +974,7 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
                                                             />
                                                         </div>
                                                         <div className="max-h-[200px] overflow-y-auto p-1">
-                                                            {filteredClients.length > 0 ? filteredClients.map(c => (
+                                                            {filteredClients.length > 0 ? filteredClients.map((c: any) => (
                                                                 <div
                                                                     key={c.id}
                                                                     onClick={() => { field.onChange(c.id); setClientOpen(false); setClientSearch(""); }}
@@ -1046,7 +1046,7 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
                                                             />
                                                         </div>
                                                         <div className="max-h-[200px] overflow-y-auto p-1">
-                                                            {filteredMainServices.length > 0 ? filteredMainServices.map(s => (
+                                                            {filteredMainServices.length > 0 ? filteredMainServices.map((s: any) => (
                                                                 <div
                                                                     key={s.id}
                                                                     onClick={() => { field.onChange(s.id); form.setValue("serviceVariantId", ""); setServiceOpen(false); setServiceSearch(""); }}
@@ -1087,7 +1087,7 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
                                                     <SelectValue placeholder="Choose location type..." />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {selectedService.variants.map((v) => (
+                                                    {selectedService.variants.map((v: any) => (
                                                         <SelectItem key={v.id} value={v.id}>
                                                             {v.locationType} - ₦{Number(v.basePrice).toLocaleString()}
                                                             {v.maxPrice && ` to ₦${Number(v.maxPrice).toLocaleString()}`}
@@ -1113,7 +1113,7 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
                                 <div className="rounded-lg border bg-muted/20 p-3">
                                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Included Deliverables</p>
                                     <ul className="text-sm space-y-1">
-                                        {selectedVariant.deliverables.map((d) => (
+                                        {selectedVariant.deliverables.map((d: any) => (
                                             <li key={d.id} className="flex gap-2 text-foreground/80">
                                                 <span className="text-primary">•</span>
                                                 <span>
@@ -1132,7 +1132,7 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
                                 <Field>
                                     <FieldLabel>Add-ons <span className="text-muted-foreground font-normal">(Optional)</span></FieldLabel>
                                     <div className="border rounded-lg max-h-[220px] overflow-y-auto">
-                                        {filteredAddonVariants.length > 0 ? filteredAddonVariants.map(item => (
+                                        {filteredAddonVariants.length > 0 ? filteredAddonVariants.map((item: any) => (
                                             <label
                                                 key={item.compositeId}
                                                 className="flex items-start justify-between px-3 py-3 cursor-pointer text-sm transition-colors hover:bg-accent border-b last:border-0"
@@ -1147,7 +1147,7 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
                                                         <span>{item.addon.name} <span className="text-muted-foreground text-xs font-medium ml-1">({item.variant.locationType})</span></span>
                                                         {item.variant.deliverables && item.variant.deliverables.length > 0 && (
                                                             <div className="text-xs text-muted-foreground mt-1">
-                                                                {item.variant.deliverables.map((d) => `${d.quantity ? d.quantity + ' ' : ''}${d.label}`).join(" • ")}
+                                                                {item.variant.deliverables.map((d: any) => `${d.quantity ? d.quantity + ' ' : ''}${d.label}`).join(" • ")}
                                                             </div>
                                                         )}
                                                     </div>
@@ -1173,7 +1173,7 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <SelectTrigger><SelectValue placeholder="Assign to..." /></SelectTrigger>
                                             <SelectContent>
-                                                {studioData.members.map(m => (
+                                                {studioData.members.map((m: any) => (
                                                     <SelectItem key={m.id} value={m.id}>{m.user.name}</SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -1278,7 +1278,7 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
                                         <span>{selectedService.name} × {watchedSessionCount || 1} session{(watchedSessionCount || 1) > 1 ? "s" : ""}</span>
                                         <span className="font-mono">₦{sessionTotal.toLocaleString()}</span>
                                     </div>
-                                    {selectedAddonVariants.map(item => (
+                                    {selectedAddonVariants.map((item: any) => (
                                         <div key={item.compositeId} className="flex justify-between text-sm text-muted-foreground">
                                             <span>+ {item.addon.name} <span className="text-[10px]">({item.variant.locationType})</span></span>
                                             <span className="font-mono">₦{Number(item.variant.basePrice).toLocaleString()}</span>
@@ -1326,7 +1326,7 @@ export default function StudioDataWrapper({ studioData, userRole }: { studioData
 
 function BookingIntents({ data }: { data: StudioWithRelations }) {
     // Hide completed intents
-    const intents = data.bookingIntents.filter(i => i.status !== "COMPLETED");
+    const intents = data.bookingIntents.filter((i: any) => i.status !== "COMPLETED");
 
     const statusStyles: Record<string, string> = {
         PENDING: "bg-amber-500/10 text-amber-600 border-amber-500/20",
@@ -1383,7 +1383,7 @@ function BookingIntents({ data }: { data: StudioWithRelations }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {intents.map((intent) => (
+                            {intents.map((intent: any) => (
                                 <tr key={intent.id} className="border-b border-border/30 hover:bg-muted/30 transition-colors">
                                     <td className="py-3 px-2">
                                         <div>

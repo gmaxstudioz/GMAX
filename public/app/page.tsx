@@ -11,7 +11,7 @@ import Magnetic from "@/components/ui/magnetic";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import ServicesSection from "@/components/web/ServicesSection";
-import { getPortfolio, type PortfolioItem } from "@/lib/api";
+import { getPortfolio, type PortfolioItem, getStudios, getStudioBySlug } from "@/lib/api";
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
 
@@ -55,6 +55,7 @@ export default function Home() {
   const [activeWorkIndex, setActiveWorkIndex] = useState<number | null>(null);
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
   const [heroItems, setHeroItems] = useState(defaultHeroImages);
+  const [hasDiscount, setHasDiscount] = useState(false);
 
   const footerText = "We masterfully blur the line between reality and art, crafting cinematic legacies and luxury imagery that command attention and stand the test of time.";
   const footerWords = footerText.split(" ");
@@ -70,6 +71,23 @@ export default function Home() {
     }).catch(() => {});
     
     getPortfolio().then(data => setPortfolioItems(data.items.slice(0, 8))).catch(() => {});
+    
+    // Check for discounts
+    getStudios().then(async (res) => {
+        let anyDiscount = false;
+        for (const s of res.items) {
+            try {
+                const studioData = await getStudioBySlug(s.slug);
+                const anyServiceDisc = studioData.categories.some(c => c.services.some(svc => svc.discountPercentage && svc.discountPercentage > 0));
+                const anyAddonDisc = studioData.addons.some(a => a.discountPercentage && a.discountPercentage > 0);
+                if (anyServiceDisc || anyAddonDisc) {
+                    anyDiscount = true;
+                    break;
+                }
+            } catch (e) {}
+        }
+        setHasDiscount(anyDiscount);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -204,6 +222,11 @@ export default function Home() {
 
   return (
     <main>
+        {hasDiscount && (
+            <div className="w-full bg-primary text-primary-foreground py-2 text-center text-sm font-medium z-50 relative">
+                🎉 Special discounts are currently available on select services and add-ons! <Link href="/book" className="underline font-bold">Book now</Link>
+            </div>
+        )}
         <section className="hero-section relative flex flex-col items-center justify-center w-full min-h-screen overflow-hidden">
             {heroItems.map((image, index) => (
               <div 

@@ -63,12 +63,12 @@ export default async function StudioDailyBookingsPage({ params, searchParams }: 
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) redirect("/auth/login");
 
-    const myMembership = studio.members.find(m => m.userId === session?.user?.id);
+    const myMembership = studio.members.find((m: any) => m.userId === session?.user?.id);
     if (!myMembership) redirect("/");
 
     const canReassign = ["owner", "developer", "manager", "admin"].includes(myMembership!.role);
 
-    const mappedMembers = studio.members.map(m => ({
+    const mappedMembers = studio.members.map((m: any) => ({
         id: m.id,
         name: m.user.name,
         email: m.user.email,
@@ -106,7 +106,7 @@ export default async function StudioDailyBookingsPage({ params, searchParams }: 
     });
 
     // Calculate total consumed minutes
-    const totalMinutes = dailyBookings.reduce((sum, b) => {
+    const totalMinutes = dailyBookings.reduce((sum: any, b: any) => {
         const duration = b.service?.studioSession?.duration || 45;
         return sum + (duration * b.sessionCount);
     }, 0);
@@ -161,7 +161,7 @@ export default async function StudioDailyBookingsPage({ params, searchParams }: 
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {dailyBookings.map((booking) => (
+                                        {dailyBookings.map((booking: any) => (
                                             <TableRow key={booking.id}>
                                                 <TableCell className="font-medium whitespace-nowrap">
                                                     {format(new Date(booking.bookingDate), "hh:mm a")}
@@ -199,7 +199,7 @@ export default async function StudioDailyBookingsPage({ params, searchParams }: 
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {dailyBookings.map((booking) => (
+                                {dailyBookings.map((booking: any) => (
                                     <Card key={booking.id} className="@container/card h-fit">
                                         <CardHeader>
                                             <div className="flex justify-between items-start">
@@ -259,7 +259,7 @@ export default async function StudioDailyBookingsPage({ params, searchParams }: 
                             <div className="pt-4 border-t space-y-3">
                                 <p className="text-sm font-semibold">Available Slots Left</p>
                                 <div className="space-y-2">
-                                    {studioSessions?.studioSessions.map(sessionDuration => {
+                                    {studioSessions?.studioSessions.map((sessionDuration: any) => {
                                         const dur = sessionDuration.duration || 45;
                                         const possibleSlots = Math.floor(remainingMinutes / dur);
                                         return (

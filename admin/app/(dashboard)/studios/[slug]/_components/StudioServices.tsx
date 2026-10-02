@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { createService, deleteService, updateService, cloneService } from "@/lib/actions/service";
+import { createService, deleteService, updateService, cloneService, bulkUpdateServiceDiscounts } from "@/lib/actions/service";
 import { ViewToggle } from "@/components/web/ViewToggle";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useSearchParams } from "next/navigation";
@@ -123,6 +123,27 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
 
     const [serviceDialogOpenForCategory, setServiceDialogOpenForCategory] = useState<string | null>(null);
     const [editModeService, setEditModeService] = useState<string | null>(null);
+    const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
+    const [bulkDiscountOpen, setBulkDiscountOpen] = useState(false);
+    const [bulkDiscountValue, setBulkDiscountValue] = useState(0);
+
+    const toggleSelection = (id: string) => {
+        setSelectedServiceIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    };
+    
+    const handleBulkDiscount = async () => {
+        if (selectedServiceIds.length === 0) return toast.error("No services selected");
+        startTransition(async () => {
+            const res = await bulkUpdateServiceDiscounts(selectedServiceIds, bulkDiscountValue);
+            if (res.status === 'success') {
+                toast.success("Discounts updated");
+                setBulkDiscountOpen(false);
+                setSelectedServiceIds([]);
+            } else {
+                toast.error(res.message);
+            }
+        });
+    };
 
     const serviceForm = useForm<z.input<typeof ServiceSchema>>({
         resolver: zodResolver(ServiceSchema),
@@ -131,6 +152,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
             description: "",
             isAddon: false,
             isActive: true,
+            discountPercentage: 0,
             studioSessionId: "",
             features: [""],
             variants: [{
@@ -159,6 +181,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
             description: "",
             isAddon: false,
             isActive: true,
+            discountPercentage: 0,
             studioSessionId: "",
             features: [""],
             variants: [{
@@ -260,6 +283,26 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <Dialog open={bulkDiscountOpen} onOpenChange={setBulkDiscountOpen}>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Set Bulk Discount</DialogTitle>
+                            </DialogHeader>
+                            <div className="py-4">
+                                <FieldLabel>Discount Percentage</FieldLabel>
+                                <Input type="number" value={bulkDiscountValue} onChange={e => setBulkDiscountValue(Number(e.target.value))} />
+                            </div>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setBulkDiscountOpen(false)}>Cancel</Button>
+                                <Button onClick={handleBulkDiscount} disabled={isPending}>Apply to {selectedServiceIds.length} services</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                    {selectedServiceIds.length > 0 && (
+                        <Button variant="outline" size="sm" onClick={() => setBulkDiscountOpen(true)}>
+                            Bulk Discount ({selectedServiceIds.length})
+                        </Button>
+                    )}
                     <ViewToggle defaultView="list" />
                 </div>
             </CardHeader>
@@ -268,7 +311,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                 <Accordion type="multiple" className="space-y-4 w-full border-none rounded-lg p-2" defaultValue={CATEGORIES}>
                     {CATEGORIES.map((category) => {
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        const services = studioData.services.filter(s => (s as any).category === category);
+                        const services = studioData.services.filter((s: any) => (s as any).category === category);
                         const categoryName = category.charAt(0) + category.slice(1).toLowerCase();
 
                         return (
@@ -317,7 +360,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                             <Table>
                                                 <TableHeader>
                                                     <TableRow>
-                                                        <TableHead>Service</TableHead>
+                                                        <TableHead className="w-[50px]"></TableHead><TableHead>Service</TableHead>
                                                         <TableHead>Base Price</TableHead>
                                                         <TableHead>Duration</TableHead>
                                                         <TableHead>Features</TableHead>
@@ -325,11 +368,14 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
-                                                    {services.map((svc) => {
-                                                        const sessionBinding = studioData.studioSessions.find(s => s.id === svc.studioSessionId);
+                                                    {services.map((svc: any) => {
+                                                        const sessionBinding = studioData.studioSessions.find((s: any) => s.id === svc.studioSessionId);
                                                         const basePrice = svc.variants?.[0]?.basePrice ? Number(svc.variants[0].basePrice) : 0;
                                                         return (
                                                             <TableRow key={svc.id}>
+                                                                <TableCell>
+                                                                    <input type="checkbox" className="size-4" checked={selectedServiceIds.includes(svc.id)} onChange={() => toggleSelection(svc.id)} />
+                                                                </TableCell>
                                                                 <TableCell>
                                                                     <div className="font-medium">
                                                                         {svc.name}
@@ -350,7 +396,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                 </TableCell>
                                                                 <TableCell>
                                                                     <div className="flex flex-wrap gap-1 max-w-[200px]">
-                                                                        {svc.features?.slice(0, 2).map((f, i) => (
+                                                                        {svc.features?.slice(0, 2).map((f: any, i: any) => (
                                                                             <span key={i} className="bg-secondary text-secondary-foreground text-[10px] px-1.5 py-0.5 rounded-sm">
                                                                                 {f}
                                                                             </span>
@@ -379,7 +425,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                             const svcFeatures = (svc.features && svc.features.length > 0) ? svc.features : [""];
                                                                             
                                                                             const mappedVariants = (svc.variants && svc.variants.length > 0) 
-                                                                                ? svc.variants.map((v) => ({
+                                                                                ? svc.variants.map((v: any) => ({
                                                                                     id: v.id,
                                                                                     title: v.title ?? undefined,
                                                                                     locationType: v.locationType as "STUDIO" | "OUTDOOR" | "BOTH" | "MULTIPLE",
@@ -387,7 +433,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                                     maxPrice: v.maxPrice ? Number(v.maxPrice) : undefined,
                                                                                     sessionDurationMins: v.sessionDurationMins,
                                                                                     logisticsIncluded: v.logisticsIncluded,
-                                                                                    deliverables: v.deliverables?.map((d) => ({
+                                                                                    deliverables: v.deliverables?.map((d: any) => ({
                                                                                         label: d.label,
                                                                                         quantity: d.quantity ?? undefined,
                                                                                         detail: d.detail ?? undefined,
@@ -401,6 +447,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                                 description: svc.description || "",
                                                                                 isAddon: svc.isAddon,
                                                                                 isActive: svc.isActive,
+                                                                                discountPercentage: svc.discountPercentage || 0,
                                                                                 studioSessionId: svc.studioSessionId || "",
                                                                                 features: svcFeatures,
                                                                                 variants: mappedVariants
@@ -429,13 +476,14 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                         </div>
                                     ) : (
                                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                            {services.map((svc) => {
-                                                const sessionBinding = studioData.studioSessions.find(s => s.id === svc.studioSessionId);
+                                            {services.map((svc: any) => {
+                                                const sessionBinding = studioData.studioSessions.find((s: any) => s.id === svc.studioSessionId);
                                                 // ✅ Safely extract base price from variants
                                                 const basePrice = svc.variants?.[0]?.basePrice ? Number(svc.variants[0].basePrice) : 0;
                                                 return (
                                                     <div key={svc.id} className="flex flex-col border rounded-md p-3 bg-muted/20 relative group/svc">
                                                         <h5 className="font-medium text-sm flex gap-2 items-center">
+                                                            <input type="checkbox" className="size-4 mr-2" checked={selectedServiceIds.includes(svc.id)} onChange={() => toggleSelection(svc.id)} />
                                                             {svc.name}
                                                             {svc.variants && svc.variants.length > 0 && (
                                                                 <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full leading-none">{svc.variants.length} Var</span>
@@ -450,7 +498,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                         
                                                         {(svc.features && svc.features.length > 0) && (
                                                             <div className="mt-2 flex flex-wrap gap-1">
-                                                                {svc.features.map((f, i) => (
+                                                                {svc.features.map((f: any, i: any) => (
                                                                     <span key={i} className="bg-secondary text-secondary-foreground text-[10px] px-1.5 py-0.5 rounded-sm">
                                                                         {f}
                                                                     </span>
@@ -482,7 +530,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                     const svcFeatures = (svc.features && svc.features.length > 0) ? svc.features : [""];
                                                                     
                                                                     const mappedVariants = (svc.variants && svc.variants.length > 0) 
-                                                                        ? svc.variants.map((v) => ({
+                                                                        ? svc.variants.map((v: any) => ({
                                                                             id: v.id,
                                                                             title: v.title ?? undefined,
                                                                             locationType: v.locationType as "STUDIO" | "OUTDOOR" | "BOTH" | "MULTIPLE",
@@ -490,7 +538,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                             maxPrice: v.maxPrice ? Number(v.maxPrice) : undefined,
                                                                             sessionDurationMins: v.sessionDurationMins,
                                                                             logisticsIncluded: v.logisticsIncluded,
-                                                                            deliverables: v.deliverables?.map((d) => ({
+                                                                            deliverables: v.deliverables?.map((d: any) => ({
                                                                                 label: d.label,
                                                                                 quantity: d.quantity ?? undefined,
                                                                                 detail: d.detail ?? undefined,
@@ -504,6 +552,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                         description: svc.description || "",
                                                                         isAddon: svc.isAddon,
                                                                         isActive: svc.isActive,
+                                                                                discountPercentage: svc.discountPercentage || 0,
                                                                         studioSessionId: svc.studioSessionId || "",
                                                                         features: svcFeatures,
                                                                         variants: mappedVariants
@@ -617,7 +666,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                         onClick={() => {
                                             // Auto-detect a good default duration from the session if selected
                                             const sessionId = serviceForm.getValues("studioSessionId");
-                                            const session = studioData.studioSessions.find(s => s.id === sessionId);
+                                            const session = studioData.studioSessions.find((s: any) => s.id === sessionId);
                                             appendVariant({ 
                                                 locationType: "STUDIO", 
                                                 basePrice: 0, 
@@ -755,7 +804,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                               onValueChange={(val) => {
                                                   field.onChange(val);
                                                   // Auto-update the variant duration to match the session
-                                                  const session = studioData.studioSessions.find(s => s.id === val);
+                                                  const session = studioData.studioSessions.find((s: any) => s.id === val);
                                                   if (session) {
                                                       serviceForm.setValue("variants.0.sessionDurationMins", session.duration);
                                                   }
@@ -766,7 +815,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                     <SelectValue placeholder="Linked Temporal Session" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {studioData.studioSessions.map(session => (
+                                                    {studioData.studioSessions.map((session: any) => (
                                                         <SelectItem key={session.id} value={session.id}>
                                                             {session.name} ({session.duration}m)
                                                         </SelectItem>

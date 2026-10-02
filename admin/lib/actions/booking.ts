@@ -96,12 +96,12 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
                     } 
                 });
 
-                const alternative = allStudios.find(s => {
+                const alternative = allStudios.find((s: any) => {
                     if (s.id === studioId) return false;
                     const sCity = (s.metadata as { city?: string })?.city;
                     if (!sCity || sCity.toLowerCase() !== myCity.toLowerCase()) return false;
                     
-                    const altOverlaps = s.bookings.some(b => {
+                    const altOverlaps = s.bookings.some((b: any) => {
                         const bDur = b.service?.studioSession?.duration || 45;
                         const bStart = new Date(b.bookingDate).getTime();
                         const bEnd = bStart + (bDur * b.sessionCount * 60 * 1000);

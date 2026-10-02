@@ -27,16 +27,16 @@ export default async function TransactionsPage() {
     
     // Check if user is an admin/manager
     const adminRoles = ["owner", "developer"];
-    const hasAdminRole = members.some(m => adminRoles.includes(m.role));
+    const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
 
     if (!hasAdminRole) {
         redirect("/");
     }
 
-    const isSuperAdmin = members.some(m => ["owner", "developer"].includes(m.role));
+    const isSuperAdmin = members.some((m: any) => ["owner", "developer"].includes(m.role));
     
     // Get the studios they manage if they are a manager
-    const managedStudioIds = members.filter(m => m.role === "manager").map(m => m.studioId);
+    const managedStudioIds = members.filter((m: any) => m.role === "manager").map((m: any) => m.studioId);
 
     // Fetch payments
     const payments = await prisma.payment.findMany({
@@ -60,14 +60,14 @@ export default async function TransactionsPage() {
     });
 
     // Calculate stats
-    const paidCount = payments.filter(p => p.status === "PAID").length;
-    const pendingCount = payments.filter(p => p.status === "PENDING").length;
-    const partiallyPaidCount = payments.filter(p => p.status === "PARTIALLY_PAID").length;
-    const cancelledCount = payments.filter(p => p.status === "CANCELLED").length;
+    const paidCount = payments.filter((p: any) => p.status === "PAID").length;
+    const pendingCount = payments.filter((p: any) => p.status === "PENDING").length;
+    const partiallyPaidCount = payments.filter((p: any) => p.status === "PARTIALLY_PAID").length;
+    const cancelledCount = payments.filter((p: any) => p.status === "CANCELLED").length;
 
     const totalAmountCollected = payments
-        .filter(p => p.status === "PAID" || p.status === "PARTIALLY_PAID")
-        .reduce((sum, p) => sum + Number(p.amount), 0);
+        .filter((p: any) => p.status === "PAID" || p.status === "PARTIALLY_PAID")
+        .reduce((sum: any, p: any) => sum + Number(p.amount), 0);
 
     return (
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">
@@ -149,7 +149,7 @@ export default async function TransactionsPage() {
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    payments.map((payment) => (
+                                    payments.map((payment: any) => (
                                         <TableRow key={payment.id}>
                                             <TableCell className="font-mono text-xs">{payment.receiptNumber}</TableCell>
                                             <TableCell>{format(new Date(payment.paymentDate), "MMM do, yyyy")}</TableCell>

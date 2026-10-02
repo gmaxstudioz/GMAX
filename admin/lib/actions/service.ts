@@ -1,5 +1,8 @@
 "use server";
 
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { inArray } from "drizzle-orm";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { ServiceSchema, ServicePayload } from "@/lib/schemas/service";
@@ -49,7 +52,7 @@ export async function createService(data: ServicePayload) {
                 studioId,
                 studioSessionId: parsed.data.studioSessionId,
                 variants: {
-                    create: parsed.data.variants.map(v => ({
+                    create: parsed.data.variants.map((v: any) => ({
                         locationType: v.locationType,
                         basePrice: v.basePrice,
                         maxPrice: v.maxPrice,
@@ -57,7 +60,7 @@ export async function createService(data: ServicePayload) {
                         logisticsIncluded: v.logisticsIncluded,
                         ...(v.deliverables ? {
                             deliverables: {
-                                create: v.deliverables.map(d => ({
+                                create: v.deliverables.map((d: any) => ({
                                     label: d.label,
                                     quantity: d.quantity,
                                     detail: d.detail,
@@ -93,9 +96,9 @@ export async function updateService(id: string, data: ServicePayload) {
             include: { _count: { select: { bookings: true } } },
         });
 
-        const inputVariantIds = parsed.data.variants.map(v => v.id).filter(Boolean) as string[];
-        const variantsToRemove = existingVariants.filter(variant => !inputVariantIds.includes(variant.id));
-        const variantIdsToRemove = variantsToRemove.map(variant => variant.id);
+        const inputVariantIds = parsed.data.variants.map((v: any) => v.id).filter(Boolean) as string[];
+        const variantsToRemove = existingVariants.filter((variant: any) => !inputVariantIds.includes(variant.id));
+        const variantIdsToRemove = variantsToRemove.map((variant: any) => variant.id);
 
         if (variantIdsToRemove.length > 0) {
             const referencedBookingCount = await prisma.booking.count({
@@ -110,9 +113,9 @@ export async function updateService(id: string, data: ServicePayload) {
             }
         }
 
-        const existingVariantById = new Map(existingVariants.map(variant => [variant.id, variant]));
+        const existingVariantById = new Map(existingVariants.map((variant: any) => [variant.id, variant]));
 
-        const updatedService = await prisma.$transaction(async tx => {
+        const updatedService = await prisma.$transaction(async (tx: any) => {
             const serviceUpdate = tx.service.update({
                 where: { id },
                 data: {
@@ -126,7 +129,7 @@ export async function updateService(id: string, data: ServicePayload) {
                 },
             });
 
-            const variantPromises = parsed.data.variants.map(variant => {
+            const variantPromises = parsed.data.variants.map((variant: any) => {
                 const data = {
                     locationType: variant.locationType,
                     basePrice: variant.basePrice,
@@ -135,7 +138,7 @@ export async function updateService(id: string, data: ServicePayload) {
                     logisticsIncluded: variant.logisticsIncluded,
                 };
 
-                const existingVariant = variant.id ? existingVariantById.get(variant.id) : null;
+                const existingVariant: any = variant.id ? existingVariantById.get(variant.id) : null;
                 if (existingVariant) {
                     return tx.serviceVariant.update({
                         where: { id: existingVariant.id },
@@ -144,7 +147,7 @@ export async function updateService(id: string, data: ServicePayload) {
                             ...(variant.deliverables ? {
                                 deliverables: {
                                     deleteMany: {},
-                                    create: variant.deliverables.map(d => ({
+                                    create: variant.deliverables.map((d: any) => ({
                                         label: d.label,
                                         quantity: d.quantity,
                                         detail: d.detail,
@@ -162,7 +165,7 @@ export async function updateService(id: string, data: ServicePayload) {
                         ...data,
                         ...(variant.deliverables ? {
                             deliverables: {
-                                create: variant.deliverables.map(d => ({
+                                create: variant.deliverables.map((d: any) => ({
                                     label: d.label,
                                     quantity: d.quantity,
                                     detail: d.detail,
@@ -276,14 +279,14 @@ export async function cloneService(serviceId: string, targetStudioId: string) {
                 studioId: targetStudioId,
                 studioSessionId: targetSessionId,
                 variants: {
-                    create: existingService.variants.map(v => ({
+                    create: existingService.variants.map((v: any) => ({
                         locationType: v.locationType,
                         basePrice: v.basePrice,
                         maxPrice: v.maxPrice,
                         sessionDurationMins: v.sessionDurationMins,
                         logisticsIncluded: v.logisticsIncluded,
                         deliverables: {
-                            create: v.deliverables.map(d => ({
+                            create: v.deliverables.map((d: any) => ({
                                 label: d.label,
                                 quantity: d.quantity,
                                 detail: d.detail,
@@ -300,5 +303,20 @@ export async function cloneService(serviceId: string, targetStudioId: string) {
     } catch (e) {
         console.error("Failed to clone service:", e);
         return { status: "error", message: "Failed to clone service" };
+    }
+}
+export async function bulkUpdateServiceDiscounts(serviceIds: string[], discountPercentage: number) {
+    try {
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (!session?.user) return { status: "error", message: "Unauthorized" };
+
+        await db.update(schema.service)
+            .set({ discountPercentage })
+            .where(inArray(schema.service.id, serviceIds));
+            
+        return { status: "success", message: "Discounts updated successfully" };
+    } catch (error) {
+        console.error("Failed to update discounts:", error);
+        return { status: "error", message: "Failed to update discounts" };
     }
 }

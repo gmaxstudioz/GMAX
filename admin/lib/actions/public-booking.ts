@@ -132,7 +132,7 @@ export async function createPublicBooking(data: {
         }
 
         const defaultMember =
-            studio.members.find((m) => m.role === "owner") || studio.members[0];
+            studio.members.find((m: any) => m.role === "owner") || studio.members[0];
         if (!defaultMember) return { status: "error", message: "No available staff member" };
 
         // Construct date in UTC so server timezone doesn't shift it
@@ -143,7 +143,7 @@ export async function createPublicBooking(data: {
         if (!service) throw new Error("Service not found");
 
         const selectedVariant = data.selectedVariantId 
-            ? service.variants.find((v) => v.id === data.selectedVariantId) 
+            ? service.variants.find((v: any) => v.id === data.selectedVariantId) 
             : service.variants[0];
             
         if (!selectedVariant) throw new Error("Invalid service variant selected");
@@ -160,10 +160,10 @@ export async function createPublicBooking(data: {
         const sessionTotal = servicePrice * data.sessionCount;
         
         const addonsTotal = parsedAddons.reduce((sum, p) => {
-            const addon = addonsList.find(a => a.id === p.addonId);
+            const addon = addonsList.find((a: any) => a.id === p.addonId);
             if (!addon) throw new Error(`Addon not found: ${p.addonId}`);
             
-            const variant = p.variantId ? addon.variants.find((v) => v.id === p.variantId) : addon.variants[0];
+            const variant = p.variantId ? addon.variants.find((v: any) => v.id === p.variantId) : addon.variants[0];
             if (!variant) throw new Error(`Invalid variant for addon: ${addon.name}`);
             
             return sum + Number(variant.basePrice);

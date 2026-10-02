@@ -51,14 +51,14 @@ export default async function ClientPage({ params }: ClientPageProps) {
 
     if (!clientData) return notFound();
 
-    const totalSpent = clientData.bookings.reduce((sum, booking) => {
+    const totalSpent = clientData.bookings.reduce((sum: any, booking: any) => {
         const paidAmount = booking.payments
-            .filter(p => p.status === "PAID")
-            .reduce((acc, curr) => acc + Number(curr.amount), 0);
+            .filter((p: any) => p.status === "PAID")
+            .reduce((acc: any, curr: any) => acc + Number(curr.amount), 0);
         return sum + paidAmount;
     }, 0);
 
-    const completedBookings = clientData.bookings.filter(b => b.bookingStatus === "COMPLETED").length;
+    const completedBookings = clientData.bookings.filter((b: any) => b.bookingStatus === "COMPLETED").length;
     const totalBookings = clientData.bookings.length;
 
     const initialTasks = await getClientTasks(clientId, 0, "", "All");

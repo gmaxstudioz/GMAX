@@ -30,12 +30,12 @@ export default async function Page() {
   });
   
   const adminRoles = ["owner", "developer"];
-  const hasAdminRole = members.some(m => adminRoles.includes(m.role));
+  const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
   const isOnlyMinorRole = members.length > 0 && !hasAdminRole;
 
   if (isOnlyMinorRole) {
     const photoVideoRoles = ["photographer", "videographer"];
-    const isPhotoVideoRole = members.every(m => photoVideoRoles.includes(m.role));
+    const isPhotoVideoRole = members.every((m: any) => photoVideoRoles.includes(m.role));
 
     if (isPhotoVideoRole) {
       redirect("/my-tasks");
@@ -53,7 +53,7 @@ export default async function Page() {
   }
 
   // === ADMIN DATA AGGREGATION ===
-  const studioIds = members.filter(m => adminRoles.includes(m.role)).map(m => m.studioId);
+  const studioIds = members.filter((m: any) => adminRoles.includes(m.role)).map((m: any) => m.studioId);
 
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -66,40 +66,40 @@ export default async function Page() {
     include: { client: true, service: true }
   });
 
-  const recentBookings = allRelevantBookings.filter(b => b.createdAt >= thirtyDaysAgo);
-  const previousBookings = allRelevantBookings.filter(b => b.createdAt >= sixtyDaysAgo && b.createdAt < thirtyDaysAgo);
+  const recentBookings = allRelevantBookings.filter((b: any) => b.createdAt >= thirtyDaysAgo);
+  const previousBookings = allRelevantBookings.filter((b: any) => b.createdAt >= sixtyDaysAgo && b.createdAt < thirtyDaysAgo);
 
-  const totalRevenueRecent = recentBookings.reduce((sum, b) => sum + Number(b.totalAmount), 0);
-  const totalRevenuePrev = previousBookings.reduce((sum, b) => sum + Number(b.totalAmount), 0);
+  const totalRevenueRecent = recentBookings.reduce((sum: any, b: any) => sum + Number(b.totalAmount), 0);
+  const totalRevenuePrev = previousBookings.reduce((sum: any, b: any) => sum + Number(b.totalAmount), 0);
   const revenueGrowth = totalRevenuePrev === 0 ? (totalRevenueRecent > 0 ? 100 : 0) : ((totalRevenueRecent - totalRevenuePrev) / totalRevenuePrev) * 100;
 
   const totalBookingsRecent = recentBookings.length;
   const totalBookingsPrev = previousBookings.length;
   const bookingsGrowth = totalBookingsPrev === 0 ? (totalBookingsRecent > 0 ? 100 : 0) : ((totalBookingsRecent - totalBookingsPrev) / totalBookingsPrev) * 100;
 
-  const activeClientsRecent = new Set(recentBookings.map(b => b.clientId)).size;
-  const activeClientsPrev = new Set(previousBookings.map(b => b.clientId)).size;
+  const activeClientsRecent = new Set(recentBookings.map((b: any) => b.clientId)).size;
+  const activeClientsPrev = new Set(previousBookings.map((b: any) => b.clientId)).size;
   const clientsGrowth = activeClientsPrev === 0 ? (activeClientsRecent > 0 ? 100 : 0) : ((activeClientsRecent - activeClientsPrev) / activeClientsPrev) * 100;
 
-  const completedRecent = recentBookings.filter(b => b.bookingStatus === "COMPLETED").length;
-  const completedPrev = previousBookings.filter(b => b.bookingStatus === "COMPLETED").length;
+  const completedRecent = recentBookings.filter((b: any) => b.bookingStatus === "COMPLETED").length;
+  const completedPrev = previousBookings.filter((b: any) => b.bookingStatus === "COMPLETED").length;
   const completionRateRecent = totalBookingsRecent === 0 ? 0 : (completedRecent / totalBookingsRecent) * 100;
   const completionRatePrev = totalBookingsPrev === 0 ? 0 : (completedPrev / totalBookingsPrev) * 100;
   const completionRateGrowth = completionRateRecent - completionRatePrev;
 
   const metrics = {
-    totalRevenue: allRelevantBookings.reduce((sum, b) => sum + Number(b.totalAmount), 0),
+    totalRevenue: allRelevantBookings.reduce((sum: any, b: any) => sum + Number(b.totalAmount), 0),
     revenueGrowth,
     totalBookings: allRelevantBookings.length,
     bookingsGrowth,
-    activeClients: new Set(allRelevantBookings.map(b => b.clientId)).size,
+    activeClients: new Set(allRelevantBookings.map((b: any) => b.clientId)).size,
     clientsGrowth,
-    completionRate: allRelevantBookings.length === 0 ? 0 : (allRelevantBookings.filter(b => b.bookingStatus === "COMPLETED").length / allRelevantBookings.length) * 100,
+    completionRate: allRelevantBookings.length === 0 ? 0 : (allRelevantBookings.filter((b: any) => b.bookingStatus === "COMPLETED").length / allRelevantBookings.length) * 100,
     completionRateGrowth
   };
 
   // Chart Data (last 90 days aggregated by day)
-  const bookingsLast90Days = allRelevantBookings.filter(b => b.createdAt >= ninetyDaysAgo);
+  const bookingsLast90Days = allRelevantBookings.filter((b: any) => b.createdAt >= ninetyDaysAgo);
   const chartDataMap = new Map<string, number>();
   
   // Pre-fill the map with 0s for the last 90 days
@@ -108,7 +108,7 @@ export default async function Page() {
       chartDataMap.set(d.toISOString().split('T')[0], 0);
   }
 
-  bookingsLast90Days.forEach(b => {
+  bookingsLast90Days.forEach((b: any) => {
       const dateStr = b.createdAt.toISOString().split('T')[0];
       if (chartDataMap.has(dateStr)) {
           chartDataMap.set(dateStr, chartDataMap.get(dateStr)! + Number(b.totalAmount));
@@ -127,7 +127,7 @@ export default async function Page() {
       include: { client: true, service: true }
   });
 
-  const tableData = rawRecentBookings.map(b => ({
+  const tableData = rawRecentBookings.map((b: any) => ({
       id: b.id,
       clientName: b.client?.name ?? 'Unknown',
       clientImage: b.client?.image ?? null,

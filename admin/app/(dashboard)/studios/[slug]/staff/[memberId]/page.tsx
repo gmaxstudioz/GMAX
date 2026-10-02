@@ -102,13 +102,13 @@ export default async function MemberPage({ params }: MemberPageProps) {
                         <Card>
                             <CardContent>
                                 <CardTitle>Completed Tasks</CardTitle>
-                                <p className="text-primary font-bold text-2xl">{memberData?.bookings.filter((booking) => booking.bookingStatus === "COMPLETED").length}</p>
+                                <p className="text-primary font-bold text-2xl">{memberData?.bookings.filter((booking: any) => booking.bookingStatus === "COMPLETED").length}</p>
                             </CardContent>
                         </Card>
                         <Card>
                             <CardContent>
                                 <CardTitle>Pending Tasks</CardTitle>
-                                <p className="text-primary font-bold text-2xl">{memberData?.bookings.filter((booking) => booking.bookingStatus === "PENDING").length}</p>
+                                <p className="text-primary font-bold text-2xl">{memberData?.bookings.filter((booking: any) => booking.bookingStatus === "PENDING").length}</p>
                             </CardContent>
                         </Card>
                     </div>

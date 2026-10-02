@@ -31,11 +31,11 @@ export async function SiteHeader() {
       select: { role: true }
     });
     
-    canCreateStudio = members.some(m => ["owner", "developer"].includes(m.role));
-    canCreateService = members.some(m => ["owner", "developer", "manager"].includes(m.role));
+    canCreateStudio = members.some((m: any) => ["owner", "developer"].includes(m.role));
+    canCreateService = members.some((m: any) => ["owner", "developer", "manager"].includes(m.role));
     
     // If they have NO roles, or their only roles are photographer/videographer, they can't create clients/bookings
-    if (members.length === 0 || members.every(m => ["photographer", "videographer"].includes(m.role))) {
+    if (members.length === 0 || members.every((m: any) => ["photographer", "videographer"].includes(m.role))) {
       canCreateClient = false;
       canCreateBooking = false;
     }

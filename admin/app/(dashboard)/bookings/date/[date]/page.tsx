@@ -92,13 +92,13 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
     });
 
     // 2. Group bookings by studio and prepare specific lists for UI components
-    const groupedBookings = dailyBookings.reduce((acc, booking) => {
+    const groupedBookings = dailyBookings.reduce((acc: any, booking: any) => {
         const studioId = booking.studio.id;
         
         if (!acc[studioId]) {
             // Flatten services from categories
             const allServices = booking.studio.services;
-            const ownerMember = booking.studio.members.find(m => m.role === "owner");
+            const ownerMember = booking.studio.members.find((m: any) => m.role === "owner");
             
             acc[studioId] = {
                 studio: {
@@ -114,7 +114,7 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
                 bookings: [],
                 totalMinutes: 0,
                 // These are passed to the UpdateBookingDialog
-                studioClients: booking.studio.clients.map(c => ({
+                studioClients: booking.studio.clients.map((c: any) => ({
                     id: c.id,
                     name: c.name,
                     phone: c.phone,
@@ -122,7 +122,7 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
                     email: c.email ?? undefined,
                     image: c.image ?? undefined,
                 })),
-                studioServices: allServices.map(s => ({
+                studioServices: allServices.map((s: any) => ({
                     id: s.id,
                     name: s.name,
                     description: s.description,
@@ -132,7 +132,7 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
                     studioSessionId: s.studioSessionId,
                     category: s.category,
                     studioId: s.studioId,
-                    variants: s.variants?.map(v => ({
+                    variants: s.variants?.map((v: any) => ({
                         id: v.id,
                         serviceId: v.serviceId,
                         locationType: v.locationType,
@@ -140,7 +140,7 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
                         maxPrice: v.maxPrice ? Number(v.maxPrice) : undefined,
                         sessionDurationMins: v.sessionDurationMins,
                         logisticsIncluded: v.logisticsIncluded,
-                        deliverables: v.deliverables?.map(d => ({
+                        deliverables: v.deliverables?.map((d: any) => ({
                             id: d.id,
                             label: d.label,
                             quantity: d.quantity ?? undefined,
@@ -149,7 +149,7 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
                         })) ?? [],
                     })) ?? [],
                 })),
-                studioMembers: booking.studio.members.map(m => ({
+                studioMembers: booking.studio.members.map((m: any) => ({
                     id: m.id,
                     name: m.user.name,
                     email: m.user.email,
@@ -199,7 +199,7 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
                 />
             ) : (
                 <div className="flex flex-col gap-8">
-                    {studios.map((group) => {
+                    {studios.map((group: any) => {
                         const totalCapacity = 720;
                         const remainingMinutes = Math.max(0, totalCapacity - group.totalMinutes);
                         const percentFilled = Math.min(100, (group.totalMinutes / totalCapacity) * 100);
@@ -234,7 +234,7 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {group.bookings.map((booking) => (
+                                                {group.bookings.map((booking: any) => (
                                                     <TableRow key={booking.id}>
                                                         <TableCell className="font-medium whitespace-nowrap">
                                                             {format(new Date(booking.bookingDate), "hh:mm a")}
@@ -278,7 +278,7 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
                                     </div>
                                 ) : (
                                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                        {group.bookings.map((booking) => (
+                                        {group.bookings.map((booking: any) => (
                                             <ContextMenu key={booking.id}>
                                                 <ContextMenuTrigger>
                                                     <Card className="@container/card h-fit">
@@ -317,7 +317,7 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
                                                     <ContextMenuGroup>
                                                         <ContextMenuLabel>Actions</ContextMenuLabel>
                                                         {(() => {
-                                                            const membership = myMemberships.find(m => m.studioId === booking.studioId);
+                                                            const membership = myMemberships.find((m: any) => m.studioId === booking.studioId);
                                                             const canUpdateBooking = membership && ["owner", "manager", "developer", "admin"].includes(membership.role);
                                                             
                                                             return canUpdateBooking ? (
@@ -339,7 +339,7 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
                                                                             serviceVariantId: booking.serviceVariantId ?? undefined,
                                                                             memberId: booking.memberId || "",
                                                                             bookingDate: booking.bookingDate.toISOString(),
-                                                                            addonIds: booking.addons.map(addon => addon.id),
+                                                                            addonIds: booking.addons.map((addon: any) => addon.id),
                                                                             totalAmount: Number(booking.totalAmount),
                                                                             paymentPlan: booking.paymentPlan,
                                                                         }}
@@ -349,7 +349,7 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
                                                             ) : null;
                                                         })()}
                                                         {(() => {
-                                                            const membership = myMemberships.find(m => m.studioId === booking.studioId);
+                                                            const membership = myMemberships.find((m: any) => m.studioId === booking.studioId);
                                                             const canUpdateBooking = membership && ["owner", "manager", "developer", "admin"].includes(membership.role);
                                                             
                                                             return canUpdateBooking ? (

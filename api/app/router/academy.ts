@@ -92,6 +92,7 @@ export const registerForCourse = os.academy.register
         const reference = `gmax-academy-${uuidv4().slice(0, 8)}`;
         
         const [registration] = await db.insert(academyStudent).values({
+            id: uuidv4(),
             courseId: course.id,
             batchId: input.batchId,
             firstName: input.firstName,
@@ -118,7 +119,7 @@ export const verifyPayment = os.academy.verifyPayment
     .handler(async ({ input }) => {
         const registration = await db.query.academyStudent.findFirst({
             where: eq(academyStudent.paymentReference, input.reference),
-            with: { course: true, batch: true },
+            with: { academyCourse: true, academyBatch: true },
         });
 
         if (!registration) {
@@ -137,14 +138,14 @@ export const verifyPayment = os.academy.verifyPayment
                     .set({ paymentStatus: "SUCCESS", updatedAt: new Date().toISOString() })
                     .where(eq(academyStudent.id, registration.id));
 
-                const startDateStr = registration.batch?.startDate 
-                    ? new Date(registration.batch.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                const startDateStr = registration.academyBatch?.startDate 
+                    ? new Date(registration.academyBatch.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
                     : "a date to be announced";
 
                 await sendAcademyRegistrationEmail({
                     email: registration.email,
                     studentName: registration.firstName,
-                    courseName: registration.course.title,
+                    courseName: registration.academyCourse.title,
                     startDate: startDateStr,
                     amountPaid: formatCurrency(Number(registration.amountPaid)),
                 }).catch(err => console.error("Academy Email failed:", err));
@@ -152,13 +153,13 @@ export const verifyPayment = os.academy.verifyPayment
                 if (registration.phone) {
                     await sendAcademyRegistrationSMS({
                         phone: registration.phone,
-                        courseName: registration.course.title,
+                        courseName: registration.academyCourse.title,
                         startDate: startDateStr,
                     }).catch(err => console.error("Academy SMS failed:", err));
                     
                     await sendAcademyRegistrationWhatsApp({
                         phone: registration.phone,
-                        courseName: registration.course.title,
+                        courseName: registration.academyCourse.title,
                         startDate: startDateStr,
                     }).catch(err => console.error("Academy WhatsApp failed:", err));
                 }

@@ -26,7 +26,7 @@ export default async function AcademyPage() {
     });
     
     const adminRoles = ["owner", "developer"];
-    const hasAdminRole = members.some(m => adminRoles.includes(m.role));
+    const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
     if (members.length > 0 && !hasAdminRole) {
         redirect("/my-tasks");
     }
@@ -53,10 +53,10 @@ export default async function AcademyPage() {
     });
 
     // Calculate metrics
-    const totalStudents = students.filter(s => s.paymentStatus === "SUCCESS").length;
+    const totalStudents = students.filter((s: any) => s.paymentStatus === "SUCCESS").length;
     const totalRevenue = students
-        .filter(s => s.paymentStatus === "SUCCESS")
-        .reduce((sum, s) => sum + Number(s.amountPaid), 0);
+        .filter((s: any) => s.paymentStatus === "SUCCESS")
+        .reduce((sum: any, s: any) => sum + Number(s.amountPaid), 0);
 
     return (
         <div className="space-y-6 md:py-6 px-4 lg:px-6">
@@ -83,7 +83,7 @@ export default async function AcademyPage() {
                         <BookOpen className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{courses.filter(c => c.isPublished).length}</div>
+                        <div className="text-2xl font-bold">{courses.filter((c: any) => c.isPublished).length}</div>
                         <p className="text-xs text-muted-foreground mt-1">
                             {courses.length} total courses
                         </p>
@@ -109,10 +109,10 @@ export default async function AcademyPage() {
                     <TabsTrigger value="students">Students ({students.length})</TabsTrigger>
                 </TabsList>
                 <TabsContent value="courses" className="space-y-4">
-                    <AcademyCoursesTable courses={courses.map(c => ({...c, price: Number(c.price)}))} />
+                    <AcademyCoursesTable courses={courses.map((c: any) => ({...c, price: Number(c.price)}))} />
                 </TabsContent>
                 <TabsContent value="students" className="space-y-4">
-                    <AcademyStudentsTable students={students.map(s => ({...s, amountPaid: Number(s.amountPaid), course: { ...s.course, price: Number(s.course.price) }}))} />
+                    <AcademyStudentsTable students={students.map((s: any) => ({...s, amountPaid: Number(s.amountPaid), course: { ...s.course, price: Number(s.course.price) }}))} />
                 </TabsContent>
             </Tabs>
         </div>

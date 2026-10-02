@@ -30,7 +30,7 @@ export default async function EditProductPage({ params }: Props) {
     });
 
     const adminRoles = ["owner", "developer"];
-    const hasAdminRole = members.some((m) => adminRoles.includes(m.role));
+    const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
     if (members.length > 0 && !hasAdminRole) redirect("/my-tasks");
 
     const [product, categories] = await Promise.all([

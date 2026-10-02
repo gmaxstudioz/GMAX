@@ -51,16 +51,16 @@ export function StudioStatsCards({ data }: { data: StudioWithRelations }) {
     // --- Revenue ---
     function getRevenue(bookings: typeof data.bookings) {
         return bookings
-            .filter(b => b.paymentStatus === "PAID")
-            .reduce((sum, b) => {
+            .filter((b: any) => b.paymentStatus === "PAID")
+            .reduce((sum: any, b: any) => {
                 if (b.totalAmount != null) {
                     return sum + Number(b.totalAmount);
                 }
                 
-                const bookedVariant = b.service?.variants?.find(v => v.id === b.serviceVariantId) || b.service?.variants?.[0];
+                const bookedVariant = b.service?.variants?.find((v: any) => v.id === b.serviceVariantId) || b.service?.variants?.[0];
                 const servicePrice = Number(bookedVariant?.basePrice ?? 0);
                 
-                const addonsTotal = (b.addons || []).reduce((acc, addon) => {
+                const addonsTotal = (b.addons || []).reduce((acc: any, addon: any) => {
                     return acc + Number(addon.variants?.[0]?.basePrice ?? 0);
                 }, 0);
                 
@@ -70,17 +70,17 @@ export function StudioStatsCards({ data }: { data: StudioWithRelations }) {
     }
 
     const totalRevenue = getRevenue(data.bookings);
-    const thisMonthRevenue = getRevenue(data.bookings.filter(b => new Date(b.bookingDate) >= thisMonthStart));
-    const prevMonthRevenue = getRevenue(data.bookings.filter(b => {
+    const thisMonthRevenue = getRevenue(data.bookings.filter((b: any) => new Date(b.bookingDate) >= thisMonthStart));
+    const prevMonthRevenue = getRevenue(data.bookings.filter((b: any) => {
         const d = new Date(b.bookingDate);
         return d >= prevMonthStart && d <= prevMonthEnd;
     }));
     const revenueTrend = calcTrend(thisMonthRevenue, prevMonthRevenue);
 
     // --- Active Bookings ---
-    const activeBookings = data.bookings.filter(b => b.bookingStatus !== "COMPLETED" && b.bookingStatus !== "CANCELLED").length;
-    const thisMonthBookings = data.bookings.filter(b => new Date(b.createdAt) >= thisMonthStart).length;
-    const prevMonthBookings = data.bookings.filter(b => {
+    const activeBookings = data.bookings.filter((b: any) => b.bookingStatus !== "COMPLETED" && b.bookingStatus !== "CANCELLED").length;
+    const thisMonthBookings = data.bookings.filter((b: any) => new Date(b.createdAt) >= thisMonthStart).length;
+    const prevMonthBookings = data.bookings.filter((b: any) => {
         const d = new Date(b.createdAt);
         return d >= prevMonthStart && d <= prevMonthEnd;
     }).length;
@@ -88,27 +88,27 @@ export function StudioStatsCards({ data }: { data: StudioWithRelations }) {
 
     // --- Clients ---
     const totalClients = data.clients.length;
-    const thisMonthClients = data.clients.filter(c => new Date(c.createdAt) >= thisMonthStart).length;
-    const prevMonthClients = data.clients.filter(c => {
+    const thisMonthClients = data.clients.filter((c: any) => new Date(c.createdAt) >= thisMonthStart).length;
+    const prevMonthClients = data.clients.filter((c: any) => {
         const d = new Date(c.createdAt);
         return d >= prevMonthStart && d <= prevMonthEnd;
     }).length;
     const clientsTrend = calcTrend(thisMonthClients, prevMonthClients);
 
     // --- Completion Rate ---
-    const completedBookings = data.bookings.filter(b => b.bookingStatus === "COMPLETED").length;
+    const completedBookings = data.bookings.filter((b: any) => b.bookingStatus === "COMPLETED").length;
     const totalBookingsCount = data.bookings.length;
     const completionRate = totalBookingsCount > 0 ? Math.round((completedBookings / totalBookingsCount) * 100 * 10) / 10 : 0;
 
-    const thisMonthCompleted = data.bookings.filter(b => b.bookingStatus === "COMPLETED" && new Date(b.bookingDate) >= thisMonthStart).length;
-    const thisMonthTotal = data.bookings.filter(b => new Date(b.bookingDate) >= thisMonthStart).length;
+    const thisMonthCompleted = data.bookings.filter((b: any) => b.bookingStatus === "COMPLETED" && new Date(b.bookingDate) >= thisMonthStart).length;
+    const thisMonthTotal = data.bookings.filter((b: any) => new Date(b.bookingDate) >= thisMonthStart).length;
     const thisMonthRate = thisMonthTotal > 0 ? (thisMonthCompleted / thisMonthTotal) * 100 : 0;
 
-    const prevMonthCompleted = data.bookings.filter(b => {
+    const prevMonthCompleted = data.bookings.filter((b: any) => {
         const d = new Date(b.bookingDate);
         return b.bookingStatus === "COMPLETED" && d >= prevMonthStart && d <= prevMonthEnd;
     }).length;
-    const prevMonthTotal = data.bookings.filter(b => {
+    const prevMonthTotal = data.bookings.filter((b: any) => {
         const d = new Date(b.bookingDate);
         return d >= prevMonthStart && d <= prevMonthEnd;
     }).length;

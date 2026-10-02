@@ -63,7 +63,7 @@ export default async function StudioDetails({ params }: StudioDetailsProps) {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) redirect("/auth/login");
 
-    const myMembership = studioData.members.find(m => m.userId === session.user.id);
+    const myMembership = studioData.members.find((m: any) => m.userId === session.user.id);
     if (!myMembership) {
         redirect("/");
     }
@@ -90,4 +90,4 @@ export default async function StudioDetails({ params }: StudioDetailsProps) {
             <StudioData studioData={serialized} userRole={userRole} />
         </div>
     )
-}
+}

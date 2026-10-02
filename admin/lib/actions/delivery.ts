@@ -138,7 +138,7 @@ export async function deliverBooking(bookingId: string) {
                     providerId: smsRes.message_id,
                     bookingId: booking.id,
                 }
-            }).catch(e => console.error("[Delivery] Failed to save SMS notification:", e));
+            }).catch((e: any) => console.error("[Delivery] Failed to save SMS notification:", e));
         }
 
         if (process.env.TERMII_WHATSAPP_SENDER_ID) {
@@ -163,7 +163,7 @@ export async function deliverBooking(bookingId: string) {
                         providerId: waRes.message_id,
                         bookingId: booking.id,
                     }
-                }).catch(e => console.error("[Delivery] Failed to save WA notification:", e));
+                }).catch((e: any) => console.error("[Delivery] Failed to save WA notification:", e));
             }
         }
     }
@@ -213,8 +213,8 @@ export async function sendBalanceDueReminder(bookingId: string) {
     }
 
     const totalPaid = booking.payments
-        .filter((p) => p.status === "PAID")
-        .reduce((sum, p) => sum + Number(p.amount), 0);
+        .filter((p: any) => p.status === "PAID")
+        .reduce((sum: any, p: any) => sum + Number(p.amount), 0);
     const grandTotal = Number(booking.totalAmount);
     const balanceDue = Math.max(0, grandTotal - totalPaid);
 

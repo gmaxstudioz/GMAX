@@ -618,7 +618,7 @@ export default function UpdateStudio({
                                 {studioData.studioSessions.length === 0 ? (
                                     <p className="text-sm italic text-muted-foreground">No sessions defined yet.</p>
                                 ) : (
-                                    studioData.studioSessions.map((session) => (
+                                    studioData.studioSessions.map((session: any) => (
                                         <Badge key={session.id} variant="secondary" className="pl-3 pr-1.5 py-1.5 flex items-center gap-2 text-sm font-medium">
                                             <span>
                                                 {session.name} <span className="opacity-60 text-xs font-normal">({session.duration}m)</span>

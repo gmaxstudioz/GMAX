@@ -19,7 +19,7 @@ export default async function ServicesPage() {
     });
     
     const adminRoles = ["owner", "developer"];
-    const hasAdminRole = members.some(m => adminRoles.includes(m.role));
+    const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
     if (members.length > 0 && !hasAdminRole) {
         redirect("/my-tasks");
     }
@@ -57,11 +57,11 @@ export default async function ServicesPage() {
         orderBy: { name: "asc" }
     });
 
-    const studioGroups = studios.map(studio => {
+    const studioGroups = studios.map((studio: any) => {
         const groupedServices = {
-            PHOTOGRAPHY: studio.services.filter(s => s.category === "PHOTOGRAPHY"),
-            VIDEOGRAPHY: studio.services.filter(s => s.category === "VIDEOGRAPHY"),
-            OTHERS: studio.services.filter(s => s.category === "OTHERS"),
+            PHOTOGRAPHY: studio.services.filter((s: any) => s.category === "PHOTOGRAPHY"),
+            VIDEOGRAPHY: studio.services.filter((s: any) => s.category === "VIDEOGRAPHY"),
+            OTHERS: studio.services.filter((s: any) => s.category === "OTHERS"),
         };
         
         return {
@@ -72,7 +72,7 @@ export default async function ServicesPage() {
                 id: cat,
                 name: cat,
                 type: cat,
-                services: groupedServices[cat as keyof typeof groupedServices].map(service => ({
+                services: groupedServices[cat as keyof typeof groupedServices].map((service: any) => ({
                     ...service,
                     studioId: studio.id,
                     studioSlug: studio.slug,

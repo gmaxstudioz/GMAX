@@ -55,6 +55,7 @@ export const getStudioBySlug = os.studio.getBySlug
                     isAddon: s.isAddon,
                     description: s.description,
                     features: s.features || [],
+                    discountPercentage: s.discountPercentage || 0,
                     variants: s.serviceVariants.map((v) => ({
                         id: v.id,
                         locationType: v.locationType,
@@ -83,6 +84,7 @@ export const getStudioBySlug = os.studio.getBySlug
                 isAddon: a.isAddon,
                 description: a.description,
                 features: a.features || [],
+                discountPercentage: a.discountPercentage || 0,
                 variants: a.serviceVariants.map((v) => ({
                     id: v.id,
                     locationType: v.locationType,
@@ -99,7 +101,7 @@ export const getStudioBySlug = os.studio.getBySlug
                     }))
                 }))
             })),
-        };
+        } as any;
     });
 
 export const getAllStudios = os.studio.getAll
@@ -152,5 +154,5 @@ export const getAllStudios = os.studio.getAll
                 hasNextPage: page < pageCount,
                 hasPreviousPage: page > 1,
             }
-        };
+        } as any;
     });

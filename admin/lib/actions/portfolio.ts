@@ -37,7 +37,7 @@ export async function createPortfolioItem(data: {
     }
 
     try {
-        const item = await prisma.$transaction(async (tx) => {
+        const item = await prisma.$transaction(async (tx: any) => {
             const lastItem = await tx.portfolioItem.findFirst({
                 orderBy: { sortOrder: 'desc' },
                 select: { sortOrder: true }

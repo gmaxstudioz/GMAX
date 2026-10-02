@@ -97,7 +97,7 @@ export function ClientBookingsList({
         const moreTasks = await getClientTasks(clientId, nextPage, search, filterJson);
         setTasks((prev) => {
             const existingIds = new Set(prev.map(t => t.id));
-            const newTasks = moreTasks.filter(t => !existingIds.has(t.id));
+            const newTasks = moreTasks.filter((t: any) => !existingIds.has(t.id));
             return [...prev, ...newTasks];
         });
         setPage(nextPage);

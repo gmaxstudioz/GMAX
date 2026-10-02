@@ -21,7 +21,7 @@ export default async function Page() {
   
   // Only users with some administrative role should access the store manager
   const adminRoles = ["owner", "developer"];
-  const hasAdminRole = members.some(m => adminRoles.includes(m.role));
+  const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
   if (members.length > 0 && !hasAdminRole) {
       redirect("/my-tasks");
   }
@@ -38,8 +38,8 @@ export default async function Page() {
       }
   });
 
-  const totalSold = products.reduce((acc, p) => acc + p._count.purchases, 0);
-  const totalRevenue = products.reduce((acc, p) => {
+  const totalSold = products.reduce((acc: any, p: any) => acc + p._count.purchases, 0);
+  const totalRevenue = products.reduce((acc: any, p: any) => {
       const price = p.salePrice ?? p.price;
       return acc + (p._count.purchases * price.toNumber());
   }, 0);

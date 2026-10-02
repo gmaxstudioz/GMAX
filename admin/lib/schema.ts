@@ -242,6 +242,7 @@ export const service = pgTable("service", {
 	features: text().array(),
 	isAddon: boolean().default(false).notNull(),
 	isActive: boolean().default(true).notNull(),
+	discountPercentage: integer().default(0).notNull(),
 	category: serviceCategoryType().default('OTHERS').notNull(),
 	studioId: text().notNull(),
 	studioSessionId: text().notNull(),

@@ -40,13 +40,13 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
     });
     
     const adminRoles = ["owner", "admin", "developer", "manager", "receptionist"];
-    const hasAdminRole = members.some(m => adminRoles.includes(m.role));
-    const canReassign = members.some(m => ["owner", "admin", "developer", "manager"].includes(m.role));
+    const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
+    const canReassign = members.some((m: any) => ["owner", "admin", "developer", "manager"].includes(m.role));
 
     const baseWhere = hasAdminRole 
         ? { 
             OR: [
-                { memberId: null, studioId: { in: members.filter(m => adminRoles.includes(m.role)).map(m => m.studioId) } },
+                { memberId: null, studioId: { in: members.filter((m: any) => adminRoles.includes(m.role)).map((m: any) => m.studioId) } },
                 { member: { userId: session.user.id } }
             ]
           }
@@ -138,7 +138,7 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {myBookings.map((booking) => (
+                                    {myBookings.map((booking: any) => (
                                         <TableRow key={booking.id}>
                                             <TableCell className="font-medium whitespace-nowrap">
                                                 {format(new Date(booking.bookingDate), "MMM do, yyyy")}
@@ -164,7 +164,7 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
                                                     <ReassignMemberDropdown 
                                                         bookingId={booking.id} 
                                                         currentMemberId={booking.memberId} 
-                                                        members={booking.studio?.members.map((m) => {
+                                                        members={booking.studio?.members.map((m: any) => {
                                                             const member = m as { id: string; role: string; studioId: string; createdAt: Date; user: { name: string; email: string; } };
                                                             return {
                                                                 id: member.id,
@@ -194,7 +194,7 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                            {myBookings.map(booking => (
+                            {myBookings.map((booking: any) => (
                                 <Card key={booking.id} className="@container/card h-fit">
                                     <CardHeader>
                                         <div className="flex justify-between items-start">
@@ -220,7 +220,7 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
                                                 <ReassignMemberDropdown 
                                                     bookingId={booking.id} 
                                                     currentMemberId={booking.memberId} 
-                                                    members={booking.studio?.members.map((m) => {
+                                                    members={booking.studio?.members.map((m: any) => {
                                                         const member = m as { id: string; role: string; studioId: string; createdAt: Date; user: { name: string; email: string; } };
                                                         return {
                                                             id: member.id,

@@ -20,12 +20,12 @@ export default async function ClientsPage() {
     });
     
     const adminRoles = ["owner", "developer", "receptionist"];
-    const hasAdminRole = members.some(m => adminRoles.includes(m.role));
+    const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
     if (members.length > 0 && !hasAdminRole) {
         redirect("/my-tasks");
     }
 
-    const canEdit = members.some(m => ["owner", "developer", "admin"].includes(m.role));
+    const canEdit = members.some((m: any) => ["owner", "developer", "admin"].includes(m.role));
 
     const studios = await prisma.studio.findMany({
         where: {
@@ -54,11 +54,11 @@ export default async function ClientsPage() {
     });
 
     // Shape data grouped by studio
-    const studioGroups = studios.map(studio => ({
+    const studioGroups = studios.map((studio: any) => ({
         id: studio.id,
         slug: studio.slug,
         name: studio.name,
-        clients: studio.clients.map(client => ({
+        clients: studio.clients.map((client: any) => ({
             ...client,
             studioId: studio.id,
             studioSlug: studio.slug,
