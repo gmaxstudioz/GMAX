@@ -16,9 +16,9 @@ const handler = new OpenAPIHandler(router, {
         schemaConverters,
         specGenerateOptions: {
             info: {
-                title: 'GMAX Studioz API',
+                title: 'Gmax Studioz API',
                 version: '1.0.0',
-                description: 'GMAX Studioz API for booking and managing studio',
+                description: 'Gmax Studioz API for booking and managing studio',
             }
         }
      })
