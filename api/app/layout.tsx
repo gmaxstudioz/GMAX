@@ -1,7 +1,7 @@
+import { APP_NAME } from "@/lib/constants";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { PostHogProvider } from "./PostHogProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GMAX Studioz API",
-  description: "Official API for GMAX Studioz platform",
+  title: `${APP_NAME} API`,
+  description: `Official API for ${APP_NAME} platform`,
 };
 
 export default function RootLayout({
@@ -28,11 +28,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <PostHogProvider>
-          {children}
-        </PostHogProvider>
-      </body>
+      <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
 }

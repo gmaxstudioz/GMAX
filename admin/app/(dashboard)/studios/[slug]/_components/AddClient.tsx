@@ -14,13 +14,15 @@ import { ChevronDown, ChevronUp, CirclePlusIcon, Loader2Icon, PlusIcon } from "l
 import { useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
-import posthog from "posthog-js";
+import { useRouter } from "next/navigation";
 
-const posthogEnabled = Boolean(
-    process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && process.env.NEXT_PUBLIC_POSTHOG_HOST,
-);
+interface AddClientProps {
+    studioId: string;
+    onSuccess?: (clientId: string) => void;
+}
 
-export default function AddClient({studioId}: {studioId: string}) {
+export default function AddClient({ studioId, onSuccess }: AddClientProps) {
+    const router = useRouter();
     const [ isPending, startTransition ] = useTransition();
     const [optionalOpen, setOptionalOpen] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
@@ -47,12 +49,14 @@ export default function AddClient({studioId}: {studioId: string}) {
             }
 
             if (result?.status === "success") {
-                if (posthogEnabled) {
-                    posthog.capture("client_created", { client_type: data.type });
-                }
                 toast.success("Client added successfully");
                 form.reset();
                 setIsOpen(false);
+                router.refresh();
+                const data = result.data as { id: string } | undefined;
+                if (onSuccess && data?.id) {
+                    onSuccess(data.id);
+                }
             } else if (result?.status === "error") {
                 toast.error(result?.message);
             }

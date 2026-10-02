@@ -1,4 +1,5 @@
 "use client";
+import { APP_NAME } from "@/lib/constants";
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
@@ -132,7 +133,7 @@ function VerifyContent() {
             <div className="max-w-lg w-full space-y-8">
                 {/* Header */}
                 <div className="text-center space-y-2">
-                    <h1 className="text-3xl font-heading font-bold uppercase tracking-wide">GMAX Studioz</h1>
+                    <h1 className="text-3xl font-heading font-bold uppercase tracking-wide"> {APP_NAME} </h1>
                     <p className="text-muted-foreground text-sm">Booking Verification</p>
                 </div>
 
@@ -220,7 +221,7 @@ function VerifyContent() {
 
                 {/* Footer */}
                 <p className="text-center text-xs text-muted-foreground">
-                    © {new Date().getFullYear()} GMAX Studioz. All rights reserved.
+                    © {new Date().getFullYear()} {APP_NAME}. All rights reserved.
                 </p>
             </div>
         </div>

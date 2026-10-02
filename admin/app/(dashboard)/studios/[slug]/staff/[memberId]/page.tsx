@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/db";
-import { eq, and, or, inArray, asc, desc, isNull, sql } from "drizzle-orm";
 import * as schema from "@/lib/schema";
+import { eq } from "drizzle-orm";
 import { getMemberTasks } from "@/lib/actions/task";
 import { CallIcon, House01Icon, Mail01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -19,7 +19,7 @@ export default async function MemberPage({ params }: MemberPageProps) {
     const { memberId, slug } = await params;
 
     const memberData = await db.query.member.findFirst({
-        where: (m, { eq }) => eq(m.id, memberId),
+        where: eq(schema.member.id, memberId),
         with: {
             user: true,
             studio: true,
@@ -102,13 +102,13 @@ export default async function MemberPage({ params }: MemberPageProps) {
                         <Card>
                             <CardContent>
                                 <CardTitle>Completed Tasks</CardTitle>
-                                <p className="text-primary font-bold text-2xl">{memberData?.bookings.filter((booking) => booking.bookingStatus === "COMPLETED").length}</p>
+                                <p className="text-primary font-bold text-2xl">{memberData?.bookings.filter((booking: any) => booking.bookingStatus === "COMPLETED").length}</p>
                             </CardContent>
                         </Card>
                         <Card>
                             <CardContent>
                                 <CardTitle>Pending Tasks</CardTitle>
-                                <p className="text-primary font-bold text-2xl">{memberData?.bookings.filter((booking) => booking.bookingStatus === "PENDING").length}</p>
+                                <p className="text-primary font-bold text-2xl">{memberData?.bookings.filter((booking: any) => booking.bookingStatus === "PENDING").length}</p>
                             </CardContent>
                         </Card>
                     </div>

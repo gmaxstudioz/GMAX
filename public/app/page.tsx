@@ -1,4 +1,5 @@
 "use client";
+import { APP_NAME } from "@/lib/constants";
 
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
@@ -10,29 +11,39 @@ import Magnetic from "@/components/ui/magnetic";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import ServicesSection from "@/components/web/ServicesSection";
-import { getPortfolio, type PortfolioItem } from "@/lib/api";
+import { getPortfolio, type PortfolioItem, getStudios, getStudioBySlug } from "@/lib/api";
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
 
 const words = ["CREATIVE", "STUDIO"];
 
-const heroImages = [
-  { src: "/works/image-1.jpg", top: "5%", left: "5%" },
-  { src: "/works/image-2.jpg", top: "8%", right: "5%" },
-  { src: "/works/image-3.jpg", top: "40%", left: "2%" },
-  { src: "/works/image-4.jpg", top: "42%", right: "2%" },
-  { src: "/works/image-5.jpg", bottom: "5%", left: "5%" },
-  { src: "/works/image-6.jpg", bottom: "8%", right: "5%" },
-  { src: "/works/image-7.jpg", top: "10%", left: "25%" },
-  { src: "/works/image-8.jpg", top: "12%", right: "25%" },
-  { src: "/works/image-9.jpg", bottom: "10%", left: "25%" },
-  { src: "/works/image-10.jpg", bottom: "12%", right: "25%" },
-  { src: "/works/image-11.jpg", top: "25%", left: "15%" },
-  { src: "/works/image-12.jpg", top: "28%", right: "15%" },
-  { src: "/works/image-13.jpg", bottom: "25%", left: "15%" },
-  { src: "/works/image-14.jpg", bottom: "28%", right: "15%" },
-  { src: "/works/image-15.jpg", top: "75%", left: "45%" },
+const heroPositions = [
+  { top: "5%", left: "5%" },
+  { top: "8%", right: "5%" },
+  { top: "40%", left: "2%" },
+  { top: "42%", right: "2%" },
+  { bottom: "5%", left: "5%" },
+  { bottom: "8%", right: "5%" },
+  { top: "10%", left: "25%" },
+  { top: "12%", right: "25%" },
+  { bottom: "10%", left: "25%" },
+  { bottom: "12%", right: "25%" },
+  { top: "25%", left: "15%" },
+  { top: "28%", right: "15%" },
+  { bottom: "25%", left: "15%" },
+  { bottom: "28%", right: "15%" },
+  { top: "75%", left: "45%" },
+  { top: "20%", left: "40%" },
+  { top: "20%", right: "40%" },
+  { bottom: "20%", left: "40%" },
+  { bottom: "20%", right: "40%" },
+  { top: "50%", right: "20%" },
 ];
+
+const defaultHeroImages = heroPositions.map((pos, i) => ({
+  src: `/works/image-${(i % 15) + 1}.jpg`,
+  ...pos
+}));
 
 export default function Home() {
   const textRef = useRef<HTMLParagraphElement>(null);
@@ -43,12 +54,40 @@ export default function Home() {
   const worksBtnRef = useRef<HTMLDivElement>(null);
   const [activeWorkIndex, setActiveWorkIndex] = useState<number | null>(null);
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
+  const [heroItems, setHeroItems] = useState(defaultHeroImages);
+  const [hasDiscount, setHasDiscount] = useState(false);
 
   const footerText = "We masterfully blur the line between reality and art, crafting cinematic legacies and luxury imagery that command attention and stand the test of time.";
   const footerWords = footerText.split(" ");
 
   useEffect(() => {
+    getPortfolio("General").then(data => {
+      if (data.items.length > 0) {
+        setHeroItems(heroPositions.map((pos, i) => ({
+          src: `${R2_PUBLIC_URL}/${data.items[i % data.items.length].r2Key}`,
+          ...pos
+        })));
+      }
+    }).catch(() => {});
+    
     getPortfolio().then(data => setPortfolioItems(data.items.slice(0, 8))).catch(() => {});
+    
+    // Check for discounts
+    getStudios().then(async (res) => {
+        let anyDiscount = false;
+        for (const s of res.items) {
+            try {
+                const studioData = await getStudioBySlug(s.slug);
+                const anyServiceDisc = studioData.categories.some(c => c.services.some(svc => svc.discountPercentage && svc.discountPercentage > 0));
+                const anyAddonDisc = studioData.addons.some(a => a.discountPercentage && a.discountPercentage > 0);
+                if (anyServiceDisc || anyAddonDisc) {
+                    anyDiscount = true;
+                    break;
+                }
+            } catch (e) {}
+        }
+        setHasDiscount(anyDiscount);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -183,8 +222,13 @@ export default function Home() {
 
   return (
     <main>
+        {hasDiscount && (
+            <div className="w-full bg-primary text-primary-foreground py-2 text-center text-sm font-medium z-50 relative">
+                🎉 Special discounts are currently available on select services and add-ons! <Link href="/book" className="underline font-bold">Book now</Link>
+            </div>
+        )}
         <section className="hero-section relative flex flex-col items-center justify-center w-full min-h-screen overflow-hidden">
-            {heroImages.map((image, index) => (
+            {heroItems.map((image, index) => (
               <div 
                 key={index}
                 ref={(el) => {
@@ -192,7 +236,7 @@ export default function Home() {
                 }}
                 className={cn(
                   "absolute z-0 pointer-events-none w-[90px] h-[120px] md:w-[150px] md:h-[200px]",
-                  index >= 6 && "hidden md:block"
+                  index >= 8 && "hidden md:block"
                 )}
                 style={{
                   ...(image.top && { top: image.top }),
@@ -205,6 +249,7 @@ export default function Home() {
                   src={image.src}
                   alt={`Hero Image ${index + 1}`}
                   fill
+                  sizes="(max-width: 768px) 90px, 150px"
                   className="rounded-xl object-cover shadow-2xl"
                   priority={index < 4}
                 />
@@ -214,19 +259,19 @@ export default function Home() {
             <div className="relative z-10 flex flex-col items-center justify-center h-screen text-center mt-[-20vh]">
                 <div className="flex items-center justify-center gap-6 md:gap-12">
                     <div className="w-4 h-4 md:w-8 md:h-8 rounded-full bg-primary"></div>
-                    <h1 className="font-extrabold font-heading text-9xl text-center">GMAX</h1>
+                    <h1 className="font-extrabold font-heading text-7xl md:text-9xl text-center">GMAX</h1>
                     <div className="w-4 h-4 md:w-8 md:h-8 rounded-full bg-primary"></div>
                 </div>
-                <p ref={textRef} className="text-7xl font-heading text-center">CREATIVE</p>
+                <p ref={textRef} className="text-5xl md:text-7xl font-heading text-center">CREATIVE</p>
                 <div className="flex flex-wrap items-center gap-2 md:flex-row mt-12">
                     <Magnetic>
                         <Link
                             href="/book"
                             className={cn("inline-flex items-center gap-2")}
                         >
-                            <span className={buttonVariants({ variant: "default", size: "lg" })}>Book Us</span>
-                            <span className={buttonVariants({ variant: "default", size: "icon-lg" })}>
-                                <ArrowUpRight size={20} />
+                            <span className={cn(buttonVariants({ variant: "default", size: "lg" }), "px-10 py-6 text-xl")}>Book Us</span>
+                            <span className={cn(buttonVariants({ variant: "default", size: "icon-lg" }), "p-6")}>
+                                <ArrowUpRight className="size-6" />
                             </span>
                         </Link>
                     </Magnetic>
@@ -239,7 +284,7 @@ export default function Home() {
           <div className="w-full md:w-1/2 flex flex-col gap-6">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-primary"></div>
-              <h2 className="text-xl md:text-2xl uppercase tracking-widest text-gray-400 font-medium">GMAX Studioz</h2>
+              <h2 className="text-xl md:text-2xl uppercase tracking-widest text-gray-400 font-medium"> {APP_NAME} </h2>
             </div>
             <h3 className="text-4xl md:text-6xl font-heading font-bold leading-tight">
               We craft cinematic legacies.
@@ -266,6 +311,7 @@ export default function Home() {
               src="/works/image-10.jpg"
               alt="About GMAX"
               fill
+              sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover transition-transform duration-700 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors duration-700"></div>
@@ -307,6 +353,7 @@ export default function Home() {
                     src={imgSrc}
                     alt={work.title || work.category}
                     fill
+                    sizes="(max-width: 768px) 50vw, 25vw"
                     className={cn(
                       "object-cover rounded-xl transition-transform duration-700 md:group-hover:scale-105",
                       isActive && "scale-105"
@@ -322,14 +369,14 @@ export default function Home() {
                       "md:translate-y-4 md:group-hover:translate-y-0",
                       isActive ? "translate-y-0" : "translate-y-4"
                     )}>
-                      {work.title || work.category}
+                      {work.category}
                     </span>
                   </div>
                 </div>
               );
             })}
           </div>
-          <div className="flex flex-col items-center gap-6 justify-center mt-16 bg-[#1f1f1f]/50 py-4 md:py-10 px-4 rounded-2xl">
+          <div className="flex flex-col items-center gap-6 justify-center mt-16 bg-primary/20 py-4 md:py-10 px-4 rounded-2xl">
             <p ref={worksTextRef} className="text-2xl md:text-4xl max-w-4xl text-center font-heading leading-snug">
               {footerWords.map((word, i) => (
                 <span key={i} className="inline-block overflow-hidden relative mr-[0.25em] pb-2 -mb-2">

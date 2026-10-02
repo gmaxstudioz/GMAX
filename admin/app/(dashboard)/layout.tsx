@@ -7,30 +7,20 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { aj } from "@/lib/arcjet";
-import { request } from "@arcjet/next";
+import * as schema from "@/lib/schema";
+import { eq } from "drizzle-orm";
 
 export default async function DashboardLayout({ children }: { children: ReactNode}) {
     const session = await auth.api.getSession({
         headers: await headers()
     });
 
-    const req = await request();
-    const decision = await aj.protect(req);
-
-    if (decision.isDenied()) {
-        if (decision.reason.isBot()) {
-            throw new Error("Bot access denied");
-        }
-        throw new Error("Access denied");
-    }
-
     if (!session?.user) {
         redirect("/auth/login");
     }
 
     const user = await db.query.user.findFirst({
-        where: (user, { eq }) => eq(user.id, session.user.id),
+        where: eq(schema.user.id, session.user.id),
         columns: { role: true }
     });
 
@@ -38,7 +28,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
     if (!isAdmin) {
         const membership = await db.query.member.findFirst({
-            where: (member, { eq }) => eq(member.userId, session.user.id)
+            where: eq(schema.member.userId, session.user.id)
         });
 
         if (!membership) {

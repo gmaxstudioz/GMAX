@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, inArray } from "drizzle-orm";
 import { GlobalBookingsClient } from "./_components/GlobalBookingsClient";
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
@@ -17,21 +19,21 @@ export default async function GlobalBookingsPage() {
     if (!session?.user) redirect("/auth/login");
 
     const members = await db.query.member.findMany({
-        where: (member, { eq }) => eq(member.userId, session.user.id),
+        where: eq(schema.member.userId, session.user.id),
         columns: { role: true, studioId: true }
     });
     
-    const adminRoles = ["owner", "developer", "manager"];
-    const hasAdminRole = members.some(m => adminRoles.includes(m.role));
+    const adminRoles = ["owner", "developer", "receptionist"];
+    const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
     if (members.length > 0 && !hasAdminRole) {
         redirect("/my-tasks");
     }
 
-    const studioIds = members.map(m => m.studioId);
+    const studioIds = members.map((m: any) => m.studioId);
 
     // Fetch all bookings across all studios where the user is a member
     const allBookings = studioIds.length > 0 ? await db.query.booking.findMany({
-        where: (booking, { inArray }) => inArray(booking.studioId, studioIds),
+        where: inArray(schema.booking.studioId, studioIds),
         with: {
             client: true,
             service: true

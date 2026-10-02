@@ -3,8 +3,8 @@
 import { auth } from "../auth";
 import { headers } from "next/headers";
 import { ApiResponse } from "../type";
-import { db } from "../db";
-import { member as memberSchema, user as userSchema } from "../schema";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import type { MemberRole } from "../schemas/studio";
 
@@ -128,7 +128,7 @@ export async function addMember(
 export async function FetchMemberDetails(memberId: string) {
     try {
         const data = await db.query.member.findFirst({
-            where: eq(memberSchema.id, memberId),
+            where: eq(schema.member.id, memberId),
             with: { user: true, studio: true, bookings: true },
         });
 
@@ -140,15 +140,6 @@ export async function FetchMemberDetails(memberId: string) {
 }
 
 // ── Update Staff Info ───────────────────────────────────────────────
-//
-// Better Auth's updateMemberRole method goes through the auth SDK and
-// cannot be composed into a Drizzle transaction directly easily. Instead, we run both
-// writes concurrently with Promise.all and fail fast if either rejects,
-// then surface a clear error.
-//
-// Limitation: this is not truly atomic. If updateMemberRole succeeds and
-// Drizzle user update fails, the role will have changed but the profile
-// won't update.
 
 export async function updateStaffInfo(
     memberId: string,
@@ -159,19 +150,18 @@ export async function updateStaffInfo(
     try {
         const [roleResult] = await Promise.all([
             updateMemberRole(memberId, data.role, studioId),
-            db.update(userSchema)
+            db.update(schema.user)
                 .set({
                     name: data.name,
                     phoneNumber: data.phoneNumber || null,
                 })
-                .where(eq(userSchema.id, userId)),
+                .where(eq(schema.user.id, userId)),
         ]);
 
-        // updateMemberRole returns an ApiResponse; check it explicitly
         if (roleResult.status === "error") {
             return {
                 status: "error",
-                message: `Profile updated but role change failed: ${roleResult.message}`,
+                message: `Profile updated but role change failed: \${roleResult.message}`,
             };
         }
 

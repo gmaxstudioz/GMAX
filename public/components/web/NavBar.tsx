@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import gsap from "gsap";
 import { buttonVariants } from "../ui/button";
 import { ArrowUpRight } from "lucide-react";
@@ -14,12 +15,14 @@ const navLinks = [
     { href: "/", label: "Home" },
     { href: "/about", label: "About" },
     { href: "/works", label: "Our Work" },
+    { href: "/academy", label: "Academy" },
     { href: "/shop", label: "Shop" },
 ];
 
 export default function NavBar() {
     const isMobile = useIsMobile();
     const [menuOpen, setMenuOpen] = useState(false);
+    const pathname = usePathname();
 
     const menuRef = useRef<HTMLElement>(null);
     const topBarRef = useRef<HTMLSpanElement>(null);
@@ -99,6 +102,10 @@ export default function NavBar() {
         setMenuOpen(false);
     };
 
+    if (pathname === '/links') {
+        return null;
+    }
+
     return (
         <header className="fixed w-full z-50 backdrop-blur-md bg-background/80">
             {/* Top bar */}
@@ -134,9 +141,9 @@ export default function NavBar() {
                             href="/book"
                             className={cn("inline-flex items-center gap-2")}
                         >
-                            <span className={buttonVariants({ variant: "default", size: "lg" })}>Book Us</span>
-                            <span className={buttonVariants({ variant: "default", size: "icon-lg" })}>
-                                <ArrowUpRight size={20} />
+                            <span className={cn(buttonVariants({ variant: "default", size: "lg" }), "px-10 py-6 text-xl")}>Book Us</span>
+                            <span className={cn(buttonVariants({ variant: "default", size: "icon-lg" }), "p-6")}>
+                                <ArrowUpRight className="size-6" />
                             </span>
                         </Link>
                     </Magnetic>
@@ -188,9 +195,9 @@ export default function NavBar() {
                             className={cn("mobile-nav-link inline-flex items-center gap-2 mt-2")}
                             onClick={handleLinkClick}
                         >
-                            <span className={buttonVariants({ variant: "default", size: "lg" })}>Book Us</span>
-                            <span className={buttonVariants({ variant: "default", size: "icon-lg" })}>
-                                <ArrowUpRight size={20} />
+                            <span className={cn(buttonVariants({ variant: "default", size: "lg" }), "px-10 py-6 text-xl font-bold")}>Book Us</span>
+                            <span className={cn(buttonVariants({ variant: "default", size: "icon-lg" }), "w-16 h-[52px]")}>
+                                <ArrowUpRight size={28} />
                             </span>
                         </Link>
                     </Magnetic>

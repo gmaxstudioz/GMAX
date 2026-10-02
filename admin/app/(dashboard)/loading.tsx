@@ -32,7 +32,7 @@ export default function DashboardLoading() {
             </div>
             <Skeleton className="h-9 w-64 rounded-lg" />
           </div>
-          <Skeleton className="h-[250px] w-full rounded-lg" />
+          <Skeleton className="h-62.5 w-full rounded-lg" />
         </div>
       </div>
 

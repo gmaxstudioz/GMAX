@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, asc } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect, notFound } from "next/navigation";
@@ -12,7 +14,7 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { productId } = await params;
     const product = await db.query.product.findFirst({
-        where: (product, { eq }) => eq(product.id, productId),
+        where: eq(schema.product.id, productId),
         columns: { title: true },
     });
     return { title: product ? `Edit — ${product.title}` : "Edit Product" };
@@ -25,23 +27,26 @@ export default async function EditProductPage({ params }: Props) {
     if (!session?.user) redirect("/auth/login");
 
     const members = await db.query.member.findMany({
-        where: (member, { eq }) => eq(member.userId, session.user.id),
+        where: eq(schema.member.userId, session.user.id),
         columns: { role: true },
     });
 
-    const adminRoles = ["owner", "developer", "manager"];
-    const hasAdminRole = members.some((m) => adminRoles.includes(m.role));
+    const adminRoles = ["owner", "developer"];
+    const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
     if (members.length > 0 && !hasAdminRole) redirect("/my-tasks");
 
     const [product, categories] = await Promise.all([
         db.query.product.findFirst({
-            where: (product, { eq }) => eq(product.id, productId),
+            where: eq(schema.product.id, productId),
             with: { productCategory: true },
         }),
-        db.query.productCategory.findMany({ orderBy: (category, { asc }) => [asc(category.name)] }),
+        db.query.productCategory.findMany({
+            orderBy: [asc(schema.productCategory.name)],
+        }),
     ]);
 
     if (!product) notFound();
+    (product as any).category = (product as any).productCategory;
 
     // Serialize Prisma Decimal objects to plain numbers for Client Components
     const serializedProduct = JSON.parse(JSON.stringify(product, (_key, value) =>

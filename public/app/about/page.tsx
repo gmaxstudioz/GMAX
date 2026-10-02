@@ -71,6 +71,7 @@ export default function AboutPage() {
             src="/works/image-2.jpg" 
             alt="About GMAX Studio" 
             fill 
+            sizes="100vw"
             className="object-cover"
             priority
           />

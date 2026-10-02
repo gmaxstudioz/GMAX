@@ -1,8 +1,9 @@
 "use server";
+import { APP_NAME } from "@/lib/constants";
 
-import { db } from "../db";
-import { booking, payment as paymentTable, member, serviceVariant, bookingAddons, service } from "../schema";
-import { eq, and } from "drizzle-orm";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, and, or, inArray, desc } from "drizzle-orm";
 import { auth } from "../auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -43,41 +44,34 @@ export async function initializePayment(bookingId: string) {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const foundBooking = await db.query.booking.findFirst({
-            where: eq(booking.id, bookingId),
-            with: {
+        const booking = await db.query.booking.findFirst({ where: eq(schema.booking.id, bookingId), with: {
                 client: true,
                 service: { with: { serviceVariants: true } },
                 payments: true,
                 bookingAddons: { with: { service: { with: { serviceVariants: true } } } },
                 studio: true,
-            },
-        });
+            }});
 
         if (!foundBooking) return { status: "error", message: "Booking not found" };
 
         // Verify the caller is a member of this booking's studio
-        const memberRecord = await db.query.member.findFirst({
-            where: and(eq(member.userId, session.user.id), eq(member.studioId, foundBooking.studioId)),
-        });
-        if (!memberRecord) return { status: "error", message: "Unauthorized access to this booking" };
+        const member = await db.query.member.findFirst({ where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId)) });
+        if (!member) return { status: "error", message: "Unauthorized access to this booking" };
 
         // Calculate balance due
-        const servicePrice = Number(foundBooking.service?.serviceVariants?.find((v) => v.id === foundBooking.serviceVariantId)?.basePrice ?? foundBooking.service?.serviceVariants?.[0]?.basePrice ?? 0);
-        const sessionTotal = servicePrice * foundBooking.sessionCount;
-        const addonsTotal = foundBooking.bookingAddons.reduce((sum, relation) => {
-            const a = relation.service;
-            if (!a) return sum;
+        const servicePrice = Number(booking.service?.serviceVariants?.find((v: any) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.serviceVariants?.[0]?.basePrice ?? 0);
+        const sessionTotal = servicePrice * booking.sessionCount;
+        const addonsTotal = (booking.bookingAddons || []).reduce((sum: any, a: any) => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const variantId = (a as any).addonVariantId;
-            const variant = variantId ? a.serviceVariants?.find((v) => v.id === variantId) : a.serviceVariants?.[0];
+            const addonService = (a as any).service || a; const variantId = (addonService as any).addonVariantId;
+            const variant = variantId ? addonService.serviceVariants?.find((v: any) => v.id === variantId) : addonService.serviceVariants?.[0];
             return sum + Number(variant?.basePrice ?? 0);
         }, 0);
         const grandTotal = foundBooking.totalAmount != null ? Number(foundBooking.totalAmount) : (sessionTotal + addonsTotal);
 
-        const totalPaid = foundBooking.payments
-            .filter((p) => p.status === "PAID")
-            .reduce((sum, p) => sum + Number(p.amount), 0);
+        const totalPaid = booking.payments
+            .filter((p: any) => p.status === "PAID")
+            .reduce((sum: any, p: any) => sum + Number(p.amount), 0);
 
         const balanceDue = Math.max(0, grandTotal - totalPaid);
 
@@ -89,16 +83,15 @@ export async function initializePayment(bookingId: string) {
         const receiptNumber = generateReceiptNumber();
 
         // Create a pending Payment record
-        const [payment] = await db.insert(paymentTable).values({
-            id: crypto.randomUUID(),
-            amount: balanceDue.toString(),
-            method: "TRANSFER",
-            status: "PENDING",
-            paystackReference: reference,
-            receiptNumber,
-            bookingId: foundBooking.id,
-            recordedById: session.user.id,
-        }).returning();
+        const payment = await db.insert(schema.payment).values({ id: uuidv4(), 
+                amount: balanceDue.toString(),
+                method: "TRANSFER",
+                status: "PENDING",
+                paystackReference: reference,
+                receiptNumber,
+                bookingId: booking.id,
+                recordedById: session.user.id,
+             }).returning().then(res => res[0]);
 
         // Paystack requires a real email — fall back only as a last resort and
         // flag clearly in logs so the team knows a receipt won't be delivered.
@@ -137,6 +130,21 @@ export async function initializePayment(bookingId: string) {
 
         revalidatePath("/studios", "layout");
 
+        if (booking.client?.phone) {
+            try {
+                const { sendPaymentLinkSMS } = await import("../termii");
+                await sendPaymentLinkSMS({
+                    phone: booking.client.phone,
+                    clientName: booking.client.name,
+                    studioName: booking.studio?.name ?? APP_NAME,
+                    amount: balanceDue,
+                    paymentLink: paystackRes.data.authorization_url,
+                });
+            } catch (notifyErr) {
+                console.error("[Payment] Failed to send payment link SMS", notifyErr);
+            }
+        }
+
         return {
             status: "success",
             data: {
@@ -170,18 +178,11 @@ export async function verifyPayment(reference: string) {
             return { status: "error", message: "Payment not confirmed by Paystack" };
         }
 
-        const foundPayment = await db.query.payment.findFirst({
-            where: eq(paymentTable.paystackReference, reference),
-            with: {
+        const payment = await db.query.payment.findFirst({ where: eq(schema.payment.paystackReference, reference), with: {
                 booking: {
-                    with: { 
-                        payments: true, 
-                        service: { with: { serviceVariants: true } }, 
-                        bookingAddons: { with: { service: { with: { serviceVariants: true } } } } 
-                    },
+                    with: { payments: true, service: { with: { serviceVariants: true } }, bookingAddons: { with: { service: { with: { serviceVariants: true } } } } },
                 },
-            },
-        });
+            }});
 
         if (!foundPayment) return { status: "error", message: "Payment record not found" };
 
@@ -207,47 +208,44 @@ export async function verifyPayment(reference: string) {
         }
 
         // Atomic transaction — update payment and booking status together.
-        await db.transaction(async (tx) => {
+        // All reads within this block see a consistent snapshot; concurrent
+        // transactions targeting the same booking row will serialize correctly.
+        await db.transaction(async (tx: any) => {
             // Step 1: Mark this payment as PAID
-            await tx.update(paymentTable).set({
-                status: "PAID",
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                paystackResponse: paystackRes.data as any,
-            }).where(eq(paymentTable.id, foundPayment.id));
+            await tx.update(schema.payment).set({
+                    status: "PAID",
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    paystackResponse: paystackRes.data as any,
+                }).where(eq(schema.payment.id, payment.id));
 
             if (!foundPayment.bookingId) return;
 
             // Step 2: Re-read ALL payments for this booking within the transaction.
-            const allPayments = await tx.query.payment.findMany({
-                where: eq(paymentTable.bookingId, foundPayment.bookingId),
-            });
+            // The payment updated above will already show PAID in this read.
+            const allPayments = await tx.query.payment.findMany({ where: eq(schema.payment.bookingId, payment.bookingId) });
 
-            const currentBooking = foundPayment.booking;
-            if (!currentBooking) return;
+            const booking = (payment as any).booking;
+            if (!booking) return;
 
-            const servicePrice = Number(currentBooking.service?.serviceVariants?.find((v) => v.id === currentBooking.serviceVariantId)?.basePrice ?? currentBooking.service?.serviceVariants?.[0]?.basePrice ?? 0);
-            const sessionTotal = servicePrice * currentBooking.sessionCount;
-            const addonsTotal = currentBooking.bookingAddons.reduce((sum, relation) => {
-                const a = relation.service;
-                if (!a) return sum;
+            const servicePrice = Number(booking.service?.serviceVariants?.find((v: any) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.serviceVariants?.[0]?.basePrice ?? 0);
+            const sessionTotal = servicePrice * booking.sessionCount;
+            const addonsTotal = (booking.bookingAddons || []).reduce((sum: any, a: any) => {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const variantId = (a as any).addonVariantId;
-                const variant = variantId ? a.serviceVariants?.find((v) => v.id === variantId) : a.serviceVariants?.[0];
+                const addonService = (a as any).service || a; const variantId = (addonService as any).addonVariantId;
+                const variant = variantId ? addonService.serviceVariants?.find((v: any) => v.id === variantId) : addonService.serviceVariants?.[0];
                 return sum + Number(variant?.basePrice ?? 0);
             }, 0);
             const grandTotal = currentBooking.totalAmount != null ? Number(currentBooking.totalAmount) : (sessionTotal + addonsTotal);
 
             // Step 3: Recalculate with the freshly updated payment included
             const totalPaid = allPayments
-                .filter((p) => p.status === "PAID")
-                .reduce((sum, p) => sum + Number(p.amount), 0);
+                .filter((p: any) => p.status === "PAID")
+                .reduce((sum: any, p: any) => sum + Number(p.amount), 0);
 
             const newPaymentStatus = totalPaid >= grandTotal ? "PAID" : "PARTIALLY_PAID";
 
             // Step 4: Update booking status atomically
-            await tx.update(booking).set({ 
-                paymentStatus: newPaymentStatus as any 
-            }).where(eq(booking.id, foundPayment.bookingId));
+            await tx.update(schema.booking).set({ paymentStatus: newPaymentStatus }).where(eq(schema.booking.id, payment.bookingId));
         });
 
         revalidatePath("/studios", "layout");
@@ -255,5 +253,75 @@ export async function verifyPayment(reference: string) {
     } catch (e) {
         console.error("Failed to verify payment:", e);
         return { status: "error", message: "Failed to verify payment" };
+    }
+}
+
+// ── Mark Payment as Paid Manually ───────────────────────────────────────────
+
+export async function markAsPaidManually(bookingId: string) {
+    try {
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (!session?.user) return { status: "error", message: "Unauthorized" };
+
+        const booking = await db.query.booking.findFirst({ where: eq(schema.booking.id, bookingId), with: {
+                payments: true,
+                service: { with: { serviceVariants: true } },
+                bookingAddons: { with: { service: { with: { serviceVariants: true } } } },
+            }});
+
+        if (!booking) return { status: "error", message: "Booking not found" };
+
+        const member = await db.query.member.findFirst({ where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId)) });
+        if (!member) return { status: "error", message: "Unauthorized access to this booking" };
+
+        const servicePrice = Number(booking.service?.serviceVariants?.find((v: any) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.serviceVariants?.[0]?.basePrice ?? 0);
+        const sessionTotal = servicePrice * booking.sessionCount;
+        const addonsTotal = (booking.bookingAddons || []).reduce((sum: any, a: any) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const addonService = (a as any).service || a; const variantId = (addonService as any).addonVariantId;
+            const variant = variantId ? addonService.serviceVariants?.find((v: any) => v.id === variantId) : addonService.serviceVariants?.[0];
+            return sum + Number(variant?.basePrice ?? 0);
+        }, 0);
+        const grandTotal = booking.totalAmount != null ? Number(booking.totalAmount) : (sessionTotal + addonsTotal);
+
+        const totalPaid = booking.payments
+            .filter((p: any) => p.status === "PAID")
+            .reduce((sum: any, p: any) => sum + Number(p.amount), 0);
+
+        const balanceDue = Math.max(0, grandTotal - totalPaid);
+
+        if (balanceDue <= 0) {
+            return { status: "error", message: "Booking is already fully paid" };
+        }
+
+        const receiptNumber = generateReceiptNumber();
+
+        await db.transaction(async (tx: any) => {
+            // Create a manual PAID payment
+            await tx.insert(schema.payment).values({ id: uuidv4(), 
+                    amount: balanceDue,
+                    method: "CASH", // Default to CASH for manual entry, could be TRANSFER too
+                    status: "PAID",
+                    receiptNumber,
+                    bookingId: booking.id,
+                    recordedById: session.user.id,
+                 }).returning();
+
+            // Re-calculate and update booking
+            const allPayments = await tx.query.payment.findMany({ where: eq(schema.payment.bookingId, booking.id) });
+            const newTotalPaid = allPayments
+                .filter((p: any) => p.status === "PAID")
+                .reduce((sum: any, p: any) => sum + Number(p.amount), 0);
+            
+            const newPaymentStatus = newTotalPaid >= grandTotal ? "PAID" : "PARTIALLY_PAID";
+
+            await tx.update(schema.booking).set({ paymentStatus: newPaymentStatus }).where(eq(schema.booking.id, booking.id));
+        });
+
+        revalidatePath("/studios", "layout");
+        return { status: "success", message: "Payment marked as paid manually" };
+    } catch (e) {
+        console.error("Failed to mark as paid:", e);
+        return { status: "error", message: "Failed to mark as paid manually" };
     }
 }

@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/lib/db";
-import { product } from "@/lib/schema";
+import * as schema from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireSession } from "./with-auth";
@@ -13,7 +13,7 @@ export async function deleteProduct(productId: string) {
     }
 
     try {
-        await db.delete(product).where(eq(product.id, productId));
+        await db.delete(schema.product).where(eq(schema.product.id, productId));
         
         revalidatePath("/store");
         return { status: "success" as const, message: "Product deleted successfully" };
@@ -33,21 +33,20 @@ export async function FetchProducts() {
         const products = await db.query.product.findMany({
             with: {
                 productCategory: true,
-                productAccesses: { columns: { id: true } }
+                productAccesses: {
+                    columns: { id: true }
+                }
             },
-            orderBy: (model, { desc }) => [desc(model.createdAt)]
+            orderBy: (product, { desc }) => [desc(product.createdAt)]
         });
         
-        const mapped = products.map(p => {
-            const { productCategory, productAccesses, ...rest } = p;
-            return {
-                ...rest,
-                category: productCategory,
-                _count: { purchases: productAccesses.length }
-            };
-        });
-        
-        return { status: "success" as const, data: mapped };
+        const mapped = products.map(p => ({
+            ...p,
+            category: p.productCategory,
+            _count: { purchases: p.productAccesses.length }
+        }));
+
+        return { status: "success" as const, data: mapped as any };
     } catch (error) {
         console.error("Failed to fetch products:", error);
         return { status: "error" as const, message: "Failed to fetch products" };
@@ -74,7 +73,7 @@ export async function createProduct(data: {
     }
 
     try {
-        const [newProduct] = await db.insert(product).values({
+        const product = await db.insert(schema.product).values({
             id: data.id,
             title: data.title,
             description: data.description,
@@ -87,10 +86,10 @@ export async function createProduct(data: {
             fileName: data.fileName,
             fileSize: data.fileSize,
             mimeType: data.mimeType,
-        }).returning();
+        }).returning().then(res => res[0]);
 
         revalidatePath("/store");
-        return { status: "success" as const, data: newProduct };
+        return { status: "success" as const, data: product as any };
     } catch (error) {
         console.error("Failed to create product:", error);
         return { status: "error" as const, message: "Failed to create product" };
@@ -104,11 +103,13 @@ export async function getProduct(productId: string) {
     }
 
     try {
-        const found = await db.query.product.findFirst({
-            where: eq(product.id, productId),
+        const product = await db.query.product.findFirst({
+            where: eq(schema.product.id, productId),
             with: {
                 productCategory: true,
-                productAccesses: { columns: { id: true } }
+                productAccesses: {
+                    columns: { id: true }
+                }
             }
         });
 
@@ -116,14 +117,13 @@ export async function getProduct(productId: string) {
             return { status: "error" as const, message: "Product not found" };
         }
 
-        const { productCategory, productAccesses, ...rest } = found;
         const mapped = {
-            ...rest,
-            category: productCategory,
-            _count: { purchases: productAccesses.length }
+            ...product,
+            category: product.productCategory,
+            _count: { purchases: product.productAccesses.length }
         };
 
-        return { status: "success" as const, data: mapped };
+        return { status: "success" as const, data: mapped as any };
     } catch (error) {
         console.error("Failed to fetch product:", error);
         return { status: "error" as const, message: "Failed to fetch product" };
@@ -152,7 +152,7 @@ export async function updateProduct(
     }
 
     try {
-        const [updatedProduct] = await db.update(product).set({
+        const product = await db.update(schema.product).set({
             title: data.title,
             description: data.description,
             price: data.price.toString(),
@@ -164,13 +164,13 @@ export async function updateProduct(
             fileName: data.fileName,
             fileSize: data.fileSize,
             mimeType: data.mimeType,
-        }).where(eq(product.id, productId)).returning();
+        }).where(eq(schema.product.id, productId)).returning().then(res => res[0]);
 
         revalidatePath("/store");
         revalidatePath(`/store/${productId}`);
         revalidatePath(`/store/${productId}/edit`);
 
-        return { status: "success" as const, data: updatedProduct };
+        return { status: "success" as const, data: product as any };
     } catch (error) {
         console.error("Failed to update product:", error);
         return { status: "error" as const, message: "Failed to update product" };
@@ -184,7 +184,7 @@ export async function togglePublish(productId: string, isPublished: boolean) {
     }
 
     try {
-        await db.update(product).set({ isPublished }).where(eq(product.id, productId));
+        await db.update(schema.product).set({ isPublished }).where(eq(schema.product.id, productId));
 
         revalidatePath("/store");
         revalidatePath(`/store/${productId}`);

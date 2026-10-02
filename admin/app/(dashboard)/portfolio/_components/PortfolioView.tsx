@@ -34,11 +34,6 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { toast } from "sonner";
 import Image from "next/image";
 import { SearchIcon, ImageIcon, Trash2, Plus, Eye, EyeOff } from "lucide-react";
-import posthog from "posthog-js";
-
-const posthogEnabled = Boolean(
-    process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && process.env.NEXT_PUBLIC_POSTHOG_HOST,
-);
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -76,6 +71,8 @@ const DEFAULT_CATEGORIES = [
     "Videography",
     "Events",
     "Commercial",
+    "Premium Shoot",
+    "Basic Shoot",
     "Portraits",
     "General",
 ];
@@ -530,9 +527,20 @@ function UploadDialog({
                 );
 
                 if (error || result?.status === "error") {
+                    if (finalKey) {
+                        try {
+                            await fetch("/api/s3/delete", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ key: finalKey }),
+                            });
+                        } catch (delErr) {
+                            console.error("Failed to clean up R2 object:", delErr);
+                        }
+                    }
                     toast.error(`Failed to save: ${file.name}`);
                 } else if (result?.status === "success") {
-                    onSuccess(result.data as unknown as PortfolioItemType);
+                    onSuccess(result.data as PortfolioItemType);
                     uploaded++;
                 }
             } catch (err) {
@@ -544,13 +552,10 @@ function UploadDialog({
         }
 
         setUploading(false);
-        setFiles([]);
-        if (inputRef.current) inputRef.current.value = "";
 
         if (uploaded > 0) {
-            if (posthogEnabled) {
-                posthog.capture("portfolio_items_uploaded", { item_count: uploaded });
-            }
+            setFiles([]);
+            if (inputRef.current) inputRef.current.value = "";
             toast.success(`${uploaded} ${uploaded === 1 ? "image" : "images"} uploaded!`);
             onComplete?.();
         }

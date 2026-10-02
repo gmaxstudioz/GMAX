@@ -35,11 +35,6 @@ import { tryCatch } from "@/hooks/try-catch";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { CreateStudio } from "@/lib/actions/organization";
-import posthog from "posthog-js";
-
-const posthogEnabled = Boolean(
-    process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && process.env.NEXT_PUBLIC_POSTHOG_HOST,
-);
 
 type FormValues = z.infer<typeof CreateStudioSchema>;
 
@@ -94,11 +89,6 @@ export default function CreateStudios({
             }
 
             if (result?.status === "success") {
-                if (posthogEnabled) {
-                    posthog.capture("studio_created", {
-                        studio_category: values.metadata?.category,
-                    });
-                }
                 toast.success(result?.message);
                 form.reset();
                 router.push("/studios");

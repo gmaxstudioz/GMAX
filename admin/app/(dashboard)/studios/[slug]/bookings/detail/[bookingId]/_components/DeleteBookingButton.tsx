@@ -20,11 +20,6 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Delete02Icon } from "@hugeicons/core-free-icons";
-import posthog from "posthog-js";
-
-const posthogEnabled = Boolean(
-    process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && process.env.NEXT_PUBLIC_POSTHOG_HOST,
-);
 
 interface DeleteBookingButtonProps {
     bookingId: string;
@@ -44,9 +39,6 @@ export function DeleteBookingButton({ bookingId, slug }: DeleteBookingButtonProp
                 return;
             }
             if (result?.status === "success") {
-                if (posthogEnabled) {
-                    posthog.capture("booking_deleted");
-                }
                 toast.success(result.message);
                 router.push(`/studios/${slug}/bookings/${new Date().toISOString().split("T")[0]}`);
             } else {

@@ -1,9 +1,9 @@
 "use server";
 
 import z from "zod";
-import { db } from "../db";
-import { eq, and, gte, lte } from "drizzle-orm";
-import { booking } from "../schema";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { and, eq, gte, lte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { CalendarBookingSchema } from "../schemas/calendar";
 import { requireStudioMember, requireBookingAccess } from "./with-auth";
@@ -19,9 +19,9 @@ export async function getBookingsPerMonth(studioId: string, year: number, month:
 
     const rawBookings = await db.query.booking.findMany({
         where: and(
-            eq(booking.studioId, studioId),
-            gte(booking.bookingDate, firstDay.toISOString()),
-            lte(booking.bookingDate, lastDay.toISOString())
+            eq(schema.booking.studioId, studioId),
+            gte(schema.booking.bookingDate, firstDay.toISOString()),
+            lte(schema.booking.bookingDate, lastDay.toISOString())
         ),
         columns: {
             id: true,
@@ -56,9 +56,9 @@ export async function moveBooking(bookingId: string, newDateKey: string) {
 
     const newDate = new Date(Date.UTC(y, m - 1, d));
 
-    await db.update(booking)
+    await db.update(schema.booking)
         .set({ bookingDate: newDate.toISOString() })
-        .where(eq(booking.id, bookingId));
+        .where(eq(schema.booking.id, bookingId));
 
     revalidatePath("/studios", "layout");
 }

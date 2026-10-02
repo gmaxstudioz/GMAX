@@ -101,7 +101,7 @@ export const getStudioBySlug = os.studio.getBySlug
                     }))
                 }))
             })),
-        };
+        } as any;
     });
 
 export const getAllStudios = os.studio.getAll
@@ -154,5 +154,5 @@ export const getAllStudios = os.studio.getAll
                 hasNextPage: page < pageCount,
                 hasPreviousPage: page > 1,
             }
-        };
+        } as any;
     });

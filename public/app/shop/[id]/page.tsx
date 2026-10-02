@@ -9,7 +9,6 @@ import type { ProductOutput } from "@/lib/types/product";
 import { ArrowLeft, ShoppingCart, ShoppingBag, Loader2, Tag } from "lucide-react";
 import Magnetic from "@/components/ui/magnetic";
 import { Button } from "@/components/ui/button";
-import posthog from "posthog-js";
 
 export default function ProductPage() {
   const { id } = useParams<{ id: string }>();
@@ -136,14 +135,7 @@ export default function ProductPage() {
               <Button
                 size="lg"
                 className="w-full md:w-auto px-12 pr-4 h-16 text-xl rounded-full"
-                onClick={() => {
-                  posthog.capture("product_checkout_started", {
-                    product_id: product.id,
-                    price: effectivePrice,
-                    on_sale: product.salePrice != null,
-                  });
-                  router.push(`/shop/${product.id}/checkout`);
-                }}
+                onClick={() => router.push(`/shop/${product.id}/checkout`)}
               >
                 <ShoppingCart className="size-6 mr-2" />
                 Buy now

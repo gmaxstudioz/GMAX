@@ -1,8 +1,8 @@
 "use server";
 
-import { db } from "../db";
-import { client as clientSchema, studio as studioSchema, booking as bookingSchema, service as serviceSchema, payment as paymentSchema, member as memberSchema, bookingAddons } from "../schema";
-import { eq, and, desc, gte, inArray, ilike } from "drizzle-orm";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, and, ilike, inArray, gte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
 
@@ -42,10 +42,10 @@ export async function checkClientName(studioId: string, name: string) {
     try {
         const existing = await db.query.client.findFirst({
             where: and(
-                eq(clientSchema.studioId, studioId),
-                ilike(clientSchema.name, name)
+                eq(schema.client.studioId, studioId),
+                ilike(schema.client.name, name)
             ),
-            columns: { id: true, name: true, phone: true },
+            columns: { id: true, name: true, phone: true }
         });
 
         if (existing) {
@@ -91,7 +91,7 @@ export async function createPublicBooking(data: {
 }) {
     try {
         const studio = await db.query.studio.findFirst({
-            where: eq(studioSchema.id, data.studioId),
+            where: eq(schema.studio.id, data.studioId),
             with: { members: true },
         });
         if (!studio) return { status: "error", message: "Studio not found" };
@@ -99,14 +99,15 @@ export async function createPublicBooking(data: {
         // Check for an existing PENDING booking for the same client+service+date
         // created in the last 5 minutes to catch double-submits and basic bots.
         if (data.existingClientId) {
+            const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
             const recentDuplicate = await db.query.booking.findFirst({
                 where: and(
-                    eq(bookingSchema.studioId, data.studioId),
-                    eq(bookingSchema.clientId, data.existingClientId),
-                    eq(bookingSchema.serviceId, data.serviceId),
-                    eq(bookingSchema.bookingStatus, "PENDING"),
-                    gte(bookingSchema.createdAt, new Date(Date.now() - 5 * 60 * 1000).toISOString())
-                ),
+                    eq(schema.booking.studioId, data.studioId),
+                    eq(schema.booking.clientId, data.existingClientId),
+                    eq(schema.booking.serviceId, data.serviceId),
+                    eq(schema.booking.bookingStatus, "PENDING"),
+                    gte(schema.booking.createdAt, fiveMinsAgo)
+                )
             });
 
             if (recentDuplicate) {
@@ -121,33 +122,34 @@ export async function createPublicBooking(data: {
         let clientId = data.existingClientId;
 
         if (!clientId) {
-            const [client] = await db.insert(clientSchema).values({
-                id: crypto.randomUUID(),
+            const client = await db.insert(schema.client).values({
+                id: uuidv4(),
                 name: data.clientName,
                 phone: data.clientPhone.trim(),
                 email: data.clientEmail || null,
                 type: "regular",
                 studioId: data.studioId,
-            }).returning();
+            }).returning().then(res => res[0]);
+            
             clientId = client.id;
         }
 
         const defaultMember =
-            studio.members.find((m) => m.role === "owner") || studio.members[0];
+            studio.members.find((m: any) => m.role === "owner") || studio.members[0];
         if (!defaultMember) return { status: "error", message: "No available staff member" };
 
         // Construct date in UTC so server timezone doesn't shift it
         const [y, m, d] = data.bookingDate.split("-").map(Number);
         const bookingDateUTC = new Date(Date.UTC(y, m - 1, d));
 
-        const service = await db.query.service.findFirst({ 
-            where: eq(serviceSchema.id, data.serviceId), 
-            with: { serviceVariants: true } 
+        const service = await db.query.service.findFirst({
+            where: eq(schema.service.id, data.serviceId),
+            with: { serviceVariants: true }
         });
         if (!service) throw new Error("Service not found");
 
         const selectedVariant = data.selectedVariantId 
-            ? service.serviceVariants.find((v) => v.id === data.selectedVariantId) 
+            ? service.serviceVariants.find((v: any) => v.id === data.selectedVariantId) 
             : service.serviceVariants[0];
             
         if (!selectedVariant) throw new Error("Invalid service variant selected");
@@ -159,7 +161,7 @@ export async function createPublicBooking(data: {
         });
         const cleanAddonIds = [...new Set(parsedAddons.map(p => p.addonId))];
         const addonsList = cleanAddonIds.length ? await db.query.service.findMany({ 
-            where: inArray(serviceSchema.id, cleanAddonIds), 
+            where: inArray(schema.service.id, cleanAddonIds), 
             with: { serviceVariants: true } 
         }) : [];
 
@@ -167,10 +169,10 @@ export async function createPublicBooking(data: {
         const sessionTotal = servicePrice * data.sessionCount;
         
         const addonsTotal = parsedAddons.reduce((sum, p) => {
-            const addon = addonsList.find(a => a.id === p.addonId);
+            const addon = addonsList.find((a: any) => a.id === p.addonId);
             if (!addon) throw new Error(`Addon not found: ${p.addonId}`);
             
-            const variant = p.variantId ? addon.serviceVariants.find((v) => v.id === p.variantId) : addon.serviceVariants[0];
+            const variant = p.variantId ? addon.serviceVariants.find((v: any) => v.id === p.variantId) : addon.serviceVariants[0];
             if (!variant) throw new Error(`Invalid variant for addon: ${addon.name}`);
             
             return sum + Number(variant.basePrice);
@@ -178,13 +180,13 @@ export async function createPublicBooking(data: {
         
         const grandTotal = sessionTotal + addonsTotal;
 
-        const bookingId = crypto.randomUUID();
-        const [booking] = await db.insert(bookingSchema).values({
+        const bookingId = uuidv4();
+        await db.insert(schema.booking).values({
             id: bookingId,
             bookingDate: bookingDateUTC.toISOString(),
             sessionCount: data.sessionCount,
             notes: data.notes || null,
-            totalAmount: String(grandTotal),
+            totalAmount: grandTotal.toString(),
             bookingStatus: "PENDING",
             paymentStatus: "PENDING",
             deliveryStatus: "PENDING",
@@ -194,28 +196,37 @@ export async function createPublicBooking(data: {
             clientId: clientId as string,
             memberId: defaultMember.id,
             createdBy: defaultMember.userId,
-        }).returning();
+        });
 
         if (cleanAddonIds.length > 0) {
-            await db.insert(bookingAddons).values(cleanAddonIds.map(id => ({
-                a: bookingId,
-                b: id
-            })));
+            await db.insert(schema.bookingAddons).values(
+                cleanAddonIds.map(addonId => ({
+                    a: bookingId,
+                    b: addonId
+                }))
+            );
         }
+
+        const booking = await db.query.booking.findFirst({
+            where: eq(schema.booking.id, bookingId),
+            with: { client: true }
+        });
+
+        if (!booking) throw new Error("Failed to create booking");
 
         const reference = `gmax-pub-${uuidv4().slice(0, 8)}`;
         const receiptNumber = generateReceiptNumber();
 
-        const [payment] = await db.insert(paymentSchema).values({
-            id: crypto.randomUUID(),
-            amount: String(grandTotal),
+        const payment = await db.insert(schema.payment).values({
+            id: uuidv4(),
+            amount: grandTotal.toString(),
             method: "TRANSFER",
             status: "PENDING",
             paystackReference: reference,
             receiptNumber,
             bookingId: booking.id,
             recordedById: defaultMember.userId,
-        }).returning();
+        }).returning().then(res => res[0]);
         
         const [clientRecord] = await db.select().from(clientSchema).where(eq(clientSchema.id, clientId as string));
         const clientEmail = data.clientEmail ?? clientRecord?.email;

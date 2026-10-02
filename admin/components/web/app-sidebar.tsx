@@ -1,3 +1,4 @@
+import { APP_NAME } from "@/lib/constants";
 import * as React from "react"
 import { NavMain } from "@/components/web/nav-main"
 import { NavUser } from "@/components/web/nav-user"
@@ -111,6 +112,8 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
   })
   
   let isOnlyMinorRole = false;
+  let isPhotoVideoRole = false;
+
   if (session?.user) {
     const userData = await db.query.user.findFirst({
       where: (user, { eq }) => eq(user.id, session.user.id),
@@ -125,15 +128,16 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
         columns: { role: true }
       });
       
-      // Check if user has NO administrative roles across all studios
-      const adminRoles = ["owner", "developer", "manager", "admin"];
+      const adminRoles = ["owner", "developer", "admin"];
       const hasAdminRole = members.some(m => adminRoles.includes(m.role));
       isOnlyMinorRole = members.length > 0 && !hasAdminRole;
+
+      const photoVideoRoles = ["photographer", "videographer"];
+      isPhotoVideoRole = members.length > 0 && members.every(m => photoVideoRoles.includes(m.role));
     }
   }
 
-  // Create restricted nav for minor roles
-  const minorNavMain = [
+  let minorNavMain = [
     {
       title: "Overview",
       url: "/",
@@ -151,6 +155,10 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
     },
   ];
 
+  if (isPhotoVideoRole) {
+    minorNavMain = minorNavMain.filter(item => item.url !== "/studios");
+  }
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -162,7 +170,7 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
             >
               <Link href="/">
                 <Image src={Logo} alt="Logo" className="size-5!" />
-                <span className="text-base font-semibold">GMAX Studioz</span>
+                <span className="text-base font-semibold"> {APP_NAME} </span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

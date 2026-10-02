@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, inArray } from "drizzle-orm";
 import type { Metadata } from "next";
 import { ClientsView } from "./_components/ClientsView";
 import { auth } from "@/lib/auth";
@@ -14,20 +16,22 @@ export default async function ClientsPage() {
     if (!session?.user) redirect("/auth/login");
 
     const members = await db.query.member.findMany({
-        where: (member, { eq }) => eq(member.userId, session.user.id),
+        where: eq(schema.member.userId, session.user.id),
         columns: { role: true, studioId: true }
     });
     
-    const adminRoles = ["owner", "developer", "manager"];
-    const hasAdminRole = members.some(m => adminRoles.includes(m.role));
+    const adminRoles = ["owner", "developer", "receptionist"];
+    const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
     if (members.length > 0 && !hasAdminRole) {
         redirect("/my-tasks");
     }
 
-    const studioIds = members.map(m => m.studioId);
+    const canEdit = members.some((m: any) => ["owner", "developer", "admin"].includes(m.role));
+
+    const studioIds = members.map((m: any) => m.studioId);
 
     const studios = studioIds.length > 0 ? await db.query.studio.findMany({
-        where: (studio, { inArray }) => inArray(studio.id, studioIds),
+        where: inArray(schema.studio.id, studioIds),
         columns: {
             id: true,
             slug: true,
@@ -45,15 +49,15 @@ export default async function ClientsPage() {
                 }
             }
         },
-        orderBy: (studio, { asc }) => [asc(studio.name)]
+        orderBy: (studios, { asc }) => [asc(studios.name)]
     }) : [];
 
     // Shape data grouped by studio
-    const studioGroups = studios.map(studio => ({
+    const studioGroups = studios.map((studio: any) => ({
         id: studio.id,
         slug: studio.slug,
         name: studio.name,
-        clients: studio.clients.map(client => ({
+        clients: studio.clients.map((client: any) => ({
             ...client,
             studioId: studio.id,
             studioSlug: studio.slug,
@@ -62,7 +66,7 @@ export default async function ClientsPage() {
 
     return (
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">
-            <ClientsView studioGroups={studioGroups} />
+            <ClientsView studioGroups={studioGroups} canEdit={canEdit} />
         </div>
     );
 }

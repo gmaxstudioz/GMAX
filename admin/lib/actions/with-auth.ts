@@ -3,6 +3,8 @@
 import { auth } from "../auth";
 import { headers } from "next/headers";
 import { db } from "../db";
+import * as schema from "../schema";
+import { eq, and } from "drizzle-orm";
 
 
 // ── Raw session fetch ────────────────────────────────────────────────────────
@@ -40,7 +42,7 @@ export async function requireStudioMember(studioId: string): Promise<
     {
         status: "ok";
         session: NonNullable<Awaited<ReturnType<typeof getAuthSession>>>;
-        member: NonNullable<Awaited<ReturnType<typeof db.query.member.findFirst>>>;
+        member: any;
     } |
     { status: "error"; message: string }
 > {
@@ -48,9 +50,9 @@ export async function requireStudioMember(studioId: string): Promise<
     if (sessionResult.status === "error") return sessionResult;
 
     const member = await db.query.member.findFirst({
-        where: (m, { and, eq }) => and(
-            eq(m.userId, sessionResult.session.user.id),
-            eq(m.studioId, studioId)
+        where: and(
+            eq(schema.member.userId, sessionResult.session.user.id),
+            eq(schema.member.studioId, studioId)
         ),
     });
 
@@ -67,27 +69,25 @@ export async function requireBookingAccess(bookingId: string): Promise<
     {
         status: "ok";
         session: NonNullable<Awaited<ReturnType<typeof getAuthSession>>>;
-        member: NonNullable<Awaited<ReturnType<typeof db.query.member.findFirst>>>;
-        booking: NonNullable<Awaited<ReturnType<typeof db.query.booking.findFirst>>>;
+        member: any;
+        booking: any;
     } |
     { status: "error"; message: string }
 > {
     const sessionResult = await requireSession();
     if (sessionResult.status === "error") return sessionResult;
 
-    const bookingRec = await db.query.booking.findFirst({
-        where: (b, { eq }) => eq(b.id, bookingId)
-    });
-    if (!bookingRec) return { status: "error", message: "Booking not found" };
+    const booking = await db.query.booking.findFirst({ where: eq(schema.booking.id, bookingId) });
+    if (!booking) return { status: "error", message: "Booking not found" };
 
-    const memberRec = await db.query.member.findFirst({
-        where: (m, { and, eq }) => and(
-            eq(m.userId, sessionResult.session.user.id),
-            eq(m.studioId, bookingRec.studioId)
+    const member = await db.query.member.findFirst({
+        where: and(
+            eq(schema.member.userId, sessionResult.session.user.id),
+            eq(schema.member.studioId, booking.studioId)
         ),
     });
 
     if (!memberRec) return { status: "error", message: "Unauthorized access to this booking" };
 
-    return { status: "ok", session: sessionResult.session, member: memberRec, booking: bookingRec };
+    return { status: "ok", session: sessionResult.session, member, booking };
 }

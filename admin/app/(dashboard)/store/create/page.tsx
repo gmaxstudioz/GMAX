@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, asc } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -15,19 +17,19 @@ export default async function Page() {
   if (!session?.user) redirect("/auth/login");
 
   const members = await db.query.member.findMany({
-      where: (member, { eq }) => eq(member.userId, session.user.id),
+      where: eq(schema.member.userId, session.user.id),
       columns: { role: true }
   });
   
   // Only users with some administrative role should access the store manager
-  const adminRoles = ["owner", "developer", "manager"];
-  const hasAdminRole = members.some((m) => adminRoles.includes(m.role));
+  const adminRoles = ["owner", "developer"];
+  const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
   if (members.length > 0 && !hasAdminRole) {
       redirect("/my-tasks");
   }
 
   const categories = await db.query.productCategory.findMany({
-      orderBy: (category, { asc }) => [asc(category.name)],
+      orderBy: [asc(schema.productCategory.name)],
   });
 
   return (

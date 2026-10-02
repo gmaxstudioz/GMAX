@@ -5,6 +5,8 @@ import type { Metadata } from "next";
 import { ProfileForm } from "./_components/ProfileForm";
 import { ResetPasswordForm } from "./_components/ResetPasswordForm";
 import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq } from "drizzle-orm";
 
 export const metadata: Metadata = {
     title: "Profile Settings",
@@ -16,7 +18,7 @@ export default async function ProfilePage() {
     if (!session) redirect("/login");
 
     const fullUser = await db.query.user.findFirst({
-        where: (user, { eq }) => eq(user.id, session.user.id)
+        where: eq(schema.user.id, session.user.id)
     });
 
     if (!fullUser) redirect("/login");

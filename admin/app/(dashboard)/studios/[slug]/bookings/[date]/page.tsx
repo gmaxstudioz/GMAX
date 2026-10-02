@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
-import { eq, and, or, inArray, asc, desc, isNull, sql } from "drizzle-orm";
 import * as schema from "@/lib/schema";
+import { eq, and, gte, lte, asc } from "drizzle-orm";
 import type { Metadata } from "next";
 import { format, parseISO, startOfDay, endOfDay } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,9 @@ import { Appointment02Icon } from "@hugeicons/core-free-icons";
 import { BackButton } from "@/components/web/back-button";
 import { MemberRole } from "@/lib/schemas/studio";
 
+import { ViewToggle } from "@/components/web/ViewToggle";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 export const metadata: Metadata = {
     title: "Daily Bookings",
 };
@@ -25,10 +28,15 @@ interface Props {
         slug: string;
         date: string; // Format: YYYY-MM-DD
     }>;
+    searchParams: Promise<{
+        view?: string;
+    }>;
 }
 
-export default async function StudioDailyBookingsPage({ params }: Props) {
+export default async function StudioDailyBookingsPage({ params, searchParams }: Props) {
     const { slug, date } = await params;
+    const { view } = await searchParams;
+    const isListView = view === "list";
     
     // Parse the date
     const targetDate = parseISO(date);
@@ -51,7 +59,18 @@ export default async function StudioDailyBookingsPage({ params }: Props) {
         return <div className="p-6">Studio not found.</div>;
     }
 
-    const mappedMembers = studio.members.map(m => ({
+    const { auth } = await import("@/lib/auth");
+    const { headers } = await import("next/headers");
+    const { redirect } = await import("next/navigation");
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) redirect("/auth/login");
+
+    const myMembership = studio.members.find((m: any) => m.userId === session?.user?.id);
+    if (!myMembership) redirect("/");
+
+    const canReassign = ["owner", "developer", "manager", "admin"].includes(myMembership!.role);
+
+    const mappedMembers = studio.members.map((m: any) => ({
         id: m.id,
         name: m.user.name,
         email: m.user.email,
@@ -65,8 +84,8 @@ export default async function StudioDailyBookingsPage({ params }: Props) {
     const dailyBookings = await db.query.booking.findMany({
         where: and(
             eq(schema.booking.studioId, studio.id),
-            sql`${schema.booking.bookingDate} >= ${start.toISOString()}::timestamp`,
-            sql`${schema.booking.bookingDate} <= ${end.toISOString()}::timestamp`
+            gte(schema.booking.bookingDate, start.toISOString()),
+            lte(schema.booking.bookingDate, end.toISOString())
         ),
         with: {
             client: true,
@@ -85,7 +104,7 @@ export default async function StudioDailyBookingsPage({ params }: Props) {
     });
 
     // Calculate total consumed minutes
-    const totalMinutes = dailyBookings.reduce((sum, b) => {
+    const totalMinutes = dailyBookings.reduce((sum: any, b: any) => {
         const duration = b.service?.studioSession?.duration || 45;
         return sum + (duration * b.sessionCount);
     }, 0);
@@ -103,12 +122,15 @@ export default async function StudioDailyBookingsPage({ params }: Props) {
 
     return (
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">
-            <div className="flex items-center gap-4">
-                <BackButton href={`/studios/${slug}`} />
-                <div>
-                    <h1 className="text-2xl font-bold">Bookings for {format(targetDate, "MMM do, yyyy")}</h1>
-                    <p className="text-muted-foreground">{studio.name}</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <BackButton href={`/studios/${slug}`} />
+                    <div>
+                        <h1 className="text-2xl font-bold">Bookings for {format(targetDate, "MMM do, yyyy")}</h1>
+                        <p className="text-muted-foreground">{studio.name}</p>
+                    </div>
                 </div>
+                <ViewToggle defaultView="grid" />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -122,36 +144,90 @@ export default async function StudioDailyBookingsPage({ params }: Props) {
                         actionText="Add Booking"
                     />
                 ) : (
-                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {dailyBookings.map((booking) => (
-                            <Card key={booking.id} className="@container/card h-fit">
-                                <CardHeader>
-                                    <div className="flex justify-between items-start">
-                                        <CardTitle className="text-lg">{booking.client?.name}</CardTitle>
-                                        <div className="flex items-center gap-1">
-                                            <Badge variant="secondary">{booking.sessionCount} {booking.sessionCount > 1 ? "Sessions" : "Session"}</Badge>
-                                            <Badge>{booking.bookingStatus}</Badge>
-                                        </div>
-                                    </div>
-                                    <CardDescription>{booking.service?.name}</CardDescription>
-                                </CardHeader>
-                                <CardContent className="flex flex-col gap-3">
-                                    <div className="flex items-center justify-between">
-                                        <p className="text-sm">Time: {format(new Date(booking.bookingDate), "hh:mm a")}</p>
-                                        <RescheduleTimePicker bookingId={booking.id} currentDate={new Date(booking.bookingDate)} />
-                                    </div>
-                                    <div>
-                                        <ReassignMemberDropdown bookingId={booking.id} currentMemberId={booking.memberId} members={mappedMembers} />
-                                    </div>
-                                    <Button variant="outline" size="sm" className="w-full gap-1.5 mt-1" asChild>
-                                        <Link href={`/studios/${slug}/bookings/detail/${booking.id}`}>
-                                            <ExternalLinkIcon className="h-3.5 w-3.5" />
-                                            View Details
-                                        </Link>
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        ))}
+                    <div className="md:col-span-2">
+                        {isListView ? (
+                            <div className="border rounded-lg overflow-hidden bg-card">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-[100px]">Time</TableHead>
+                                            <TableHead>Client</TableHead>
+                                            <TableHead>Service</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead className="w-[200px]">Assign To</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {dailyBookings.map((booking: any) => (
+                                            <TableRow key={booking.id}>
+                                                <TableCell className="font-medium whitespace-nowrap">
+                                                    {format(new Date(booking.bookingDate), "hh:mm a")}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="font-semibold">{booking.client?.name}</div>
+                                                    {booking.client?.phone && <div className="text-xs text-muted-foreground">{booking.client.phone}</div>}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div>{booking.service?.name}</div>
+                                                    <div className="text-xs text-muted-foreground">{booking.sessionCount} {booking.sessionCount > 1 ? "Sessions" : "Session"}</div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant="secondary">{booking.bookingStatus}</Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <ReassignMemberDropdown 
+                                                        bookingId={booking.id} 
+                                                        currentMemberId={booking.memberId} 
+                                                        members={mappedMembers} 
+                                                        disabled={!canReassign}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button variant="ghost" size="sm" asChild>
+                                                        <Link href={`/studios/${slug}/bookings/detail/${booking.id}`}>
+                                                            View
+                                                        </Link>
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {dailyBookings.map((booking: any) => (
+                                    <Card key={booking.id} className="@container/card h-fit">
+                                        <CardHeader>
+                                            <div className="flex justify-between items-start">
+                                                <CardTitle className="text-lg">{booking.client?.name}</CardTitle>
+                                                <div className="flex items-center gap-1">
+                                                    <Badge variant="secondary">{booking.sessionCount} {booking.sessionCount > 1 ? "Sessions" : "Session"}</Badge>
+                                                    <Badge>{booking.bookingStatus}</Badge>
+                                                </div>
+                                            </div>
+                                            <CardDescription>{booking.service?.name}</CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="flex flex-col gap-3">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-sm">Time: {format(new Date(booking.bookingDate), "hh:mm a")}</p>
+                                                <RescheduleTimePicker bookingId={booking.id} currentDate={booking.bookingDate} />
+                                            </div>
+                                            <div>
+                                                <ReassignMemberDropdown bookingId={booking.id} currentMemberId={booking.memberId} members={mappedMembers} disabled={!canReassign} />
+                                            </div>
+                                            <Button variant="outline" size="sm" className="w-full gap-1.5 mt-1" asChild>
+                                                <Link href={`/studios/${slug}/bookings/detail/${booking.id}`}>
+                                                    <ExternalLinkIcon className="h-3.5 w-3.5" />
+                                                    View Details
+                                                </Link>
+                                            </Button>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -181,7 +257,7 @@ export default async function StudioDailyBookingsPage({ params }: Props) {
                             <div className="pt-4 border-t space-y-3">
                                 <p className="text-sm font-semibold">Available Slots Left</p>
                                 <div className="space-y-2">
-                                    {studioSessions?.studioSessions.map(sessionDuration => {
+                                    {studioSessions?.studioSessions.map((sessionDuration: any) => {
                                         const dur = sessionDuration.duration || 45;
                                         const possibleSlots = Math.floor(remainingMinutes / dur);
                                         return (

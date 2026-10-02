@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { user as userSchema } from "@/lib/schema";
+import * as schema from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -22,14 +22,17 @@ export async function updateUserProfile(data: z.infer<typeof UpdateProfileSchema
 
     const validatedData = UpdateProfileSchema.parse(data);
 
-    const [updatedUser] = await db.update(userSchema)
+    await db.update(schema.user)
         .set({
             name: validatedData.name,
             image: validatedData.image || null,
             phoneNumber: validatedData.phoneNumber || null,
         })
-        .where(eq(userSchema.id, session.user.id))
-        .returning();
+        .where(eq(schema.user.id, session.user.id));
+
+    const user = await db.query.user.findFirst({
+        where: eq(schema.user.id, session.user.id)
+    });
 
     revalidatePath("/profile");
     revalidatePath("/", "layout");

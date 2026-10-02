@@ -5,7 +5,6 @@ import { onError } from '@orpc/server'
 import { SmartCoercionPlugin } from "@orpc/json-schema"
 import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4'
 import { router } from '@/app/router';
-import { auth, getPostHogClient } from '@/lib/auth';
 
 const schemaConverters = [new ZodToJsonSchemaConverter()]
 
@@ -17,9 +16,9 @@ const handler = new OpenAPIHandler(router, {
         schemaConverters,
         specGenerateOptions: {
             info: {
-                title: 'GMAX Studioz API',
+                title: 'Gmax Studioz API',
                 version: '1.0.0',
-                description: 'GMAX Studioz API for booking and managing studio',
+                description: 'Gmax Studioz API for booking and managing studio',
             }
         }
      })
@@ -40,22 +39,12 @@ const handler = new OpenAPIHandler(router, {
 });
 
 async function handleRequest(request: Request) {
-    const posthog = getPostHogClient();
-    const session = await auth.api.getSession({ headers: request.headers });
-    const handle = async () => {
-        const { response } = await handler.handle(request, {
-            prefix: '/api',
-            context: { headers: request.headers }
-        });
+    const { response } = await handler.handle(request, {
+        prefix: '/api',
+        context: { headers: request.headers }
+    });
 
-        return response ?? new Response('Not Found', { status: 404 });
-    };
-
-    if (!posthog || !session?.user?.id) {
-        return handle();
-    }
-
-    return posthog.withContext({ distinctId: session.user.id }, handle, { fresh: true });
+    return response ?? new Response('Not Found', { status: 404 });
 }
 
 export const HEAD = handleRequest;

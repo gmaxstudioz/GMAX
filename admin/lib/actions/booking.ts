@@ -1,12 +1,13 @@
 "use server";
 
-import { db } from "../db";
-import { eq, and, gte, lte, ne, inArray } from "drizzle-orm";
-import { booking, member, service, studio, photo, bookingAddons } from "../schema";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, and, or, inArray, desc, gte, lte, ne } from "drizzle-orm";
 import { auth } from "../auth";
 import { headers } from "next/headers";
 import { CreateBookingInput, PaymentPlan } from "../schemas/booking";
 import { revalidatePath } from "next/cache";
+import { v4 as uuidv4 } from "uuid";
 
 import { startOfDay, endOfDay } from "date-fns";
 
@@ -20,11 +21,16 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
             return { status: "error", message: "Unauthorized" };
         }
 
-        const memberData = await db.query.member.findFirst({
-            where: and(eq(member.userId, session.user.id), eq(member.studioId, studioId))
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, studioId))
         });
         if (!memberData) {
             return { status: "error", message: "Unauthorized access to studio" };
+        }
+
+        const allowedRoles = ["owner", "admin", "manager", "receptionist", "developer"];
+        if (!allowedRoles.includes(member.role)) {
+            return { status: "error", message: "Unauthorized: You do not have permission to create bookings" };
         }
 
         const { addonIds, ...bookingData } = data;
@@ -35,7 +41,7 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
         const end = endOfDay(targetDate);
 
         const targetService = await db.query.service.findFirst({
-            where: eq(service.id, bookingData.serviceId),
+            where: eq(schema.service.id, bookingData.serviceId),
             with: { studioSession: true }
         });
 
@@ -47,9 +53,9 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
 
         const dailyBookings = await db.query.booking.findMany({
             where: and(
-                eq(booking.studioId, studioId),
-                gte(booking.bookingDate, start.toISOString()),
-                lte(booking.bookingDate, end.toISOString())
+                eq(schema.booking.studioId, studioId),
+                gte(schema.booking.bookingDate, start.toISOString()),
+                lte(schema.booking.bookingDate, end.toISOString())
             ),
             with: { service: { with: { studioSession: true } } }
         });
@@ -78,7 +84,7 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
 
         if (hasOverlap) {
             // Find an alternative studio
-            const currentStudio = await db.query.studio.findFirst({ where: eq(studio.id, studioId) });
+            const currentStudio = await db.query.studio.findFirst({ where: eq(schema.studio.id, studioId) });
             const myCity = (currentStudio?.metadata as { city?: string })?.city;
 
             let altMessage = `The selected time slot is fully booked or outside operating hours. Please choose another time or day.`;
@@ -88,18 +94,21 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
                 const allStudios = await db.query.studio.findMany({ 
                     with: { 
                         bookings: { 
-                            where: and(gte(booking.bookingDate, start.toISOString()), lte(booking.bookingDate, end.toISOString())), 
+                            where: (bookings, { and, gte, lte }) => and(
+                                gte(bookings.bookingDate, start.toISOString()),
+                                lte(bookings.bookingDate, end.toISOString())
+                            ),
                             with: { service: { with: { studioSession: true } } } 
                         } 
                     } 
                 });
 
-                const alternative = allStudios.find(s => {
+                const alternative = allStudios.find((s: any) => {
                     if (s.id === studioId) return false;
                     const sCity = (s.metadata as { city?: string })?.city;
                     if (!sCity || sCity.toLowerCase() !== myCity.toLowerCase()) return false;
                     
-                    const altOverlaps = s.bookings.some(b => {
+                    const altOverlaps = s.bookings.some((b: any) => {
                         const bDur = b.service?.studioSession?.duration || 45;
                         const bStart = new Date(b.bookingDate).getTime();
                         const bEnd = bStart + (bDur * b.sessionCount * 60 * 1000);
@@ -117,29 +126,26 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
             return { status: "error", message: altMessage };
         }
 
-        const [newBooking] = await db.insert(booking).values({
-            id: crypto.randomUUID(),
-            clientId: bookingData.clientId,
-            serviceId: bookingData.serviceId,
-            serviceVariantId: bookingData.serviceVariantId,
-            bookingDate: new Date(bookingData.bookingDate).toISOString(),
-            sessionCount: bookingData.sessionCount,
-            notes: bookingData.notes,
-            bookingStatus: bookingData.bookingStatus,
-            paymentStatus: bookingData.paymentStatus,
-            deliveryStatus: bookingData.deliveryStatus,
-            totalAmount: bookingData.totalAmount?.toString() || '0',
+        const bookingId = uuidv4();
+        const [booking] = await db.insert(schema.booking).values({
+            id: bookingId,
+            ...bookingData,
+            bookingDate: bookingData.bookingDate.toISOString(),
+            totalAmount: bookingData.totalAmount.toString(),
             studioId,
             createdBy: session.user.id,
-            memberId: bookingData.memberId || null,
         }).returning();
 
         if (addonIds && addonIds.length > 0) {
-            const addonInserts = addonIds.map(id => ({
-                a: newBooking.id,
-                b: id.split(":")[0]
-            }));
-            await db.insert(bookingAddons).values(addonInserts);
+            await Promise.all(
+                addonIds.map(async (id) => {
+                    const addonId = id.split(":")[0];
+                    await db.insert(schema.bookingAddons).values({
+                        a: bookingId,
+                        b: addonId
+                    });
+                })
+            );
         }
 
         revalidatePath(`/studios`, "layout");
@@ -160,21 +166,23 @@ export async function reassignBooking(bookingId: string, targetMemberId: string)
             return { status: "error", message: "Unauthorized" };
         }
 
-        const b = await db.query.booking.findFirst({
-            where: eq(booking.id, bookingId)
+        const booking = await db.query.booking.findFirst({
+            where: eq(schema.booking.id, bookingId)
         });
 
         if (!b) return { status: "error", message: "Booking not found" };
 
-        const memberData = await db.query.member.findFirst({
-            where: and(eq(member.userId, session.user.id), eq(member.studioId, b.studioId))
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
         });
 
         if (!memberData || !["owner", "manager", "admin", "developer"].includes(memberData.role)) {
             return { status: "error", message: "Unauthorized" };
         }
 
-        await db.update(booking).set({ memberId: targetMemberId }).where(eq(booking.id, bookingId));
+        await db.update(schema.booking)
+            .set({ memberId })
+            .where(eq(schema.booking.id, bookingId));
 
         revalidatePath("/studios", "layout");
         return { status: "success" };
@@ -193,9 +201,11 @@ export async function rescheduleBooking(bookingId: string, newDate: string) {
             return { status: "error", message: "Unauthorized" };
         }
 
-        const b = await db.query.booking.findFirst({
-            where: eq(booking.id, bookingId),
+        const booking = await db.query.booking.findFirst({
+            where: eq(schema.booking.id, bookingId),
             with: {
+                client: true,
+                studio: true,
                 service: {
                     with: { studioSession: true }
                 }
@@ -204,11 +214,11 @@ export async function rescheduleBooking(bookingId: string, newDate: string) {
 
         if (!b) return { status: "error", message: "Booking not found" };
 
-        const memberData = await db.query.member.findFirst({
-            where: and(eq(member.userId, session.user.id), eq(member.studioId, b.studioId))
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
         });
-        if (!memberData) {
-            return { status: "error", message: "Unauthorized" };
+        if (!member || member.role === "receptionist") {
+            return { status: "error", message: "Unauthorized: Receptionists cannot reschedule bookings" };
         }
 
         const targetDate = new Date(newDate);
@@ -226,12 +236,13 @@ export async function rescheduleBooking(bookingId: string, newDate: string) {
             return { status: "error", message: "The selected time is outside operating hours (8am - 8pm)." };
         }
 
+        // Check for overlaps with other bookings (exclude this booking)
         const dailyBookings = await db.query.booking.findMany({
             where: and(
-                eq(booking.studioId, b.studioId),
-                gte(booking.bookingDate, start.toISOString()),
-                lte(booking.bookingDate, end.toISOString()),
-                ne(booking.id, bookingId)
+                eq(schema.booking.studioId, booking.studioId),
+                gte(schema.booking.bookingDate, start.toISOString()),
+                lte(schema.booking.bookingDate, end.toISOString()),
+                ne(schema.booking.id, bookingId)
             ),
             with: { service: { with: { studioSession: true } } }
         });
@@ -246,7 +257,38 @@ export async function rescheduleBooking(bookingId: string, newDate: string) {
             }
         }
 
-        await db.update(booking).set({ bookingDate: targetDate.toISOString() }).where(eq(booking.id, bookingId));
+        await db.update(schema.booking)
+            .set({ bookingDate: targetDate.toISOString() })
+            .where(eq(schema.booking.id, bookingId));
+
+        if (booking.client?.phone) {
+            try {
+                const { sendSMS } = await import("../termii");
+                const formattedDate = new Intl.DateTimeFormat("en-NG", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit"
+                }).format(targetDate);
+
+                const message = `Hi \${booking.client.name}, your booking for \${booking.service?.name} at \${booking.studio?.name} has been rescheduled to \${formattedDate}.`;
+                await sendSMS(booking.client.phone, message);
+
+                await db.insert(schema.notification).values({
+                    id: uuidv4(),
+                    clientPhone: booking.client.phone,
+                    clientName: booking.client.name,
+                    type: "BOOKING_CONFIRMATION",
+                    message: message,
+                    channel: ["SMS"],
+                    status: "SENT",
+                    bookingId: bookingId
+                });
+            } catch (smsError) {
+                console.error("Failed to send reschedule SMS:", smsError);
+            }
+        }
 
         revalidatePath("/studios", "layout");
         return { status: "success", message: "Booking rescheduled successfully" };
@@ -260,9 +302,10 @@ export async function updateBookingInfo(
     bookingId: string,
     data: {
         notes?: string;
-        paymentStatus?: string;
-        deliveryStatus?: string;
-        bookingStatus?: string;
+        sessionCount?: number;
+        bookingStatus?: any;
+        paymentStatus?: any;
+        deliveryStatus?: any;
     }
 ) {
     try {
@@ -271,22 +314,27 @@ export async function updateBookingInfo(
         });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const b = await db.query.booking.findFirst({
-            where: eq(booking.id, bookingId)
-        });
-        if (!b) return { status: "error", message: "Booking not found" };
+        const booking = await db.query.booking.findFirst({ where: eq(schema.booking.id, bookingId) });
+        if (!booking) return { status: "error", message: "Booking not found" };
 
-        const memberData = await db.query.member.findFirst({
-            where: and(eq(member.userId, session.user.id), eq(member.studioId, b.studioId))
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
         });
-        if (!memberData) return { status: "error", message: "Unauthorized" };
+        const disallowedRoles = ["receptionist", "photographer", "videographer"];
+        if (!member || disallowedRoles.includes(member.role)) {
+            return { status: "error", message: "Unauthorized: You do not have permission to update bookings" };
+        }
 
-        await db.update(booking).set({
-            notes: data.notes,
-            paymentStatus: data.paymentStatus as any,
-            deliveryStatus: data.deliveryStatus as any,
-            bookingStatus: data.bookingStatus as any
-        }).where(eq(booking.id, bookingId));
+        const updateData: Record<string, any> = {};
+        if (data.notes !== undefined) updateData.notes = data.notes;
+        if (data.sessionCount !== undefined) updateData.sessionCount = Math.max(1, data.sessionCount);
+        if (data.bookingStatus) updateData.bookingStatus = data.bookingStatus;
+        if (data.paymentStatus) updateData.paymentStatus = data.paymentStatus;
+        if (data.deliveryStatus) updateData.deliveryStatus = data.deliveryStatus;
+
+        await db.update(schema.booking)
+            .set(updateData)
+            .where(eq(schema.booking.id, bookingId));
 
         revalidatePath("/studios", "layout");
         return { status: "success", message: "Booking updated successfully" };
@@ -307,24 +355,59 @@ export async function uploadBookingPhoto(data: {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const b = await db.query.booking.findFirst({ where: eq(booking.id, data.bookingId) });
-        if (!b) return { status: "error", message: "Booking not found" };
+        const booking = await db.query.booking.findFirst({ where: eq(schema.booking.id, data.bookingId) });
+        if (!booking) return { status: "error", message: "Booking not found" };
 
-        const memberData = await db.query.member.findFirst({
-            where: and(eq(member.userId, session.user.id), eq(member.studioId, b.studioId))
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
         });
         if (!memberData) return { status: "error", message: "Unauthorized" };
 
-        await db.insert(photo).values({
-            id: crypto.randomUUID(),
+        // Admin, manager, owner uploads auto-approve
+        const autoApproveRoles = ["admin", "manager", "owner"];
+        const isAutoApproved = autoApproveRoles.includes(member.role);
+
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+        const [photo] = await db.insert(schema.photo).values({
+            id: uuidv4(),
             bookingId: data.bookingId,
             r2Key: data.r2Key,
             fileName: data.fileName,
             fileSize: data.fileSize,
             mimeType: data.mimeType,
+            expiresAt,
             uploadedById: session.user.id,
-            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        });
+            approvalStatus: isAutoApproved ? "APPROVED" : "PENDING_REVIEW",
+            approvedAt: isAutoApproved ? new Date().toISOString() : undefined,
+            approvedById: isAutoApproved ? session.user.id : undefined,
+        }).returning();
+
+        if (["photographer", "videographer"].includes(member.role)) {
+            const admins = await db.query.member.findMany({
+                where: and(eq(schema.member.studioId, booking.studioId), inArray(schema.member.role, ["admin", "owner", "manager"])),
+                with: { user: true }
+            });
+
+            const { sendSMS } = await import("../termii");
+            for (const admin of admins) {
+                await db.insert(schema.userNotification).values({
+                    id: uuidv4(),
+                    userId: admin.userId,
+                    title: "New Photo Uploaded",
+                    message: `A new photo was uploaded for a booking by \${session.user.name || "staff"}.`,
+                    type: "PHOTO_UPLOAD",
+                    bookingId: booking.id
+                });
+                if (admin.user?.phoneNumber) {
+                    try {
+                        await sendSMS(admin.user.phoneNumber, `GMAX Studio: A new photo was uploaded for a booking by \${session.user.name || "staff"}. Please review it.`);
+                    } catch (err) {
+                        console.error("SMS failed", err);
+                    }
+                }
+            }
+        }
 
         revalidatePath("/studios", "layout");
         return { status: "success" };
@@ -339,22 +422,37 @@ export async function approvePhoto(photoId: string) {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const p = await db.query.photo.findFirst({
-            where: eq(photo.id, photoId),
-            with: { booking: true }
+        const photo = await db.query.photo.findFirst({
+            where: eq(schema.photo.id, photoId),
+            with: { booking: { with: { client: true, studio: true } } },
         });
         if (!p) return { status: "error", message: "Photo not found" };
 
-        const memberData = await db.query.member.findFirst({
-            where: and(eq(member.userId, session.user.id), eq(member.studioId, p.booking.studioId))
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, photo.booking?.studioId!))
         });
         if (!memberData) return { status: "error", message: "Unauthorized" };
 
-        await db.update(photo).set({
-            approvalStatus: "APPROVED",
-            approvedById: session.user.id,
-            approvedAt: new Date().toISOString()
-        }).where(eq(photo.id, photoId));
+        await db.update(schema.photo)
+            .set({
+                approvalStatus: "APPROVED",
+                approvedAt: new Date().toISOString(),
+                approvedById: session.user.id,
+            })
+            .where(eq(schema.photo.id, photoId));
+
+        // Notify client via Termii
+        const client = photo.booking?.client;
+        const studioName = photo.booking?.studio?.name || "Studio";
+        if (client?.phone?.length > 0) {
+            const { sendSMS } = await import("../termii");
+            const message = `Hi \${client.name}! Your photos from \${studioName} are ready for viewing and download. Visit your booking page to access them.`;
+            try {
+                await sendSMS(client.phone, message);
+            } catch (err) {
+                console.error("[Termii] Failed to notify client:", err);
+            }
+        }
 
         revalidatePath("/studios", "layout");
         return { status: "success", message: "Photo approved" };
@@ -368,21 +466,44 @@ export async function rejectPhoto(photoId: string, reason?: string) {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const p = await db.query.photo.findFirst({
-            where: eq(photo.id, photoId),
-            with: { booking: true }
+        const photo = await db.query.photo.findFirst({
+            where: eq(schema.photo.id, photoId),
+            with: { booking: true },
         });
         if (!p) return { status: "error", message: "Photo not found" };
 
-        const memberData = await db.query.member.findFirst({
-            where: and(eq(member.userId, session.user.id), eq(member.studioId, p.booking.studioId))
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, photo.booking?.studioId!))
         });
         if (!memberData) return { status: "error", message: "Unauthorized" };
 
-        await db.update(photo).set({
-            approvalStatus: "REJECTED",
-            rejectionReason: reason || null
-        }).where(eq(photo.id, photoId));
+        await db.update(schema.photo)
+            .set({
+                approvalStatus: "REJECTED",
+                rejectionReason: reason || undefined,
+            })
+            .where(eq(schema.photo.id, photoId));
+
+        const uploader = await db.query.user.findFirst({ where: eq(schema.user.id, photo.uploadedById) });
+        if (uploader) {
+            await db.insert(schema.userNotification).values({
+                id: uuidv4(),
+                userId: uploader.id,
+                title: "Photo Rejected",
+                message: `Your photo upload for a booking was rejected. Reason: \${reason || "No reason provided"}`,
+                type: "PHOTO_REJECTED",
+                bookingId: photo.bookingId
+            });
+
+            if (uploader.phoneNumber) {
+                const { sendSMS } = await import("../termii");
+                try {
+                    await sendSMS(uploader.phoneNumber, `GMAX Studio: Your photo upload was rejected. Reason: \${reason || "Please check dashboard"}`);
+                } catch(e){
+                    console.error("SMS failed", e);
+                }
+            }
+        }
 
         revalidatePath("/studios", "layout");
         return { status: "success", message: "Photo rejected" };
@@ -396,14 +517,14 @@ export async function deletePhoto(photoId: string) {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const p = await db.query.photo.findFirst({
-            where: eq(photo.id, photoId),
-            with: { booking: true }
+        const photo = await db.query.photo.findFirst({
+            where: eq(schema.photo.id, photoId),
+            with: { booking: true },
         });
         if (!p) return { status: "error", message: "Photo not found" };
 
-        const memberData = await db.query.member.findFirst({
-            where: and(eq(member.userId, session.user.id), eq(member.studioId, p.booking.studioId))
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, photo.booking?.studioId!))
         });
         if (!memberData || !["admin", "manager", "owner", "receptionist"].includes(memberData.role)) {
             return { status: "error", message: "Unauthorized to delete photo" };
@@ -411,7 +532,7 @@ export async function deletePhoto(photoId: string) {
 
         try {
             const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-            await fetch(`${baseUrl}/api/s3/delete`, {
+            await fetch(`\${baseUrl}/api/s3/delete`, {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ key: p.r2Key }),
@@ -420,7 +541,8 @@ export async function deletePhoto(photoId: string) {
             console.error("[R2] Failed to delete file from storage:", r2Error);
         }
 
-        await db.delete(photo).where(eq(photo.id, photoId));
+        // Delete from database
+        await db.delete(schema.photo).where(eq(schema.photo.id, photoId));
 
         revalidatePath("/studios", "layout");
         return { status: "success", message: "Photo deleted successfully" };
@@ -435,33 +557,36 @@ export async function deleteBooking(bookingId: string) {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const b = await db.query.booking.findFirst({
-            where: eq(booking.id, bookingId),
-            with: { photos: true }
+        const booking = await db.query.booking.findFirst({
+            where: eq(schema.booking.id, bookingId),
+            with: { photos: true },
         });
         if (!b) return { status: "error", message: "Booking not found" };
 
-        const memberData = await db.query.member.findFirst({
-            where: and(eq(member.userId, session.user.id), eq(member.studioId, b.studioId))
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
         });
         if (!memberData || !["admin", "manager", "owner", "receptionist"].includes(memberData.role)) {
             return { status: "error", message: "You don't have permission to delete bookings" };
         }
 
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-        for (const p of b.photos) {
-            try {
-                await fetch(`${baseUrl}/api/s3/delete`, {
-                    method: "DELETE",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ key: p.r2Key }),
-                });
-            } catch (r2Error) {
-                console.error(`[R2] Failed to delete photo ${p.r2Key}:`, r2Error);
+        if (booking.photos) {
+            for (const photo of booking.photos) {
+                try {
+                    await fetch(`\${baseUrl}/api/s3/delete`, {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ key: photo.r2Key }),
+                    });
+                } catch (r2Error) {
+                    console.error(`[R2] Failed to delete photo \${photo.r2Key}:`, r2Error);
+                }
             }
         }
 
-        await db.delete(booking).where(eq(booking.id, bookingId));
+        // Cascade delete handles payments, photos, addon relations
+        await db.delete(schema.booking).where(eq(schema.booking.id, bookingId));
 
         revalidatePath("/studios", "layout");
         return { status: "success", message: "Booking deleted successfully" };
@@ -481,50 +606,70 @@ export async function updateBookingFull(
         bookingDate?: string;
         sessionCount?: number;
         notes?: string;
-        bookingStatus?: string;
-        paymentStatus?: string;
-        deliveryStatus?: string;
+        bookingStatus?: any;
+        paymentStatus?: any;
+        deliveryStatus?: any;
         addonIds?: string[];
         totalAmount?: number;
         paymentPlan?: PaymentPlan;
+        extraPicturesCount?: number;
     }
 ) {
     try {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const b = await db.query.booking.findFirst({
-            where: eq(booking.id, bookingId),
+        const booking = await db.query.booking.findFirst({
+            where: eq(schema.booking.id, bookingId),
             with: {
-                service: { with: { studioSession: true } },
-                bookingAddons: true
-            }
+                service: { with: { studioSession: true } }
+            },
         });
         if (!b) return { status: "error", message: "Booking not found" };
 
-        const memberData = await db.query.member.findFirst({
-            where: and(eq(member.userId, session.user.id), eq(member.studioId, b.studioId))
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
         });
-        if (!memberData) return { status: "error", message: "Unauthorized" };
+        const disallowedRoles = ["receptionist", "photographer", "videographer"];
+        if (!member || disallowedRoles.includes(member.role)) {
+            return { status: "error", message: "Unauthorized: You do not have permission to update bookings" };
+        }
 
-        const updateData: Record<string, unknown> = {};
+        // Build update data
+        const updateData: Record<string, any> = {};
+
         if (data.clientId) updateData.clientId = data.clientId;
         if (data.serviceId) updateData.serviceId = data.serviceId;
         if (data.serviceVariantId) updateData.serviceVariantId = data.serviceVariantId;
         if (data.memberId) updateData.memberId = data.memberId;
         if (data.notes !== undefined) updateData.notes = data.notes;
         if (data.sessionCount !== undefined) updateData.sessionCount = Math.max(1, data.sessionCount);
+        if (data.extraPicturesCount !== undefined) updateData.extraPicturesCount = Math.max(0, data.extraPicturesCount);
         if (data.bookingStatus) updateData.bookingStatus = data.bookingStatus;
         if (data.paymentStatus) updateData.paymentStatus = data.paymentStatus;
         if (data.deliveryStatus) updateData.deliveryStatus = data.deliveryStatus;
-        if (data.totalAmount !== undefined) updateData.totalAmount = data.totalAmount;
+        
+        let priceChangeNotificationNeeded = false;
+        if (data.totalAmount !== undefined && data.totalAmount !== Number(booking.totalAmount)) {
+            if (member.role === "manager") {
+                updateData.pendingTotalAmount = data.totalAmount.toString();
+                updateData.priceApprovalStatus = "PENDING_APPROVAL";
+                updateData.priceChangedBy = member.id;
+                priceChangeNotificationNeeded = true;
+            } else {
+                updateData.totalAmount = data.totalAmount.toString();
+                updateData.priceApprovalStatus = "APPROVED";
+                updateData.pendingTotalAmount = null;
+            }
+        }
+        
         if (data.paymentPlan) updateData.paymentPlan = data.paymentPlan;
 
         if (data.bookingDate) {
             const targetDate = new Date(data.bookingDate);
             const serviceForDuration = data.serviceId
-                ? await db.query.service.findFirst({ where: eq(service.id, data.serviceId), with: { studioSession: true } })
-                : b.service;
+                ? await db.query.service.findFirst({ where: eq(schema.service.id, data.serviceId), with: { studioSession: true } })
+                : booking.service;
 
             const sessionCount = data.sessionCount ?? b.sessionCount;
             const duration = (serviceForDuration?.studioSession?.duration || 45) * sessionCount;
@@ -540,14 +685,15 @@ export async function updateBookingFull(
                 return { status: "error", message: "The selected time is outside operating hours (8am - 8pm)." };
             }
 
+            // Check overlaps
             const dailyBookings = await db.query.booking.findMany({
                 where: and(
-                    eq(booking.studioId, b.studioId),
-                    gte(booking.bookingDate, start.toISOString()),
-                    lte(booking.bookingDate, end.toISOString()),
-                    ne(booking.id, bookingId)
+                    eq(schema.booking.studioId, booking.studioId),
+                    gte(schema.booking.bookingDate, start.toISOString()),
+                    lte(schema.booking.bookingDate, end.toISOString()),
+                    ne(schema.booking.id, bookingId)
                 ),
-                with: { service: { with: { studioSession: true } } }
+                with: { service: { with: { studioSession: true } } },
             });
 
             for (const other of dailyBookings) {
@@ -562,18 +708,40 @@ export async function updateBookingFull(
             updateData.bookingDate = targetDate.toISOString();
         }
 
-        if (Object.keys(updateData).length > 0) {
-            await db.update(booking).set(updateData).where(eq(booking.id, bookingId));
+        await db.update(schema.booking)
+            .set(updateData)
+            .where(eq(schema.booking.id, bookingId));
+
+        // Handle addon updates
+        if (data.addonIds !== undefined) {
+            await db.delete(schema.bookingAddons).where(eq(schema.bookingAddons.a, bookingId));
+            if (data.addonIds.length > 0) {
+                await Promise.all(
+                    data.addonIds.map(async (id) => {
+                        const addonId = id.split(":")[0];
+                        await db.insert(schema.bookingAddons).values({
+                            a: bookingId,
+                            b: addonId
+                        });
+                    })
+                );
+            }
         }
 
-        if (data.addonIds !== undefined) {
-            await db.delete(bookingAddons).where(eq(bookingAddons.a, bookingId));
-            if (data.addonIds.length > 0) {
-                const addonInserts = data.addonIds.map(id => ({
-                    a: bookingId,
-                    b: id.split(":")[0]
-                }));
-                await db.insert(bookingAddons).values(addonInserts);
+        if (priceChangeNotificationNeeded) {
+            const admins = await db.query.member.findMany({
+                where: and(eq(schema.member.studioId, booking.studioId), inArray(schema.member.role, ["admin", "owner", "developer"])),
+                with: { user: true }
+            });
+            for (const admin of admins) {
+                await db.insert(schema.userNotification).values({
+                    id: uuidv4(),
+                    userId: admin.userId,
+                    title: "Price Approval Required",
+                    message: `Manager \${session.user.name || "staff"} requested a price change to ₦\${data.totalAmount} for a booking.`,
+                    type: "SYSTEM",
+                    bookingId: booking.id
+                });
             }
         }
 
@@ -582,5 +750,46 @@ export async function updateBookingFull(
     } catch (e) {
         console.error("Failed to update booking:", e);
         return { status: "error", message: "Failed to update booking" };
+    }
+}
+
+// ── Mark Task Completed (Staff) ────────────────────────────────────
+
+export async function markTaskCompleted(bookingId: string) {
+    try {
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (!session?.user) return { status: "error", message: "Unauthorized" };
+
+        const booking = await db.query.booking.findFirst({
+            where: eq(schema.booking.id, bookingId)
+        });
+        if (!booking) return { status: "error", message: "Booking not found" };
+
+        const member = await db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
+        });
+        
+        if (!member) {
+            return { status: "error", message: "Unauthorized: You do not belong to this studio" };
+        }
+
+        // Only allow if they are assigned to this booking OR they are an admin/manager
+        const isAssigned = booking.memberId === member.id;
+        const isAdminOrManager = ["owner", "admin", "manager", "developer"].includes(member.role);
+
+        if (!isAssigned && !isAdminOrManager) {
+            return { status: "error", message: "Unauthorized: You can only complete tasks assigned to you" };
+        }
+
+        await db.update(schema.booking)
+            .set({ bookingStatus: "COMPLETED" })
+            .where(eq(schema.booking.id, bookingId));
+
+        revalidatePath("/studios", "layout");
+        revalidatePath("/my-tasks");
+        return { status: "success", message: "Task marked as completed" };
+    } catch (e) {
+        console.error("Failed to mark task completed:", e);
+        return { status: "error", message: "Internal server error" };
     }
 }

@@ -56,16 +56,18 @@ interface UpdateBookingDialogProps {
         serviceVariantId?: string;
         memberId: string;
         bookingDate: string;
-        addonIds: string[];
+        addonIds?: string[];
         totalAmount?: number;
         paymentPlan?: string;
+        extraPicturesCount?: number;
     };
     clients: ClientOption[];
     services: ServiceOption[];
     members: MemberOption[];
+    canEditPrice?: boolean;
 }
 
-export function UpdateBookingDialog({ bookingId, currentData, clients, services, members }: UpdateBookingDialogProps) {
+export function UpdateBookingDialog({ bookingId, currentData, clients, services, members, canEditPrice = true }: UpdateBookingDialogProps) {
     const [isPending, startTransition] = useTransition();
     const [open, setOpen] = useState(false);
 
@@ -89,6 +91,14 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
             }))
         );
     }, [addonServices]);
+
+    const normalizeAddonIds = (rawIds: string[]) => {
+        return rawIds.map(id => {
+            if (id.includes(":")) return id;
+            const match = flattenedAddons.find(a => a.addon.id === id);
+            return match ? match.compositeId : id;
+        });
+    };
 
     const filteredClients = useMemo(() => {
         if (!clientSearch.trim()) return clients;
@@ -115,12 +125,13 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
             serviceVariantId: currentData.serviceVariantId,
             memberId: currentData.memberId,
             bookingDate: currentData.bookingDate ? new Date(currentData.bookingDate) : undefined,
-            addonIds: currentData.addonIds || [],
+            addonIds: normalizeAddonIds(currentData.addonIds || []),
             totalAmount: currentData.totalAmount ?? 0,
             paymentPlan: (currentData.paymentPlan as "FULL" | "HALF" | "QUARTER" | undefined) ?? "FULL",
+            extraPicturesCount: currentData.extraPicturesCount ?? 0,
         }
     });
-
+    // eslint-disable-next-line react-hooks/incompatible-library
     const watchedClientId = form.watch("clientId");
     const watchedServiceId = form.watch("serviceId");
     const watchedServiceVariantId = form.watch("serviceVariantId");
@@ -164,6 +175,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                 addonIds: data.addonIds,
                 totalAmount: data.totalAmount,
                 paymentPlan: data.paymentPlan as "FULL" | "HALF" | "QUARTER",
+                extraPicturesCount: data.extraPicturesCount,
             }));
             
             if (error) {
@@ -193,9 +205,10 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                 serviceVariantId: currentData.serviceVariantId,
                 memberId: currentData.memberId,
                 bookingDate: currentData.bookingDate ? new Date(currentData.bookingDate) : undefined,
-                addonIds: currentData.addonIds || [],
+                addonIds: normalizeAddonIds(currentData.addonIds || []),
                 totalAmount: currentData.totalAmount ?? 0,
                 paymentPlan: (currentData.paymentPlan as "FULL" | "HALF" | "QUARTER" | undefined) ?? "FULL",
+                extraPicturesCount: currentData.extraPicturesCount ?? 0,
             });
             setClientSearch("");
             setServiceSearch("");
@@ -305,7 +318,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                                         {filteredMainServices.length > 0 ? filteredMainServices.map(s => (
                                             <div
                                                 key={s.id}
-                                                onClick={() => { form.setValue("serviceId", s.id, { shouldValidate: true }); setServiceOpen(false); setServiceSearch(""); }}
+                                                onClick={() => { form.setValue("serviceId", s.id, { shouldValidate: true }); form.setValue("serviceVariantId", undefined, { shouldValidate: true }); setServiceOpen(false); setServiceSearch(""); }}
                                                 className={`flex items-center justify-between px-3 py-2 cursor-pointer text-sm rounded-md transition-colors hover:bg-accent ${watchedServiceId === s.id ? "bg-accent font-medium" : ""}`}
                                             >
                                                 <div className="flex items-center gap-2">
@@ -372,6 +385,22 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                                             )}
                                         </div>
                                     )}
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Extra Pictures</label>
+                                        <Controller
+                                            name="extraPicturesCount"
+                                            control={form.control}
+                                            render={({ field: { value, onChange, ...f } }) => (
+                                                <Input
+                                                    {...f}
+                                                    type="number"
+                                                    value={value ?? 0}
+                                                    onChange={(e) => onChange(Number(e.target.value))}
+                                                    min={0}
+                                                />
+                                            )}
+                                        />
+                                    </div>
                                 </div>
                             )}
                         />
@@ -564,7 +593,13 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                                         min={0}
                                         value={value}
                                         onChange={(e) => onChange(Number(e.target.value))}
+                                        disabled={!canEditPrice}
                                     />
+                                    {!canEditPrice && (
+                                        <p className="text-[10px] text-muted-foreground mt-1">
+                                            Only managers and admins can edit price directly.
+                                        </p>
+                                    )}
                                     {form.formState.errors.totalAmount && (
                                         <p className="text-xs text-red-500">{form.formState.errors.totalAmount.message}</p>
                                     )}

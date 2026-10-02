@@ -7,11 +7,11 @@ export const LocationTypeEnum = z.enum([
     "MULTIPLE",
 ], { message: "Invalid location type" });
 
-export const CategorySchema = z.object({
-    name:       z.string().min(1, "Category name is required"),
-    type:       z.string(),
-    studioId:   z.string().optional(),
-});
+export const ServiceCategoryTypeEnum = z.enum([
+    "PHOTOGRAPHY",
+    "VIDEOGRAPHY",
+    "OTHERS",
+], { message: "Invalid category type" });
 
 export const ServiceDeliverableSchema = z.object({
     label:      z.string().min(1, "Label is required"),
@@ -21,6 +21,8 @@ export const ServiceDeliverableSchema = z.object({
 });
 
 export const ServiceVariantSchema = z.object({
+    id:                     z.string().optional(),
+    title:                  z.string().optional(),
     locationType:           LocationTypeEnum,
     basePrice:              z.number().min(0, "Base price cannot be negative"),
     maxPrice:               z.number().min(0, "Max price cannot be negative").optional(),
@@ -40,9 +42,10 @@ export const ServiceSchema = z.object({
     features:           z.array(z.string()).optional(),
     isAddon:            z.boolean(),
     isActive:           z.boolean(),
-    discountPercentage: z.number().int().min(0).max(100),
+    discountPercentage: z.number().int().min(0).max(100).default(0),
     studioSessionId:    z.string().min(1, "Studio Session is required"),
-    categoryId:         z.string().optional(),
+    category:           ServiceCategoryTypeEnum.default("OTHERS"),
+    studioId:           z.string().optional(),
     variants:           z.array(ServiceVariantSchema).min(1, "At least one pricing variant is required"),
 });
 
@@ -53,15 +56,16 @@ export const ServiceOutput = z.object({
     features:           z.array(z.string()).optional(),
     isAddon:            z.boolean(),
     isActive:           z.boolean(),
-    discountPercentage: z.number().int().min(0).max(100),
+    discountPercentage: z.number().int().min(0).max(100).default(0),
     studioSessionId:    z.string(),
-    categoryId:         z.string().optional(),
+    category:           ServiceCategoryTypeEnum,
+    studioId:           z.string(),
     variants:           z.array(ServiceVariantOutput).optional(),
 });
 
 export type LocationType            = z.infer<typeof LocationTypeEnum>;
 export type ServiceVariantInput     = z.infer<typeof ServiceVariantSchema>;
 export type ServiceDeliverableInput = z.infer<typeof ServiceDeliverableSchema>;
-export type CategoryPayload         = z.infer<typeof CategorySchema>;
+export type ServiceCategoryType     = z.infer<typeof ServiceCategoryTypeEnum>;
 export type ServicePayload = z.output<typeof ServiceSchema>;
 export type ServiceOutput = z.infer<typeof ServiceOutput>;

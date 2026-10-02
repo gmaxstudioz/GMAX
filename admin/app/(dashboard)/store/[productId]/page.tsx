@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
-import { sql } from "drizzle-orm";
+import * as schema from "@/lib/schema";
+import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect, notFound } from "next/navigation";
@@ -13,7 +14,7 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { productId } = await params;
     const product = await db.query.product.findFirst({
-        where: (product, { eq }) => eq(product.id, productId),
+        where: eq(schema.product.id, productId),
         columns: { title: true, description: true },
     });
 
@@ -32,30 +33,33 @@ export default async function ProductDetailsPage({ params }: Props) {
     if (!session?.user) redirect("/auth/login");
 
     const members = await db.query.member.findMany({
-        where: (member, { eq }) => eq(member.userId, session.user.id),
+        where: eq(schema.member.userId, session.user.id),
         columns: { role: true },
     });
 
-    const adminRoles = ["owner", "developer", "manager"];
-    const hasAdminRole = members.some((m) => adminRoles.includes(m.role));
+    const adminRoles = ["owner", "developer"];
+    const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
     if (members.length > 0 && !hasAdminRole) redirect("/my-tasks");
 
-    const productRaw = await db.query.product.findFirst({
-        where: (product, { eq }) => eq(product.id, productId),
-        extras: {
-            purchasesCount: sql<number>`(select count(*)::int from "product_access" where "product_access"."productId" = "product"."id")`.as('purchasesCount')
-        },
+    const productData = await db.query.product.findFirst({
+        where: eq(schema.product.id, productId),
         with: {
             productCategory: true,
+            productAccesses: { columns: { id: true } },
         },
     });
 
-    if (!productRaw) notFound();
+    if (!productData) notFound();
 
     const product = {
-        ...productRaw,
-        _count: { purchases: (productRaw as any).purchasesCount || 0 }
+        ...productData,
+        category: (productData as any).productCategory,
+        _count: {
+            purchases: (productData as any).productAccesses.length,
+        },
     };
+    delete (product as any).productAccesses;
+    delete (product as any).productCategory;
 
     // Serialize Prisma Decimal objects to plain numbers for Client Components
     const serializedProduct = JSON.parse(JSON.stringify(product, (_key, value) =>

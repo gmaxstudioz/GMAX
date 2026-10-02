@@ -1,11 +1,19 @@
 "use client";
+import { APP_NAME } from "@/lib/constants";
 
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { ArrowUpRight } from 'lucide-react';
 import Magnetic from '@/components/ui/magnetic';
 
 export default function Footer() {
+  const pathname = usePathname();
+
+  if (pathname === '/links') {
+    return null;
+  }
+
   return (
     <footer className="relative w-full bg-[#0a0a0a] text-white pt-24 pb-8 px-4 sm:px-6 mt-32 border-t border-white/10 overflow-hidden">
       <div className="max-w-7xl mx-auto flex flex-col gap-16">
@@ -29,6 +37,7 @@ export default function Footer() {
               <Link href="/" className="hover:text-gray-300 transition-colors">Home</Link>
               <Link href="/about" className="hover:text-gray-300 transition-colors">About us</Link>
               <Link href="/works" className="hover:text-gray-300 transition-colors">Our Works</Link>
+              <Link href="/academy" className="hover:text-gray-300 transition-colors">Academy</Link>
               <Link href="/shop" className="hover:text-gray-300 transition-colors">Shop</Link>
             </div>
             <div className="flex flex-col gap-4">
@@ -50,7 +59,7 @@ export default function Footer() {
 
         {/* Bottom Section */}
         <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-white/10 text-xs md:text-sm text-gray-500">
-          <p>© {new Date().getFullYear()} GMAX Studioz. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {APP_NAME}. All rights reserved.</p>
           <div className="flex gap-6 mt-4 md:mt-0">
             <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>

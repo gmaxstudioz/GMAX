@@ -1,61 +1,43 @@
-import { BatchLogRecordProcessor, LoggerProvider } from "@opentelemetry/sdk-logs";
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
+import { BatchLogRecordProcessor, LoggerProvider } from "@opentelemetry/sdk-logs";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 
-let posthogLogProvider: LoggerProvider | null = null;
+const posthogProjectToken = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
+const posthogHost = process.env.NEXT_PUBLIC_POSTHOG_HOST;
 
-function getPostHogLogProvider() {
-    if (posthogLogProvider) {
-        return posthogLogProvider;
+function reportMissingConfiguration(variableName: string) {
+    if (process.env.NODE_ENV === "development") {
+        throw new Error(
+            `${variableName} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${variableName} is configured`,
+        );
     }
+}
 
-    const projectToken = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
-    const host = process.env.NEXT_PUBLIC_POSTHOG_HOST;
+if (!posthogProjectToken) {
+    reportMissingConfiguration("NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN");
+}
 
-    if (!projectToken || !host) {
-        if (process.env.NODE_ENV === "development") {
-            const missingVariable = !projectToken
-                ? "NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN"
-                : "NEXT_PUBLIC_POSTHOG_HOST";
-            throw new Error(
-                `${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`,
-            );
-        }
+if (!posthogHost) {
+    reportMissingConfiguration("NEXT_PUBLIC_POSTHOG_HOST");
+}
 
-        return null;
-    }
-
-    posthogLogProvider = new LoggerProvider({
-        resource: resourceFromAttributes({
-            "service.name": "gmax-api",
-            "deployment.environment": process.env.NODE_ENV ?? "production",
-        }),
+export const posthogLogProvider = posthogProjectToken && posthogHost
+    ? new LoggerProvider({
+        resource: resourceFromAttributes({ "service.name": "gmax-studioz" }),
         processors: [
             new BatchLogRecordProcessor({
                 exporter: new OTLPLogExporter({
-                    url: `${host.replace(/\/$/, "")}/i/v1/logs`,
+                    url: `${posthogHost}/i/v1/logs`,
                     headers: {
-                        Authorization: `Bearer ${projectToken}`,
+                        Authorization: `Bearer ${posthogProjectToken}`,
                         "Content-Type": "application/json",
                     },
                 }),
             }),
         ],
-    });
+    })
+    : null;
 
-    return posthogLogProvider;
-}
+export const posthogLog = posthogLogProvider?.getLogger("posthog-exporter");
 
-export function register() {
-    if (process.env.NEXT_RUNTIME === "nodejs") {
-        getPostHogLogProvider();
-    }
-}
-
-export function getPostHogLogger() {
-    return getPostHogLogProvider()?.getLogger("posthog-dedicated-logs") ?? null;
-}
-
-export async function flushPostHogLogs() {
-    await posthogLogProvider?.forceFlush();
-}
+export function register() {}

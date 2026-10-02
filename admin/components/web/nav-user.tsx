@@ -29,18 +29,11 @@ import Link from "next/link"
 import { buttonVariants } from "../ui/button"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { LogIn } from "@hugeicons/core-free-icons"
-import posthog from "posthog-js"
-import { useEffect, useRef } from "react"
-
-const posthogEnabled = Boolean(
-  process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && process.env.NEXT_PUBLIC_POSTHOG_HOST,
-)
 
 export function NavUser({
   user,
 }: {
   user?: {
-    id: string
     name: string
     email: string
     image?: string | null
@@ -48,31 +41,11 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar()
   const router = useRouter();
-  const identifiedUserId = useRef<string | null>(null)
-
-  useEffect(() => {
-    if (!user || !posthogEnabled) return
-
-    if (identifiedUserId.current && identifiedUserId.current !== user.id) {
-      posthog.reset()
-    }
-
-    if (identifiedUserId.current !== user.id) {
-      posthog.identify(user.id, {
-        email: user.email,
-        name: user.name,
-      })
-      identifiedUserId.current = user.id
-    }
-  }, [user])
 
   async function SignOut() {
     await authClient.signOut({
       fetchOptions: {
         onSuccess: () => {
-          if (posthogEnabled) {
-            posthog.reset()
-          }
           toast.success("Logged out successfully");
           router.push("/auth/login");
         },

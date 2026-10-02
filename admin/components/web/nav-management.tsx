@@ -12,7 +12,8 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 export function NavManagement({
-    items
+    items,
+    ...props
   }: {
     items: {
       title: string
@@ -23,7 +24,7 @@ export function NavManagement({
   const pathname = usePathname()
 
   return (
-    <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+    <SidebarGroup className="group-data-[collapsible=icon]:hidden" {...props}>
       <SidebarGroupLabel>Management</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => (

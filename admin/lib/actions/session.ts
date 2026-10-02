@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { studioSession, member } from "@/lib/schema";
+import * as schema from "@/lib/schema";
 import { eq, and } from "drizzle-orm";
 import z from "zod";
 import { v4 as uuidv4 } from "uuid";
@@ -28,21 +28,24 @@ export async function createStudioSession(data: { name: string; duration: number
     const userSession = await auth.api.getSession({ headers: await headers() });
     if (!userSession?.user) return { status: "error", message: "Unauthorized" };
     
-    const memberRecord = await db.query.member.findFirst({ 
-      where: and(eq(member.userId, userSession.user.id), eq(member.studioId, studioId)) 
+    const member = await db.query.member.findFirst({ 
+      where: and(eq(schema.member.userId, userSession.user.id), eq(schema.member.studioId, studioId)) 
     });
     
-    if (!memberRecord) return { status: "error", message: "Unauthorized access to studio" };
+    if (!member) return { status: "error", message: "Unauthorized access to studio" };
 
-    // Generate an ID manually since StudioSession lacks @default()
     const id = uuidv4();
 
-    const [newSession] = await db.insert(studioSession).values({
-        id,
-        name,
-        duration,
-        studioId,
-    }).returning();
+    await db.insert(schema.studioSession).values({
+      id,
+      name,
+      duration,
+      studioId,
+    });
+    
+    const newSession = await db.query.studioSession.findFirst({
+        where: eq(schema.studioSession.id, id)
+    });
 
     revalidatePath(`/studios/[slug]`, "page");
 
@@ -55,21 +58,19 @@ export async function createStudioSession(data: { name: string; duration: number
 
 export async function deleteStudioSession(sessionId: string) {
   try {
-    const existing = await db.query.studioSession.findFirst({ where: eq(studioSession.id, sessionId) });
+    const existing = await db.query.studioSession.findFirst({ where: eq(schema.studioSession.id, sessionId) });
     if (!existing) return { status: "error", message: "Session not found" };
     
     const userSession = await auth.api.getSession({ headers: await headers() });
     if (!userSession?.user) return { status: "error", message: "Unauthorized" };
     
-    const memberRecord = await db.query.member.findFirst({ 
-      where: and(eq(member.userId, userSession.user.id), eq(member.studioId, existing.studioId)) 
+    const member = await db.query.member.findFirst({ 
+      where: and(eq(schema.member.userId, userSession.user.id), eq(schema.member.studioId, existing.studioId)) 
     });
     
-    if (!memberRecord) return { status: "error", message: "Unauthorized access to studio" };
+    if (!member) return { status: "error", message: "Unauthorized access to studio" };
 
-    // Note: If services are bound via ON DELETE CASCADE to this, they'll also drop! 
-    // Usually that's what Prisma does, check if they want to warn users.
-    await db.delete(studioSession).where(eq(studioSession.id, sessionId));
+    await db.delete(schema.studioSession).where(eq(schema.studioSession.id, sessionId));
 
     revalidatePath(`/studios/[slug]`, "page");
     return { status: "success", message: "Studio session deleted successfully" };

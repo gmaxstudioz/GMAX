@@ -38,10 +38,11 @@ export const StudioListOutputSchema = PaginatedOutput(StudioSummaryOutputSchema)
 export const PublicServiceOutputSchema = z.object({
     id: z.string(),
     name: z.string(),
+    category: z.enum(["PHOTOGRAPHY", "VIDEOGRAPHY", "OTHERS"]),
     isAddon: z.boolean(),
     description: z.string(),
     features: z.array(z.string()),
-    discountPercentage: z.number().int(),
+    discountPercentage: z.number().int().min(0).max(100).default(0),
     variants: z.array(z.object({
         id: z.string(),
         locationType: z.enum(["STUDIO", "OUTDOOR", "BOTH", "MULTIPLE"]),

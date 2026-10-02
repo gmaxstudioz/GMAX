@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, and, gte, lte, asc } from "drizzle-orm";
 import type { Metadata } from "next";
 import { format, parseISO, startOfDay, endOfDay } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +20,9 @@ import { ClientOutput, ClientType } from "@/lib/schemas/client";
 import { MemberRole, MembersOutput, StudioMetadata, StudioOutput } from "@/lib/schemas/studio";
 import { ServiceOutput } from "@/lib/schemas/service";
 
+import { ViewToggle } from "@/components/web/ViewToggle";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 export const metadata: Metadata = {
     title: "Global Daily Bookings",
 };
@@ -26,20 +31,39 @@ interface Props {
     params: Promise<{
         date: string; // Format: YYYY-MM-DD
     }>;
+    searchParams: Promise<{
+        view?: string;
+    }>;
 }
 
-export default async function GlobalDailyBookingsPage({ params }: Props) {
+export default async function GlobalDailyBookingsPage({ params, searchParams }: Props) {
     const { date } = await params;
+    const { view } = await searchParams;
+    const isListView = view === "list";
     
     const targetDate = parseISO(date);
     const start = startOfDay(targetDate);
     const end = endOfDay(targetDate);
 
+    const { auth } = await import("@/lib/auth");
+    const { headers } = await import("next/headers");
+    const { redirect } = await import("next/navigation");
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) redirect("/auth/login");
+
+    if (!session?.user) {
+        return <div>Unauthorized</div>;
+    }
+
+    const myMemberships = await db.query.member.findMany({
+        where: eq(schema.member.userId, session.user.id)
+    });
+
     // 1. Fetch bookings with comprehensive relations
     const dailyBookings = await db.query.booking.findMany({
-        where: (booking, { gte, lte, and }) => and(
-            gte(booking.bookingDate, start.toISOString()),
-            lte(booking.bookingDate, end.toISOString())
+        where: and(
+            gte(schema.booking.bookingDate, start.toISOString()),
+            lte(schema.booking.bookingDate, end.toISOString())
         ),
         with: {
             client: true,
@@ -52,9 +76,7 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
                     clients: {
                         columns: { id: true, name: true, phone: true, email: true, image: true, type: true }
                     },
-                    services: {
-                        with: { serviceVariants: { with: { serviceDeliverables: true } } }
-                    }
+                    services: { with: { serviceVariants: { with: { serviceDeliverables: true } } } }
                 }
             },
             service: {
@@ -63,16 +85,21 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
                 }
             }
         },
-        orderBy: (booking, { asc }) => [asc(booking.studioId), asc(booking.bookingDate)]
+        orderBy: [
+            asc(schema.booking.studioId), // Simple ordering for DB, will sort by name in memory if needed
+            asc(schema.booking.bookingDate)
+        ]
     });
 
+
     // 2. Group bookings by studio and prepare specific lists for UI components
-    const groupedBookings = dailyBookings.reduce((acc, booking) => {
+    const groupedBookings = dailyBookings.reduce((acc: any, booking: any) => {
         const studioId = booking.studio.id;
         
         if (!acc[studioId]) {
+            // Flatten services from categories
             const allServices = booking.studio.services;
-            const ownerMember = booking.studio.members.find(m => m.role === "owner");
+            const ownerMember = booking.studio.members.find((m: any) => m.role === "owner");
             
             acc[studioId] = {
                 studio: {
@@ -88,7 +115,7 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
                 bookings: [],
                 totalMinutes: 0,
                 // These are passed to the UpdateBookingDialog
-                studioClients: booking.studio.clients.map(c => ({
+                studioClients: booking.studio.clients.map((c: any) => ({
                     id: c.id,
                     name: c.name,
                     phone: c.phone,
@@ -96,7 +123,7 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
                     email: c.email ?? undefined,
                     image: c.image ?? undefined,
                 })),
-                studioServices: allServices.map(s => ({
+                studioServices: allServices.map((s: any) => ({
                     id: s.id,
                     name: s.name,
                     description: s.description,
@@ -106,7 +133,8 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
                     discountPercentage: s.discountPercentage || 0,
                     studioSessionId: s.studioSessionId,
                     category: s.category,
-                    serviceVariants: s.serviceVariants?.map(v => ({
+                    studioId: s.studioId,
+                    variants: s.serviceVariants?.map((v: any) => ({
                         id: v.id,
                         serviceId: v.serviceId,
                         locationType: v.locationType,
@@ -114,7 +142,7 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
                         maxPrice: v.maxPrice ? Number(v.maxPrice) : undefined,
                         sessionDurationMins: v.sessionDurationMins,
                         logisticsIncluded: v.logisticsIncluded,
-                        deliverables: v.serviceDeliverables?.map(d => ({
+                        deliverables: v.serviceDeliverables?.map((d: any) => ({
                             id: d.id,
                             label: d.label,
                             quantity: d.quantity ?? undefined,
@@ -123,7 +151,7 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
                         })) ?? [],
                     })) ?? [],
                 })),
-                studioMembers: booking.studio.members.map(m => ({
+                studioMembers: booking.studio.members.map((m: any) => ({
                     id: m.id,
                     name: m.user.name,
                     email: m.user.email,
@@ -153,12 +181,15 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
 
     return (
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">
-            <div className="flex items-center gap-4">
-                <BackButton href="/bookings" />
-                <div>
-                    <h1 className="text-2xl font-bold">System Bookings for {format(targetDate, "MMM do, yyyy")}</h1>
-                    <p className="text-muted-foreground">All Studios</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <BackButton href="/bookings" />
+                    <div>
+                        <h1 className="text-2xl font-bold">System Bookings for {format(targetDate, "MMM do, yyyy")}</h1>
+                        <p className="text-muted-foreground">All Studios</p>
+                    </div>
                 </div>
+                <ViewToggle defaultView="grid" />
             </div>
 
             {studios.length === 0 ? (
@@ -170,7 +201,7 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
                 />
             ) : (
                 <div className="flex flex-col gap-8">
-                    {studios.map((group) => {
+                    {studios.map((group: any) => {
                         const totalCapacity = 720;
                         const remainingMinutes = Math.max(0, totalCapacity - group.totalMinutes);
                         const percentFilled = Math.min(100, (group.totalMinutes / totalCapacity) * 100);
@@ -191,76 +222,151 @@ export default async function GlobalDailyBookingsPage({ params }: Props) {
                                     </Button>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                    {group.bookings.map((booking) => (
-                                        <ContextMenu key={booking.id}>
-                                            <ContextMenuTrigger>
-                                                <Card className="@container/card h-fit">
-                                                    <CardHeader>
-                                                        <div className="flex justify-between items-start">
-                                                            <CardTitle className="text-lg">{booking.client?.name}</CardTitle>
-                                                            <div className="flex items-center gap-1">
-                                                                <Badge variant="secondary">{booking.sessionCount} {booking.sessionCount > 1 ? "Sessions" : "Session"}</Badge>
-                                                                <Badge>{booking.bookingStatus}</Badge>
-                                                            </div>
-                                                        </div>
-                                                        <CardDescription>{booking.service?.name}</CardDescription>
-                                                    </CardHeader>
-                                                    <CardContent className="flex flex-col gap-3">
-                                                        <div className="flex items-center justify-between">
-                                                            <p className="text-sm">Time: {format(new Date(booking.bookingDate), "hh:mm a")}</p>
-                                                            <RescheduleTimePicker bookingId={booking.id} currentDate={new Date(booking.bookingDate)} />
-                                                        </div>
-                                                        <div>
+                                {isListView ? (
+                                    <div className="border rounded-lg overflow-hidden bg-card">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead className="w-[100px]">Time</TableHead>
+                                                    <TableHead>Client</TableHead>
+                                                    <TableHead>Service</TableHead>
+                                                    <TableHead>Status</TableHead>
+                                                    <TableHead className="w-[200px]">Assign To</TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {group.bookings.map((booking: any) => (
+                                                    <TableRow key={booking.id}>
+                                                        <TableCell className="font-medium whitespace-nowrap">
+                                                            {format(new Date(booking.bookingDate), "hh:mm a")}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="font-semibold">{booking.client?.name}</div>
+                                                            {booking.client?.phone && <div className="text-xs text-muted-foreground">{booking.client.phone}</div>}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div>{booking.service?.name}</div>
+                                                            <div className="text-xs text-muted-foreground">{booking.sessionCount} {booking.sessionCount > 1 ? "Sessions" : "Session"}</div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge variant="secondary">{booking.bookingStatus}</Badge>
+                                                        </TableCell>
+                                                        <TableCell>
                                                             <ReassignMemberDropdown 
                                                                 bookingId={booking.id} 
                                                                 currentMemberId={booking.memberId} 
                                                                 members={group.studioMembers} 
                                                             />
-                                                        </div>
-                                                        <Button variant="outline" size="sm" className="w-full gap-1.5 mt-1" asChild>
-                                                            <Link href={`/studios/${group.studio.slug}/bookings/detail/${booking.id}`}>
-                                                                <ExternalLinkIcon className="h-3.5 w-3.5" />
-                                                                View Details
-                                                            </Link>
-                                                        </Button>
-                                                    </CardContent>
-                                                </Card>
-                                            </ContextMenuTrigger>
-                                            <ContextMenuContent>
-                                                <ContextMenuGroup>
-                                                    <ContextMenuLabel>Actions</ContextMenuLabel>
-                                                    <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
-                                                       {/* Note: UpdateBookingDialog is usually a Dialog, so ensure it works correctly inside a ContextMenu (often requires a DialogTrigger wrap) */}
-                                                        <UpdateBookingDialog
-                                                            bookingId={booking.id}
-                                                            clients={group.studioClients}
-                                                            services={group.studioServices}
-                                                            members={group.studioMembers}
-                                                            currentData={{
-                                                                notes: booking.notes || "",
-                                                                sessionCount: booking.sessionCount,
-                                                                bookingStatus: booking.bookingStatus,
-                                                                paymentStatus: booking.paymentStatus,
-                                                                deliveryStatus: booking.deliveryStatus,
-                                                                clientId: booking.clientId,
-                                                                serviceId: booking.serviceId,
-                                                                serviceVariantId: booking.serviceVariantId ?? undefined,
-                                                                memberId: booking.memberId || "",
-                                                                bookingDate: booking.bookingDate || "",
-                                                                addonIds: booking.bookingAddons?.map(addon => addon.b) || [],
-                                                                totalAmount: Number(booking.totalAmount),
-                                                                paymentPlan: booking.paymentPlan,
-                                                            }}
-                                                        />
-                                                    </div>
-                                                    <ContextMenuItem className="text-destructive">Delete</ContextMenuItem>
-                                                    <ContextMenuItem>Cancel</ContextMenuItem>
-                                                </ContextMenuGroup>
-                                            </ContextMenuContent>
-                                        </ContextMenu>
-                                    ))}
-                                </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Button variant="ghost" size="sm" asChild>
+                                                                <Link href={`/studios/${group.studio.slug}/bookings/detail/${booking.id}`}>
+                                                                    View
+                                                                </Link>
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                                {group.bookings.length === 0 && (
+                                                    <TableRow>
+                                                        <TableCell colSpan={6} className="h-24 text-center">
+                                                            No bookings found.
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                        {group.bookings.map((booking: any) => (
+                                            <ContextMenu key={booking.id}>
+                                                <ContextMenuTrigger>
+                                                    <Card className="@container/card h-fit">
+                                                        <CardHeader>
+                                                            <div className="flex justify-between items-start">
+                                                                <CardTitle className="text-lg">{booking.client?.name}</CardTitle>
+                                                                <div className="flex items-center gap-1">
+                                                                    <Badge variant="secondary">{booking.sessionCount} {booking.sessionCount > 1 ? "Sessions" : "Session"}</Badge>
+                                                                    <Badge>{booking.bookingStatus}</Badge>
+                                                                </div>
+                                                            </div>
+                                                            <CardDescription>{booking.service?.name}</CardDescription>
+                                                        </CardHeader>
+                                                        <CardContent className="flex flex-col gap-3">
+                                                            <div className="flex items-center justify-between">
+                                                                <p className="text-sm">Time: {format(new Date(booking.bookingDate), "hh:mm a")}</p>
+                                                                <RescheduleTimePicker bookingId={booking.id} currentDate={booking.bookingDate} />
+                                                            </div>
+                                                            <div>
+                                                                <ReassignMemberDropdown 
+                                                                    bookingId={booking.id} 
+                                                                    currentMemberId={booking.memberId} 
+                                                                    members={group.studioMembers} 
+                                                                />
+                                                            </div>
+                                                            <Button variant="outline" size="sm" className="w-full gap-1.5 mt-1" asChild>
+                                                                <Link href={`/studios/${group.studio.slug}/bookings/detail/${booking.id}`}>
+                                                                    <ExternalLinkIcon className="h-3.5 w-3.5" />
+                                                                    View Details
+                                                                </Link>
+                                                            </Button>
+                                                        </CardContent>
+                                                    </Card>
+                                                </ContextMenuTrigger>
+                                                <ContextMenuContent>
+                                                    <ContextMenuGroup>
+                                                        <ContextMenuLabel>Actions</ContextMenuLabel>
+                                                        {(() => {
+                                                            const membership = myMemberships.find((m: any) => m.studioId === booking.studioId);
+                                                            const canUpdateBooking = membership && ["owner", "manager", "developer", "admin"].includes(membership.role);
+                                                            
+                                                            return canUpdateBooking ? (
+                                                                <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+                                                                   {/* Note: UpdateBookingDialog is usually a Dialog, so ensure it works correctly inside a ContextMenu (often requires a DialogTrigger wrap) */}
+                                                                    <UpdateBookingDialog
+                                                                        bookingId={booking.id}
+                                                                        clients={group.studioClients}
+                                                                        services={group.studioServices}
+                                                                        members={group.studioMembers}
+                                                                        currentData={{
+                                                                            notes: booking.notes || "",
+                                                                            sessionCount: booking.sessionCount,
+                                                                            bookingStatus: booking.bookingStatus,
+                                                                            paymentStatus: booking.paymentStatus,
+                                                                            deliveryStatus: booking.deliveryStatus,
+                                                                            clientId: booking.clientId,
+                                                                            serviceId: booking.serviceId,
+                                                                            serviceVariantId: booking.serviceVariantId ?? undefined,
+                                                                            memberId: booking.memberId || "",
+                                                                            bookingDate: booking.bookingDate.toISOString(),
+                                                                            addonIds: booking.addons.map((addon: any) => addon.id),
+                                                                            totalAmount: Number(booking.totalAmount),
+                                                                            paymentPlan: booking.paymentPlan,
+                                                                        }}
+                                                                        canEditPrice={canUpdateBooking}
+                                                                    />
+                                                                </div>
+                                                            ) : null;
+                                                        })()}
+                                                        {(() => {
+                                                            const membership = myMemberships.find((m: any) => m.studioId === booking.studioId);
+                                                            const canUpdateBooking = membership && ["owner", "manager", "developer", "admin"].includes(membership.role);
+                                                            
+                                                            return canUpdateBooking ? (
+                                                                <>
+                                                                    <ContextMenuItem className="text-destructive">Delete</ContextMenuItem>
+                                                                    <ContextMenuItem>Cancel</ContextMenuItem>
+                                                                </>
+                                                            ) : null;
+                                                        })()}
+                                                    </ContextMenuGroup>
+                                                </ContextMenuContent>
+                                            </ContextMenu>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )
                     })}

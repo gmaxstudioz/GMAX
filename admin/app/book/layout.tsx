@@ -1,8 +1,9 @@
+import { APP_NAME } from "@/lib/constants";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-    title: "Book a Session — GMAX Studioz",
+    title: `Book a Session — ${APP_NAME}`,
     description: "Browse studios and book your session online.",
 };
 
@@ -29,7 +30,7 @@ export default function BookLayout({ children }: { children: React.ReactNode }) 
             {/* Minimal Footer */}
             <footer className="border-t py-6">
                 <p className="text-center text-xs text-muted-foreground">
-                    © {new Date().getFullYear()} GMAX Studioz. All rights reserved.
+                    © {new Date().getFullYear()} {APP_NAME}. All rights reserved.
                 </p>
             </footer>
         </div>

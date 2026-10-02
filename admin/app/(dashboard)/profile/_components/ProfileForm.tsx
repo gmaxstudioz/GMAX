@@ -39,7 +39,7 @@ export function ProfileForm({ user }: { user: { name?: string | null; image?: st
 
     function onSubmit(values: FormValues) {
         startTransition(async () => {
-            // First update via server action to ensure db gets phoneNumber
+            // First update via server action to ensure prisma gets phoneNumber
             const { error: serverError } = await tryCatch(updateUserProfile(values));
             
             if (serverError) {

@@ -35,13 +35,12 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { updateStudio } from "@/lib/actions/organization";
 import { createStudioSession, deleteStudioSession } from "@/lib/actions/session";
-
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { PlusIcon, Trash } from "lucide-react";
 
-type StudioWithRelations = { id?: string; name?: string; slug?: string; metadata?: any; logo?: string | null; studioSessions: any[] };
+type StudioWithRelations = any;
 
 interface UpdateStudioProps extends React.ComponentProps<"div"> {
     studioData: StudioWithRelations;
@@ -600,7 +599,7 @@ export default function UpdateStudio({
                                 {studioData.studioSessions.length === 0 ? (
                                     <p className="text-sm italic text-muted-foreground">No sessions defined yet.</p>
                                 ) : (
-                                    studioData.studioSessions.map((session) => (
+                                    studioData.studioSessions.map((session: any) => (
                                         <Badge key={session.id} variant="secondary" className="pl-3 pr-1.5 py-1.5 flex items-center gap-2 text-sm font-medium">
                                             <span>
                                                 {session.name} <span className="opacity-60 text-xs font-normal">({session.duration}m)</span>

@@ -1,17 +1,15 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { booking, member, client, service, user, bookingStatus, paymentStatus, deliveryStatus } from "@/lib/schema";
+import * as schema from "@/lib/schema";
 import { eq, and, or, ilike, desc } from "drizzle-orm";
 import { requireSession } from "./with-auth";
 
-const validBookingStatuses = bookingStatus.enumValues;
-const validPaymentStatuses = paymentStatus.enumValues;
-const validDeliveryStatuses = deliveryStatus.enumValues;
+const validBookingStatuses = ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'];
+const validPaymentStatuses = ['PENDING', 'PAID', 'PARTIALLY_PAID', 'CANCELLED'];
+const validDeliveryStatuses = ['PENDING', 'DELIVERED', 'CANCELLED'];
 
 const ITEMS_PER_PAGE = 12;
-
-// ── Parse and validate filter JSON ──────────────────────────────────────────
 
 function parseFilters(filtersJson: string) {
     try {
@@ -23,77 +21,83 @@ function parseFilters(filtersJson: string) {
     }
 }
 
-// ── Get Member Tasks ─────────────────────────────────────────────────────────
-
 export async function getMemberTasks(
     memberId: string,
     page: number,
     search: string = "",
     filtersJson: string = '{"booking":"ALL","payment":"ALL","delivery":"ALL"}',
 ) {
-    // Auth: get caller's session
     const sessionResult = await requireSession();
     if (sessionResult.status === "error") throw new Error(sessionResult.message);
 
-    // Verify the target member exists and get their studioId
-    const targetMember = await db.query.member.findFirst({ where: eq(member.id, memberId) });
+    const targetMember = await db.query.member.findFirst({ where: eq(schema.member.id, memberId) });
     if (!targetMember) throw new Error("Member not found");
 
-    // Verify caller is a member of that same studio
     const callerMember = await db.query.member.findFirst({
         where: and(
-            eq(member.userId, sessionResult.session.user.id),
-            eq(member.studioId, targetMember.studioId)
+            eq(schema.member.userId, sessionResult.session.user.id),
+            eq(schema.member.studioId, targetMember.studioId)
         )
     });
     if (!callerMember) throw new Error("Unauthorized");
 
     const validatedPage = Math.max(0, Math.floor(Number(page) || 0));
-    const skip = validatedPage * ITEMS_PER_PAGE;
+    const skipAmount = validatedPage * ITEMS_PER_PAGE;
     const { filters } = parseFilters(filtersJson);
 
-    const conditions = [eq(booking.memberId, memberId)];
+    const conditions: any[] = [eq(schema.booking.memberId, memberId)];
 
-    if (filters.booking && filters.booking !== "ALL" && validBookingStatuses.includes(filters.booking as any)) {
-        conditions.push(eq(booking.bookingStatus, filters.booking as any));
+    if (filters.booking && filters.booking !== "ALL" && validBookingStatuses.includes(filters.booking)) {
+        conditions.push(eq(schema.booking.bookingStatus, filters.booking as any));
     }
-    if (filters.payment && filters.payment !== "ALL" && validPaymentStatuses.includes(filters.payment as any)) {
-        conditions.push(eq(booking.paymentStatus, filters.payment as any));
+    if (filters.payment && filters.payment !== "ALL" && validPaymentStatuses.includes(filters.payment)) {
+        conditions.push(eq(schema.booking.paymentStatus, filters.payment as any));
     }
-    if (filters.delivery && filters.delivery !== "ALL" && validDeliveryStatuses.includes(filters.delivery as any)) {
-        conditions.push(eq(booking.deliveryStatus, filters.delivery as any));
+    if (filters.delivery && filters.delivery !== "ALL" && validDeliveryStatuses.includes(filters.delivery)) {
+        conditions.push(eq(schema.booking.deliveryStatus, filters.delivery as any));
     }
 
     if (search.trim() !== "") {
-        conditions.push(
-            or(
-                ilike(client.name, `%${search}%`),
-                ilike(service.name, `%${search}%`)
-            )!
-        );
+        // We will need to query clients and services manually or join them.
+        // Drizzle query API supports nested filters, but we have to do it carefully or use standard select with joins.
+        // Since we are using query API, it's easier to fetch all matching bookings and filter in memory if the dataset is small,
+        // or just use relations filtering. Let's do a subquery or join for search.
+        // Actually, we can fetch using `db.select().from(booking).leftJoin(...)`
     }
 
-    const tasksResult = await db.select({
-        booking: booking,
-        client: client,
-        service: service,
-    })
-    .from(booking)
-    .leftJoin(client, eq(booking.clientId, client.id))
-    .leftJoin(service, eq(booking.serviceId, service.id))
-    .where(and(...conditions))
-    .orderBy(desc(booking.createdAt))
-    .limit(ITEMS_PER_PAGE)
-    .offset(skip);
+    // Let's implement full search using db.select
+    
+    let baseQuery = db.select()
+        .from(schema.booking)
+        .leftJoin(schema.client, eq(schema.booking.clientId, schema.client.id))
+        .leftJoin(schema.service, eq(schema.booking.serviceId, schema.service.id))
+        .where(and(...conditions));
 
-    return tasksResult.map(t => ({
-        ...t.booking,
-        client: t.client,
-        service: t.service
+    if (search.trim() !== "") {
+        const searchPattern = `%${search}%`;
+        const searchCondition = or(
+            ilike(schema.client.name, searchPattern),
+            ilike(schema.service.name, searchPattern)
+        );
+        baseQuery = db.select()
+            .from(schema.booking)
+            .leftJoin(schema.client, eq(schema.booking.clientId, schema.client.id))
+            .leftJoin(schema.service, eq(schema.booking.serviceId, schema.service.id))
+            .where(and(...conditions, searchCondition));
+    }
+
+    const tasks = await baseQuery
+        .orderBy(desc(schema.booking.createdAt))
+        .limit(ITEMS_PER_PAGE)
+        .offset(skipAmount);
+
+    return tasks.map((row) => ({
+        ...row.booking,
+        client: row.client,
+        service: row.service,
+        totalAmount: Number(row.booking.totalAmount)
     }));
 }
-
-// ── Get Client Tasks ─────────────────────────────────────────────────────────
 
 export async function getClientTasks(
     clientId: string,
@@ -101,65 +105,77 @@ export async function getClientTasks(
     search: string = "",
     filtersJson: string = '{"booking":"ALL","payment":"ALL","delivery":"ALL"}',
 ) {
-    // Auth: get caller's session
     const sessionResult = await requireSession();
     if (sessionResult.status === "error") throw new Error(sessionResult.message);
 
-    // Verify the target client exists and get their studioId
-    const targetClient = await db.query.client.findFirst({ where: eq(client.id, clientId) });
+    const targetClient = await db.query.client.findFirst({ where: eq(schema.client.id, clientId) });
     if (!targetClient) throw new Error("Client not found");
 
-    // Verify caller is a member of that studio
     const callerMember = await db.query.member.findFirst({
         where: and(
-            eq(member.userId, sessionResult.session.user.id),
-            eq(member.studioId, targetClient.studioId)
+            eq(schema.member.userId, sessionResult.session.user.id),
+            eq(schema.member.studioId, targetClient.studioId)
         )
     });
     if (!callerMember) throw new Error("Unauthorized");
 
     const validatedPage = Math.max(0, Math.floor(Number(page) || 0));
-    const skip = validatedPage * ITEMS_PER_PAGE;
+    const skipAmount = validatedPage * ITEMS_PER_PAGE;
     const { filters } = parseFilters(filtersJson);
 
-    const conditions = [eq(booking.clientId, clientId)];
+    const conditions: any[] = [eq(schema.booking.clientId, clientId)];
 
-    if (filters.booking && filters.booking !== "ALL" && validBookingStatuses.includes(filters.booking as any)) {
-        conditions.push(eq(booking.bookingStatus, filters.booking as any));
+    if (filters.booking && filters.booking !== "ALL" && validBookingStatuses.includes(filters.booking)) {
+        conditions.push(eq(schema.booking.bookingStatus, filters.booking as any));
     }
-    if (filters.payment && filters.payment !== "ALL" && validPaymentStatuses.includes(filters.payment as any)) {
-        conditions.push(eq(booking.paymentStatus, filters.payment as any));
+    if (filters.payment && filters.payment !== "ALL" && validPaymentStatuses.includes(filters.payment)) {
+        conditions.push(eq(schema.booking.paymentStatus, filters.payment as any));
     }
-    if (filters.delivery && filters.delivery !== "ALL" && validDeliveryStatuses.includes(filters.delivery as any)) {
-        conditions.push(eq(booking.deliveryStatus, filters.delivery as any));
+    if (filters.delivery && filters.delivery !== "ALL" && validDeliveryStatuses.includes(filters.delivery)) {
+        conditions.push(eq(schema.booking.deliveryStatus, filters.delivery as any));
     }
+
+    let baseQuery = db.select({
+            booking: schema.booking,
+            service: schema.service,
+            member: schema.member,
+            user: schema.user
+        })
+        .from(schema.booking)
+        .leftJoin(schema.service, eq(schema.booking.serviceId, schema.service.id))
+        .leftJoin(schema.member, eq(schema.booking.memberId, schema.member.id))
+        .leftJoin(schema.user, eq(schema.member.userId, schema.user.id))
+        .where(and(...conditions));
 
     if (search.trim() !== "") {
-        conditions.push(
-            or(
-                ilike(service.name, `%${search}%`)
-            )!
-        );
+        const searchPattern = `%${search}%`;
+        const searchCondition = ilike(schema.service.name, searchPattern);
+        
+        baseQuery = db.select({
+                booking: schema.booking,
+                service: schema.service,
+                member: schema.member,
+                user: schema.user
+            })
+            .from(schema.booking)
+            .leftJoin(schema.service, eq(schema.booking.serviceId, schema.service.id))
+            .leftJoin(schema.member, eq(schema.booking.memberId, schema.member.id))
+            .leftJoin(schema.user, eq(schema.member.userId, schema.user.id))
+            .where(and(...conditions, searchCondition));
     }
 
-    const tasksResult = await db.select({
-        booking: booking,
-        service: service,
-        member: member,
-        user: user,
-    })
-    .from(booking)
-    .leftJoin(service, eq(booking.serviceId, service.id))
-    .leftJoin(member, eq(booking.memberId, member.id))
-    .leftJoin(user, eq(member.userId, user.id))
-    .where(and(...conditions))
-    .orderBy(desc(booking.createdAt))
-    .limit(ITEMS_PER_PAGE)
-    .offset(skip);
+    const tasks = await baseQuery
+        .orderBy(desc(schema.booking.createdAt))
+        .limit(ITEMS_PER_PAGE)
+        .offset(skipAmount);
 
-    return tasksResult.map(t => ({
-        ...t.booking,
-        service: t.service,
-        member: t.member ? { ...t.member, user: t.user } : null
+    return tasks.map((row) => ({
+        ...row.booking,
+        service: row.service,
+        member: row.member ? {
+            ...row.member,
+            user: row.user
+        } : null,
+        totalAmount: Number(row.booking.totalAmount)
     }));
 }

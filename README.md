@@ -1,99 +1,133 @@
 # GMAX Studio Management System
 
-## Overview
-GMAX Studio Management System is a comprehensive web-based platform tailored for high-volume photography studios. It eliminates the inefficiencies of manual logbooks by providing real-time booking conflict detection, automated payment tracking, secure client photo delivery, and automated communication. 
+## 🌟 Overview
+**GMAX Studio Management System** is an enterprise-grade, comprehensive web-based platform tailored specifically for high-volume photography and videography studios. It modernizes the entire studio workflow—from client acquisition and bookings to post-production and final asset delivery. 
 
-This document serves as a clean architectural specification and blueprint for generating or understanding the project.
+By eliminating the inefficiencies of manual logbooks and disconnected tools, GMAX provides real-time booking conflict detection, robust multi-installment payment tracking, secure payment-gated media delivery, a digital product store, and an integrated training academy.
 
 ---
 
-## 🛠 Technology Stack
+## 🏗️ Architecture & Technology Stack
+Building a project of this scale requires a robust, type-safe, and scalable technology stack:
+
 - **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript (Strict Mode)
-- **Styling UI**: Tailwind CSS, shadcn/ui, Lucide React
-- **Authentication**: Better Auth - Credentials Provider
-- **Database**: Superbase
-- **File Storage**: Cloudflare R2 (S3-Compatible)
-- **Integrations**: Paystack (Payments), Termii API (SMS), Google Calendar API
+- **Styling UI**: Tailwind CSS, shadcn/ui, Framer Motion, GSAP, Lucide React
+- **Authentication**: Better Auth (Credentials/OAuth Provider)
+- **Database ORM**: Prisma
+- **Database Engine**: PostgreSQL (Supabase / Local PG)
+- **API Layer**: oRPC (Type-safe RPC framework for Next.js)
+- **File Storage**: Cloudflare R2 (S3-Compatible Object Storage)
+- **Payments**: Paystack Integration (Webhooks & Verifications)
+- **Notifications**: Termii API (SMS/WhatsApp)
 
 ---
 
 ## 👥 User Roles & Access Control
+The application enforces strict Role-Based Access Control (RBAC) to ensure operational security across multiple studio branches.
 
-The application enforces strict Role-Based Access Control (RBAC) to ensure operational security.
-
-1. **Admin**: Full system access. Can manage staff roles, access high-level financial metrics, configure service pricing, and modify studio settings.
-2. **Manager**: Oversees daily operations. Has CRUD access for clients, bookings, and payments. Can assign staff to bookings but cannot alter system configurations.
-3. **Receptionist**: Front-desk operations. Creates new client profiles, logs bookings, records manual payments, and checks the calendar for scheduling conflicts.
-4. **Photographer**: Assigned to specific shoots. Views upcoming assignments, client notes, and uploads raw/final photos to the delivery system.
-5. **Videographer**: Similar to the Photographer role, but tailored for video assignments.
-6. **Photo Editor / Video Editor**: Post-production staff. Receives notifications when shoots are complete, downloads assets, and uploads the finalized edits for client delivery.
-7. **Staff**: Base role for generic personnel with read-only capabilities for necessary operational data.
-
----
-
-## 🚀 Core Features & Modules (Detailed Breakdown)
-
-### 1. Advanced Client Management System (CRM)
-- **Profile Management:** Full CRUD operations for detailed client profiles (Name, Phone, Email, Address, Notes). Contains Nigerian-format phone validation hooks.
-- **Classification & Tagging:** Dynamic tagging system to categorize clients automatically (VIP, Corporate, Standard, VVIP) to prioritize high-value profiles.
-- **Aggregated History:** Direct insight into every client’s entire chronological journey, including past shoots attended, payment consistency (reliability of initial deposits vs. full completions), and cumulative lifetime value calculations.
-- **Search & Filtering:** Real-time lookup enabling receptionists to filter clients globally by phone numbers or full names.
-
-### 2. Intelligent Booking & Calendar System
-- **Real-Time Conflict Prevention Algorithm:** The backend ensures no two sessions overlap. It automatically calculates availability and enforces a strict 2-hour separation buffer between bookings before confirming DB insertion.
-- **Custom Time-Picker Component:** Specifically built popover interface allowing clients/receptionists to book at accurate 45-minute intervals tailored specifically to standard studio shoot structures. 
-- **Dynamic Pricing "Snapshots":** When a user selects a service package (e.g., Wedding Photography + Extra Prints), the system saves a direct snapshot of the price to a pivot table (`BookingItem`). If the studio updates package prices later, historical booking balances remain untouched.
-- **Resource Allocation:** Managers can directly assign a specific Photographer or Videographer to a booking, routing that shoot directly to the assigned staff member's personal dashboard view.
-- **Google Calendar Synchronization:** One-way automated synchronization pushes confirmed bookings directly to the studio's Google Calendar via OAuth 2.0 without redundant manual entry.
-
-### 3. Comprehensive Payment Tracking & Security
-- **Multi-Method Ledger:** Supports and organizes records for sequential payments (e.g. initial deposits, partial balance completions, final sweeps) across Cash, Bank Transfer, POS, and Paystack.
-- **Paystack Webhook Verification:** Online payments are confirmed strictly via backend webhook responses rather than client-side assertions, severely limiting vulnerability to falsified payment receipts.
-- **Overdue Alert System:** A visual, dashboard-level warning system highlights bookings missing final payments in red, preventing unpaid deliverables from slipping under the radar.
-- **Receipt Engine:** Automatic generation of structured receipt tracking numbers and unique reference codes for every verified transaction.
-
-### 4. Payment-Gated Photo Delivery System 
-- **Bulk Media Handling:** Provides staff with drag-and-drop capability enabling direct, heavy uploads into Cloudflare R2 (bypassing the internal server for speed and reducing egress latency). Triggers automatic thumbnail generation for fast page loads.
-- **The "Payment Gate" Mechanism:** The core studio revenue protection feature. The file download system actively checks the booking's `paymentStatus`. R2 payload URLs remain locked and un-generated until the central system registers the balance as `COMPLETED`. 
-- **Secure Token URLs:** Every completed shoot generates a cryptographically secure, unique identifier (`DeliveryToken`) that serves as the isolated access point to the digital files via a public client portal.
-- **Automated Lifecycle Policy:** To optimize cloud storage costs, download portals expire and assets are permanently scrubbed from R2 buckets exactly 7 days after the link generates. (Warning notifications are dispatched 3 days prior).
-
-### 5. Automated Communications & Notifications
-- **Termii API Integration (SMS):** Automated text triggers generated by background jobs fire instantly for:
-  - Immediate Booking Confirmations.
-  - 3-Day Upcoming Payment Balance Reminders.
-  - 1-Day Urgent Payment Warnings.
-  - "Photos are Ready for Download" Alerts.
-- **WhatsApp Quick Links:** Dynamic link generation allowing staff to securely transition conversations manually into WhatsApp using pre-filled API templates referencing the client's name and Booking ID.
-- **Analytics Dashboard (Bonus):** Summarizes the raw CRM data visually through responsive Recharts, showing current month expected revenues vs. collected revenues, booking type distributions, and a visual heatmap of the busiest scheduling days.
+1. **Owner / Developer**: Full administrative and system access. Can create new studios, manage global settings, oversee all financial metrics, and manage high-level staff roles.
+2. **Admin**: High-level access for a specific studio. Can configure service pricing, approve price overrides, and manage staff schedules.
+3. **Manager**: Oversees daily studio operations. Has CRUD access for clients, bookings, and payments. Can reassign staff to specific bookings.
+4. **Receptionist**: Front-desk operations. Creates new client profiles, logs bookings, records manual payments (POS/Cash), and checks the calendar for scheduling conflicts.
+5. **Photographer / Videographer**: Assigned to specific shoots. Views upcoming assignments, client notes, and uploads raw/final assets to the delivery system.
+6. **Editor**: Post-production staff. Receives notifications when shoots are complete, downloads raw assets, and uploads finalized deliverables for client review.
+7. **Staff**: Base role with read-only capabilities for necessary operational data.
 
 ---
 
-## 🗄️ Database Architecture (Key Entities)
+## 🚀 Core Features & Modules
 
-- **`Staff`**: Stores credentials, role enums, and studio assignments. Controls system access.
-- **`Client`**: Stores customer contact details, tags, and relational links to their history.
-- **`Booking`**: The central entity representing a scheduled shoot. Links to a `Client`, assigned `Staff` (photographer), and tracks states (`CONFIRMED`, `COMPLETED`, `CANCELLED`).
-- **`BookingItem` & `Service`**: Maps specific offerings (e.g., Wedding Photography, Portraits) and locks in pricing at the moment of booking creation.
-- **`Payment`**: Records transactions, amounts, and payment methods tied to a specific `Booking`.
-- **`Photo` & `DeliveryToken`**: Maps R2 storage bucket keys and manages secure access tokens for client deliverables.
+### 1. Intelligent Booking & Calendar System
+- **Real-Time Conflict Prevention**: The backend ensures no two sessions overlap, enforcing separation buffers and capacity limits across different studio rooms/locations.
+- **Dynamic Services & Add-ons**: Services support multiple variants (Studio, Outdoor, Both), base prices, max prices, and associated deliverables. Add-ons can be dynamically attached.
+- **Pricing Snapshots**: When a booking is created, the system saves a direct snapshot of the price. If package prices change later, historical booking balances remain untouched.
+- **Price Approval Workflow**: Managers can override prices, triggering an approval request to Admins before the booking is fully confirmed.
+
+### 2. Client Management (CRM)
+- **Profile Management**: Full tracking of client history, contact details, alternative numbers, and special dates (Birthdays, Weddings).
+- **Aggregated History**: Insight into every client’s entire chronological journey, lifetime value, and payment consistency.
+
+### 3. Comprehensive Payment Ledger
+- **Multi-Installment Support**: Organizes records for sequential payments (Deposits, Half Payments, Full Clearances).
+- **Multi-Method Ledger**: Tracks Cash, Bank Transfer, POS, and online Paystack transactions.
+- **Webhook Verification**: Online payments are confirmed strictly via backend webhook responses, preventing client-side forgery.
+
+### 4. Payment-Gated Media Delivery
+- **R2 Cloud Storage**: Bulk, high-speed multipart uploads directly into Cloudflare R2.
+- **The "Payment Gate"**: Core revenue protection. Download links and asset access remain locked until the central system registers the booking balance as `COMPLETED`.
+- **Secure Token URLs**: Clients receive unique, cryptographically secure URLs for accessing their finalized galleries.
+- **Automated Lifecycle**: Download portals automatically expire 30 days after upload to optimize storage costs.
+
+### 5. Digital Store & Training Academy
+- **Product Store**: Integrated digital storefront for selling presets, lookup tables (LUTs), and guides, complete with automated access links post-purchase.
+- **GMAX Academy**: A fully featured module to manage physical/online training courses, batches, student enrollments, and tuition tracking.
+
+### 6. Automated Communications
+- **Termii Integration**: Automated SMS triggers for Booking Confirmations, Payment Reminders, and "Photos Ready" alerts.
+- **Task Management**: Staff receive dynamic internal notifications and tasks (e.g., "Edit Wedding Video for John Doe") tied directly to booking states.
 
 ---
 
-## 🤖 Implementation Guide (For AI Generation)
+## 🛠️ How to Build & Run Locally
 
-To automatically scaffold and build this project using AI tools, follow these structured steps:
+To scaffold and run a project like this, you need the following prerequisites:
+- **Node.js**: v18+ 
+- **Package Manager**: npm, yarn, or pnpm
+- **Database**: A PostgreSQL instance (local or hosted like Supabase)
+- **Cloudflare R2**: Access keys for an R2 bucket (or standard AWS S3)
+- **Paystack Account**: For payment API keys
+- **Termii Account**: For SMS/Notification API keys
 
-1. **Bootstrap Phase**: 
-   Initialize Next.js 16 with Tailwind CSS, TypeScript, and shadcn/ui. Set up proper routing conventions.
-2. **Database & Auth Schema**: 
-   Configure Prisma with PostgreSQL. Generate the schemas for the entities listed above (Staff, Client, Booking, Service, Payment). Integrate Auth.js using the `Staff` table.
-3. **Core APIs**: 
-   Create Next.js Route Handlers (`/api/clients`, `/api/bookings`, `/api/services`) to enable standard CRUD operations. Implement the conflict detection algorithm in the `POST /api/bookings` route.
-4. **Frontend Architecture**: 
-   Build the Admin Dashboard utilizing a collapsible sidebar. Implement the Client list pages, the interactive Calendar View, and the Custom Time Picker component.
-5. **Payment & Storage Logic**: 
-   Layer the financial logic to calculate outstanding balances. Integrate S3-compatible endpoints to manage Cloudflare R2 uploads, tying photo access strictly to the "paid in full" status.
-6. **Refinement**: 
-   Finalize data visualization with Recharts on the home dashboard, and wire up SMS notifications for booking lifestyle events.
+### 1. Repository Setup
+Clone the repository and install dependencies in the root, `admin`, `api`, and `public` workspaces:
+\`\`\`bash
+git clone https://github.com/gmaxstudioz/GMAX.git
+cd GMAX
+npm install
+\`\`\`
+
+### 2. Environment Configuration
+Create `.env` files in the necessary directories (`/api`, `/admin`, `/public`). Key environment variables include:
+- `DATABASE_URL` (PostgreSQL connection string)
+- `BETTER_AUTH_SECRET` & `BETTER_AUTH_URL`
+- `NEXT_PUBLIC_API_URL`
+- `PAYSTACK_SECRET_KEY` & `PAYSTACK_PUBLIC_KEY`
+- `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_ENDPOINT`
+- `TERMII_API_KEY` & `TERMII_SENDER_ID`
+
+### 3. Database Migration
+Navigate to the API package to push the Prisma schema to your database and generate the client:
+\`\`\`bash
+cd api
+npx prisma db push
+npx prisma generate
+\`\`\`
+
+### 4. Start the Development Servers
+The project is split into multiple frontend applications and a central API. You can start them simultaneously or individually:
+
+**Start the Backend API:**
+\`\`\`bash
+cd api
+npm run dev
+\`\`\`
+
+**Start the Admin Dashboard:**
+\`\`\`bash
+cd admin
+npm run dev
+\`\`\`
+
+**Start the Public Facing App (Store, Academy, Booking Portal):**
+\`\`\`bash
+cd public
+npm run dev
+\`\`\`
+
+### 5. Deployment
+- **Database**: Supabase / AWS RDS
+- **API**: Vercel, Railway, or Render (Node.js runtime)
+- **Admin & Public Apps**: Vercel (Optimized for Next.js 16 App Router)
+
+Make sure to configure the correct CORS origins in the API to allow requests from the deployed Admin and Public domains.

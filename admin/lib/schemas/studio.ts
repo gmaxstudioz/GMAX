@@ -107,6 +107,7 @@ export const StudioMetadataSchema = z.object({
         .email("Please enter a valid email address.")
         .toLowerCase()
         .trim(),
+        phone: z.string().optional(),
         role: MemberRoleEnum,
         studio: z.string()
     });

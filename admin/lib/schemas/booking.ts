@@ -30,6 +30,7 @@ export const PaymentPlanEnum = z.enum([
 export const BookingSchema = z.object({
     bookingDate:        z.date(),
     sessionCount:       z.number().min(1, "At least 1 session must be booked"),
+    extraPicturesCount: z.number().min(0).optional(),
     notes:              z.string().optional(),
 
     totalAmount:        z.number().positive("Total amount must be greater than 0"),
@@ -85,6 +86,7 @@ export const PublicBookingSchema = z.object({
     selectedVariantId:        z.string().min(1, "Please select a service option"),
     selectedAddonIds:         z.array(z.string()),
     sessionCount:             z.number().min(1, "Must be at least 1"),
+    extraPicturesCount:       z.number().min(0).optional(),
 
     bookingDate:              z.string().min(1, "Please select a date"),
     bookingTime:              z.string().min(1, "Please select a time"),

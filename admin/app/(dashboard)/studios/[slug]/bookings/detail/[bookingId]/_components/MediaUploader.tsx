@@ -4,10 +4,11 @@ import { useState, useCallback, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { uploadBookingPhoto } from "@/lib/actions/booking";
+import { uploadBookingPhoto, deletePhoto } from "@/lib/actions/booking";
 import { tryCatch } from "@/hooks/try-catch";
 import { toast } from "sonner";
 import { useDropzone } from "react-dropzone";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
     UploadCloudIcon,
@@ -30,6 +31,8 @@ interface UploadItem {
 
 interface MediaUploaderProps {
     bookingId: string;
+    replacePhotoId?: string;
+    onSuccess?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -46,6 +49,7 @@ async function uploadSmallFile(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+            fileName: item.file.name,
             fileType: item.file.type,
             fileSize: item.file.size,
             isImage: item.file.type.startsWith("image/"),
@@ -86,6 +90,7 @@ async function uploadLargeFile(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+            fileName: item.file.name,
             fileType: item.file.type,
             directory: `studio/bookings/${bookingId}/photos`,
         }),
@@ -138,7 +143,8 @@ async function uploadLargeFile(
 // Component
 // ---------------------------------------------------------------------------
 
-export function MediaUploader({ bookingId }: MediaUploaderProps) {
+export function MediaUploader({ bookingId, replacePhotoId, onSuccess }: MediaUploaderProps) {
+    const router = useRouter();
     const [uploads, setUploads] = useState<UploadItem[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const abortRef = useRef(false);
@@ -180,8 +186,8 @@ export function MediaUploader({ bookingId }: MediaUploaderProps) {
                     const { error } = await tryCatch(
                         uploadBookingPhoto({
                             bookingId,
-                            fileName: item.file.name,
                             r2Key: key,
+                            fileName: item.file.name,
                             fileSize: item.file.size,
                             mimeType: item.file.type,
                         })
@@ -191,6 +197,9 @@ export function MediaUploader({ bookingId }: MediaUploaderProps) {
                         updateUpload(item.id, { status: "error", progress: 0 });
                         toast.error(`Failed to save "${item.file.name}"`);
                     } else {
+                        if (replacePhotoId) {
+                            await tryCatch(deletePhoto(replacePhotoId));
+                        }
                         updateUpload(item.id, { status: "done", progress: 100, key });
                         successCount++;
                     }
@@ -208,9 +217,11 @@ export function MediaUploader({ bookingId }: MediaUploaderProps) {
                         ? `All ${successCount} file${successCount > 1 ? "s" : ""} uploaded`
                         : `${successCount} of ${items.length} files uploaded`
                 );
+                router.refresh();
+                if (onSuccess) onSuccess();
             }
         },
-        [bookingId, updateUpload]
+        [bookingId, replacePhotoId, onSuccess, updateUpload, router]
     );
 
     const onDrop = useCallback(
@@ -239,6 +250,7 @@ export function MediaUploader({ bookingId }: MediaUploaderProps) {
             "video/*": [],
         },
         disabled: isUploading,
+        maxFiles: replacePhotoId ? 1 : undefined,
     });
 
     const getIcon = (type: string) => {

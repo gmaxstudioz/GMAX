@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/db";
-import { eq, and, or, inArray, asc, desc, isNull, sql } from "drizzle-orm";
 import * as schema from "@/lib/schema";
+import { eq, and } from "drizzle-orm";
 import { getClientTasks } from "@/lib/actions/task";
 import { CallIcon, Mail01Icon, Book01Icon, Note01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -53,14 +53,14 @@ export default async function ClientPage({ params }: ClientPageProps) {
 
     if (!clientData) return notFound();
 
-    const totalSpent = clientData.bookings.reduce((sum, booking) => {
+    const totalSpent = clientData.bookings.reduce((sum: any, booking: any) => {
         const paidAmount = booking.payments
-            .filter(p => p.status === "PAID")
-            .reduce((acc, curr) => acc + Number(curr.amount), 0);
+            .filter((p: any) => p.status === "PAID")
+            .reduce((acc: any, curr: any) => acc + Number(curr.amount), 0);
         return sum + paidAmount;
     }, 0);
 
-    const completedBookings = clientData.bookings.filter(b => b.bookingStatus === "COMPLETED").length;
+    const completedBookings = clientData.bookings.filter((b: any) => b.bookingStatus === "COMPLETED").length;
     const totalBookings = clientData.bookings.length;
 
     const initialTasks = await getClientTasks(clientId, 0, "", "All");
@@ -72,17 +72,22 @@ export default async function ClientPage({ params }: ClientPageProps) {
                     <BackButton />
                     <h1 className="text-2xl font-bold">Client Profile</h1>
                 </div>
-                <EditClientDialog 
-                    clientId={clientData.id} 
-                    initialData={{
-                        name: clientData.name,
-                        email: clientData.email,
-                        phone: clientData.phone,
-                        address: clientData.address,
-                        notes: clientData.notes,
-                        type: clientData.type as "regular" | "vip" | "vvip"
-                    }} 
-                />
+                {(() => {
+                    const canEditClient = ["owner", "developer", "manager", "admin"].includes(currentMember.role);
+                    return canEditClient ? (
+                        <EditClientDialog 
+                            clientId={clientData.id} 
+                            initialData={{
+                                name: clientData.name,
+                                email: clientData.email,
+                                phone: clientData.phone,
+                                address: clientData.address,
+                                notes: clientData.notes,
+                                type: clientData.type as "regular" | "vip" | "vvip"
+                            }} 
+                        />
+                    ) : null;
+                })()}
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

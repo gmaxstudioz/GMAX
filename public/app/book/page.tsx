@@ -1,63 +1,70 @@
 "use client";
+import { APP_NAME } from "@/lib/constants";
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import gsap from "gsap";
-import { buttonVariants } from "@/components/ui/button";
-import { ArrowRight, ArrowLeft, CheckCircle2, Calendar, User, CreditCard, Loader2, Building2, Clock } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Calendar as CalendarIcon, ArrowRight, ArrowLeft, CheckCircle2, User, CreditCard, Loader2, Building2, Clock, Sparkles, MapPin, ChevronDown, ChevronUp, ChevronRight, CheckCircle, UploadCloud, Users, Image as ImageIcon, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { publicBookingSchema, type PublicBookingInput } from "@/lib/schemas/booking.schema";
 import { getStudioBySlug, getStudios, createPublicBooking } from "@/lib/api";
-import type { PublicStudioOutput, PublicServiceOutput } from "@/lib/types/studio";
+import type { PublicStudioOutput, PublicServiceOutput, PublicCategoryOutput, ServiceVariantOutput, ServiceDeliverableOutput } from "@/lib/types/studio";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
-import { posthogLogs } from "@/lib/posthog-logs";
 
 const steps = [
-  { id: 1, title: "Studio", icon: Building2, description: "Choose location" },
-  { id: 2, title: "Service", icon: Calendar, description: "Select service & date" },
-  { id: 3, title: "Client", icon: User, description: "Your details" },
-  { id: 4, title: "Payment", icon: CreditCard, description: "Confirm & pay" },
+  { id: 1, title: 'Configuration', icon: Sparkles,  description: 'Build your session'      },
+  { id: 2, title: 'Details',       icon: User,      description: 'Your information'        },
+  { id: 3, title: 'Payment',       icon: CreditCard, description: 'Confirm & pay'          },
 ];
 
 export default function BookingPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
+  const [configStep, setConfigStep] = useState(1);
+  const [selectedOccasionType, setSelectedOccasionType] = useState<string>("");
+  const [selectedOccasionLabel, setSelectedOccasionLabel] = useState<string>("");
   const containerRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
   
   const [studiosList, setStudiosList] = useState<{ id: string; name: string; slug: string; logo?: string | null; metadata?: Record<string, unknown> | null }[]>([]);
   const [studio, setStudio] = useState<PublicStudioOutput | null>(null);
   const [services, setServices] = useState<PublicServiceOutput[]>([]);
-  const [isLoadingStudios, setIsLoadingStudios] = useState(true);
+
   const [isLoadingServices, setIsLoadingServices] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("");
+  const [rulesExpanded, setRulesExpanded] = useState(true);
+
+  useEffect(() => {
+    if ((currentStep === 1 && configStep === 1) || currentStep === 3) {
+      setRulesExpanded(true);
+    } else {
+      setRulesExpanded(false);
+    }
+  }, [currentStep, configStep]);
   
-  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
+
 
   const {
     register,
     handleSubmit,
     watch,
     setValue,
+    control,
     trigger,
     formState: { errors },
   } = useForm<PublicBookingInput>({
@@ -99,20 +106,51 @@ export default function BookingPage() {
         ? generateTimeSlots(selectedService.variants[0].sessionDurationMins) 
         : [];
 
-  const isTomorrow = selectedDate === new Date(Date.now() + 86400000).toISOString().split("T")[0];
-  
+  const isSlotBooked = (time: string, dateStr: string) => {
+    if (!dateStr) return false;
+    const slotDate = new Date(dateStr);
+    const [hours, minutes] = time.split(':').map(Number);
+    slotDate.setHours(hours, minutes, 0, 0);
+    return slotDate.getTime() < Date.now();
+  };
+
   let maxAvailableSessions = 1;
-  if (selectedTime && timeSlots.length > 0) {
+  if (selectedTime && selectedDate && timeSlots.length > 0) {
       const startIndex = timeSlots.indexOf(selectedTime);
       let continuousAvailable = 0;
       for (let i = startIndex; i < timeSlots.length; i++) {
           const time = timeSlots[i];
-          const isBooked = isTomorrow && timeSlots.indexOf(time) < 3;
-          if (isBooked) break;
+          if (isSlotBooked(time, selectedDate)) break;
           continuousAvailable++;
       }
       maxAvailableSessions = continuousAvailable > 0 ? continuousAvailable : 1;
   }
+
+  // Auto-select Date & Time
+  useEffect(() => {
+      if (configStep === 5 && selectedVariant && !selectedDate && timeSlots.length > 0) {
+          const today = new Date();
+          const todayStr = today.toISOString().split("T")[0];
+          
+          let availableTime = null;
+          for (const t of timeSlots) {
+               if (!isSlotBooked(t, todayStr)) {
+                   availableTime = t;
+                   break;
+               }
+          }
+
+          if (availableTime) {
+              setSelectedDate(todayStr);
+              setSelectedTime(availableTime);
+          } else {
+              const tomorrow = new Date(Date.now() + 86400000);
+              const tmrStr = tomorrow.toISOString().split("T")[0];
+              setSelectedDate(tmrStr);
+              setSelectedTime(timeSlots[0]);
+          }
+      }
+  }, [configStep, selectedVariant, selectedDate, timeSlots]);
 
   useEffect(() => {
     if (selectedDate && selectedTime) {
@@ -138,7 +176,7 @@ export default function BookingPage() {
         console.error(err);
         toast.error("Failed to load studios.");
       })
-      .finally(() => setIsLoadingStudios(false));
+      .finally();
   }, []);
 
   useEffect(() => {
@@ -172,413 +210,649 @@ export default function BookingPage() {
 
   const navigateStep = async (direction: "next" | "prev") => {
     if (direction === "next") {
-      let isValid = false;
+      let ok = false;
+
       if (currentStep === 1) {
-        isValid = await trigger(["studioId"]);
-        if (isValid && selectedStudioSlug) {
-           await fetchStudioServices(selectedStudioSlug);
+        if (configStep === 1) {
+          if (!selectedStudioId) { toast.error("Please select a location."); return; }
+          setConfigStep(2);
+          return;
+        } else if (configStep === 2) {
+          if (!selectedOccasionType) { toast.error("Please select an occasion."); return; }
+          setConfigStep(3);
+          return;
+        } else if (configStep === 3) {
+          if (!selectedServiceId) { toast.error("Please select a package."); return; }
+          const visibleVariants = selectedService?.variants.filter((v: ServiceVariantOutput) => v.locationType.toUpperCase() !== "BOTH") || [];
+          if (visibleVariants.length <= 1) setConfigStep(5);
+          else setConfigStep(4);
+          return;
+        } else if (configStep === 4) {
+          if (!selectedVariantId) { toast.error("Please select a shoot location."); return; }
+          setConfigStep(5);
+          return;
+        } else if (configStep === 5) {
+          if (!selectedDate || !selectedTime) { toast.error("Please select both a date and a time."); return; }
+          ok = await trigger(["studioId", "selectedServiceId", "selectedVariantId", "bookingDate", "selectedAddonIds"]);
         }
       } else if (currentStep === 2) {
-        if (!selectedDate || !selectedTime) {
-          toast.error("Please select both a date and a time.");
-          return;
-        }
-        isValid = await trigger(["selectedServiceId", "bookingDate", "selectedAddonIds"]);
-      } else if (currentStep === 3) {
-        isValid = await trigger(["clientName", "clientEmail", "clientPhone"]);
+        ok = await trigger(["clientName", "clientEmail", "clientPhone"]);
       }
-      
-      if (!isValid) return;
-    }
 
-    const newStep = direction === "next" ? currentStep + 1 : currentStep - 1;
-    if (newStep >= 1 && newStep <= 4) {
+      if (!ok) return;
+
       gsap.to(formRef.current, {
         opacity: 0,
-        x: direction === "next" ? -20 : 20,
+        x: -20,
         duration: 0.3,
         onComplete: () => {
-          setCurrentStep(newStep);
-          gsap.fromTo(
-            formRef.current,
-            { opacity: 0, x: direction === "next" ? 20 : -20 },
-            { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" }
-          );
+          setCurrentStep((prev) => Math.min(prev + 1, steps.length));
+          if (formRef.current) {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }
+          gsap.fromTo(formRef.current, { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" });
+        },
+      });
+    } else {
+      if (currentStep === 1) {
+        if (configStep > 1) {
+          let prevConfigStep = configStep - 1;
+          if (configStep === 5 && selectedService?.variants.length === 1) {
+            prevConfigStep = 3;
+          }
+          setConfigStep(prevConfigStep);
+          setTimeout(() => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }, 50);
+        }
+        return;
+      }
+      
+      gsap.to(formRef.current, {
+        opacity: 0,
+        x: 20,
+        duration: 0.3,
+        onComplete: () => {
+          setCurrentStep((prev) => Math.max(prev - 1, 1));
+          if (formRef.current) {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }
+          gsap.fromTo(formRef.current, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" });
         },
       });
     }
   };
 
-  const onSubmit = async (data: PublicBookingInput) => {
+    const onSubmit = async (data: PublicBookingInput) => {
+    try {
       setIsSubmitting(true);
-      try {
-          const result = await createPublicBooking(data);
-          posthog.capture("booking_submitted", {
-            service_id: data.selectedServiceId,
-            variant_id: data.selectedVariantId,
-            payment_plan: data.paymentPlan,
-            session_count: data.sessionCount,
-            addon_count: data.selectedAddonIds.length,
-            payment_redirect_available: Boolean(result.paymentUrl),
-          });
-          posthogLogs.info("booking submission completed", {
-            service_id: data.selectedServiceId,
-            variant_id: data.selectedVariantId,
-            payment_plan: data.paymentPlan,
-            session_count: data.sessionCount,
-            addon_count: data.selectedAddonIds.length,
-            payment_redirect_available: Boolean(result.paymentUrl),
-          });
-          if (result.paymentUrl) {
-              window.location.href = result.paymentUrl;
-          } else {
-            toast.warning(result.warning ?? "Booking created. Payment link will be sent manually.");
-            router.push(`/book/confirm?reference=${result.reference}`);
-          }
-      } catch (err) {
-          console.error(err);
-          toast.error("Failed to create booking.");
-      } finally {
-          setIsSubmitting(false);
-      }
-  };
+      
+      const finalNotes = [
+          selectedOccasionLabel ? `Occasion: ${selectedOccasionLabel}` : "",
+          data.notes ? `Notes: ${data.notes}` : ""
+      ].filter(Boolean).join("\n\n");
 
-  if (isLoadingStudios) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+      const result = await createPublicBooking({
+        ...data,
+        notes: finalNotes || undefined,
+        sessionCount: data.sessionCount || 1,
+      });
+      if (result && result.bookingId) {
+        toast.success("Booking created! Redirecting to payment...");
+        if (result.reference) {
+           router.push(`/pay/${result.reference}`);
+        } else {
+           router.push(`/booking/${result.bookingId}/deliverables`);
+        }
+      } else {
+        toast.error("Failed to submit booking");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const renderStepContent = () => {
     switch (currentStep) {
-      case 1:
+                  case 1: {
+        const selectedCategory = studio?.categories?.find(c => c.services.some(s => s.id === selectedServiceId));
+        const categoryAddons = studio?.addons?.filter((s: PublicServiceOutput & { isActive?: boolean }) => s.category === selectedCategory?.id && s.isActive !== false) || [];
+
+        const occasionAnswers = [
+          { label: "Birthday", mappedCategory: "PHOTOGRAPHY", icon: "🎂" },
+          { label: "Wedding", mappedCategory: "VIDEOGRAPHY", icon: "💍" },
+          { label: "Event", mappedCategory: "VIDEOGRAPHY", icon: "🎊" },
+          { label: "Graduation / Matriculation", mappedCategory: "PHOTOGRAPHY", icon: "🎓" },
+          { label: "Personal Shoot", mappedCategory: "PHOTOGRAPHY", icon: "📸" },
+          { label: "Other", mappedCategory: "OTHERS", icon: "✨" }
+        ];
+
         return (
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Select Studio</Label>
-              {studiosList.length === 0 ? (
-                 <p className="text-muted-foreground">No studios available at the moment.</p>
-              ) : (
-                <div className="grid grid-cols-1 gap-4">
-                  {studiosList.map((s) => (
-                    <div
-                      key={s.id}
-                      onClick={() => setValue("studioId", s.id, { shouldValidate: true })}
-                      className={cn(
-                        "p-5 rounded-xl border border-border/50 cursor-pointer transition-all duration-300 hover:border-primary/50 hover:bg-primary/5 flex items-center justify-between",
-                        selectedStudioId === s.id ? "border-primary bg-primary/10 ring-1 ring-primary" : "bg-card"
-                      )}
-                    >
-                      <div className="flex items-center gap-4">
-                        {s.logo ? (
-                          <div className="w-12 h-12 rounded-full overflow-hidden border shadow-sm shrink-0 relative">
-                            <Image
-                                src={`${process.env.NEXT_PUBLIC_R2_PUBLIC_URL || ""}/${s.logo}`}
-                                alt={s.name}
-                                fill
-                                className="object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                            <Building2 className="w-6 h-6" />
-                          </div>
+          <div className="w-full">
+            {/* ─── CONFIG STEP 1: STUDIO ─── */}
+            {configStep === 1 && (
+              <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                <div className="mb-8">
+                  <Label className="text-2xl font-bold font-heading text-foreground">
+                    Select a location close to you
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-2">Pick the studio nearest to you.</p>
+                </div>
+                {studiosList.length === 0 ? (
+                  <p className="text-muted-foreground">No studios available at the moment.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {studiosList.map((s: typeof studiosList[number]) => (
+                      <div
+                        key={s.id}
+                        onClick={() => {
+                          setValue("studioId", s.id, { shouldValidate: true });
+                          fetchStudioServices(s.slug);
+                          setConfigStep(2);
+                        }}
+                        className={cn(
+                          "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 flex flex-col justify-center gap-4 group hover:-translate-y-1 hover:shadow-lg active:scale-[0.98]",
+                          selectedStudioId === s.id
+                            ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1 shadow-md"
+                            : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5"
                         )}
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-lg break-words whitespace-normal">{s.name}</h4>
-                          <p className="text-sm text-muted-foreground break-words whitespace-normal">{(s.metadata?.description as string) || "Select this location"}</p>
-                          {(() => {
-                            const location = [s.metadata?.address, s.metadata?.city, s.metadata?.state].filter(Boolean).join(", ");
-                            return location ? <p className="text-xs text-muted-foreground/80 mt-1 break-words whitespace-normal">{location}</p> : null;
-                          })()}
+                      >
+                        <div className="flex items-center gap-4">
+                          {s.logo ? (
+                            <div className="w-14 h-14 rounded-full overflow-hidden border shadow-sm shrink-0 relative group-hover:scale-105 transition-transform">
+                              <Image src={`${process.env.NEXT_PUBLIC_R2_PUBLIC_URL || ""}/${s.logo}`} alt={s.name} fill className="object-cover" />
+                            </div>
+                          ) : (
+                            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                              <Building2 className="w-6 h-6 text-primary" />
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <h4 className="font-bold text-lg font-heading group-hover:text-primary transition-colors">{s.name}</h4>
+                            <p className="text-sm text-muted-foreground line-clamp-1 mt-0.5">
+                              {s.metadata?.address ? (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" /> {(s.metadata.address as string)}
+                                </span>
+                              ) : (
+                                (s.metadata?.description as string) || "Select this location"
+                              )}
+                            </p>
+                          </div>
+                          <div className="shrink-0 text-muted-foreground opacity-50 group-hover:opacity-100 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300">
+                            <ChevronRight className="w-10 h-10" />
+                          </div>
                         </div>
                       </div>
-                      {selectedStudioId === s.id && <CheckCircle2 className="text-primary w-6 h-6" />}
+                    ))}
+                  </div>
+                )}
+                {errors.studioId && <p className="text-destructive text-sm">{errors.studioId.message}</p>}
+              </div>
+            )}
+
+            {/* ─── CONFIG STEP 2: OCCASION QUESTION ─── */}
+            {configStep === 2 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-300">
+                <div className="mb-8">
+                  <Label className="text-2xl font-bold font-heading text-foreground">
+                    What is the occasion?
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-2">Let us know what you&apos;re celebrating so we can tailor the experience.</p>
+                </div>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {occasionAnswers.map((answer) => (
+                    <div
+                      key={answer.label}
+                      onClick={() => {
+                        setSelectedOccasionType(answer.mappedCategory);
+                        setSelectedOccasionLabel(answer.label);
+                        setConfigStep(3);
+                      }}
+                      className={cn(
+                        "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 group hover:-translate-y-1 hover:border-primary/50 hover:bg-primary/5 flex flex-col items-center justify-center gap-3 bg-card hover:shadow-lg active:scale-[0.98]"
+                      )}
+                    >
+                      <span className="text-4xl group-hover:scale-110 transition-transform duration-300">{answer.icon}</span>
+                      <span className="font-semibold text-center group-hover:text-primary transition-colors">{answer.label}</span>
                     </div>
                   ))}
                 </div>
-              )}
-              {errors.studioId && <p className="text-destructive text-sm mt-1">{errors.studioId.message}</p>}
-            </div>
-          </div>
-        );
-      case 2:
-        return (
-          <div className="space-y-6">
-            {isLoadingServices ? (
-               <div className="flex flex-col items-center justify-center py-12 gap-4">
-                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                 <p className="text-muted-foreground">Loading services for {studio?.name}...</p>
-               </div>
-            ) : (
-              <>
-                <div className="space-y-4">
-                  <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Select Service</Label>
-                  {services.length === 0 ? (
-                    <p className="text-muted-foreground">No services available for this studio.</p>
-                  ) : (
-                    <div className="space-y-4">
-                      <Select 
-                        onValueChange={(val) => {
-                          const [sId, vId] = val.split(":");
-                          setValue("selectedServiceId", sId, { shouldValidate: true });
-                          setValue("selectedVariantId", vId, { shouldValidate: true });
-                        }} 
-                        value={selectedServiceId && selectedVariantId ? `${selectedServiceId}:${selectedVariantId}` : ""}
-                      >
-                        <SelectTrigger className="h-14 rounded-xl text-base bg-card border-input focus:ring-primary focus:ring-offset-1">
-                          <SelectValue placeholder="Select a service..." />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[300px]">
-                          {studio?.categories.map(category => (
-                            <SelectGroup key={category.id} className="pb-2">
-                              <SelectLabel className="text-primary font-bold text-xs uppercase tracking-wider pl-6 mt-2">{category.name}</SelectLabel>
-                              {category.services.flatMap(service => 
-                                service.variants.map((variant: { id: string; locationType: string; basePrice?: string | number | null }) => {
-                                  const originalPrice = Number(variant.basePrice || 0);
-                                  const discount = service.discountPercentage || 0;
-                                  const finalPrice = originalPrice - (originalPrice * discount) / 100;
-                                  return (
-                                    <SelectItem key={variant.id} value={`${service.id}:${variant.id}`} className="pl-6 py-2.5 cursor-pointer">
-                                      {service.name} ({variant.locationType}) - ₦{finalPrice.toLocaleString()} {discount > 0 && <span className="line-through text-muted-foreground ml-2 text-xs">₦{originalPrice.toLocaleString()}</span>}
-                                    </SelectItem>
-                                  );
-                                })
-                              )}
-                            </SelectGroup>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      
-                      {selectedService && (
-                        <div className="p-6 rounded-xl border border-border/50 bg-primary/5 animate-in fade-in slide-in-from-top-2">
-                          <div className="flex justify-between items-start mb-4">
-                            <h4 className="font-semibold text-xl">{selectedService.name} {selectedVariant ? `(${selectedVariant.locationType})` : ""}</h4>
-                            {/* ✅ Updated to use selected variant price with discount */}
-                            {(() => {
-                               const baseP = Number(selectedVariant?.basePrice || selectedService.variants[0]?.basePrice || 0);
-                               const disc = selectedService.discountPercentage || 0;
-                               const finalP = baseP - (baseP * disc) / 100;
-                               return (
-                                 <div className="flex flex-col items-end">
-                                   <span className="text-xl font-bold text-primary">₦{finalP.toLocaleString()}</span>
-                                   {disc > 0 && <span className="text-sm line-through text-muted-foreground">₦{baseP.toLocaleString()}</span>}
-                                 </div>
-                               );
-                            })()}
-                          </div>
-                          {selectedService.description && (
-                            <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{selectedService.description}</p>
-                          )}
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6 bg-card w-max px-3 py-1.5 rounded-full border border-border/50">
-                            <Clock className="w-4 h-4 text-primary" />
-                            <span className="font-medium">{selectedVariant?.sessionDurationMins || selectedService.variants[0]?.sessionDurationMins || 0} minutes</span>
-                          </div>
-                          {selectedService.features && selectedService.features.length > 0 && (
-                            <div className="space-y-3 mb-6">
-                              <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Included Features</h5>
-                              <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-muted-foreground/90">
-                                {selectedService.features.map((feature, idx) => (
-                                  <li key={idx} className="flex items-start gap-2.5">
-                                    <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                                    <span>{feature}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          
-                          {selectedVariant?.deliverables && selectedVariant.deliverables.length > 0 && (
-                            <div className="space-y-3">
-                              <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Included Deliverables</h5>
-                              <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-muted-foreground/90">
-                                {selectedVariant.deliverables.map((del: { quantity?: number | null; label?: string; detail?: string | null; isFree?: boolean }, idx: number) => (
-                                  <li key={idx} className="flex items-start gap-2.5">
-                                    <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                                    <span>{del.quantity ? `${del.quantity} ` : ""}{del.label} {del.detail ? `(${del.detail})` : ""} {del.isFree ? "(Free)" : ""}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {errors.selectedServiceId && <p className="text-destructive text-sm mt-1">{errors.selectedServiceId.message}</p>}
-                </div>
-                
-                {studio?.addons && studio.addons.length > 0 && (
-                  <div className="space-y-4 pt-4 border-t border-border/50">
-                    <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Enhance Your Session (Optional)</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {studio.addons.flatMap(addon => 
-                        addon.variants.map((variant: { id: string; locationType: string; basePrice?: string | number | null; deliverables?: { quantity?: number | null; label?: string; detail?: string | null; isFree?: boolean }[] }) => {
-                          const compositeId = `${addon.id}:${variant.id}`;
-                          const isSelected = selectedAddonIds.includes(compositeId);
-                          const isExpanded = expandedItems[compositeId];
-                          return (
-                            <div
-                              key={compositeId}
-                              onClick={() => {
-                                if (isSelected) {
-                                  setValue("selectedAddonIds", selectedAddonIds.filter(id => id !== compositeId));
-                                } else {
-                                  const filtered = selectedAddonIds.filter(id => !id.startsWith(addon.id + ":"));
-                                  setValue("selectedAddonIds", [...filtered, compositeId]);
-                                }
-                              }}
-                              className={cn(
-                                "p-4 rounded-xl border border-border/50 cursor-pointer transition-all duration-300 hover:border-primary/50 hover:bg-primary/5",
-                                isSelected ? "border-primary bg-primary/10 ring-1 ring-primary" : "bg-card"
-                              )}
-                            >
-                              <div className="flex flex-col h-full">
-                                <div className="flex justify-between items-start mb-2">
-                                  <div>
-                                    <span className="font-medium block">{addon.name} ({variant.locationType})</span>
-                                    {/* ✅ Updated to use specific variant price with discount */}
-                                    {(() => {
-                                      const baseP = Number(variant.basePrice || 0);
-                                      const disc = addon.discountPercentage || 0;
-                                      const finalP = baseP - (baseP * disc) / 100;
-                                      return (
-                                        <div className="flex flex-col">
-                                          <span className="text-sm font-semibold text-primary">+₦{finalP.toLocaleString()}</span>
-                                          {disc > 0 && <span className="text-[10px] line-through text-muted-foreground">₦{baseP.toLocaleString()}</span>}
-                                        </div>
-                                      );
-                                    })()}
-                                  </div>
-                                  {isSelected && <CheckCircle2 className="text-primary w-5 h-5 flex-shrink-0" />}
-                                </div>
-                                
-                                {(addon.description || (addon.features && addon.features.length > 0) || (variant.deliverables && variant.deliverables.length > 0)) && (
-                                  <button 
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setExpandedItems(prev => ({ ...prev, [compositeId]: !prev[compositeId] }));
-                                    }}
-                                    className="text-[11px] font-medium text-primary hover:underline self-start mt-1"
-                                  >
-                                    {isExpanded ? "Hide details" : "View details"}
-                                  </button>
-                                )}
+              </div>
+            )}
 
-                                {isExpanded && (
-                                  <div className="mt-3 pt-3 border-t border-border/30 animate-in fade-in slide-in-from-top-1 duration-200">
-                                    {addon.description && (
-                                      <p className="text-xs text-muted-foreground mb-3 leading-relaxed">{addon.description}</p>
-                                    )}
-                                    {addon.features && addon.features.length > 0 && (
-                                      <ul className="text-xs space-y-2 text-muted-foreground/90 mb-3">
-                                        {addon.features.map((feature, idx) => (
-                                          <li key={idx} className="flex items-start gap-1.5">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-primary/50 mt-1 shrink-0" />
-                                            <span>{feature}</span>
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    )}
-                                    {variant.deliverables && variant.deliverables.length > 0 && (
-                                      <div className="space-y-2 border-t border-border/30 pt-3">
-                                        <h6 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Deliverables</h6>
-                                        <ul className="text-xs space-y-2 text-muted-foreground/90">
-                                          {variant.deliverables.map((del: { quantity?: number | null; label?: string; detail?: string | null; isFree?: boolean }, idx: number) => (
-                                            <li key={idx} className="flex items-start gap-1.5">
-                                              <div className="w-1.5 h-1.5 rounded-full bg-primary/50 mt-1 shrink-0" />
-                                              <span>{del.quantity ? `${del.quantity} ` : ""}{del.label} {del.detail ? `(${del.detail})` : ""} {del.isFree ? "(Free)" : ""}</span>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    )}
-                                  </div>
+            {/* ─── CONFIG STEP 3: SERVICE SELECTION ─── */}
+            {configStep === 3 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-300">
+                <div className="mb-8">
+                  <Label className="text-2xl font-bold font-heading text-foreground">
+                    Select a package
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-2">Choose the perfect package for your session.</p>
+                </div>
+
+                {isLoadingServices ? (
+                  <div className="flex flex-col items-center justify-center py-16 gap-4">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    <p className="text-muted-foreground text-sm">Loading available sessions…</p>
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    {(() => {
+                      const filteredCategories = selectedOccasionType === "Other"
+                        ? studio?.categories
+                        : studio?.categories?.filter((c: PublicCategoryOutput) => c.name.toLowerCase().includes(selectedOccasionType.toLowerCase()));
+
+                      const categoriesToDisplay = filteredCategories?.length ? filteredCategories : studio?.categories;
+                      
+                      const allServices = categoriesToDisplay?.flatMap((c: PublicCategoryOutput) => c.services.filter((s: PublicServiceOutput & { isActive?: boolean }) => !s.isAddon && s.isActive !== false)) || [];
+                      
+                      if (allServices.length === 0) return <p className="text-muted-foreground">No services found for this selection.</p>;
+                      
+                      return (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {allServices.map((service: PublicServiceOutput & { isActive?: boolean }) => {
+                            const isSelected = selectedServiceId === service.id;
+                            return (
+                              <div
+                                key={service.id}
+                                onClick={() => {
+                                  setValue("selectedServiceId", service.id, { shouldValidate: true });
+                                  setValue("selectedAddonIds", []);
+                                  setSelectedDate("");
+                                  setSelectedTime("");
+                                  const visibleVariants = service.variants.filter(v => v.locationType.toUpperCase() !== "BOTH");
+                                  
+                                  if (visibleVariants.length === 1) {
+                                    setValue("selectedVariantId", visibleVariants[0].id, { shouldValidate: true });
+                                    setConfigStep(5);
+                                  } else {
+                                    setValue("selectedVariantId", "", { shouldValidate: false });
+                                    setConfigStep(4);
+                                  }
+                                }}
+                                className={cn(
+                                  "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 group overflow-hidden flex flex-col justify-center min-h-[120px] hover:-translate-y-1 hover:shadow-lg active:scale-[0.98]",
+                                  isSelected ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1 shadow-md" : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5"
                                 )}
+                              >
+                                {isSelected && <CheckCircle2 className="absolute top-4 right-4 w-5 h-5 text-primary" />}
+                                <div className="pr-8">
+                                  <h4 className="font-heading font-bold text-lg leading-snug">
+            {service.name}
+            {service.discountPercentage && service.discountPercentage > 0 ? (
+                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-500/20 text-green-600 uppercase tracking-wider align-middle">
+                    {service.discountPercentage}% OFF
+                </span>
+            ) : null}
+        </h4>
+                                  {service.description && <p className="text-sm text-muted-foreground mt-2 line-clamp-2 leading-relaxed">{service.description}</p>}
+                                  {service.features && service.features.length > 0 && (
+                                    <ul className="mt-3 space-y-1">
+                                      {service.features.map((feature: string, idx: number) => (
+                                        <li key={idx} className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                          <div className="w-1 h-1 rounded-full bg-primary/50 shrink-0" />
+                                          <span className="line-clamp-1">{feature}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                                <div className="absolute top-1/2 right-4 -translate-y-1/2 text-muted-foreground opacity-30 group-hover:opacity-100 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300">
+                                  <ChevronRight className="w-6 h-6" />
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
+                {errors.selectedServiceId && <p className="text-destructive text-sm">{errors.selectedServiceId.message}</p>}
+              </div>
+            )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-border/50">
-                  <div className="space-y-2 flex flex-col">
-                    <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Select Date</Label>
-                    <Input
-                      type="date"
-                      min={new Date().toISOString().split("T")[0]}
-                      value={selectedDate}
-                      onChange={(e) => {
-                        setSelectedDate(e.target.value);
-                        setSelectedTime(""); 
-                      }}
-                      className="rounded-xl bg-card/50"
-                    />
+            {/* ─── CONFIG STEP 4: LOCATION TOGGLE ─── */}
+            {configStep === 4 && selectedService && selectedService.variants.filter((v: ServiceVariantOutput) => v.locationType.toUpperCase() !== "BOTH").length > 1 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-300">
+                <div className="mb-8">
+                  <Label className="text-2xl font-bold font-heading text-foreground">
+                    Where would you like to snap?
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-2">Select your preferred location type for this session.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {selectedService.variants
+                    .filter((v: ServiceVariantOutput) => v.locationType.toUpperCase() !== "BOTH")
+                    .sort((a: ServiceVariantOutput, b: ServiceVariantOutput) => {
+                       const aIsStudio = a.locationType.toUpperCase() === 'STUDIO';
+                       const bIsStudio = b.locationType.toUpperCase() === 'STUDIO';
+                       if (aIsStudio && !bIsStudio) return -1;
+                       if (!aIsStudio && bIsStudio) return 1;
+                       return 0;
+                    })
+                    .map((variant: ServiceVariantOutput) => {
+                    const isSelectedV = selectedVariantId === variant.id;
+                    const locationMeta: Record<string, { label: string; icon: string }> = {
+                      STUDIO:   { label: "Studio",          icon: "🏢" },
+                      OUTDOOR:  { label: "Outdoor",         icon: "🌿" },
+                      BOTH:     { label: "Studio & Outdoor", icon: "✨" },
+                      MULTIPLE: { label: "Multiple Locations", icon: "📍" },
+                    };
+                    const meta = locationMeta[variant.locationType] ?? { label: variant.locationType, icon: "📷" };
+
+                    return (
+                      <div
+                        key={variant.id}
+                        onClick={() => {
+                          setValue("selectedVariantId", variant.id, { shouldValidate: true });
+                          setConfigStep(5);
+                        }}
+                        className={cn(
+                          "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 group hover:-translate-y-1 hover:shadow-lg active:scale-[0.98] flex flex-col",
+                          isSelectedV ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1 shadow-md" : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5"
+                        )}
+                      >
+                        {isSelectedV && <CheckCircle2 className="absolute top-4 right-4 w-5 h-5 text-primary" />}
+                        <div className="text-3xl mb-3">{meta.icon}</div>
+                        <p className="font-semibold text-base">{meta.label}</p>
+                        <p className="text-primary font-bold mt-1 text-sm">₦{Number(variant.basePrice).toLocaleString("en-NG")}</p>
+                        
+                        {variant.deliverables && variant.deliverables.length > 0 && (
+                          <div className="mt-4 pt-4 border-t border-border/50">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2">Deliverables</p>
+                            <ul className="space-y-1.5">
+                              {variant.deliverables.map((d: ServiceDeliverableOutput, idx: number) => (
+                                <li key={idx} className="text-sm flex items-start gap-1.5 text-muted-foreground/80">
+                                  <div className="w-1 h-1 rounded-full bg-primary/50 shrink-0 mt-1.5" />
+                                  <span className="line-clamp-2">
+                                    {d.quantity ? `${d.quantity}x ` : ""}{d.label}
+                                    {d.detail ? ` (${d.detail})` : ""}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {errors.selectedVariantId && <p className="text-destructive text-sm">{errors.selectedVariantId.message}</p>}
+              </div>
+            )}
+
+            {/* ─── CONFIG STEP 5: SESSION CONFIG ─── */}
+            {configStep === 5 && selectedVariant && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-300">
+                <div className="mb-4">
+                  <Label className="text-2xl font-bold font-heading text-foreground">
+                    Configure your session
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-2">Personalize your outfits, add-ons, and choose a date.</p>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-primary/5 border border-primary/20 flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Price per session</p>
+                      <p className="text-2xl font-bold text-primary mt-1">
+                        ₦{Number(selectedVariant.basePrice).toLocaleString("en-NG")}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Duration</p>
+                      <div className="flex items-center gap-1.5 justify-end mt-1">
+                        <Clock className="w-5 h-5 text-primary" />
+                        <span className="font-semibold text-lg">{selectedVariant.sessionDurationMins}min</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-2 flex flex-col">
-                    <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Available Times</Label>
-                    <div className="grid grid-cols-3 gap-2">
+                  {selectedVariant.deliverables && selectedVariant.deliverables.length > 0 && (
+                    <div className="pt-4 border-t border-primary/10">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-3">What&apos;s Included</p>
+                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {selectedVariant.deliverables.map((d: ServiceDeliverableOutput) => (
+                          <li key={d.id} className="text-sm flex items-start gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <span className="font-medium text-foreground">{d.quantity ? `${d.quantity}x ` : ""}{d.label}</span>
+                              {d.detail && <span className="text-muted-foreground ml-1">({d.detail})</span>}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Date & Time */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-border/50">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium text-foreground uppercase tracking-wider">Select Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full justify-start text-left font-normal h-12 rounded-xl bg-background border-input hover:border-primary/50",
+                            !selectedDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {selectedDate ? format(new Date(selectedDate), "PPP") : <span>Pick a date</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate ? new Date(selectedDate) : undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                                const offset = date.getTimezoneOffset();
+                                const localDate = new Date(date.getTime() - (offset*60*1000));
+                                const dStr = localDate.toISOString().split('T')[0];
+                                setSelectedDate(dStr);
+                                setSelectedTime("");
+                            } else {
+                                setSelectedDate("");
+                                setSelectedTime("");
+                            }
+                          }}
+                          disabled={(date) => {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            return date < today;
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium text-foreground uppercase tracking-wider">Available Times</Label>
+                    <div className="grid grid-cols-3 gap-3">
                       {selectedDate ? (
-                        timeSlots.map((time) => {
-                           const isTomorrow = selectedDate === new Date(Date.now() + 86400000).toISOString().split("T")[0];
-                           const isBooked = isTomorrow && timeSlots.indexOf(time) < 3;
-                           
-                           return (
-                            <button
-                              key={time}
-                              type="button"
-                              disabled={isBooked}
-                              onClick={() => setSelectedTime(time)}
-                              className={cn(
-                                "py-2 px-3 text-sm rounded-lg border transition-all",
-                                isBooked ? "bg-muted/50 text-muted-foreground opacity-50 cursor-not-allowed border-transparent" : 
-                                selectedTime === time ? "bg-primary text-primary-foreground border-primary shadow-md" : 
-                                "bg-card hover:border-primary/50 border-border"
-                              )}
-                            >
+                        timeSlots.map(time => {
+                          const isBooked = isSlotBooked(time, selectedDate);
+                          return (
+                            <button key={time} type="button" disabled={isBooked} onClick={() => setSelectedTime(time)} className={cn("py-2.5 px-3 text-sm font-medium rounded-xl border transition-all", isBooked ? "bg-muted/50 text-muted-foreground opacity-40 cursor-not-allowed border-transparent" : selectedTime === time ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-card hover:border-primary/50 border-border")}>
                               {time}
                             </button>
-                           );
+                          );
                         })
                       ) : (
-                        <div className="col-span-3 text-sm text-muted-foreground py-2">Please select a date first</div>
+                        <div className="col-span-3 text-sm text-muted-foreground py-3 bg-muted/30 text-center rounded-xl border border-dashed border-border">Select a date to view times</div>
                       )}
                     </div>
                     {errors.bookingDate && <p className="text-destructive text-sm mt-2">{errors.bookingDate.message}</p>}
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-border/50">
-                  <div className="space-y-2 flex flex-col max-w-xs">
+                {/* Extras Grid (Outfits & Extra Pictures) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-border/50">
+                  {/* Outfits Stepper */}
+                  <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Number of Sessions</Label>
-                      {selectedTime && <span className="text-xs text-primary font-medium">Max: {maxAvailableSessions}</span>}
+                      <Label className="text-sm font-medium text-foreground uppercase tracking-wider">
+                        How many outfits?
+                      </Label>
+                      {selectedTime && (
+                        <span className="text-xs text-primary font-medium bg-primary/10 px-3 py-1 rounded-full">
+                          Max: {maxAvailableSessions}
+                        </span>
+                      )}
                     </div>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={maxAvailableSessions}
-                      disabled={!selectedTime}
-                      {...register("sessionCount", { valueAsNumber: true })}
-                      className="rounded-xl bg-card/50"
-                    />
-                    {!selectedTime && <p className="text-xs text-muted-foreground">Select a time first to choose sessions.</p>}
-                    {errors.sessionCount && <p className="text-destructive text-sm mt-2">{errors.sessionCount.message}</p>}
+
+                    <div className="flex items-center gap-6">
+                      <div className="flex items-center border border-border rounded-xl overflow-hidden bg-card shadow-sm">
+                        <button type="button" onClick={() => { const cur = watch("sessionCount") || 1; if (cur > 1) setValue("sessionCount", cur - 1, { shouldValidate: true }); }} className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors">−</button>
+                        <div className="w-14 h-12 flex items-center justify-center font-bold text-lg border-x border-border">{watch("sessionCount") || 1}</div>
+                        <button type="button" onClick={() => { const cur = watch("sessionCount") || 1; if (cur < maxAvailableSessions) setValue("sessionCount", cur + 1, { shouldValidate: true }); }} className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors">+</button>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-primary">₦{(Number(selectedVariant.basePrice) * (watch("sessionCount") || 1)).toLocaleString("en-NG")}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{watch("sessionCount") || 1} outfit{(watch("sessionCount") || 1) !== 1 ? "s" : ""} · subtotal</p>
+                      </div>
+                    </div>
+                    {!selectedTime && <p className="text-xs text-muted-foreground/70">Select a time slot above to unlock the maximum available outfits.</p>}
+                    {errors.sessionCount && <p className="text-destructive text-sm">{errors.sessionCount.message}</p>}
                   </div>
+
+                  {/* Extra Pictures Stepper */}
+                  {selectedService?.variants?.find((v: ServiceVariantOutput) => v.locationType.toUpperCase() === "BOTH") && (
+                    <div className="space-y-4">
+                      <Label className="text-sm font-medium text-foreground uppercase tracking-wider block mb-4">
+                        How many extra pictures? <span className="ml-2 text-xs normal-case font-normal text-muted-foreground/60">(optional)</span>
+                      </Label>
+
+                      <div className="flex items-center gap-6">
+                        <div className="flex items-center border border-border rounded-xl overflow-hidden bg-card shadow-sm">
+                          <button type="button" onClick={() => { const cur = watch("extraPicturesCount") || 0; if (cur > 0) setValue("extraPicturesCount", cur - 1, { shouldValidate: true }); }} className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors">−</button>
+                          <div className="w-14 h-12 flex items-center justify-center font-bold text-lg border-x border-border">{watch("extraPicturesCount") || 0}</div>
+                          <button type="button" onClick={() => { const cur = watch("extraPicturesCount") || 0; setValue("extraPicturesCount", cur + 1, { shouldValidate: true }); }} className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors">+</button>
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold text-primary">₦{(Number(selectedService?.variants?.find((v: ServiceVariantOutput) => v.locationType.toUpperCase() === "BOTH")?.basePrice || 0) * (watch("extraPicturesCount") || 0)).toLocaleString("en-NG")}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{watch("extraPicturesCount") || 0} extra picture{(watch("extraPicturesCount") || 0) !== 1 ? "s" : ""} · subtotal</p>
+                        </div>
+                      </div>
+                      {errors.extraPicturesCount && <p className="text-destructive text-sm">{errors.extraPicturesCount.message}</p>}
+                    </div>
+                  )}
                 </div>
-              </>
+
+                {/* Add-ons */}
+                {categoryAddons.length > 0 && (
+                  <div className="space-y-4 pt-6 border-t border-border/50">
+                    <Label className="text-sm font-medium text-foreground uppercase tracking-wider">
+                      Enhance Your Session <span className="ml-2 text-xs normal-case font-normal text-muted-foreground/60">(optional)</span>
+                    </Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {categoryAddons.flatMap((addon: PublicServiceOutput) =>
+                        addon.variants
+                          .map((variant: ServiceVariantOutput) => {
+                            const compositeId = `${addon.id}:${variant.id}`;
+                            const count = selectedAddonIds.filter(id => id === compositeId).length;
+                            return (
+                              <div
+                                key={compositeId}
+                                onClick={() => {
+                                  if (count === 0) {
+                                    const newArr = selectedAddonIds.filter(id => !id.startsWith(`${addon.id}:`));
+                                    setValue("selectedAddonIds", [...newArr, compositeId]);
+                                  }
+                                }}
+                                className={cn(
+                                  "relative p-4 rounded-2xl border cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-md active:scale-[0.98] group flex flex-col justify-center",
+                                  count > 0 ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1" : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5"
+                                )}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <div>
+                                    <span className="font-semibold text-base block">
+            {addon.name}
+            {addon.discountPercentage && addon.discountPercentage > 0 ? (
+                <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-500/20 text-green-600 uppercase tracking-wider align-middle">
+                    {addon.discountPercentage}% OFF
+                </span>
+            ) : null}
+        </span>
+                                    {addon.variants.length > 1 && (
+                                       <span className="text-xs text-muted-foreground uppercase tracking-wider block mt-0.5">{variant.locationType}</span>
+                                    )}
+                                    <span className="text-sm font-bold text-primary mt-1 block">+₦{Number(variant.basePrice || 0).toLocaleString("en-NG")}</span>
+                                  </div>
+                                  
+                                  {count === 0 ? (
+                                    <button 
+                                      type="button" 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const newArr = selectedAddonIds.filter(id => !id.startsWith(`${addon.id}:`));
+                                        setValue("selectedAddonIds", [...newArr, compositeId]);
+                                      }} 
+                                      className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors group-hover:border-primary/50 group-hover:bg-primary/10 group-hover:text-primary"
+                                    >
+                                      +
+                                    </button>
+                                  ) : (
+                                    <div className="flex items-center gap-3 bg-background border border-border rounded-full p-1 shadow-sm" onClick={e => e.stopPropagation()}>
+                                      <button 
+                                        type="button" 
+                                        onClick={(e) => {
+                                           e.stopPropagation();
+                                           const idx = selectedAddonIds.indexOf(compositeId);
+                                           if (idx > -1) {
+                                             const newArr = [...selectedAddonIds];
+                                             newArr.splice(idx, 1);
+                                             setValue("selectedAddonIds", newArr);
+                                           }
+                                        }} 
+                                        className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-muted text-muted-foreground transition-colors"
+                                      >
+                                        −
+                                      </button>
+                                      <span className="text-sm font-bold w-4 text-center">{count}</span>
+                                      <button 
+                                        type="button" 
+                                        onClick={(e) => {
+                                           e.stopPropagation();
+                                           setValue("selectedAddonIds", [...selectedAddonIds, compositeId]);
+                                        }} 
+                                        className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-muted text-muted-foreground transition-colors"
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              </div>
             )}
           </div>
         );
-      case 3:
+      }
+      case 2:
         return (
           <div className="space-y-6">
+            <div className="mb-8">
+              <Label className="text-2xl font-bold font-heading text-foreground">
+                Your Details
+              </Label>
+              <p className="text-sm text-muted-foreground mt-2">Please provide your contact information.</p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Full Name</Label>
@@ -586,7 +860,7 @@ export default function BookingPage() {
                   type="text"
                   placeholder="John Doe"
                   {...register("clientName")}
-                  className="rounded-xl bg-card/50"
+                  className="rounded-xl bg-card/50 h-12"
                 />
                 {errors.clientName && <p className="text-destructive text-sm">{errors.clientName.message}</p>}
               </div>
@@ -596,18 +870,25 @@ export default function BookingPage() {
                   type="email"
                   placeholder="john@example.com"
                   {...register("clientEmail")}
-                  className="rounded-xl bg-card/50"
+                  className="rounded-xl bg-card/50 h-12"
                 />
                 {errors.clientEmail && <p className="text-destructive text-sm">{errors.clientEmail.message}</p>}
               </div>
             </div>
             <div className="space-y-2">
               <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Phone Number</Label>
-              <Input
-                type="tel"
-                placeholder="+1 (555) 000-0000"
-                {...register("clientPhone")}
-                className="rounded-xl bg-card/50"
+              <Controller
+                control={control}
+                name="clientPhone"
+                render={({ field }) => (
+                  <PhoneInput
+                    defaultCountry="NG"
+                    placeholder="Enter phone number"
+                    value={field.value}
+                    onChange={field.onChange}
+                    className="flex h-12 w-full rounded-xl border border-input bg-card/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                )}
               />
               {errors.clientPhone && <p className="text-destructive text-sm">{errors.clientPhone.message}</p>}
             </div>
@@ -623,11 +904,9 @@ export default function BookingPage() {
             </div>
           </div>
         );
-      case 4: {
+      case 3: {
         const sessionCount = watch("sessionCount") || 1;
-        const baseServicePrice = Number(selectedVariant?.basePrice || selectedService?.variants[0]?.basePrice || 0);
-        const serviceDiscount = selectedService?.discountPercentage || 0;
-        const servicePrice = baseServicePrice - (baseServicePrice * serviceDiscount) / 100;
+        const servicePrice = Number(selectedVariant?.basePrice || selectedService?.variants.find((v: ServiceVariantOutput) => v.locationType.toUpperCase() !== "BOTH")?.basePrice || 0);
         const serviceTotal = servicePrice * sessionCount;
         const addonsTotal = selectedAddonIds.length > 0 && studio?.addons
           ? selectedAddonIds.reduce((sum, compositeId) => {
@@ -636,12 +915,14 @@ export default function BookingPage() {
               const variant = variantId
                 ? addon?.variants?.find((v: { id: string; basePrice?: string | number | null }) => v.id === variantId)
                 : addon?.variants?.[0];
-              const addonBasePrice = Number(variant?.basePrice || 0);
-              const addonDiscount = addon?.discountPercentage || 0;
-              return sum + (addonBasePrice - (addonBasePrice * addonDiscount) / 100);
+              return sum + Number(variant?.basePrice || 0);
             }, 0)
           : 0;
-        const grandTotal = serviceTotal + addonsTotal;
+        
+        const extraPicturesCount = watch("extraPicturesCount") || 0;
+        const bothVariant = selectedService?.variants?.find((v: ServiceVariantOutput) => v.locationType.toUpperCase() === "BOTH");
+        const extraPicturesTotal = bothVariant ? Number(bothVariant.basePrice) * extraPicturesCount : 0;
+        const grandTotal = serviceTotal + addonsTotal + extraPicturesTotal;
         const currentPlan = watch("paymentPlan") || "FULL";
         const planMultiplier = currentPlan === "QUARTER" ? 0.25 : currentPlan === "HALF" ? 0.5 : 1;
         const chargeAmount = Math.round(grandTotal * planMultiplier * 100) / 100;
@@ -680,6 +961,12 @@ export default function BookingPage() {
                   <span className="text-muted-foreground">Sessions</span>
                   <span className="font-medium text-right">{sessionCount}</span>
                 </div>
+                {extraPicturesCount > 0 && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Extra Pictures ({extraPicturesCount})</span>
+                    <span className="text-right font-medium text-foreground">₦{extraPicturesTotal.toLocaleString("en-NG")}</span>
+                  </div>
+                )}
                 {selectedAddonIds.length > 0 && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Add-ons</span>
@@ -761,6 +1048,7 @@ export default function BookingPage() {
               </div>
             </div>
             
+
             <div className="bg-primary/5 rounded-2xl p-6 border border-primary/20 text-center">
               <CreditCard className="w-8 h-8 text-primary mx-auto mb-3" />
               <h4 className="font-semibold mb-2">Secure Payment Gateway</h4>
@@ -784,23 +1072,86 @@ export default function BookingPage() {
             <div className="w-2 h-2 rounded-full bg-primary"></div>
           </div>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Reserve your spot at {studio?.name || "GMAX Studioz"}. Follow the steps below to customize your experience and secure your session.
+            Reserve your spot at {studio?.name || APP_NAME}{studio?.metadata && typeof studio.metadata === 'object' && 'address' in studio.metadata && typeof studio.metadata.address === 'string' ? `, located at ${studio.metadata.address}` : ""}. Follow the steps below to customize your experience and secure your session.
           </p>
         </div>
 
-        {/* Stepper */}
-        <div className="mb-12 relative">
-          <div className="absolute top-1/2 left-0 w-full h-0.5 bg-border/50 -translate-y-1/2 z-0 hidden md:block"></div>
-          <div className="absolute top-1/2 left-0 h-0.5 bg-primary -translate-y-1/2 z-0 hidden md:block transition-all duration-500 ease-in-out" style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}></div>
+        {/* Booking Rules and Guidelines */}
+        <div className="bg-muted/30 rounded-2xl p-6 border border-border/50 text-sm mb-12 transition-all duration-300">
+          <div 
+            className={cn("flex flex-col sm:flex-row sm:items-start justify-between gap-4 cursor-pointer", rulesExpanded ? "mb-5" : "mb-0")}
+            onClick={() => setRulesExpanded(!rulesExpanded)}
+          >
+            <div>
+              <h4 className="font-semibold text-xl md:text-2xl text-primary flex items-center gap-2 font-heading">
+                Booking Rules and Guidelines
+              </h4>
+              <p className="text-muted-foreground mt-1">
+                By booking our services, you acknowledge and accept these terms and conditions.
+              </p>
+            </div>
+            <div className="shrink-0 self-end sm:self-center">
+              <button type="button" className="p-2 rounded-full hover:bg-muted bg-background border shadow-sm transition-colors">
+                {rulesExpanded ? <ChevronUp className="w-5 h-5 text-primary" /> : <ChevronDown className="w-5 h-5 text-primary" />}
+              </button>
+            </div>
+          </div>
           
-          <div className="relative z-10 flex flex-col md:flex-row justify-between gap-6 md:gap-0">
+          <div className={cn("overflow-hidden transition-all duration-500", rulesExpanded ? "opacity-100 max-h-[1500px]" : "opacity-0 max-h-0")}>
+            <div className="space-y-3 mt-4 pt-4 border-t border-border/50">
+              <div>
+                <span className="font-semibold text-foreground block md:inline">PAYMENT VALIDATES BOOKING:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Secure your booking by paying a non-refundable deposit, and note Picture deliver won’t be possible unless full payment is settled.</span>
+              </div>
+              <div>
+                <span className="font-semibold text-foreground block md:inline">CLIENT COOPERATION:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">To ensure a seamless photo session, clients are kindly expected to provide all necessary information and cooperate throughout the shoot.</span>
+              </div>
+              <div>
+                <span className="font-semibold text-foreground block md:inline">BOOKING AND PAYMENT:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Secure your booking by paying a non-refundable deposit, and make sure the full payment is settled by the date of your photo session or event.</span>
+              </div>
+              <div>
+                <span className="font-semibold text-foreground block md:inline">CANCELLATIONS AND RESCHEDULING:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Notify us in advance about any cancellations or rescheduling and be aware that cancellations within 48 hours might result in the forfeiture of your deposit.</span>
+              </div>
+              <div>
+                <span className="font-semibold text-foreground block md:inline">IMAGE DELIVERY:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Expect your professionally edited images within the agreed-upon timeframe, and we’ll provide you with a download link for your high-resolution pictures.</span>
+              </div>
+              <div>
+                <span className="font-semibold text-foreground block md:inline">CLIENT COOPERATION:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Ensure a smooth photo session by providing necessary information and cooperating during the shoot. Notify us in advance if there are any delays or changes to the schedule.</span>
+              </div>
+              <div>
+                <span className="font-semibold text-foreground block md:inline">DELIVERY ERRORS:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Report any errors or issues with the delivered images within a specified timeframe to allow us address and rectify them promptly.</span>
+              </div>
+              <div>
+                <span className="font-semibold text-foreground block md:inline">ADDITIONAL SERVICES:</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Any additional services beyond our initial agreement may incur extra charges.</span>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-border/50 mt-4">
+              <p className="font-medium italic text-muted-foreground">Be rest assure that Gmax studioz renders the best service as long as these terms are being adhered to. Reach us at any time as we’re always available to be of service to you.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Stepper (Desktop) */}
+        <div className="mb-12 relative hidden md:block">
+          <div className="absolute top-1/2 left-0 w-full h-0.5 bg-border/50 -translate-y-1/2 z-0"></div>
+          <div className="absolute top-1/2 left-0 h-0.5 bg-primary -translate-y-1/2 z-0 transition-all duration-500 ease-in-out" style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}></div>
+          
+          <div className="relative z-10 flex justify-between gap-0">
             {steps.map((step) => {
               const Icon = step.icon;
               const isActive = currentStep === step.id;
               const isCompleted = currentStep > step.id;
               
               return (
-                <div key={step.id} className="flex flex-row md:flex-col items-center gap-4 md:gap-2">
+                <div key={step.id} className="flex flex-col items-center gap-2">
                   <div 
                     className={cn(
                       "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-500 border-2",
@@ -811,20 +1162,21 @@ export default function BookingPage() {
                   >
                     <Icon className="w-5 h-5" />
                   </div>
-                  <div className="text-left md:text-center">
+                  <div className="text-center">
                     <div className={cn(
                       "text-sm font-bold uppercase tracking-wider transition-colors",
                       isActive ? "text-primary" : isCompleted ? "text-foreground" : "text-muted-foreground"
                     )}>
                       {step.title}
                     </div>
-                    <div className="text-xs text-muted-foreground hidden md:block">{step.description}</div>
+                    <div className="text-xs text-muted-foreground">{step.description}</div>
                   </div>
                 </div>
               );
             })}
           </div>
         </div>
+
 
         {/* Form Area */}
         <div className="bg-card/50 backdrop-blur-xl border border-border/50 rounded-[2rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
@@ -840,45 +1192,60 @@ export default function BookingPage() {
               <button
                 type="button"
                 onClick={() => navigateStep("prev")}
-                disabled={currentStep === 1 || isSubmitting}
+                disabled={(currentStep === 1 && configStep === 1) || isSubmitting}
                 className={cn(
                   "inline-flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all",
-                  currentStep === 1 ? "opacity-0 pointer-events-none" : "hover:bg-secondary/50 text-foreground"
+                  (currentStep === 1 && configStep === 1) ? "opacity-0 pointer-events-none" : "hover:bg-secondary/50 text-foreground"
                 )}
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back
               </button>
               
-              {currentStep < 4 ? (
+              {currentStep < 3 ? (
+                ((currentStep === 2) || (currentStep === 1 && configStep === 5)) && (
                 <button
                   type="button"
                   onClick={() => navigateStep("next")}
                   className={cn(
-                    buttonVariants({ variant: "default", size: "lg" }),
-                    "rounded-full px-8 gap-2 group shadow-lg shadow-primary/20"
+                    buttonVariants({ variant: "default" }),
+                    "rounded-full px-10 py-6 text-lg font-semibold gap-2 group shadow-lg shadow-primary/20"
                   )}
                 >
                   Continue
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </button>
-              ) : (
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className={cn(
-                    buttonVariants({ variant: "default", size: "lg" }),
-                    "rounded-full px-8 gap-2 group shadow-lg shadow-primary/20"
-                  )}
-                >
-                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Proceed to Payment
-                </button>
-              )}
+              )
+            ) : (
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={cn(
+                  buttonVariants({ variant: "default" }),
+                  "rounded-full px-10 py-6 text-lg font-semibold gap-2 group shadow-lg shadow-primary/20"
+                )}
+              >
+                {isSubmitting && <Loader2 className="w-5 h-5 animate-spin" />}
+                Proceed to Payment
+              </button>
+            )}
             </div>
           </form>
         </div>
       </div>
+
+      {/* WhatsApp Floating Button */}
+      <a
+        href="https://wa.me/2349122223353?text=Hello,%20I%20would%20like%20to%20discuss%20my%20session%20ideas%20with%20you!"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-50 bg-[#25D366] hover:bg-[#1ebd5a] text-white p-4 rounded-full shadow-lg transition-transform hover:scale-110 flex items-center justify-center group"
+      >
+        <MessageCircle className="w-6 h-6" />
+        <span className="absolute right-full mr-4 bg-foreground text-background text-sm px-3 py-1.5 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+          Chat with us!
+        </span>
+      </a>
     </main>
   );
 }

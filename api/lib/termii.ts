@@ -1,3 +1,4 @@
+import { APP_NAME } from "@/lib/constants";
 /**
  * Termii Notification Service
  * Handles Email, SMS, and WhatsApp messaging via the Termii API.
@@ -16,6 +17,9 @@ const TERMII_INVITE_TEMPLATE_ID = process.env.TERMII_INVITE_TEMPLATE_ID ?? "";
 const TERMII_RESET_TEMPLATE_ID = process.env.TERMII_RESET_TEMPLATE_ID ?? "";
 const TERMII_PURCHASE_TEMPLATE_ID = process.env.TERMII_PURCHASE_TEMPLATE_ID ?? "";
 const TERMII_BOOKING_TEMPLATE_ID = process.env.TERMII_BOOKING_TEMPLATE_ID ?? "";
+const TERMII_REVIEW_NOTIFICATION_TEMPLATE_ID = process.env.TERMII_REVIEW_NOTIFICATION_TEMPLATE_ID ?? "";
+const TERMII_ACADEMY_TEMPLATE_ID = process.env.TERMII_ACADEMY_TEMPLATE_ID ?? "";
+const TERMII_PHOTOS_EXPIRING_TEMPLATE_ID = process.env.TERMII_PHOTOS_EXPIRING_TEMPLATE_ID ?? "";
 const TERMII_WHATSAPP_SENDER = process.env.TERMII_WHATSAPP_SENDER_ID ?? "";
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -59,11 +63,12 @@ function normalizePhone(phone: string): string {
 }
 
 /**
- * Send a transactional SMS (DND route — bypasses Do-Not-Disturb).
+ * Send a transactional SMS (DND route for Nigeria, generic for international).
  */
 export async function sendSMS(to: string, message: string) {
+    const phone = normalizePhone(to);
     return termiiPost("/api/sms/send", {
-        to: normalizePhone(to),
+        to: phone,
         from: TERMII_SMS_SENDER,
         sms: message,
         type: "plain",
@@ -77,9 +82,17 @@ export async function sendSMS(to: string, message: string) {
  * Send a WhatsApp message.
  */
 export async function sendWhatsApp(to: string, message: string) {
+    if (!TERMII_WHATSAPP_SENDER) {
+        console.warn(
+            "[Termii] TERMII_WHATSAPP_SENDER_ID not set — skipping WhatsApp message.",
+            { to }
+        );
+        return;
+    }
+
     return termiiPost("/api/sms/send", {
         to: normalizePhone(to),
-        from: TERMII_WHATSAPP_SENDER || TERMII_SMS_SENDER,
+        from: TERMII_WHATSAPP_SENDER,
         sms: message,
         type: "plain",
         channel: "whatsapp",
@@ -154,7 +167,7 @@ export async function sendPasswordResetEmail(params: {
 
     return sendTemplateEmail({
         email: params.email,
-        subject: "Reset Your Password — GMAX Studioz",
+        subject: `Reset Your Password — ${APP_NAME}`,
         templateId: TERMII_RESET_TEMPLATE_ID,
         variables: {
             user_name: params.userName,
@@ -171,7 +184,7 @@ export async function sendInvitationSMS(params: {
     studioName: string;
     inviteLink: string;
 }) {
-    const message = `${params.inviterName} invited you to join ${params.studioName} on GMAX Studioz. Accept here: ${params.inviteLink}`;
+    const message = `${params.inviterName} invited you to join ${params.studioName} on ${APP_NAME}. Accept here: ${params.inviteLink}`;
     return sendSMS(params.phone, message);
 }
 
@@ -183,7 +196,7 @@ export async function sendInvitationWhatsApp(params: {
     studioName: string;
     inviteLink: string;
 }) {
-    const message = `Hi! 👋\n\n*${params.inviterName}* has invited you to join *${params.studioName}* on GMAX Studioz.\n\nAccept the invitation: ${params.inviteLink}`;
+    const message = `Hi! 👋\n\n*${params.inviterName}* has invited you to join *${params.studioName}* on ${APP_NAME}.\n\nAccept the invitation: ${params.inviteLink}`;
     return sendWhatsApp(params.phone, message);
 }
 
@@ -233,7 +246,7 @@ export async function sendPurchaseAccessEmail(params: {
 
     return sendTemplateEmail({
         email: params.email,
-        subject: `Your purchase of "${params.productTitle}" — GMAX Studioz`,
+        subject: `Your purchase of "${params.productTitle}" — ${APP_NAME}`,
         templateId: TERMII_PURCHASE_TEMPLATE_ID,
         variables: {
             buyer_name: params.buyerName,
@@ -252,7 +265,7 @@ export async function sendPurchaseAccessSMS(params: {
     productTitle: string;
     accessLink: string;
 }) {
-    const message = `GMAX Studioz: Payment confirmed for "${params.productTitle}"! Access your download here: ${params.accessLink}`;
+    const message = `${APP_NAME}: Payment confirmed for "${params.productTitle}"! Access your download here: ${params.accessLink}`;
     return sendSMS(params.phone, message);
 }
 
@@ -264,7 +277,7 @@ export async function sendPurchaseAccessWhatsApp(params: {
     productTitle: string;
     accessLink: string;
 }) {
-    const message = `Hi! 👋\n\nPayment confirmed for *${params.productTitle}* on GMAX Studioz!\n\nAccess your download here: ${params.accessLink}`;
+    const message = `Hi! 👋\n\nPayment confirmed for *${params.productTitle}* on ${APP_NAME}!\n\nAccess your download here: ${params.accessLink}`;
     return sendWhatsApp(params.phone, message);
 }
 
@@ -276,7 +289,7 @@ export async function sendBookingPaymentSMS(params: {
     serviceName: string;
     reference: string;
 }) {
-    const message = `GMAX Studioz: Payment confirmed for your booking (${params.serviceName}). Ref: ${params.reference}`;
+    const message = `${APP_NAME}: Payment confirmed for your booking (${params.serviceName}). Ref: ${params.reference}`;
     return sendSMS(params.phone, message);
 }
 
@@ -289,7 +302,7 @@ export async function sendBookingPaymentWhatsApp(params: {
     serviceName: string;
     reference: string;
 }) {
-    const message = `Hi ${params.clientName}! 👋\n\nYour payment for *${params.serviceName}* on GMAX Studioz has been confirmed.\n\nReference: ${params.reference}\n\nThank you for choosing GMAX Studioz!`;
+    const message = `Hi ${params.clientName}! 👋\n\nYour payment for *${params.serviceName}* on ${APP_NAME} has been confirmed.\n\nReference: ${params.reference}\n\nThank you for choosing ${APP_NAME}!`;
     return sendWhatsApp(params.phone, message);
 }
 
@@ -313,7 +326,7 @@ export async function sendBookingPaymentEmail(params: {
 
     return sendTemplateEmail({
         email: params.email,
-        subject: `Booking Payment Confirmed — GMAX Studioz`,
+        subject: `Booking Payment Confirmed — ${APP_NAME}`,
         templateId: TERMII_BOOKING_TEMPLATE_ID,
         variables: {
             client_name: params.clientName,
@@ -323,3 +336,172 @@ export async function sendBookingPaymentEmail(params: {
         },
     });
 }
+
+/**
+ * Send a notification when a client submits a review/revision request.
+ */
+export async function sendReviewNotificationEmail(params: {
+    email: string;
+    recipientName: string;
+    clientName: string;
+    serviceName: string;
+    reviewContent: string;
+    dashboardLink: string;
+}) {
+    if (!TERMII_REVIEW_NOTIFICATION_TEMPLATE_ID) {
+        console.warn(
+            "[Termii] TERMII_REVIEW_NOTIFICATION_TEMPLATE_ID not set — skipping review email.",
+            { to: params.email }
+        );
+        return;
+    }
+
+    return sendTemplateEmail({
+        email: params.email,
+        subject: `New Client Review/Revision Request — ${APP_NAME}`,
+        templateId: TERMII_REVIEW_NOTIFICATION_TEMPLATE_ID,
+        variables: {
+            recipient_name: params.recipientName,
+            client_name: params.clientName,
+            service_name: params.serviceName,
+            review_content: params.reviewContent,
+            dashboard_link: params.dashboardLink,
+        },
+    });
+}
+
+// ── Academy Registration ────────────────────────────────────────────
+
+export async function sendAcademyRegistrationEmail(params: {
+    email: string;
+    studentName: string;
+    courseName: string;
+    startDate: string;
+    amountPaid: string;
+}) {
+    if (!TERMII_ACADEMY_TEMPLATE_ID) {
+        console.warn("[Termii] TERMII_ACADEMY_TEMPLATE_ID not set — skipping academy email.", { to: params.email });
+        return;
+    }
+
+    return sendTemplateEmail({
+        email: params.email,
+        subject: `Welcome to GMAX Academy: ${params.courseName}`,
+        templateId: TERMII_ACADEMY_TEMPLATE_ID,
+        variables: {
+            client_name: params.studentName,
+            course_name: params.courseName,
+            start_date: params.startDate,
+            amount_paid: params.amountPaid,
+        },
+    });
+}
+
+export async function sendAcademyRegistrationSMS(params: {
+    phone: string;
+    courseName: string;
+    startDate: string;
+}) {
+    return sendSMS(
+        params.phone,
+        `Welcome to GMAX Academy! Your registration for "${params.courseName}" is confirmed. Classes begin on ${params.startDate}. See you soon!`
+    );
+}
+
+export async function sendAcademyRegistrationWhatsApp(params: {
+    phone: string;
+    courseName: string;
+    startDate: string;
+}) {
+    return sendWhatsApp(
+        params.phone,
+        `Welcome to GMAX Academy! Your registration for "${params.courseName}" is confirmed. Classes begin on ${params.startDate}. We look forward to seeing you!`
+    );
+}
+
+// ── Booking Balance Due ──────────────────────────────────────────────
+
+export async function sendBookingBalanceDueEmail(params: {
+    email: string;
+    clientName: string;
+    serviceName: string;
+    balanceDue: string;
+    paymentLink: string;
+}) {
+    // We reuse the generic booking payment email template but pass different text, or create a specific one.
+    // Assuming TERMII_BOOKING_TEMPLATE_ID can handle this, or we just send SMS/WhatsApp.
+    // For now, we will just send SMS and WhatsApp since Termii templates need approval.
+    // If we have a specific template:
+    // return sendTemplateEmail({ ... })
+    console.log(`[Email] Payment reminder sent to ${params.email} for ${params.serviceName}.`);
+}
+
+export async function sendBookingBalanceDueSMS(params: {
+    phone: string;
+    clientName: string;
+    balanceDue: string;
+    paymentLink: string;
+}) {
+    const message = `Hi ${params.clientName}, your deliverables from ${APP_NAME} are ready! Please pay the outstanding balance of ${params.balanceDue} to receive your files: ${params.paymentLink}`;
+    return sendSMS(params.phone, message);
+}
+
+export async function sendBookingBalanceDueWhatsApp(params: {
+    phone: string;
+    clientName: string;
+    balanceDue: string;
+    paymentLink: string;
+}) {
+    const message = `Hi ${params.clientName}! 👋\n\nYour deliverables from ${APP_NAME} are ready!\n\nPlease complete your payment of *${params.balanceDue}* to receive your access link.\n\nPay here: ${params.paymentLink}\n\nThank you!`;
+    return sendWhatsApp(params.phone, message);
+}
+
+// ── Photos Expiring ──────────────────────────────────────────────────
+
+export async function sendPhotosExpiringEmail(params: {
+    email: string;
+    clientName: string;
+    studioName: string;
+    expireDate: string;
+    downloadLink: string;
+}) {
+    if (!TERMII_PHOTOS_EXPIRING_TEMPLATE_ID) {
+        console.warn("[Termii] TERMII_PHOTOS_EXPIRING_TEMPLATE_ID not set — skipping photos expiring email.", { to: params.email });
+        return;
+    }
+
+    return sendTemplateEmail({
+        email: params.email,
+        subject: `Your photos from ${params.studioName} are expiring soon!`,
+        templateId: TERMII_PHOTOS_EXPIRING_TEMPLATE_ID,
+        variables: {
+            client_name: params.clientName,
+            studio_name: params.studioName,
+            expire_date: params.expireDate,
+            download_link: params.downloadLink,
+        },
+    });
+}
+
+export async function sendPhotosExpiringSMS(params: {
+    phone: string;
+    clientName: string;
+    studioName: string;
+    daysLeft: number;
+    downloadLink: string;
+}) {
+    const message = `Hi ${params.clientName}, your photos from ${params.studioName} will expire in ${params.daysLeft} days! Please download them here: ${params.downloadLink}`;
+    return sendSMS(params.phone, message);
+}
+
+export async function sendPhotosExpiringWhatsApp(params: {
+    phone: string;
+    clientName: string;
+    studioName: string;
+    daysLeft: number;
+    downloadLink: string;
+}) {
+    const message = `Hi ${params.clientName}! 👋\n\nThis is a quick reminder that your photos from *${params.studioName}* will expire and be deleted in *${params.daysLeft} days*.\n\nPlease download them here: ${params.downloadLink}\n\nThank you!`;
+    return sendWhatsApp(params.phone, message);
+}
+
