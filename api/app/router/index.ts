@@ -8,7 +8,7 @@ import {
     rescheduleBooking, updateBooking, updateBookingStatus,
 } from "./bookings";
 import { createProduct, deleteProduct, getAllProducts, getProductById, purchaseProduct, requestAccessLink, requestDownload, updateProduct, verifyAccessToken } from "./products";
-import { clientDownloadPhoto, clientPhotoAccess, clientSubmitReview, clientUpdateDates } from "./photos";
+import { clientDownloadPhoto, clientPhotoAccess } from "./photos";
 import { verifyPurchase, getPublicPaymentDetails } from "./payments";
 import { getStudioBySlug, getAllStudios } from "./studio";
 import { getPublicPortfolio } from "./portfolio";
@@ -126,8 +126,8 @@ export const router = os.router({
         bulkApprove: os.photo.bulkApprove.handler(notImplemented),
         clientAccess: clientPhotoAccess,
         clientDownload: clientDownloadPhoto,
-        clientSubmitReview: clientSubmitReview,
-        clientUpdateDates: clientUpdateDates,
+        clientSubmitReview: os.photo.clientSubmitReview.handler(notImplemented),
+        clientUpdateDates: os.photo.clientUpdateDates.handler(notImplemented),
     },
 
     portfolio: {

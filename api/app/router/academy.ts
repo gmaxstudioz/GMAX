@@ -1,5 +1,6 @@
-
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import { academyCourse, academyStudent } from "@/lib/schema";
+import { eq, and, desc, asc } from "drizzle-orm";
 import { optionalAuthMiddleware, BaseContext } from "./middleware";
 import { v4 as uuidv4 } from "uuid";
 import { implement } from "@orpc/server";
@@ -17,33 +18,33 @@ function formatCurrency(amount: number | string): string {
 export const getPublicCourses = os.academy.getPublicCourses
     .use(optionalAuthMiddleware)
     .handler(async () => {
-        const courses = await prisma.academyCourse.findMany({
-            where: { isPublished: true },
-            include: {
-                modules: {
-                    orderBy: { sortOrder: "asc" },
+        const courses = await db.query.academyCourse.findMany({
+            where: eq(academyCourse.isPublished, true),
+            with: {
+                academyModules: {
+                    orderBy: (modules, { asc }) => [asc(modules.sortOrder)],
                 },
-                batches: {
-                    orderBy: { startDate: "asc" },
+                academyBatches: {
+                    orderBy: (batches, { asc }) => [asc(batches.startDate)],
                 }
             },
-            orderBy: { createdAt: "desc" },
+            orderBy: (courses, { desc }) => [desc(courses.createdAt)],
         });
 
-        return { items: courses };
+        return { items: courses as any };
     });
 
 export const getPublicCourse = os.academy.getPublicCourse
     .use(optionalAuthMiddleware)
     .handler(async ({ input, errors }) => {
-        const course = await prisma.academyCourse.findUnique({
-            where: { id: input.id, isPublished: true },
-            include: {
-                modules: {
-                    orderBy: { sortOrder: "asc" },
+        const course = await db.query.academyCourse.findFirst({
+            where: and(eq(academyCourse.id, input.id), eq(academyCourse.isPublished, true)),
+            with: {
+                academyModules: {
+                    orderBy: (modules, { asc }) => [asc(modules.sortOrder)],
                 },
-                batches: {
-                    orderBy: { startDate: "asc" },
+                academyBatches: {
+                    orderBy: (batches, { asc }) => [asc(batches.startDate)],
                 }
             },
         });
@@ -55,14 +56,14 @@ export const getPublicCourse = os.academy.getPublicCourse
             });
         }
 
-        return course;
+        return course as any;
     });
 
 export const registerForCourse = os.academy.register
     .use(optionalAuthMiddleware)
     .handler(async ({ input, errors }) => {
-        const course = await prisma.academyCourse.findUnique({
-            where: { id: input.courseId, isPublished: true },
+        const course = await db.query.academyCourse.findFirst({
+            where: and(eq(academyCourse.id, input.courseId), eq(academyCourse.isPublished, true)),
         });
 
         if (!course) {
@@ -72,12 +73,12 @@ export const registerForCourse = os.academy.register
             });
         }
 
-        const existing = await prisma.academyStudent.findFirst({
-            where: {
-                courseId: course.id,
-                email: input.email,
-                paymentStatus: "SUCCESS",
-            }
+        const existing = await db.query.academyStudent.findFirst({
+            where: and(
+                eq(academyStudent.courseId, course.id),
+                eq(academyStudent.email, input.email),
+                eq(academyStudent.paymentStatus, "SUCCESS")
+            )
         });
 
         if (existing) {
@@ -90,21 +91,19 @@ export const registerForCourse = os.academy.register
 
         const reference = `gmax-academy-${uuidv4().slice(0, 8)}`;
         
-        const registration = await prisma.academyStudent.create({
-            data: {
-                courseId: course.id,
-                batchId: input.batchId,
-                firstName: input.firstName,
-                lastName: input.lastName,
-                email: input.email,
-                phone: input.phone,
-                amountPaid: amountToPay,
-                paymentPlan: input.paymentPlan,
-                howDidYouHear: input.howDidYouHear,
-                paymentReference: reference,
-                paymentStatus: "PENDING",
-            }
-        });
+        const [registration] = await db.insert(academyStudent).values({
+            courseId: course.id,
+            batchId: input.batchId,
+            firstName: input.firstName,
+            lastName: input.lastName,
+            email: input.email,
+            phone: input.phone,
+            amountPaid: amountToPay.toString(),
+            paymentPlan: input.paymentPlan as "FULL" | "HALF" | "QUARTER",
+            howDidYouHear: input.howDidYouHear,
+            paymentReference: reference,
+            paymentStatus: "PENDING",
+        }).returning();
 
         return {
             reference: registration.paymentReference as string,
@@ -117,9 +116,9 @@ export const registerForCourse = os.academy.register
 export const verifyPayment = os.academy.verifyPayment
     .use(optionalAuthMiddleware)
     .handler(async ({ input }) => {
-        const registration = await prisma.academyStudent.findUnique({
-            where: { paymentReference: input.reference },
-            include: { course: true, batch: true },
+        const registration = await db.query.academyStudent.findFirst({
+            where: eq(academyStudent.paymentReference, input.reference),
+            with: { course: true, batch: true },
         });
 
         if (!registration) {
@@ -134,10 +133,9 @@ export const verifyPayment = os.academy.verifyPayment
             const response = await paystackFetch<{ data?: { status?: string } }>(`/transaction/verify/${input.reference}`);
             
             if (response.data?.status === "success") {
-                await prisma.academyStudent.update({
-                    where: { id: registration.id },
-                    data: { paymentStatus: "SUCCESS" },
-                });
+                await db.update(academyStudent)
+                    .set({ paymentStatus: "SUCCESS", updatedAt: new Date().toISOString() })
+                    .where(eq(academyStudent.id, registration.id));
 
                 const startDateStr = registration.batch?.startDate 
                     ? new Date(registration.batch.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
