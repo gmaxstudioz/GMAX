@@ -180,6 +180,14 @@ export async function reassignBooking(bookingId: string, targetMemberId: string)
             return { status: "error", message: "Unauthorized" };
         }
 
+        const targetMember = await db.query.member.findFirst({
+            where: and(eq(schema.member.id, targetMemberId), eq(schema.member.studioId, booking.studioId))
+        });
+        
+        if (!targetMember) {
+            return { status: "error", message: "Target member not found in this studio" };
+        }
+
         await db.update(schema.booking)
             .set({ memberId: targetMemberId })
             .where(eq(schema.booking.id, bookingId));
