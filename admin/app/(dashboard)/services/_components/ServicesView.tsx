@@ -249,8 +249,8 @@ export function ServicesView({ studioGroups }: { studioGroups: StudioGroup[] }) 
                                                             <Sparkles className="size-3 mr-1" />
                                                             {service.isAddon ? 'Addon' : 'Service'}
                                                         </Badge>
-                                                        {service.variants?.length > 1 && (
-                                                            <Badge variant="outline" className="text-muted-foreground">{service.variants.length} Variants</Badge>
+                                                        {service.variants?.length > 0 && (
+                                                            <Badge variant="outline" className="text-muted-foreground">{service.variants.length} Variant{service.variants.length > 1 ? 's' : ''}</Badge>
                                                         )}
                                                         {totalDeliverables > 0 && (
                                                             <Badge variant="outline" className="text-muted-foreground">{totalDeliverables} Deliverables</Badge>

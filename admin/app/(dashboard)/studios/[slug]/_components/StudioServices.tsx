@@ -364,7 +364,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                 <TableBody>
                                                     {services.map((svc: any) => {
                                                         const sessionBinding = studioData.studioSessions.find((s: any) => s.id === svc.studioSessionId);
-                                                        const basePrice = svc.variants?.[0]?.basePrice ? Number(svc.variants[0].basePrice) : 0;
+                                                        const basePrice = svc.serviceVariants?.[0]?.basePrice ? Number(svc.serviceVariants[0].basePrice) : 0;
                                                         return (
                                                             <TableRow key={svc.id}>
                                                                 <TableCell>
@@ -373,8 +373,8 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                 <TableCell>
                                                                     <div className="font-medium">
                                                                         {svc.name}
-                                                                        {svc.variants && svc.variants.length > 0 && (
-                                                                            <span className="ml-2 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">{svc.variants.length} Variant{svc.variants.length > 1 ? 's' : ''}</span>
+                                                                        {svc.serviceVariants && svc.serviceVariants.length > 0 && (
+                                                                            <span className="ml-2 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">{svc.serviceVariants.length} Variant{svc.serviceVariants.length > 1 ? 's' : ''}</span>
                                                                         )}
                                                                     </div>
                                                                     <div className="text-xs text-muted-foreground line-clamp-1 max-w-[250px]">{svc.description}</div>
@@ -418,8 +418,8 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                             setEditModeService(svc.id);
                                                                             const svcFeatures = (svc.features && svc.features.length > 0) ? svc.features : [""];
                                                                             
-                                                                            const mappedVariants = (svc.variants && svc.variants.length > 0) 
-                                                                                ? svc.variants.map((v: any) => ({
+                                                                            const mappedVariants = (svc.serviceVariants && svc.serviceVariants.length > 0) 
+                                                                                ? svc.serviceVariants.map((v: any) => ({
                                                                                     id: v.id,
                                                                                     title: v.title ?? undefined,
                                                                                     locationType: v.locationType as "STUDIO" | "OUTDOOR" | "BOTH" | "MULTIPLE",
@@ -427,7 +427,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                                     maxPrice: v.maxPrice ? Number(v.maxPrice) : undefined,
                                                                                     sessionDurationMins: v.sessionDurationMins,
                                                                                     logisticsIncluded: v.logisticsIncluded,
-                                                                                    deliverables: v.deliverables?.map((d: any) => ({
+                                                                                    deliverables: v.serviceDeliverables?.map((d: any) => ({
                                                                                         label: d.label,
                                                                                         quantity: d.quantity ?? undefined,
                                                                                         detail: d.detail ?? undefined,
@@ -479,8 +479,8 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                         <h5 className="font-medium text-sm flex gap-2 items-center">
                                                             <input type="checkbox" className="size-4 mr-2" checked={selectedServiceIds.includes(svc.id)} onChange={() => toggleSelection(svc.id)} />
                                                             {svc.name}
-                                                            {svc.variants && svc.variants.length > 0 && (
-                                                                <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full leading-none">{svc.variants.length} Var</span>
+                                                            {svc.serviceVariants && svc.serviceVariants.length > 0 && (
+                                                                <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full leading-none">{svc.serviceVariants.length} Var</span>
                                                             )}
                                                         </h5>
                                                         <span className="text-xs font-bold text-primary mt-1">
@@ -523,8 +523,8 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                     setEditModeService(svc.id);
                                                                     const svcFeatures = (svc.features && svc.features.length > 0) ? svc.features : [""];
                                                                     
-                                                                    const mappedVariants = (svc.variants && svc.variants.length > 0) 
-                                                                        ? svc.variants.map((v: any) => ({
+                                                                    const mappedVariants = (svc.serviceVariants && svc.serviceVariants.length > 0) 
+                                                                        ? svc.serviceVariants.map((v: any) => ({
                                                                             id: v.id,
                                                                             title: v.title ?? undefined,
                                                                             locationType: v.locationType as "STUDIO" | "OUTDOOR" | "BOTH" | "MULTIPLE",
@@ -532,7 +532,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                             maxPrice: v.maxPrice ? Number(v.maxPrice) : undefined,
                                                                             sessionDurationMins: v.sessionDurationMins,
                                                                             logisticsIncluded: v.logisticsIncluded,
-                                                                            deliverables: v.deliverables?.map((d: any) => ({
+                                                                            deliverables: v.serviceDeliverables?.map((d: any) => ({
                                                                                 label: d.label,
                                                                                 quantity: d.quantity ?? undefined,
                                                                                 detail: d.detail ?? undefined,

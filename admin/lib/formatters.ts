@@ -1,10 +1,10 @@
 /**
- * Formats a number as a USD currency string.
+ * Formats a number as a Nigerian naira currency string.
  * @param price The number to format.
  * @returns Formatted currency string.
  */
 export const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(price);
+    return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(price);
 };
 
 /**

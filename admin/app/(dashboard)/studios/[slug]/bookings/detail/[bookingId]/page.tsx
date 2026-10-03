@@ -264,7 +264,7 @@ export default async function BookingDetailPage({ params }: Props) {
                                 serviceVariantId: serializedBooking.serviceVariantId ?? undefined,
                                 memberId: serializedBooking.memberId || "",
                                 bookingDate: serializedBooking.bookingDate,
-                                addonIds: serializedBooking.addons.map((addon: { id: string; variants?: { id: string }[] }) => `${addon.id}:${addon.variants?.[0]?.id}`),
+                                addonIds: (serializedBooking.addons || []).map((addon: { id: string; variants?: { id: string }[] }) => `${addon.id}:${addon.variants?.[0]?.id}`),
                                 totalAmount: Number(serializedBooking.totalAmount),
                                 paymentPlan: serializedBooking.paymentPlan,
                                 extraPicturesCount: serializedBooking.extraPicturesCount,
@@ -316,7 +316,7 @@ export default async function BookingDetailPage({ params }: Props) {
                                 {format(new Date(serializedBooking.bookingDate), "EEEE, MMMM do, yyyy")}
                             </InfoRow>
                             <InfoRow icon={ClockIcon} label="Time">
-                                <span className="break-words">
+                                <span className="wrap-break-word">
                                     {format(new Date(serializedBooking.bookingDate), "hh:mm a")} · {totalDuration}min
                                 </span>
                             </InfoRow>
@@ -461,7 +461,7 @@ export default async function BookingDetailPage({ params }: Props) {
                             </div>
                             <div className="flex justify-between gap-2">
                                 <span className="text-muted-foreground shrink-0">Booking ID</span>
-                                <span className="font-mono text-xs text-muted-foreground truncate max-w-[140px] sm:max-w-[160px]">{booking.id}</span>
+                                <span className="font-mono text-xs text-muted-foreground truncate max-w-35 sm:max-w-40">{booking.id}</span>
                             </div>
                         </CardContent>
                     </Card>
