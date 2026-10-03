@@ -9,6 +9,7 @@ import { studioAc, photographer, videographer, receptionist, manager, owner, dev
 const BASE_URL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
 
 export const auth = betterAuth({
+    baseURL: BASE_URL,
     database: drizzleAdapter(db, {
         provider: "pg",
         schema,
