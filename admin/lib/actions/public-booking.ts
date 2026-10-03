@@ -228,7 +228,7 @@ export async function createPublicBooking(data: {
             recordedById: defaultMember.userId,
         }).returning().then(res => res[0]);
         
-        const [clientRecord] = await db.select().from(clientSchema).where(eq(clientSchema.id, clientId as string));
+        const [clientRecord] = await db.select().from(schema.client).where(eq(schema.client.id, clientId as string));
         const clientEmail = data.clientEmail ?? clientRecord?.email;
 
         if (!clientEmail) {

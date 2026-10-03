@@ -240,13 +240,6 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                     studioId: studioData.id
                 });
                 if (result.status === "success") {
-                    if (posthogEnabled) {
-                        posthog.capture("service_created", {
-                            is_active: data.isActive,
-                            is_addon: data.isAddon,
-                            variant_count: data.variants.length,
-                        });
-                    }
                     toast.success("Service added!");
                     resetServiceState();
                     setServiceDialogOpenForCategory(null);

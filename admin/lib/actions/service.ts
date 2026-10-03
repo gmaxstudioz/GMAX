@@ -37,11 +37,11 @@ export async function createService(data: ServicePayload) {
 
         const member = await db.query.member.findFirst({
             where: and(
-                eq(schema.member.userId, session.user.id),
+                eq(schema.member.userId, userSession.user.id),
                 eq(schema.member.studioId, studioId)
             )
         });
-        if (!memberRecord) return { status: "error", message: "Unauthorized access to studio" };
+        if (!member) return { status: "error", message: "Unauthorized access to studio" };
 
         const newServiceId = uuidv4();
 
@@ -238,7 +238,7 @@ export async function deleteService(id: string) {
                 eq(schema.member.studioId, studioId)
             )
         });
-        if (!memberRecord) return { status: "error", message: "Unauthorized access to studio" };
+        if (!member) return { status: "error", message: "Unauthorized access to studio" };
 
         await db.delete(schema.service).where(eq(schema.service.id, id));
         revalidatePath(`/studios/[slug]`, "page");

@@ -7,7 +7,6 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { CalendarBooking } from "@/lib/schemas/calendar";
-import { inArray } from "drizzle-orm";
 
 export const metadata: Metadata = {
     title: "Global Bookings",

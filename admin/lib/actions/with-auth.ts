@@ -87,7 +87,7 @@ export async function requireBookingAccess(bookingId: string): Promise<
         ),
     });
 
-    if (!memberRec) return { status: "error", message: "Unauthorized access to this booking" };
+    if (!member) return { status: "error", message: "Unauthorized access to this booking" };
 
     return { status: "ok", session: sessionResult.session, member, booking };
 }

@@ -53,7 +53,7 @@ export async function DeleteClient(clientId: string): Promise<ApiResponse> {
         if (!client) return { status: "error", message: "Client not found" };
 
         // Verify the caller belongs to the studio that owns this client
-        const auth = await requireStudioMember(clientRec.studioId);
+        const auth = await requireStudioMember(client.studioId);
         if (auth.status === "error") return auth;
 
         await db.delete(schema.client).where(eq(schema.client.id, clientId));

@@ -52,7 +52,7 @@ export async function initializePayment(bookingId: string) {
                 studio: true,
             }});
 
-        if (!foundBooking) return { status: "error", message: "Booking not found" };
+        if (!booking) return { status: "error", message: "Booking not found" };
 
         // Verify the caller is a member of this booking's studio
         const member = await db.query.member.findFirst({ where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId)) });
@@ -67,7 +67,7 @@ export async function initializePayment(bookingId: string) {
             const variant = variantId ? addonService.serviceVariants?.find((v: any) => v.id === variantId) : addonService.serviceVariants?.[0];
             return sum + Number(variant?.basePrice ?? 0);
         }, 0);
-        const grandTotal = foundBooking.totalAmount != null ? Number(foundBooking.totalAmount) : (sessionTotal + addonsTotal);
+        const grandTotal = booking.totalAmount != null ? Number(booking.totalAmount) : (sessionTotal + addonsTotal);
 
         const totalPaid = booking.payments
             .filter((p: any) => p.status === "PAID")
@@ -95,10 +95,10 @@ export async function initializePayment(bookingId: string) {
 
         // Paystack requires a real email — fall back only as a last resort and
         // flag clearly in logs so the team knows a receipt won't be delivered.
-        const clientEmail = foundBooking.client?.email;
+        const clientEmail = booking.client?.email;
         if (!clientEmail) {
             console.warn(
-                `[Payment] Booking ${foundBooking.id} has no client email. ` +
+                `[Payment] Booking ${booking.id} has no client email. ` +
                 `Paystack receipt will not be delivered to the client.`,
             );
         }
@@ -116,13 +116,13 @@ export async function initializePayment(bookingId: string) {
                 currency: "NGN",
                 callback_url: `${process.env.NEXT_PUBLIC_AUTH_URL ?? "http://localhost:3000"}/pay/${reference}?status=success`,
                 metadata: {
-                    booking_id: foundBooking.id,
+                    booking_id: booking.id,
                     payment_id: payment.id,
-                    studio_name: foundBooking.studio?.name,
-                    client_name: foundBooking.client?.name,
+                    studio_name: booking.studio?.name,
+                    client_name: booking.client?.name,
                     custom_fields: [
-                        { display_name: "Client", variable_name: "client", value: foundBooking.client?.name ?? "N/A" },
-                        { display_name: "Service", variable_name: "service", value: foundBooking.service?.name ?? "N/A" },
+                        { display_name: "Client", variable_name: "client", value: booking.client?.name ?? "N/A" },
+                        { display_name: "Service", variable_name: "service", value: booking.service?.name ?? "N/A" },
                     ],
                 },
             }),
@@ -184,9 +184,9 @@ export async function verifyPayment(reference: string) {
                 },
             }});
 
-        if (!foundPayment) return { status: "error", message: "Payment record not found" };
+        if (!payment) return { status: "error", message: "Payment record not found" };
 
-        if (foundPayment.status === "PAID") {
+        if (payment.status === "PAID") {
             // Idempotency guard — already processed, return success
             return { status: "success", message: "Payment already verified" };
         }
@@ -194,7 +194,7 @@ export async function verifyPayment(reference: string) {
         // Verify the confirmed amount matches what was initialized.
         // Paystack returns amounts in kobo; our DB stores in naira.
         const confirmedAmountNaira = paystackRes.data.amount / 100;
-        const expectedAmountNaira = Number(foundPayment.amount);
+        const expectedAmountNaira = Number(payment.amount);
 
         if (Math.abs(confirmedAmountNaira - expectedAmountNaira) > 0.5) {
             console.error(
@@ -218,11 +218,12 @@ export async function verifyPayment(reference: string) {
                     paystackResponse: paystackRes.data as any,
                 }).where(eq(schema.payment.id, payment.id));
 
-            if (!foundPayment.bookingId) return;
+            const bookingId = payment.bookingId;
+            if (!bookingId) return;
 
             // Step 2: Re-read ALL payments for this booking within the transaction.
             // The payment updated above will already show PAID in this read.
-            const allPayments = await tx.query.payment.findMany({ where: eq(schema.payment.bookingId, payment.bookingId) });
+            const allPayments = await tx.query.payment.findMany({ where: eq(schema.payment.bookingId, bookingId as string) });
 
             const booking = (payment as any).booking;
             if (!booking) return;
@@ -235,7 +236,7 @@ export async function verifyPayment(reference: string) {
                 const variant = variantId ? addonService.serviceVariants?.find((v: any) => v.id === variantId) : addonService.serviceVariants?.[0];
                 return sum + Number(variant?.basePrice ?? 0);
             }, 0);
-            const grandTotal = currentBooking.totalAmount != null ? Number(currentBooking.totalAmount) : (sessionTotal + addonsTotal);
+            const grandTotal = booking.totalAmount != null ? Number(booking.totalAmount) : (sessionTotal + addonsTotal);
 
             // Step 3: Recalculate with the freshly updated payment included
             const totalPaid = allPayments
@@ -245,7 +246,7 @@ export async function verifyPayment(reference: string) {
             const newPaymentStatus = totalPaid >= grandTotal ? "PAID" : "PARTIALLY_PAID";
 
             // Step 4: Update booking status atomically
-            await tx.update(schema.booking).set({ paymentStatus: newPaymentStatus }).where(eq(schema.booking.id, payment.bookingId));
+            await tx.update(schema.booking).set({ paymentStatus: newPaymentStatus }).where(eq(schema.booking.id, bookingId as string));
         });
 
         revalidatePath("/studios", "layout");

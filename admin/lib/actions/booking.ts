@@ -24,7 +24,7 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
         const member = await db.query.member.findFirst({
             where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, studioId))
         });
-        if (!memberData) {
+        if (!member) {
             return { status: "error", message: "Unauthorized access to studio" };
         }
 
@@ -149,7 +149,7 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
         }
 
         revalidatePath(`/studios`, "layout");
-        return { status: "success", data: newBooking };
+        return { status: "success", data: booking };
     } catch (error) {
         console.error("Failed to create booking:", error);
         return { status: "error", message: "Failed to create booking" };
@@ -170,18 +170,18 @@ export async function reassignBooking(bookingId: string, targetMemberId: string)
             where: eq(schema.booking.id, bookingId)
         });
 
-        if (!b) return { status: "error", message: "Booking not found" };
+        if (!booking) return { status: "error", message: "Booking not found" };
 
         const member = await db.query.member.findFirst({
             where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
         });
 
-        if (!memberData || !["owner", "manager", "admin", "developer"].includes(memberData.role)) {
+        if (!member || !["owner", "manager", "admin", "developer"].includes(member.role)) {
             return { status: "error", message: "Unauthorized" };
         }
 
         await db.update(schema.booking)
-            .set({ memberId })
+            .set({ memberId: targetMemberId })
             .where(eq(schema.booking.id, bookingId));
 
         revalidatePath("/studios", "layout");
@@ -212,7 +212,7 @@ export async function rescheduleBooking(bookingId: string, newDate: string) {
             }
         });
 
-        if (!b) return { status: "error", message: "Booking not found" };
+        if (!booking) return { status: "error", message: "Booking not found" };
 
         const member = await db.query.member.findFirst({
             where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
@@ -225,7 +225,7 @@ export async function rescheduleBooking(bookingId: string, newDate: string) {
         const start = startOfDay(targetDate);
         const end = endOfDay(targetDate);
 
-        const duration = (b.service?.studioSession?.duration || 45) * b.sessionCount;
+        const duration = (booking.service?.studioSession?.duration || 45) * booking.sessionCount;
         const proposedStart = targetDate.getTime();
         const proposedEnd = proposedStart + (duration * 60 * 1000);
 
@@ -361,7 +361,7 @@ export async function uploadBookingPhoto(data: {
         const member = await db.query.member.findFirst({
             where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
         });
-        if (!memberData) return { status: "error", message: "Unauthorized" };
+        if (!member) return { status: "error", message: "Unauthorized" };
 
         // Admin, manager, owner uploads auto-approve
         const autoApproveRoles = ["admin", "manager", "owner"];
@@ -426,12 +426,12 @@ export async function approvePhoto(photoId: string) {
             where: eq(schema.photo.id, photoId),
             with: { booking: { with: { client: true, studio: true } } },
         });
-        if (!p) return { status: "error", message: "Photo not found" };
+        if (!photo) return { status: "error", message: "Photo not found" };
 
         const member = await db.query.member.findFirst({
             where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, photo.booking?.studioId!))
         });
-        if (!memberData) return { status: "error", message: "Unauthorized" };
+        if (!member) return { status: "error", message: "Unauthorized" };
 
         await db.update(schema.photo)
             .set({
@@ -470,12 +470,12 @@ export async function rejectPhoto(photoId: string, reason?: string) {
             where: eq(schema.photo.id, photoId),
             with: { booking: true },
         });
-        if (!p) return { status: "error", message: "Photo not found" };
+        if (!photo) return { status: "error", message: "Photo not found" };
 
         const member = await db.query.member.findFirst({
             where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, photo.booking?.studioId!))
         });
-        if (!memberData) return { status: "error", message: "Unauthorized" };
+        if (!member) return { status: "error", message: "Unauthorized" };
 
         await db.update(schema.photo)
             .set({
@@ -521,12 +521,12 @@ export async function deletePhoto(photoId: string) {
             where: eq(schema.photo.id, photoId),
             with: { booking: true },
         });
-        if (!p) return { status: "error", message: "Photo not found" };
+        if (!photo) return { status: "error", message: "Photo not found" };
 
         const member = await db.query.member.findFirst({
             where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, photo.booking?.studioId!))
         });
-        if (!memberData || !["admin", "manager", "owner", "receptionist"].includes(memberData.role)) {
+        if (!member || !["admin", "manager", "owner", "receptionist"].includes(member.role)) {
             return { status: "error", message: "Unauthorized to delete photo" };
         }
 
@@ -535,7 +535,7 @@ export async function deletePhoto(photoId: string) {
             await fetch(`\${baseUrl}/api/s3/delete`, {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ key: p.r2Key }),
+                body: JSON.stringify({ key: photo.r2Key }),
             });
         } catch (r2Error) {
             console.error("[R2] Failed to delete file from storage:", r2Error);
@@ -561,12 +561,12 @@ export async function deleteBooking(bookingId: string) {
             where: eq(schema.booking.id, bookingId),
             with: { photos: true },
         });
-        if (!b) return { status: "error", message: "Booking not found" };
+        if (!booking) return { status: "error", message: "Booking not found" };
 
         const member = await db.query.member.findFirst({
             where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
         });
-        if (!memberData || !["admin", "manager", "owner", "receptionist"].includes(memberData.role)) {
+        if (!member || !["admin", "manager", "owner", "receptionist"].includes(member.role)) {
             return { status: "error", message: "You don't have permission to delete bookings" };
         }
 
@@ -625,7 +625,7 @@ export async function updateBookingFull(
                 service: { with: { studioSession: true } }
             },
         });
-        if (!b) return { status: "error", message: "Booking not found" };
+        if (!booking) return { status: "error", message: "Booking not found" };
 
         const member = await db.query.member.findFirst({
             where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
@@ -671,7 +671,7 @@ export async function updateBookingFull(
                 ? await db.query.service.findFirst({ where: eq(schema.service.id, data.serviceId), with: { studioSession: true } })
                 : booking.service;
 
-            const sessionCount = data.sessionCount ?? b.sessionCount;
+            const sessionCount = data.sessionCount ?? booking.sessionCount;
             const duration = (serviceForDuration?.studioSession?.duration || 45) * sessionCount;
             const proposedStart = targetDate.getTime();
             const proposedEnd = proposedStart + (duration * 60 * 1000);
