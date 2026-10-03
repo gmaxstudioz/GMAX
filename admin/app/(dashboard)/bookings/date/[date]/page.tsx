@@ -227,11 +227,11 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
-                                                    <TableHead className="w-[100px]">Time</TableHead>
+                                                    <TableHead className="w-25">Time</TableHead>
                                                     <TableHead>Client</TableHead>
                                                     <TableHead>Service</TableHead>
                                                     <TableHead>Status</TableHead>
-                                                    <TableHead className="w-[200px]">Assign To</TableHead>
+                                                    <TableHead className="w-50">Assign To</TableHead>
                                                     <TableHead className="text-right">Actions</TableHead>
                                                 </TableRow>
                                             </TableHeader>
@@ -340,8 +340,8 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
                                                                             serviceId: booking.serviceId,
                                                                             serviceVariantId: booking.serviceVariantId ?? undefined,
                                                                             memberId: booking.memberId || "",
-                                                                            bookingDate: booking.bookingDate.toISOString(),
-                                                                            addonIds: booking.addons.map((addon: any) => addon.id),
+                                                                            bookingDate: new Date(booking.bookingDate).toISOString(),
+                                                                            addonIds: booking.bookingAddons?.map((addon: any) => addon.b) || [],
                                                                             totalAmount: Number(booking.totalAmount),
                                                                             paymentPlan: booking.paymentPlan,
                                                                         }}

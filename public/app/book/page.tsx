@@ -5,7 +5,27 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import gsap from "gsap";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Calendar as CalendarIcon, ArrowRight, ArrowLeft, CheckCircle2, User, CreditCard, Loader2, Building2, Clock, Sparkles, MapPin, ChevronDown, ChevronUp, ChevronRight, CheckCircle, UploadCloud, Users, Image as ImageIcon, MessageCircle } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  ArrowRight,
+  ArrowLeft,
+  CheckCircle2,
+  User,
+  CreditCard,
+  Loader2,
+  Building2,
+  Clock,
+  Sparkles,
+  MapPin,
+  ChevronDown,
+  ChevronUp,
+  ChevronRight,
+  CheckCircle,
+  UploadCloud,
+  Users,
+  Image as ImageIcon,
+  MessageCircle,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,10 +33,23 @@ import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { publicBookingSchema, type PublicBookingInput } from "@/lib/schemas/booking.schema";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  publicBookingSchema,
+  type PublicBookingInput,
+} from "@/lib/schemas/booking.schema";
 import { getStudioBySlug, getStudios, createPublicBooking } from "@/lib/api";
-import type { PublicStudioOutput, PublicServiceOutput, PublicCategoryOutput, ServiceVariantOutput, ServiceDeliverableOutput } from "@/lib/types/studio";
+import type {
+  PublicStudioOutput,
+  PublicServiceOutput,
+  PublicCategoryOutput,
+  ServiceVariantOutput,
+  ServiceDeliverableOutput,
+} from "@/lib/types/studio";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -24,9 +57,14 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 const steps = [
-  { id: 1, title: 'Configuration', icon: Sparkles,  description: 'Build your session'      },
-  { id: 2, title: 'Details',       icon: User,      description: 'Your information'        },
-  { id: 3, title: 'Payment',       icon: CreditCard, description: 'Confirm & pay'          },
+  {
+    id: 1,
+    title: "Configuration",
+    icon: Sparkles,
+    description: "Build your session",
+  },
+  { id: 2, title: "Details", icon: User, description: "Your information" },
+  { id: 3, title: "Payment", icon: CreditCard, description: "Confirm & pay" },
 ];
 
 export default function BookingPage() {
@@ -34,22 +72,29 @@ export default function BookingPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [configStep, setConfigStep] = useState(1);
   const [selectedOccasionType, setSelectedOccasionType] = useState<string>("");
-  const [selectedOccasionLabel, setSelectedOccasionLabel] = useState<string>("");
+  const [selectedOccasionLabel, setSelectedOccasionLabel] =
+    useState<string>("");
   const containerRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
-  
-  const [studiosList, setStudiosList] = useState<{ id: string; name: string; slug: string; logo?: string | null; metadata?: Record<string, unknown> | null }[]>([]);
+
+  const [studiosList, setStudiosList] = useState<
+    {
+      id: string;
+      name: string;
+      slug: string;
+      logo?: string | null;
+      metadata?: Record<string, unknown> | null;
+    }[]
+  >([]);
   const [studio, setStudio] = useState<PublicStudioOutput | null>(null);
   const [services, setServices] = useState<PublicServiceOutput[]>([]);
 
   const [isLoadingServices, setIsLoadingServices] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [rulesExpanded, setRulesExpanded] = useState(false);
-  
-
 
   const {
     register,
@@ -70,21 +115,27 @@ export default function BookingPage() {
   });
 
   const selectedStudioId = watch("studioId");
-  const selectedStudioSlug = studiosList.find(s => s.id === selectedStudioId)?.slug;
+  const selectedStudioSlug = studiosList.find(
+    (s) => s.id === selectedStudioId,
+  )?.slug;
   const selectedServiceId = watch("selectedServiceId");
   const selectedVariantId = watch("selectedVariantId");
-  const selectedService = services.find(s => s.id === selectedServiceId);
-  const selectedVariant = selectedService?.variants?.find(v => v.id === selectedVariantId);
+  const selectedService = services.find((s) => s.id === selectedServiceId);
+  const selectedVariant = selectedService?.variants?.find(
+    (v) => v.id === selectedVariantId,
+  );
   const selectedAddonIds = watch("selectedAddonIds") || [];
 
   const generateTimeSlots = (durationInMinutes: number = 60) => {
     const slots = [];
     let currentMin = 9 * 60; // 09:00 am start
     const endMin = 18 * 60; // 06:00 pm end
-    
+
     while (currentMin + durationInMinutes <= endMin) {
-      const h = Math.floor(currentMin / 60).toString().padStart(2, '0');
-      const m = (currentMin % 60).toString().padStart(2, '0');
+      const h = Math.floor(currentMin / 60)
+        .toString()
+        .padStart(2, "0");
+      const m = (currentMin % 60).toString().padStart(2, "0");
       slots.push(`${h}:${m}`);
       currentMin += durationInMinutes;
     }
@@ -92,61 +143,68 @@ export default function BookingPage() {
   };
 
   // ✅ Updated to use sessionDurationMins from the selected variant or default
-  const timeSlots = (selectedVariant) 
-    ? generateTimeSlots(selectedVariant.sessionDurationMins) 
-    : (selectedService && selectedService.variants.length > 0) 
-        ? generateTimeSlots(selectedService.variants[0].sessionDurationMins) 
-        : [];
+  const timeSlots = selectedVariant
+    ? generateTimeSlots(selectedVariant.sessionDurationMins)
+    : selectedService && selectedService.variants.length > 0
+      ? generateTimeSlots(selectedService.variants[0].sessionDurationMins)
+      : [];
 
   const isSlotBooked = (time: string, dateStr: string) => {
     if (!dateStr) return false;
     const slotDate = new Date(dateStr);
-    const [hours, minutes] = time.split(':').map(Number);
+    const [hours, minutes] = time.split(":").map(Number);
     slotDate.setHours(hours, minutes, 0, 0);
     return slotDate.getTime() < Date.now();
   };
 
   let maxAvailableSessions = 1;
   if (selectedTime && selectedDate && timeSlots.length > 0) {
-      const startIndex = timeSlots.indexOf(selectedTime);
-      let continuousAvailable = 0;
-      for (let i = startIndex; i < timeSlots.length; i++) {
-          const time = timeSlots[i];
-          if (isSlotBooked(time, selectedDate)) break;
-          continuousAvailable++;
-      }
-      maxAvailableSessions = continuousAvailable > 0 ? continuousAvailable : 1;
+    const startIndex = timeSlots.indexOf(selectedTime);
+    let continuousAvailable = 0;
+    for (let i = startIndex; i < timeSlots.length; i++) {
+      const time = timeSlots[i];
+      if (isSlotBooked(time, selectedDate)) break;
+      continuousAvailable++;
+    }
+    maxAvailableSessions = continuousAvailable > 0 ? continuousAvailable : 1;
   }
 
   // Auto-select Date & Time
   useEffect(() => {
-      if (configStep === 5 && selectedVariant && !selectedDate && timeSlots.length > 0) {
-          const today = new Date();
-          const todayStr = today.toISOString().split("T")[0];
-          
-          let availableTime = null;
-          for (const t of timeSlots) {
-               if (!isSlotBooked(t, todayStr)) {
-                   availableTime = t;
-                   break;
-               }
-          }
+    if (
+      configStep === 5 &&
+      selectedVariant &&
+      !selectedDate &&
+      timeSlots.length > 0
+    ) {
+      const today = new Date();
+      const todayStr = today.toISOString().split("T")[0];
 
-          if (availableTime) {
-              setSelectedDate(todayStr);
-              setSelectedTime(availableTime);
-          } else {
-              const tomorrow = new Date(Date.now() + 86400000);
-              const tmrStr = tomorrow.toISOString().split("T")[0];
-              setSelectedDate(tmrStr);
-              setSelectedTime(timeSlots[0]);
-          }
+      let availableTime = null;
+      for (const t of timeSlots) {
+        if (!isSlotBooked(t, todayStr)) {
+          availableTime = t;
+          break;
+        }
       }
+
+      if (availableTime) {
+        setSelectedDate(todayStr);
+        setSelectedTime(availableTime);
+      } else {
+        const tomorrow = new Date(Date.now() + 86400000);
+        const tmrStr = tomorrow.toISOString().split("T")[0];
+        setSelectedDate(tmrStr);
+        setSelectedTime(timeSlots[0]);
+      }
+    }
   }, [configStep, selectedVariant, selectedDate, timeSlots]);
 
   useEffect(() => {
     if (selectedDate && selectedTime) {
-      setValue("bookingDate", `${selectedDate}T${selectedTime}`, { shouldValidate: true });
+      setValue("bookingDate", `${selectedDate}T${selectedTime}`, {
+        shouldValidate: true,
+      });
     } else {
       setValue("bookingDate", "");
     }
@@ -176,7 +234,7 @@ export default function BookingPage() {
       gsap.fromTo(
         containerRef.current,
         { opacity: 0, y: 30 },
-        { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }
+        { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" },
       );
     }
   }, []);
@@ -186,7 +244,7 @@ export default function BookingPage() {
     try {
       const data = await getStudioBySlug(slug);
       setStudio(data);
-      const allServices = data.categories.flatMap(c => c.services);
+      const allServices = data.categories.flatMap((c) => c.services);
       setServices(allServices);
       setValue("selectedServiceId", "");
       setValue("selectedAddonIds", []);
@@ -206,26 +264,51 @@ export default function BookingPage() {
 
       if (currentStep === 1) {
         if (configStep === 1) {
-          if (!selectedStudioId) { toast.error("Please select a location."); return; }
+          if (!selectedStudioId) {
+            toast.error("Please select a location.");
+            return;
+          }
           setConfigStep(2);
           return;
         } else if (configStep === 2) {
-          if (!selectedOccasionType) { toast.error("Please select an occasion."); return; }
+          if (!selectedOccasionType) {
+            toast.error("Please select an occasion.");
+            return;
+          }
           setConfigStep(3);
           return;
         } else if (configStep === 3) {
-          if (!selectedServiceId) { toast.error("Please select a package."); return; }
-          const visibleVariants = selectedService?.variants.filter((v: ServiceVariantOutput) => v.locationType.toUpperCase() !== "BOTH") || [];
+          if (!selectedServiceId) {
+            toast.error("Please select a package.");
+            return;
+          }
+          const visibleVariants =
+            selectedService?.variants.filter(
+              (v: ServiceVariantOutput) =>
+                v.locationType.toUpperCase() !== "BOTH",
+            ) || [];
           if (visibleVariants.length <= 1) setConfigStep(5);
           else setConfigStep(4);
           return;
         } else if (configStep === 4) {
-          if (!selectedVariantId) { toast.error("Please select a shoot location."); return; }
+          if (!selectedVariantId) {
+            toast.error("Please select a shoot location.");
+            return;
+          }
           setConfigStep(5);
           return;
         } else if (configStep === 5) {
-          if (!selectedDate || !selectedTime) { toast.error("Please select both a date and a time."); return; }
-          ok = await trigger(["studioId", "selectedServiceId", "selectedVariantId", "bookingDate", "selectedAddonIds"]);
+          if (!selectedDate || !selectedTime) {
+            toast.error("Please select both a date and a time.");
+            return;
+          }
+          ok = await trigger([
+            "studioId",
+            "selectedServiceId",
+            "selectedVariantId",
+            "bookingDate",
+            "selectedAddonIds",
+          ]);
         }
       } else if (currentStep === 2) {
         ok = await trigger(["clientName", "clientEmail", "clientPhone"]);
@@ -242,7 +325,11 @@ export default function BookingPage() {
           if (formRef.current) {
             window.scrollTo({ top: 0, behavior: "smooth" });
           }
-          gsap.fromTo(formRef.current, { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" });
+          gsap.fromTo(
+            formRef.current,
+            { opacity: 0, x: 20 },
+            { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" },
+          );
         },
       });
     } else {
@@ -259,7 +346,7 @@ export default function BookingPage() {
         }
         return;
       }
-      
+
       gsap.to(formRef.current, {
         opacity: 0,
         x: 20,
@@ -269,20 +356,26 @@ export default function BookingPage() {
           if (formRef.current) {
             window.scrollTo({ top: 0, behavior: "smooth" });
           }
-          gsap.fromTo(formRef.current, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" });
+          gsap.fromTo(
+            formRef.current,
+            { opacity: 0, x: -20 },
+            { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" },
+          );
         },
       });
     }
   };
 
-    const onSubmit = async (data: PublicBookingInput) => {
+  const onSubmit = async (data: PublicBookingInput) => {
     try {
       setIsSubmitting(true);
-      
+
       const finalNotes = [
-          selectedOccasionLabel ? `Occasion: ${selectedOccasionLabel}` : "",
-          data.notes ? `Notes: ${data.notes}` : ""
-      ].filter(Boolean).join("\n\n");
+        selectedOccasionLabel ? `Occasion: ${selectedOccasionLabel}` : "",
+        data.notes ? `Notes: ${data.notes}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
 
       const result = await createPublicBooking({
         ...data,
@@ -292,9 +385,9 @@ export default function BookingPage() {
       if (result && result.bookingId) {
         toast.success("Booking created! Redirecting to payment...");
         if (result.reference) {
-           router.push(`/pay/${result.reference}`);
+          router.push(`/pay/${result.reference}`);
         } else {
-           router.push(`/booking/${result.bookingId}/deliverables`);
+          router.push(`/booking/${result.bookingId}/deliverables`);
         }
       } else {
         toast.error("Failed to submit booking");
@@ -309,17 +402,31 @@ export default function BookingPage() {
 
   const renderStepContent = () => {
     switch (currentStep) {
-                  case 1: {
-        const selectedCategory = studio?.categories?.find(c => c.services.some(s => s.id === selectedServiceId));
-        const categoryAddons = studio?.addons?.filter((s: PublicServiceOutput & { isActive?: boolean }) => s.category === selectedCategory?.id && s.isActive !== false) || [];
+      case 1: {
+        const selectedCategory = studio?.categories?.find((c) =>
+          c.services.some((s) => s.id === selectedServiceId),
+        );
+        const categoryAddons =
+          studio?.addons?.filter(
+            (s: PublicServiceOutput & { isActive?: boolean }) =>
+              s.category === selectedCategory?.id && s.isActive !== false,
+          ) || [];
 
         const occasionAnswers = [
           { label: "Birthday", mappedCategory: "PHOTOGRAPHY", icon: "🎂" },
           { label: "Wedding", mappedCategory: "VIDEOGRAPHY", icon: "💍" },
           { label: "Event", mappedCategory: "VIDEOGRAPHY", icon: "🎊" },
-          { label: "Graduation / Matriculation", mappedCategory: "PHOTOGRAPHY", icon: "🎓" },
-          { label: "Personal Shoot", mappedCategory: "PHOTOGRAPHY", icon: "📸" },
-          { label: "Other", mappedCategory: "OTHERS", icon: "✨" }
+          {
+            label: "Graduation / Matriculation",
+            mappedCategory: "PHOTOGRAPHY",
+            icon: "🎓",
+          },
+          {
+            label: "Personal Shoot",
+            mappedCategory: "PHOTOGRAPHY",
+            icon: "📸",
+          },
+          { label: "Other", mappedCategory: "OTHERS", icon: "✨" },
         ];
 
         return (
@@ -331,13 +438,17 @@ export default function BookingPage() {
                   <Label className="text-2xl font-bold font-heading text-foreground">
                     Select a location close to you
                   </Label>
-                  <p className="text-sm text-muted-foreground mt-2">Pick the studio nearest to you.</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Pick the studio nearest to you.
+                  </p>
                 </div>
                 {studiosList.length === 0 ? (
-                  <p className="text-muted-foreground">No studios available at the moment.</p>
+                  <p className="text-muted-foreground">
+                    No studios available at the moment.
+                  </p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {studiosList.map((s: typeof studiosList[number]) => (
+                    {studiosList.map((s: (typeof studiosList)[number]) => (
                       <div
                         key={s.id}
                         onClick={() => {
@@ -349,13 +460,18 @@ export default function BookingPage() {
                           "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 flex flex-col justify-center gap-4 group hover:-translate-y-1 hover:shadow-lg active:scale-[0.98]",
                           selectedStudioId === s.id
                             ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1 shadow-md"
-                            : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5"
+                            : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5",
                         )}
                       >
                         <div className="flex items-center gap-4">
                           {s.logo ? (
                             <div className="w-14 h-14 rounded-full overflow-hidden border shadow-sm shrink-0 relative group-hover:scale-105 transition-transform">
-                              <Image src={`${process.env.NEXT_PUBLIC_R2_PUBLIC_URL || ""}/${s.logo}`} alt={s.name} fill className="object-cover" />
+                              <Image
+                                src={`${process.env.NEXT_PUBLIC_R2_PUBLIC_URL || ""}/${s.logo}`}
+                                alt={s.name}
+                                fill
+                                className="object-cover"
+                              />
                             </div>
                           ) : (
                             <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
@@ -363,14 +479,18 @@ export default function BookingPage() {
                             </div>
                           )}
                           <div className="flex-1">
-                            <h4 className="font-bold text-lg font-heading group-hover:text-primary transition-colors">{s.name}</h4>
+                            <h4 className="font-bold text-lg font-heading group-hover:text-primary transition-colors">
+                              {s.name}
+                            </h4>
                             <p className="text-sm text-muted-foreground line-clamp-1 mt-0.5">
                               {s.metadata?.address ? (
                                 <span className="flex items-center gap-1">
-                                  <MapPin className="w-3 h-3" /> {(s.metadata.address as string)}
+                                  <MapPin className="w-3 h-3" />{" "}
+                                  {s.metadata.address as string}
                                 </span>
                               ) : (
-                                (s.metadata?.description as string) || "Select this location"
+                                (s.metadata?.description as string) ||
+                                "Select this location"
                               )}
                             </p>
                           </div>
@@ -382,7 +502,11 @@ export default function BookingPage() {
                     ))}
                   </div>
                 )}
-                {errors.studioId && <p className="text-destructive text-sm">{errors.studioId.message}</p>}
+                {errors.studioId && (
+                  <p className="text-destructive text-sm">
+                    {errors.studioId.message}
+                  </p>
+                )}
               </div>
             )}
 
@@ -393,9 +517,12 @@ export default function BookingPage() {
                   <Label className="text-2xl font-bold font-heading text-foreground">
                     What is the occasion?
                   </Label>
-                  <p className="text-sm text-muted-foreground mt-2">Let us know what you&apos;re celebrating so we can tailor the experience.</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Let us know what you&apos;re celebrating so we can tailor
+                    the experience.
+                  </p>
                 </div>
-                
+
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {occasionAnswers.map((answer) => (
                     <div
@@ -406,11 +533,15 @@ export default function BookingPage() {
                         setConfigStep(3);
                       }}
                       className={cn(
-                        "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 group hover:-translate-y-1 hover:border-primary/50 hover:bg-primary/5 flex flex-col items-center justify-center gap-3 bg-card hover:shadow-lg active:scale-[0.98]"
+                        "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 group hover:-translate-y-1 hover:border-primary/50 hover:bg-primary/5 flex flex-col items-center justify-center gap-3 bg-card hover:shadow-lg active:scale-[0.98]",
                       )}
                     >
-                      <span className="text-4xl group-hover:scale-110 transition-transform duration-300">{answer.icon}</span>
-                      <span className="font-semibold text-center group-hover:text-primary transition-colors">{answer.label}</span>
+                      <span className="text-4xl group-hover:scale-110 transition-transform duration-300">
+                        {answer.icon}
+                      </span>
+                      <span className="font-semibold text-center group-hover:text-primary transition-colors">
+                        {answer.label}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -424,160 +555,277 @@ export default function BookingPage() {
                   <Label className="text-2xl font-bold font-heading text-foreground">
                     Select a package
                   </Label>
-                  <p className="text-sm text-muted-foreground mt-2">Choose the perfect package for your session.</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Choose the perfect package for your session.
+                  </p>
                 </div>
 
                 {isLoadingServices ? (
                   <div className="flex flex-col items-center justify-center py-16 gap-4">
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                    <p className="text-muted-foreground text-sm">Loading available sessions…</p>
+                    <p className="text-muted-foreground text-sm">
+                      Loading available sessions…
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-8">
                     {(() => {
-                      const filteredCategories = selectedOccasionType === "Other"
-                        ? studio?.categories
-                        : studio?.categories?.filter((c: PublicCategoryOutput) => c.name.toLowerCase().includes(selectedOccasionType.toLowerCase()));
+                      const filteredCategories =
+                        selectedOccasionType === "Other"
+                          ? studio?.categories
+                          : studio?.categories?.filter(
+                              (c: PublicCategoryOutput) =>
+                                c.name
+                                  .toLowerCase()
+                                  .includes(selectedOccasionType.toLowerCase()),
+                            );
 
-                      const categoriesToDisplay = filteredCategories?.length ? filteredCategories : studio?.categories;
-                      
-                      const allServices = categoriesToDisplay?.flatMap((c: PublicCategoryOutput) => c.services.filter((s: PublicServiceOutput & { isActive?: boolean }) => !s.isAddon && s.isActive !== false)) || [];
-                      
-                      if (allServices.length === 0) return <p className="text-muted-foreground">No services found for this selection.</p>;
-                      
+                      const categoriesToDisplay = filteredCategories?.length
+                        ? filteredCategories
+                        : studio?.categories;
+
+                      const allServices =
+                        categoriesToDisplay?.flatMap(
+                          (c: PublicCategoryOutput) =>
+                            c.services.filter(
+                              (
+                                s: PublicServiceOutput & { isActive?: boolean },
+                              ) => !s.isAddon && s.isActive !== false,
+                            ),
+                        ) || [];
+
+                      if (allServices.length === 0)
+                        return (
+                          <p className="text-muted-foreground">
+                            No services found for this selection.
+                          </p>
+                        );
+
                       return (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {allServices.map((service: PublicServiceOutput & { isActive?: boolean }) => {
-                            const isSelected = selectedServiceId === service.id;
-                            return (
-                              <div
-                                key={service.id}
-                                onClick={() => {
-                                  setValue("selectedServiceId", service.id, { shouldValidate: true });
-                                  setValue("selectedAddonIds", []);
-                                  setSelectedDate("");
-                                  setSelectedTime("");
-                                  const visibleVariants = service.variants.filter(v => v.locationType.toUpperCase() !== "BOTH");
-                                  
-                                  if (visibleVariants.length === 1) {
-                                    setValue("selectedVariantId", visibleVariants[0].id, { shouldValidate: true });
-                                    setConfigStep(5);
-                                  } else {
-                                    setValue("selectedVariantId", "", { shouldValidate: false });
-                                    setConfigStep(4);
-                                  }
-                                }}
-                                className={cn(
-                                  "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 group overflow-hidden flex flex-col justify-center min-h-[120px] hover:-translate-y-1 hover:shadow-lg active:scale-[0.98]",
-                                  isSelected ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1 shadow-md" : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5"
-                                )}
-                              >
-                                {isSelected && <CheckCircle2 className="absolute top-4 right-4 w-5 h-5 text-primary" />}
-                                <div className="pr-8">
-                                  <h4 className="font-heading font-bold text-lg leading-snug">
-            {service.name}
-            {service.discountPercentage && service.discountPercentage > 0 ? (
-                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-500/20 text-green-600 uppercase tracking-wider align-middle">
-                    {service.discountPercentage}% OFF
-                </span>
-            ) : null}
-        </h4>
-                                  {service.description && <p className="text-sm text-muted-foreground mt-2 line-clamp-2 leading-relaxed">{service.description}</p>}
-                                  {service.features && service.features.length > 0 && (
-                                    <ul className="mt-3 space-y-1">
-                                      {service.features.map((feature: string, idx: number) => (
-                                        <li key={idx} className="text-xs text-muted-foreground flex items-center gap-1.5">
-                                          <div className="w-1 h-1 rounded-full bg-primary/50 shrink-0" />
-                                          <span className="line-clamp-1">{feature}</span>
-                                        </li>
-                                      ))}
-                                    </ul>
+                          {allServices.map(
+                            (
+                              service: PublicServiceOutput & {
+                                isActive?: boolean;
+                              },
+                            ) => {
+                              const isSelected =
+                                selectedServiceId === service.id;
+                              return (
+                                <div
+                                  key={service.id}
+                                  onClick={() => {
+                                    setValue("selectedServiceId", service.id, {
+                                      shouldValidate: true,
+                                    });
+                                    setValue("selectedAddonIds", []);
+                                    setSelectedDate("");
+                                    setSelectedTime("");
+                                    const visibleVariants =
+                                      service.variants.filter(
+                                        (v) =>
+                                          v.locationType.toUpperCase() !==
+                                          "BOTH",
+                                      );
+
+                                    if (visibleVariants.length === 1) {
+                                      setValue(
+                                        "selectedVariantId",
+                                        visibleVariants[0].id,
+                                        { shouldValidate: true },
+                                      );
+                                      setConfigStep(5);
+                                    } else {
+                                      setValue("selectedVariantId", "", {
+                                        shouldValidate: false,
+                                      });
+                                      setConfigStep(4);
+                                    }
+                                  }}
+                                  className={cn(
+                                    "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 group overflow-hidden flex flex-col justify-center min-h-30 hover:-translate-y-1 hover:shadow-lg active:scale-[0.98]",
+                                    isSelected
+                                      ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1 shadow-md"
+                                      : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5",
                                   )}
+                                >
+                                  {isSelected && (
+                                    <CheckCircle2 className="absolute top-4 right-4 w-5 h-5 text-primary" />
+                                  )}
+                                  <div className="pr-8">
+                                    <h4 className="font-heading font-bold text-lg leading-snug">
+                                      {service.name}
+                                      {service.discountPercentage &&
+                                      service.discountPercentage > 0 ? (
+                                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-500/20 text-green-600 uppercase tracking-wider align-middle">
+                                          {service.discountPercentage}% OFF
+                                        </span>
+                                      ) : null}
+                                    </h4>
+                                    {service.description && (
+                                      <p className="text-sm text-muted-foreground mt-2 line-clamp-2 leading-relaxed">
+                                        {service.description}
+                                      </p>
+                                    )}
+                                    {service.features &&
+                                      service.features.length > 0 && (
+                                        <ul className="mt-3 space-y-1">
+                                          {service.features.map(
+                                            (feature: string, idx: number) => (
+                                              <li
+                                                key={idx}
+                                                className="text-xs text-muted-foreground flex items-center gap-1.5"
+                                              >
+                                                <div className="w-1 h-1 rounded-full bg-primary/50 shrink-0" />
+                                                <span className="line-clamp-1">
+                                                  {feature}
+                                                </span>
+                                              </li>
+                                            ),
+                                          )}
+                                        </ul>
+                                      )}
+                                  </div>
+                                  <div className="absolute top-1/2 right-4 -translate-y-1/2 text-muted-foreground opacity-30 group-hover:opacity-100 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300">
+                                    <ChevronRight className="w-6 h-6" />
+                                  </div>
                                 </div>
-                                <div className="absolute top-1/2 right-4 -translate-y-1/2 text-muted-foreground opacity-30 group-hover:opacity-100 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300">
-                                  <ChevronRight className="w-6 h-6" />
-                                </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            },
+                          )}
                         </div>
                       );
                     })()}
                   </div>
                 )}
-                {errors.selectedServiceId && <p className="text-destructive text-sm">{errors.selectedServiceId.message}</p>}
+                {errors.selectedServiceId && (
+                  <p className="text-destructive text-sm">
+                    {errors.selectedServiceId.message}
+                  </p>
+                )}
               </div>
             )}
 
             {/* ─── CONFIG STEP 4: LOCATION TOGGLE ─── */}
-            {configStep === 4 && selectedService && selectedService.variants.filter((v: ServiceVariantOutput) => v.locationType.toUpperCase() !== "BOTH").length > 1 && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-300">
-                <div className="mb-8">
-                  <Label className="text-2xl font-bold font-heading text-foreground">
-                    Where would you like to snap?
-                  </Label>
-                  <p className="text-sm text-muted-foreground mt-2">Select your preferred location type for this session.</p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  {selectedService.variants
-                    .filter((v: ServiceVariantOutput) => v.locationType.toUpperCase() !== "BOTH")
-                    .sort((a: ServiceVariantOutput, b: ServiceVariantOutput) => {
-                       const aIsStudio = a.locationType.toUpperCase() === 'STUDIO';
-                       const bIsStudio = b.locationType.toUpperCase() === 'STUDIO';
-                       if (aIsStudio && !bIsStudio) return -1;
-                       if (!aIsStudio && bIsStudio) return 1;
-                       return 0;
-                    })
-                    .map((variant: ServiceVariantOutput) => {
-                    const isSelectedV = selectedVariantId === variant.id;
-                    const locationMeta: Record<string, { label: string; icon: string }> = {
-                      STUDIO:   { label: "Studio",          icon: "🏢" },
-                      OUTDOOR:  { label: "Outdoor",         icon: "🌿" },
-                      BOTH:     { label: "Studio & Outdoor", icon: "✨" },
-                      MULTIPLE: { label: "Multiple Locations", icon: "📍" },
-                    };
-                    const meta = locationMeta[variant.locationType] ?? { label: variant.locationType, icon: "📷" };
+            {configStep === 4 &&
+              selectedService &&
+              selectedService.variants.filter(
+                (v: ServiceVariantOutput) =>
+                  v.locationType.toUpperCase() !== "BOTH",
+              ).length > 1 && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-300">
+                  <div className="mb-8">
+                    <Label className="text-2xl font-bold font-heading text-foreground">
+                      Where would you like to snap?
+                    </Label>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Select your preferred location type for this session.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    {selectedService.variants
+                      .filter(
+                        (v: ServiceVariantOutput) =>
+                          v.locationType.toUpperCase() !== "BOTH",
+                      )
+                      .sort(
+                        (a: ServiceVariantOutput, b: ServiceVariantOutput) => {
+                          const aIsStudio =
+                            a.locationType.toUpperCase() === "STUDIO";
+                          const bIsStudio =
+                            b.locationType.toUpperCase() === "STUDIO";
+                          if (aIsStudio && !bIsStudio) return -1;
+                          if (!aIsStudio && bIsStudio) return 1;
+                          return 0;
+                        },
+                      )
+                      .map((variant: ServiceVariantOutput) => {
+                        const isSelectedV = selectedVariantId === variant.id;
+                        const locationMeta: Record<
+                          string,
+                          { label: string; icon: string }
+                        > = {
+                          STUDIO: { label: "Studio", icon: "🏢" },
+                          OUTDOOR: { label: "Outdoor", icon: "🌿" },
+                          BOTH: { label: "Studio & Outdoor", icon: "✨" },
+                          MULTIPLE: { label: "Multiple Locations", icon: "📍" },
+                        };
+                        const meta = locationMeta[variant.locationType] ?? {
+                          label: variant.locationType,
+                          icon: "📷",
+                        };
 
-                    return (
-                      <div
-                        key={variant.id}
-                        onClick={() => {
-                          setValue("selectedVariantId", variant.id, { shouldValidate: true });
-                          setConfigStep(5);
-                        }}
-                        className={cn(
-                          "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 group hover:-translate-y-1 hover:shadow-lg active:scale-[0.98] flex flex-col",
-                          isSelectedV ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1 shadow-md" : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5"
-                        )}
-                      >
-                        {isSelectedV && <CheckCircle2 className="absolute top-4 right-4 w-5 h-5 text-primary" />}
-                        <div className="text-3xl mb-3">{meta.icon}</div>
-                        <p className="font-semibold text-base">{meta.label}</p>
-                        <p className="text-primary font-bold mt-1 text-sm">₦{Number(variant.basePrice).toLocaleString("en-NG")}</p>
-                        
-                        {variant.deliverables && variant.deliverables.length > 0 && (
-                          <div className="mt-4 pt-4 border-t border-border/50">
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2">Deliverables</p>
-                            <ul className="space-y-1.5">
-                              {variant.deliverables.map((d: ServiceDeliverableOutput, idx: number) => (
-                                <li key={idx} className="text-sm flex items-start gap-1.5 text-muted-foreground/80">
-                                  <div className="w-1 h-1 rounded-full bg-primary/50 shrink-0 mt-1.5" />
-                                  <span className="line-clamp-2">
-                                    {d.quantity ? `${d.quantity}x ` : ""}{d.label}
-                                    {d.detail ? ` (${d.detail})` : ""}
-                                  </span>
-                                </li>
-                              ))}
-                            </ul>
+                        return (
+                          <div
+                            key={variant.id}
+                            onClick={() => {
+                              setValue("selectedVariantId", variant.id, {
+                                shouldValidate: true,
+                              });
+                              setConfigStep(5);
+                            }}
+                            className={cn(
+                              "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 group hover:-translate-y-1 hover:shadow-lg active:scale-[0.98] flex flex-col",
+                              isSelectedV
+                                ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1 shadow-md"
+                                : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5",
+                            )}
+                          >
+                            {isSelectedV && (
+                              <CheckCircle2 className="absolute top-4 right-4 w-5 h-5 text-primary" />
+                            )}
+                            <div className="text-3xl mb-3">{meta.icon}</div>
+                            <p className="font-semibold text-base">
+                              {meta.label}
+                            </p>
+                            <p className="text-primary font-bold mt-1 text-sm">
+                              ₦
+                              {Number(variant.basePrice).toLocaleString(
+                                "en-NG",
+                              )}
+                            </p>
+
+                            {variant.deliverables &&
+                              variant.deliverables.length > 0 && (
+                                <div className="mt-4 pt-4 border-t border-border/50">
+                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2">
+                                    Deliverables
+                                  </p>
+                                  <ul className="space-y-1.5">
+                                    {variant.deliverables.map(
+                                      (
+                                        d: ServiceDeliverableOutput,
+                                        idx: number,
+                                      ) => (
+                                        <li
+                                          key={idx}
+                                          className="text-sm flex items-start gap-1.5 text-muted-foreground/80"
+                                        >
+                                          <div className="w-1 h-1 rounded-full bg-primary/50 shrink-0 mt-1.5" />
+                                          <span className="line-clamp-2">
+                                            {d.quantity
+                                              ? `${d.quantity}x `
+                                              : ""}
+                                            {d.label}
+                                            {d.detail ? ` (${d.detail})` : ""}
+                                          </span>
+                                        </li>
+                                      ),
+                                    )}
+                                  </ul>
+                                </div>
+                              )}
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                  </div>
+                  {errors.selectedVariantId && (
+                    <p className="text-destructive text-sm">
+                      {errors.selectedVariantId.message}
+                    </p>
+                  )}
                 </div>
-                {errors.selectedVariantId && <p className="text-destructive text-sm">{errors.selectedVariantId.message}</p>}
-              </div>
-            )}
+              )}
 
             {/* ─── CONFIG STEP 5: SESSION CONFIG ─── */}
             {configStep === 5 && selectedVariant && (
@@ -586,74 +834,112 @@ export default function BookingPage() {
                   <Label className="text-2xl font-bold font-heading text-foreground">
                     Configure your session
                   </Label>
-                  <p className="text-sm text-muted-foreground mt-2">Personalize your outfits, add-ons, and choose a date.</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Personalize your outfits, add-ons, and choose a date.
+                  </p>
                 </div>
 
                 <div className="p-5 rounded-2xl bg-primary/5 border border-primary/20 flex flex-col gap-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Price per session</p>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                        Price per session
+                      </p>
                       <p className="text-2xl font-bold text-primary mt-1">
-                        ₦{Number(selectedVariant.basePrice).toLocaleString("en-NG")}
+                        ₦
+                        {Number(selectedVariant.basePrice).toLocaleString(
+                          "en-NG",
+                        )}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Duration</p>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                        Duration
+                      </p>
                       <div className="flex items-center gap-1.5 justify-end mt-1">
                         <Clock className="w-5 h-5 text-primary" />
-                        <span className="font-semibold text-lg">{selectedVariant.sessionDurationMins}min</span>
+                        <span className="font-semibold text-lg">
+                          {selectedVariant.sessionDurationMins}min
+                        </span>
                       </div>
                     </div>
                   </div>
-                  {selectedVariant.deliverables && selectedVariant.deliverables.length > 0 && (
-                    <div className="pt-4 border-t border-primary/10">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-3">What&apos;s Included</p>
-                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {selectedVariant.deliverables.map((d: ServiceDeliverableOutput) => (
-                          <li key={d.id} className="text-sm flex items-start gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                            <div className="flex-1">
-                              <span className="font-medium text-foreground">{d.quantity ? `${d.quantity}x ` : ""}{d.label}</span>
-                              {d.detail && <span className="text-muted-foreground ml-1">({d.detail})</span>}
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                  {selectedVariant.deliverables &&
+                    selectedVariant.deliverables.length > 0 && (
+                      <div className="pt-4 border-t border-primary/10">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-3">
+                          What&apos;s Included
+                        </p>
+                        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {selectedVariant.deliverables.map(
+                            (d: ServiceDeliverableOutput) => (
+                              <li
+                                key={d.id}
+                                className="text-sm flex items-start gap-2"
+                              >
+                                <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                                <div className="flex-1">
+                                  <span className="font-medium text-foreground">
+                                    {d.quantity ? `${d.quantity}x ` : ""}
+                                    {d.label}
+                                  </span>
+                                  {d.detail && (
+                                    <span className="text-muted-foreground ml-1">
+                                      ({d.detail})
+                                    </span>
+                                  )}
+                                </div>
+                              </li>
+                            ),
+                          )}
+                        </ul>
+                      </div>
+                    )}
                 </div>
 
                 {/* Date & Time */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-border/50">
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium text-foreground uppercase tracking-wider">Select Date</Label>
+                    <Label className="text-sm font-medium text-foreground uppercase tracking-wider">
+                      Select Date
+                    </Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
                           variant={"outline"}
                           className={cn(
                             "w-full justify-start text-left font-normal h-12 rounded-xl bg-background border-input hover:border-primary/50",
-                            !selectedDate && "text-muted-foreground"
+                            !selectedDate && "text-muted-foreground",
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {selectedDate ? format(new Date(selectedDate), "PPP") : <span>Pick a date</span>}
+                          {selectedDate ? (
+                            format(new Date(selectedDate), "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={selectedDate ? new Date(selectedDate) : undefined}
+                          selected={
+                            selectedDate ? new Date(selectedDate) : undefined
+                          }
                           onSelect={(date) => {
                             if (date) {
-                                const offset = date.getTimezoneOffset();
-                                const localDate = new Date(date.getTime() - (offset*60*1000));
-                                const dStr = localDate.toISOString().split('T')[0];
-                                setSelectedDate(dStr);
-                                setSelectedTime("");
+                              const offset = date.getTimezoneOffset();
+                              const localDate = new Date(
+                                date.getTime() - offset * 60 * 1000,
+                              );
+                              const dStr = localDate
+                                .toISOString()
+                                .split("T")[0];
+                              setSelectedDate(dStr);
+                              setSelectedTime("");
                             } else {
-                                setSelectedDate("");
-                                setSelectedTime("");
+                              setSelectedDate("");
+                              setSelectedTime("");
                             }
                           }}
                           disabled={(date) => {
@@ -666,22 +952,43 @@ export default function BookingPage() {
                     </Popover>
                   </div>
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium text-foreground uppercase tracking-wider">Available Times</Label>
+                    <Label className="text-sm font-medium text-foreground uppercase tracking-wider">
+                      Available Times
+                    </Label>
                     <div className="grid grid-cols-3 gap-3">
                       {selectedDate ? (
-                        timeSlots.map(time => {
+                        timeSlots.map((time) => {
                           const isBooked = isSlotBooked(time, selectedDate);
                           return (
-                            <button key={time} type="button" disabled={isBooked} onClick={() => setSelectedTime(time)} className={cn("py-2.5 px-3 text-sm font-medium rounded-xl border transition-all", isBooked ? "bg-muted/50 text-muted-foreground opacity-40 cursor-not-allowed border-transparent" : selectedTime === time ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-card hover:border-primary/50 border-border")}>
+                            <button
+                              key={time}
+                              type="button"
+                              disabled={isBooked}
+                              onClick={() => setSelectedTime(time)}
+                              className={cn(
+                                "py-2.5 px-3 text-sm font-medium rounded-xl border transition-all",
+                                isBooked
+                                  ? "bg-muted/50 text-muted-foreground opacity-40 cursor-not-allowed border-transparent"
+                                  : selectedTime === time
+                                    ? "bg-primary text-primary-foreground border-primary shadow-md"
+                                    : "bg-card hover:border-primary/50 border-border",
+                              )}
+                            >
                               {time}
                             </button>
                           );
                         })
                       ) : (
-                        <div className="col-span-3 text-sm text-muted-foreground py-3 bg-muted/30 text-center rounded-xl border border-dashed border-border">Select a date to view times</div>
+                        <div className="col-span-3 text-sm text-muted-foreground py-3 bg-muted/30 text-center rounded-xl border border-dashed border-border">
+                          Select a date to view times
+                        </div>
                       )}
                     </div>
-                    {errors.bookingDate && <p className="text-destructive text-sm mt-2">{errors.bookingDate.message}</p>}
+                    {errors.bookingDate && (
+                      <p className="text-destructive text-sm mt-2">
+                        {errors.bookingDate.message}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -702,38 +1009,134 @@ export default function BookingPage() {
 
                     <div className="flex items-center gap-6">
                       <div className="flex items-center border border-border rounded-xl overflow-hidden bg-card shadow-sm">
-                        <button type="button" onClick={() => { const cur = watch("sessionCount") || 1; if (cur > 1) setValue("sessionCount", cur - 1, { shouldValidate: true }); }} className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors">−</button>
-                        <div className="w-14 h-12 flex items-center justify-center font-bold text-lg border-x border-border">{watch("sessionCount") || 1}</div>
-                        <button type="button" onClick={() => { const cur = watch("sessionCount") || 1; if (cur < maxAvailableSessions) setValue("sessionCount", cur + 1, { shouldValidate: true }); }} className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors">+</button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = watch("sessionCount") || 1;
+                            if (cur > 1)
+                              setValue("sessionCount", cur - 1, {
+                                shouldValidate: true,
+                              });
+                          }}
+                          className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors"
+                        >
+                          −
+                        </button>
+                        <div className="w-14 h-12 flex items-center justify-center font-bold text-lg border-x border-border">
+                          {watch("sessionCount") || 1}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = watch("sessionCount") || 1;
+                            if (cur < maxAvailableSessions)
+                              setValue("sessionCount", cur + 1, {
+                                shouldValidate: true,
+                              });
+                          }}
+                          className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors"
+                        >
+                          +
+                        </button>
                       </div>
                       <div>
-                        <p className="text-2xl font-bold text-primary">₦{(Number(selectedVariant.basePrice) * (watch("sessionCount") || 1)).toLocaleString("en-NG")}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{watch("sessionCount") || 1} outfit{(watch("sessionCount") || 1) !== 1 ? "s" : ""} · subtotal</p>
+                        <p className="text-2xl font-bold text-primary">
+                          ₦
+                          {(
+                            Number(selectedVariant.basePrice) *
+                            (watch("sessionCount") || 1)
+                          ).toLocaleString("en-NG")}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {watch("sessionCount") || 1} outfit
+                          {(watch("sessionCount") || 1) !== 1 ? "s" : ""} ·
+                          subtotal
+                        </p>
                       </div>
                     </div>
-                    {!selectedTime && <p className="text-xs text-muted-foreground/70">Select a time slot above to unlock the maximum available outfits.</p>}
-                    {errors.sessionCount && <p className="text-destructive text-sm">{errors.sessionCount.message}</p>}
+                    {!selectedTime && (
+                      <p className="text-xs text-muted-foreground/70">
+                        Select a time slot above to unlock the maximum available
+                        outfits.
+                      </p>
+                    )}
+                    {errors.sessionCount && (
+                      <p className="text-destructive text-sm">
+                        {errors.sessionCount.message}
+                      </p>
+                    )}
                   </div>
 
                   {/* Extra Pictures Stepper */}
-                  {selectedService?.variants?.find((v: ServiceVariantOutput) => v.locationType.toUpperCase() === "BOTH") && (
+                  {selectedService?.variants?.find(
+                    (v: ServiceVariantOutput) =>
+                      v.locationType.toUpperCase() === "BOTH",
+                  ) && (
                     <div className="space-y-4">
                       <Label className="text-sm font-medium text-foreground uppercase tracking-wider block mb-4">
-                        How many extra pictures? <span className="ml-2 text-xs normal-case font-normal text-muted-foreground/60">(optional)</span>
+                        How many extra pictures?{" "}
+                        <span className="ml-2 text-xs normal-case font-normal text-muted-foreground/60">
+                          (optional)
+                        </span>
                       </Label>
 
                       <div className="flex items-center gap-6">
                         <div className="flex items-center border border-border rounded-xl overflow-hidden bg-card shadow-sm">
-                          <button type="button" onClick={() => { const cur = watch("extraPicturesCount") || 0; if (cur > 0) setValue("extraPicturesCount", cur - 1, { shouldValidate: true }); }} className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors">−</button>
-                          <div className="w-14 h-12 flex items-center justify-center font-bold text-lg border-x border-border">{watch("extraPicturesCount") || 0}</div>
-                          <button type="button" onClick={() => { const cur = watch("extraPicturesCount") || 0; setValue("extraPicturesCount", cur + 1, { shouldValidate: true }); }} className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors">+</button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const cur = watch("extraPicturesCount") || 0;
+                              if (cur > 0)
+                                setValue("extraPicturesCount", cur - 1, {
+                                  shouldValidate: true,
+                                });
+                            }}
+                            className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors"
+                          >
+                            −
+                          </button>
+                          <div className="w-14 h-12 flex items-center justify-center font-bold text-lg border-x border-border">
+                            {watch("extraPicturesCount") || 0}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const cur = watch("extraPicturesCount") || 0;
+                              setValue("extraPicturesCount", cur + 1, {
+                                shouldValidate: true,
+                              });
+                            }}
+                            className="w-12 h-12 flex items-center justify-center text-xl font-bold hover:bg-muted/50 transition-colors"
+                          >
+                            +
+                          </button>
                         </div>
                         <div>
-                          <p className="text-2xl font-bold text-primary">₦{(Number(selectedService?.variants?.find((v: ServiceVariantOutput) => v.locationType.toUpperCase() === "BOTH")?.basePrice || 0) * (watch("extraPicturesCount") || 0)).toLocaleString("en-NG")}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">{watch("extraPicturesCount") || 0} extra picture{(watch("extraPicturesCount") || 0) !== 1 ? "s" : ""} · subtotal</p>
+                          <p className="text-2xl font-bold text-primary">
+                            ₦
+                            {(
+                              Number(
+                                selectedService?.variants?.find(
+                                  (v: ServiceVariantOutput) =>
+                                    v.locationType.toUpperCase() === "BOTH",
+                                )?.basePrice || 0,
+                              ) * (watch("extraPicturesCount") || 0)
+                            ).toLocaleString("en-NG")}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {watch("extraPicturesCount") || 0} extra picture
+                            {(watch("extraPicturesCount") || 0) !== 1
+                              ? "s"
+                              : ""}{" "}
+                            · subtotal
+                          </p>
                         </div>
                       </div>
-                      {errors.extraPicturesCount && <p className="text-destructive text-sm">{errors.extraPicturesCount.message}</p>}
+                      {errors.extraPicturesCount && (
+                        <p className="text-destructive text-sm">
+                          {errors.extraPicturesCount.message}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -742,95 +1145,127 @@ export default function BookingPage() {
                 {categoryAddons.length > 0 && (
                   <div className="space-y-4 pt-6 border-t border-border/50">
                     <Label className="text-sm font-medium text-foreground uppercase tracking-wider">
-                      Enhance Your Session <span className="ml-2 text-xs normal-case font-normal text-muted-foreground/60">(optional)</span>
+                      Enhance Your Session{" "}
+                      <span className="ml-2 text-xs normal-case font-normal text-muted-foreground/60">
+                        (optional)
+                      </span>
                     </Label>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {categoryAddons.flatMap((addon: PublicServiceOutput) =>
-                        addon.variants
-                          .map((variant: ServiceVariantOutput) => {
-                            const compositeId = `${addon.id}:${variant.id}`;
-                            const count = selectedAddonIds.filter(id => id === compositeId).length;
-                            return (
-                              <div
-                                key={compositeId}
-                                onClick={() => {
-                                  if (count === 0) {
-                                    const newArr = selectedAddonIds.filter(id => !id.startsWith(`${addon.id}:`));
-                                    setValue("selectedAddonIds", [...newArr, compositeId]);
-                                  }
-                                }}
-                                className={cn(
-                                  "relative p-4 rounded-2xl border cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-md active:scale-[0.98] group flex flex-col justify-center",
-                                  count > 0 ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1" : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5"
-                                )}
-                              >
-                                <div className="flex justify-between items-center">
-                                  <div>
-                                    <span className="font-semibold text-base block">
-            {addon.name}
-            {addon.discountPercentage && addon.discountPercentage > 0 ? (
-                <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-500/20 text-green-600 uppercase tracking-wider align-middle">
-                    {addon.discountPercentage}% OFF
-                </span>
-            ) : null}
-        </span>
-                                    {addon.variants.length > 1 && (
-                                       <span className="text-xs text-muted-foreground uppercase tracking-wider block mt-0.5">{variant.locationType}</span>
-                                    )}
-                                    <span className="text-sm font-bold text-primary mt-1 block">+₦{Number(variant.basePrice || 0).toLocaleString("en-NG")}</span>
-                                  </div>
-                                  
-                                  {count === 0 ? (
-                                    <button 
-                                      type="button" 
+                        addon.variants.map((variant: ServiceVariantOutput) => {
+                          const compositeId = `${addon.id}:${variant.id}`;
+                          const count = selectedAddonIds.filter(
+                            (id) => id === compositeId,
+                          ).length;
+                          return (
+                            <div
+                              key={compositeId}
+                              onClick={() => {
+                                if (count === 0) {
+                                  const newArr = selectedAddonIds.filter(
+                                    (id) => !id.startsWith(`${addon.id}:`),
+                                  );
+                                  setValue("selectedAddonIds", [
+                                    ...newArr,
+                                    compositeId,
+                                  ]);
+                                }
+                              }}
+                              className={cn(
+                                "relative p-4 rounded-2xl border cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-md active:scale-[0.98] group flex flex-col justify-center",
+                                count > 0
+                                  ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1"
+                                  : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5",
+                              )}
+                            >
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <span className="font-semibold text-base block">
+                                    {addon.name}
+                                    {addon.discountPercentage &&
+                                    addon.discountPercentage > 0 ? (
+                                      <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-500/20 text-green-600 uppercase tracking-wider align-middle">
+                                        {addon.discountPercentage}% OFF
+                                      </span>
+                                    ) : null}
+                                  </span>
+                                  {addon.variants.length > 1 && (
+                                    <span className="text-xs text-muted-foreground uppercase tracking-wider block mt-0.5">
+                                      {variant.locationType}
+                                    </span>
+                                  )}
+                                  <span className="text-sm font-bold text-primary mt-1 block">
+                                    +₦
+                                    {Number(
+                                      variant.basePrice || 0,
+                                    ).toLocaleString("en-NG")}
+                                  </span>
+                                </div>
+
+                                {count === 0 ? (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const newArr = selectedAddonIds.filter(
+                                        (id) => !id.startsWith(`${addon.id}:`),
+                                      );
+                                      setValue("selectedAddonIds", [
+                                        ...newArr,
+                                        compositeId,
+                                      ]);
+                                    }}
+                                    className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors group-hover:border-primary/50 group-hover:bg-primary/10 group-hover:text-primary"
+                                  >
+                                    +
+                                  </button>
+                                ) : (
+                                  <div
+                                    className="flex items-center gap-3 bg-background border border-border rounded-full p-1 shadow-sm"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <button
+                                      type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        const newArr = selectedAddonIds.filter(id => !id.startsWith(`${addon.id}:`));
-                                        setValue("selectedAddonIds", [...newArr, compositeId]);
-                                      }} 
-                                      className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors group-hover:border-primary/50 group-hover:bg-primary/10 group-hover:text-primary"
+                                        const idx =
+                                          selectedAddonIds.indexOf(compositeId);
+                                        if (idx > -1) {
+                                          const newArr = [...selectedAddonIds];
+                                          newArr.splice(idx, 1);
+                                          setValue("selectedAddonIds", newArr);
+                                        }
+                                      }}
+                                      className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-muted text-muted-foreground transition-colors"
+                                    >
+                                      −
+                                    </button>
+                                    <span className="text-sm font-bold w-4 text-center">
+                                      {count}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setValue("selectedAddonIds", [
+                                          ...selectedAddonIds,
+                                          compositeId,
+                                        ]);
+                                      }}
+                                      className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-muted text-muted-foreground transition-colors"
                                     >
                                       +
                                     </button>
-                                  ) : (
-                                    <div className="flex items-center gap-3 bg-background border border-border rounded-full p-1 shadow-sm" onClick={e => e.stopPropagation()}>
-                                      <button 
-                                        type="button" 
-                                        onClick={(e) => {
-                                           e.stopPropagation();
-                                           const idx = selectedAddonIds.indexOf(compositeId);
-                                           if (idx > -1) {
-                                             const newArr = [...selectedAddonIds];
-                                             newArr.splice(idx, 1);
-                                             setValue("selectedAddonIds", newArr);
-                                           }
-                                        }} 
-                                        className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-muted text-muted-foreground transition-colors"
-                                      >
-                                        −
-                                      </button>
-                                      <span className="text-sm font-bold w-4 text-center">{count}</span>
-                                      <button 
-                                        type="button" 
-                                        onClick={(e) => {
-                                           e.stopPropagation();
-                                           setValue("selectedAddonIds", [...selectedAddonIds, compositeId]);
-                                        }} 
-                                        className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-muted text-muted-foreground transition-colors"
-                                      >
-                                        +
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
+                                  </div>
+                                )}
                               </div>
-                            );
-                        })
+                            </div>
+                          );
+                        }),
                       )}
                     </div>
                   </div>
                 )}
-
               </div>
             )}
           </div>
@@ -843,32 +1278,48 @@ export default function BookingPage() {
               <Label className="text-2xl font-bold font-heading text-foreground">
                 Your Details
               </Label>
-              <p className="text-sm text-muted-foreground mt-2">Please provide your contact information.</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Please provide your contact information.
+              </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Full Name</Label>
+                <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                  Full Name
+                </Label>
                 <Input
                   type="text"
                   placeholder="John Doe"
                   {...register("clientName")}
                   className="rounded-xl bg-card/50 h-12"
                 />
-                {errors.clientName && <p className="text-destructive text-sm">{errors.clientName.message}</p>}
+                {errors.clientName && (
+                  <p className="text-destructive text-sm">
+                    {errors.clientName.message}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Email</Label>
+                <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                  Email <span className="normal-case opacity-70">(Optional)</span>
+                </Label>
                 <Input
                   type="email"
                   placeholder="john@example.com"
                   {...register("clientEmail")}
                   className="rounded-xl bg-card/50 h-12"
                 />
-                {errors.clientEmail && <p className="text-destructive text-sm">{errors.clientEmail.message}</p>}
+                {errors.clientEmail && (
+                  <p className="text-destructive text-sm">
+                    {errors.clientEmail.message}
+                  </p>
+                )}
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Phone Number</Label>
+              <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                Phone Number
+              </Label>
               <Controller
                 control={control}
                 name="clientPhone"
@@ -882,72 +1333,125 @@ export default function BookingPage() {
                   />
                 )}
               />
-              {errors.clientPhone && <p className="text-destructive text-sm">{errors.clientPhone.message}</p>}
+              {errors.clientPhone && (
+                <p className="text-destructive text-sm">
+                  {errors.clientPhone.message}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Additional Notes (Optional)</Label>
+              <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                Additional Notes (Optional)
+              </Label>
               <Textarea
                 placeholder="Tell us about your vision..."
                 rows={4}
                 {...register("notes")}
                 className="rounded-xl bg-card/50 resize-none"
               />
-              {errors.notes && <p className="text-destructive text-sm">{errors.notes.message}</p>}
+              {errors.notes && (
+                <p className="text-destructive text-sm">
+                  {errors.notes.message}
+                </p>
+              )}
             </div>
           </div>
         );
       case 3: {
         const sessionCount = watch("sessionCount") || 1;
-        const servicePrice = Number(selectedVariant?.basePrice || selectedService?.variants.find((v: ServiceVariantOutput) => v.locationType.toUpperCase() !== "BOTH")?.basePrice || 0);
+        const servicePrice = Number(
+          selectedVariant?.basePrice ||
+            selectedService?.variants.find(
+              (v: ServiceVariantOutput) =>
+                v.locationType.toUpperCase() !== "BOTH",
+            )?.basePrice ||
+            0,
+        );
         const serviceTotal = servicePrice * sessionCount;
-        const addonsTotal = selectedAddonIds.length > 0 && studio?.addons
-          ? selectedAddonIds.reduce((sum, compositeId) => {
-              const [addonId, variantId] = compositeId.split(":");
-              const addon = studio.addons.find(a => a.id === addonId);
-              const variant = variantId
-                ? addon?.variants?.find((v: { id: string; basePrice?: string | number | null }) => v.id === variantId)
-                : addon?.variants?.[0];
-              return sum + Number(variant?.basePrice || 0);
-            }, 0)
-          : 0;
-        
+        const addonsTotal =
+          selectedAddonIds.length > 0 && studio?.addons
+            ? selectedAddonIds.reduce((sum, compositeId) => {
+                const [addonId, variantId] = compositeId.split(":");
+                const addon = studio.addons.find((a) => a.id === addonId);
+                const variant = variantId
+                  ? addon?.variants?.find(
+                      (v: { id: string; basePrice?: string | number | null }) =>
+                        v.id === variantId,
+                    )
+                  : addon?.variants?.[0];
+                return sum + Number(variant?.basePrice || 0);
+              }, 0)
+            : 0;
+
         const extraPicturesCount = watch("extraPicturesCount") || 0;
-        const bothVariant = selectedService?.variants?.find((v: ServiceVariantOutput) => v.locationType.toUpperCase() === "BOTH");
-        const extraPicturesTotal = bothVariant ? Number(bothVariant.basePrice) * extraPicturesCount : 0;
+        const bothVariant = selectedService?.variants?.find(
+          (v: ServiceVariantOutput) => v.locationType.toUpperCase() === "BOTH",
+        );
+        const extraPicturesTotal = bothVariant
+          ? Number(bothVariant.basePrice) * extraPicturesCount
+          : 0;
         const grandTotal = serviceTotal + addonsTotal + extraPicturesTotal;
         const currentPlan = watch("paymentPlan") || "FULL";
-        const planMultiplier = currentPlan === "QUARTER" ? 0.25 : currentPlan === "HALF" ? 0.5 : 1;
-        const chargeAmount = Math.round(grandTotal * planMultiplier * 100) / 100;
+        const planMultiplier =
+          currentPlan === "QUARTER" ? 0.25 : currentPlan === "HALF" ? 0.5 : 1;
+        const chargeAmount =
+          Math.round(grandTotal * planMultiplier * 100) / 100;
 
         const plans = [
-          { value: "QUARTER" as const, label: "Quarter", percent: "25%", desc: "Secure your spot with a deposit" },
-          { value: "HALF" as const, label: "Half", percent: "50%", desc: "Pay half now, rest later" },
-          { value: "FULL" as const, label: "Full", percent: "100%", desc: "Complete payment upfront" },
+          {
+            value: "QUARTER" as const,
+            label: "Quarter",
+            percent: "25%",
+            desc: "Secure your spot with a deposit",
+          },
+          {
+            value: "HALF" as const,
+            label: "Half",
+            percent: "50%",
+            desc: "Pay half now, rest later",
+          },
+          {
+            value: "FULL" as const,
+            label: "Full",
+            percent: "100%",
+            desc: "Complete payment upfront",
+          },
         ];
 
         return (
           <div className="space-y-8">
             {/* Booking Summary */}
             <div className="bg-card/30 rounded-2xl p-6 border border-border/50 backdrop-blur-sm">
-              <h3 className="text-xl font-heading font-bold mb-4 border-b border-border/50 pb-4">Booking Summary</h3>
+              <h3 className="text-xl font-heading font-bold mb-4 border-b border-border/50 pb-4">
+                Booking Summary
+              </h3>
               <div className="space-y-4 text-sm md:text-base">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Service</span>
-                  <span className="font-medium text-right">{selectedService?.name || "Not selected"} {selectedVariant ? `(${selectedVariant.locationType})` : ""}</span>
+                  <span className="font-medium text-right">
+                    {selectedService?.name || "Not selected"}{" "}
+                    {selectedVariant ? `(${selectedVariant.locationType})` : ""}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Date</span>
                   <span className="font-medium text-right">
-                    {watch("bookingDate") ? new Date(watch("bookingDate")).toLocaleString() : "TBD"}
+                    {watch("bookingDate")
+                      ? new Date(watch("bookingDate")).toLocaleString()
+                      : "TBD"}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Client Name</span>
-                  <span className="font-medium text-right">{watch("clientName") || "Unknown"}</span>
+                  <span className="font-medium text-right">
+                    {watch("clientName") || "Unknown"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Studio</span>
-                  <span className="font-medium text-right">{studio?.name || selectedStudioSlug}</span>
+                  <span className="font-medium text-right">
+                    {studio?.name || selectedStudioSlug}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Sessions</span>
@@ -956,13 +1460,17 @@ export default function BookingPage() {
                 {extraPicturesCount > 0 && (
                   <div className="flex justify-between text-muted-foreground">
                     <span>Extra Pictures ({extraPicturesCount})</span>
-                    <span className="text-right font-medium text-foreground">₦{extraPicturesTotal.toLocaleString("en-NG")}</span>
+                    <span className="text-right font-medium text-foreground">
+                      ₦{extraPicturesTotal.toLocaleString("en-NG")}
+                    </span>
                   </div>
                 )}
                 {selectedAddonIds.length > 0 && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Add-ons</span>
-                    <span className="font-medium text-right">{selectedAddonIds.length} selected</span>
+                    <span className="font-medium text-right">
+                      {selectedAddonIds.length} selected
+                    </span>
                   </div>
                 )}
               </div>
@@ -976,20 +1484,35 @@ export default function BookingPage() {
 
             {/* Payment Plan Selector */}
             <div className="space-y-4">
-              <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Choose Payment Plan</Label>
+              <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                Choose Payment Plan
+              </Label>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {plans.map((plan) => {
                   const isActive = currentPlan === plan.value;
-                  const planAmount = Math.round(grandTotal * (plan.value === "QUARTER" ? 0.25 : plan.value === "HALF" ? 0.5 : 1) * 100) / 100;
+                  const planAmount =
+                    Math.round(
+                      grandTotal *
+                        (plan.value === "QUARTER"
+                          ? 0.25
+                          : plan.value === "HALF"
+                            ? 0.5
+                            : 1) *
+                        100,
+                    ) / 100;
                   return (
                     <div
                       key={plan.value}
-                      onClick={() => setValue("paymentPlan", plan.value, { shouldValidate: true })}
+                      onClick={() =>
+                        setValue("paymentPlan", plan.value, {
+                          shouldValidate: true,
+                        })
+                      }
                       className={cn(
                         "relative p-5 rounded-xl border-2 cursor-pointer transition-all duration-300 group",
                         isActive
                           ? "border-primary bg-primary/10 shadow-lg shadow-primary/10 ring-1 ring-primary"
-                          : "border-border/50 bg-card hover:border-primary/40 hover:bg-primary/5"
+                          : "border-border/50 bg-card hover:border-primary/40 hover:bg-primary/5",
                       )}
                     >
                       {isActive && (
@@ -998,24 +1521,34 @@ export default function BookingPage() {
                         </div>
                       )}
                       <div className="mb-3">
-                        <span className={cn(
-                          "inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider",
-                          isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                        )}>
+                        <span
+                          className={cn(
+                            "inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider",
+                            isActive
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-muted-foreground",
+                          )}
+                        >
                           {plan.percent}
                         </span>
                       </div>
-                      <h4 className={cn(
-                        "text-lg font-bold mb-1 transition-colors",
-                        isActive ? "text-primary" : "text-foreground"
-                      )}>
+                      <h4
+                        className={cn(
+                          "text-lg font-bold mb-1 transition-colors",
+                          isActive ? "text-primary" : "text-foreground",
+                        )}
+                      >
                         {plan.label}
                       </h4>
-                      <p className="text-xs text-muted-foreground mb-3 leading-relaxed">{plan.desc}</p>
-                      <p className={cn(
-                        "text-xl font-bold",
-                        isActive ? "text-primary" : "text-foreground"
-                      )}>
+                      <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                        {plan.desc}
+                      </p>
+                      <p
+                        className={cn(
+                          "text-xl font-bold",
+                          isActive ? "text-primary" : "text-foreground",
+                        )}
+                      >
                         ₦{planAmount.toLocaleString("en-NG")}
                       </p>
                     </div>
@@ -1025,26 +1558,36 @@ export default function BookingPage() {
             </div>
 
             {/* Amount to Pay Now */}
-            <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-2xl p-6 border border-primary/20">
+            <div className="bg-linear-to-r from-primary/10 via-primary/5 to-transparent rounded-2xl p-6 border border-primary/20">
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Amount to pay now</p>
-                  <p className="text-3xl font-bold text-primary">₦{chargeAmount.toLocaleString("en-NG")}</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Amount to pay now
+                  </p>
+                  <p className="text-3xl font-bold text-primary">
+                    ₦{chargeAmount.toLocaleString("en-NG")}
+                  </p>
                 </div>
                 {currentPlan !== "FULL" && (
                   <div className="text-right">
-                    <p className="text-sm text-muted-foreground mb-1">Remaining balance</p>
-                    <p className="text-lg font-semibold text-foreground">₦{(grandTotal - chargeAmount).toLocaleString("en-NG")}</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Remaining balance
+                    </p>
+                    <p className="text-lg font-semibold text-foreground">
+                      ₦{(grandTotal - chargeAmount).toLocaleString("en-NG")}
+                    </p>
                   </div>
                 )}
               </div>
             </div>
-            
 
             <div className="bg-primary/5 rounded-2xl p-6 border border-primary/20 text-center">
               <CreditCard className="w-8 h-8 text-primary mx-auto mb-3" />
               <h4 className="font-semibold mb-2">Secure Payment Gateway</h4>
-              <p className="text-sm text-muted-foreground">You will be redirected to our secure payment provider to complete your booking.</p>
+              <p className="text-sm text-muted-foreground">
+                You will be redirected to our secure payment provider to
+                complete your booking.
+              </p>
             </div>
           </div>
         );
@@ -1060,18 +1603,31 @@ export default function BookingPage() {
         <div className="text-center mb-16">
           <div className="flex items-center justify-center gap-2 mb-4">
             <div className="w-2 h-2 rounded-full bg-primary"></div>
-            <h1 className="text-4xl md:text-6xl font-heading font-bold uppercase tracking-wide">Book a Session</h1>
+            <h1 className="text-4xl md:text-6xl font-heading font-bold uppercase tracking-wide">
+              Book a Session
+            </h1>
             <div className="w-2 h-2 rounded-full bg-primary"></div>
           </div>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Reserve your spot at {studio?.name || APP_NAME}{studio?.metadata && typeof studio.metadata === 'object' && 'address' in studio.metadata && typeof studio.metadata.address === 'string' ? `, located at ${studio.metadata.address}` : ""}. Follow the steps below to customize your experience and secure your session.
+            Reserve your spot at {studio?.name || APP_NAME}
+            {studio?.metadata &&
+            typeof studio.metadata === "object" &&
+            "address" in studio.metadata &&
+            typeof studio.metadata.address === "string"
+              ? `, located at ${studio.metadata.address}`
+              : ""}
+            . Follow the steps below to customize your experience and secure
+            your session.
           </p>
         </div>
 
         {/* Booking Rules and Guidelines */}
         <div className="bg-muted/30 rounded-2xl p-6 border border-border/50 text-sm mb-12 transition-all duration-300">
-          <div 
-            className={cn("flex flex-col sm:flex-row sm:items-start justify-between gap-4 cursor-pointer", rulesExpanded ? "mb-5" : "mb-0")}
+          <div
+            className={cn(
+              "flex flex-col sm:flex-row sm:items-start justify-between gap-4 cursor-pointer",
+              rulesExpanded ? "mb-5" : "mb-0",
+            )}
             onClick={() => setRulesExpanded(!rulesExpanded)}
           >
             <div>
@@ -1079,49 +1635,104 @@ export default function BookingPage() {
                 Booking Rules and Guidelines
               </h4>
               <p className="text-muted-foreground mt-1">
-                By booking our services, you acknowledge and accept these terms and conditions.
+                By booking our services, you acknowledge and accept these terms
+                and conditions.
               </p>
             </div>
             <div className="shrink-0 self-end sm:self-center">
-              <button type="button" className="p-2 rounded-full hover:bg-muted bg-background border shadow-sm transition-colors">
-                {rulesExpanded ? <ChevronUp className="w-5 h-5 text-primary" /> : <ChevronDown className="w-5 h-5 text-primary" />}
+              <button
+                type="button"
+                className="p-2 rounded-full hover:bg-muted bg-background border shadow-sm transition-colors"
+              >
+                {rulesExpanded ? (
+                  <ChevronUp className="w-5 h-5 text-primary" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-primary" />
+                )}
               </button>
             </div>
           </div>
-          
-          <div className={cn("overflow-hidden transition-all duration-500", rulesExpanded ? "opacity-100 max-h-375" : "opacity-0 max-h-0")}>
+
+          <div
+            className={cn(
+              "overflow-hidden transition-all duration-500",
+              rulesExpanded ? "opacity-100 max-h-375" : "opacity-0 max-h-0",
+            )}
+          >
             <div className="space-y-3 mt-4 pt-4 border-t border-border/50">
               <div>
-                <span className="font-semibold text-foreground block md:inline text-lg">NO REFUND</span>
+                <span className="font-semibold text-foreground block md:inline text-lg">
+                  NO REFUND
+                </span>
               </div>
               <div>
-                <span className="font-semibold text-foreground block md:inline">PAYMENT VALIDATES BOOKING:</span>
-                <span className="text-muted-foreground md:ml-2 block md:inline">Secure your booking by paying a non-refundable deposit. Note Picture deliver won’t be possible unless full payment is settled, and make sure the full payment is settled by the date of your photo session or event.</span>
+                <span className="font-semibold text-foreground block md:inline">
+                  PAYMENT VALIDATES BOOKING:
+                </span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">
+                  Secure your booking by paying a non-refundable deposit. Note
+                  Picture deliver won’t be possible unless full payment is
+                  settled, and make sure the full payment is settled by the date
+                  of your photo session or event.
+                </span>
               </div>
               <div>
-                <span className="font-semibold text-foreground block md:inline">CLIENT COOPERATION:</span>
-                <span className="text-muted-foreground md:ml-2 block md:inline">To ensure a seamless photo session, clients are kindly expected to provide all necessary information and cooperate throughout the shoot.</span>
+                <span className="font-semibold text-foreground block md:inline">
+                  CLIENT COOPERATION:
+                </span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">
+                  To ensure a seamless photo session, clients are kindly
+                  expected to provide all necessary information and cooperate
+                  throughout the shoot.
+                </span>
               </div>
               <div>
-                <span className="font-semibold text-foreground block md:inline">CANCELLATIONS AND RESCHEDULING:</span>
-                <span className="text-muted-foreground md:ml-2 block md:inline">Notify us in advance about any cancellations or rescheduling and be aware that cancellations within 48 hours might result in the forfeiture of your deposit.</span>
+                <span className="font-semibold text-foreground block md:inline">
+                  CANCELLATIONS AND RESCHEDULING:
+                </span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">
+                  Notify us in advance about any cancellations or rescheduling
+                  and be aware that cancellations within 48 hours might result
+                  in the forfeiture of your deposit.
+                </span>
               </div>
               <div>
-                <span className="font-semibold text-foreground block md:inline">IMAGE DELIVERY:</span>
-                <span className="text-muted-foreground md:ml-2 block md:inline">Expect your professionally edited images within the agreed-upon timeframe, and we’ll provide you with a download link for your high-resolution pictures.</span>
+                <span className="font-semibold text-foreground block md:inline">
+                  IMAGE DELIVERY:
+                </span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">
+                  Expect your professionally edited images within the
+                  agreed-upon timeframe, and we’ll provide you with a download
+                  link for your high-resolution pictures.
+                </span>
               </div>
               <div>
-                <span className="font-semibold text-foreground block md:inline">DELIVERY ERRORS:</span>
-                <span className="text-muted-foreground md:ml-2 block md:inline">Report any errors or issues with the delivered images within a 24 hours timeframe to allow us address and rectify them promptly.</span>
+                <span className="font-semibold text-foreground block md:inline">
+                  DELIVERY ERRORS:
+                </span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">
+                  Report any errors or issues with the delivered images within a
+                  24 hours timeframe to allow us address and rectify them
+                  promptly.
+                </span>
               </div>
               <div>
-                <span className="font-semibold text-foreground block md:inline">ADDITIONAL SERVICES:</span>
-                <span className="text-muted-foreground md:ml-2 block md:inline">Any additional services beyond our initial agreement may incur extra charges.</span>
+                <span className="font-semibold text-foreground block md:inline">
+                  ADDITIONAL SERVICES:
+                </span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">
+                  Any additional services beyond our initial agreement may incur
+                  extra charges.
+                </span>
               </div>
             </div>
 
             <div className="pt-4 border-t border-border/50 mt-4">
-              <p className="font-medium italic text-muted-foreground">Be rest assure that Gmax Studioz renders the best service as long as these terms are being adhered to. Reach us at any time as we’re always available to be of service to you.</p>
+              <p className="font-medium italic text-muted-foreground">
+                Be rest assure that Gmax Studioz renders the best service as
+                long as these terms are being adhered to. Reach us at any time
+                as we’re always available to be of service to you.
+              </p>
             </div>
           </div>
         </div>
@@ -1129,34 +1740,49 @@ export default function BookingPage() {
         {/* Stepper (Desktop) */}
         <div className="mb-12 relative hidden md:block">
           <div className="absolute top-1/2 left-0 w-full h-0.5 bg-border/50 -translate-y-1/2 z-0"></div>
-          <div className="absolute top-1/2 left-0 h-0.5 bg-primary -translate-y-1/2 z-0 transition-all duration-500 ease-in-out" style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}></div>
-          
+          <div
+            className="absolute top-1/2 left-0 h-0.5 bg-primary -translate-y-1/2 z-0 transition-all duration-500 ease-in-out"
+            style={{
+              width: `${((currentStep - 1) / (steps.length - 1)) * 100}%`,
+            }}
+          ></div>
+
           <div className="relative z-10 flex justify-between gap-0">
             {steps.map((step) => {
               const Icon = step.icon;
               const isActive = currentStep === step.id;
               const isCompleted = currentStep > step.id;
-              
+
               return (
                 <div key={step.id} className="flex flex-col items-center gap-2">
-                  <div 
+                  <div
                     className={cn(
                       "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-500 border-2",
-                      isActive ? "bg-background border-primary text-primary shadow-[0_0_15px_rgba(var(--primary),0.3)]" : 
-                      isCompleted ? "bg-primary border-primary text-primary-foreground" : 
-                      "bg-background border-border text-muted-foreground"
+                      isActive
+                        ? "bg-background border-primary text-primary shadow-[0_0_15px_rgba(var(--primary),0.3)]"
+                        : isCompleted
+                          ? "bg-primary border-primary text-primary-foreground"
+                          : "bg-background border-border text-muted-foreground",
                     )}
                   >
                     <Icon className="w-5 h-5" />
                   </div>
                   <div className="text-center">
-                    <div className={cn(
-                      "text-sm font-bold uppercase tracking-wider transition-colors",
-                      isActive ? "text-primary" : isCompleted ? "text-foreground" : "text-muted-foreground"
-                    )}>
+                    <div
+                      className={cn(
+                        "text-sm font-bold uppercase tracking-wider transition-colors",
+                        isActive
+                          ? "text-primary"
+                          : isCompleted
+                            ? "text-foreground"
+                            : "text-muted-foreground",
+                      )}
+                    >
                       {step.title}
                     </div>
-                    <div className="text-xs text-muted-foreground">{step.description}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {step.description}
+                    </div>
                   </div>
                 </div>
               );
@@ -1164,58 +1790,60 @@ export default function BookingPage() {
           </div>
         </div>
 
-
+          <button
+            type="button"
+            onClick={() => navigateStep("prev")}
+            disabled={(currentStep === 1 && configStep === 1) || isSubmitting}
+            className={cn(
+              "inline-flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all mb-10 border border-foreground/30",
+              currentStep === 1 && configStep === 1
+                ? "opacity-0 pointer-events-none"
+                : "hover:bg-secondary/50 text-foreground",
+            )}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </button>
         {/* Form Area */}
         <div className="bg-card/50 backdrop-blur-xl border border-border/50 rounded-[2rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
           {/* Subtle gradient background */}
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px] -z-10 pointer-events-none translate-x-1/2 -translate-y-1/2"></div>
-          
+          <div className="absolute top-0 right-0 w-125 h-125 bg-primary/5 rounded-full blur-[100px] -z-10 pointer-events-none translate-x-1/2 -translate-y-1/2"></div>
+
+
           <form onSubmit={handleSubmit(onSubmit)}>
-            <div ref={formRef} className="min-h-[400px]">
+            <div ref={formRef} className="min-h-100">
               {renderStepContent()}
             </div>
 
             <div className="mt-12 pt-6 border-t border-border/50 flex justify-between items-center">
-              <button
-                type="button"
-                onClick={() => navigateStep("prev")}
-                disabled={(currentStep === 1 && configStep === 1) || isSubmitting}
-                className={cn(
-                  "inline-flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all",
-                  (currentStep === 1 && configStep === 1) ? "opacity-0 pointer-events-none" : "hover:bg-secondary/50 text-foreground"
-                )}
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back
-              </button>
-              
               {currentStep < 3 ? (
-                ((currentStep === 2) || (currentStep === 1 && configStep === 5)) && (
+                (currentStep === 2 ||
+                  (currentStep === 1 && configStep === 5)) && (
+                  <button
+                    type="button"
+                    onClick={() => navigateStep("next")}
+                    className={cn(
+                      buttonVariants({ variant: "default" }),
+                      "rounded-full px-10 py-6 text-lg font-semibold gap-2 group shadow-lg shadow-primary/20",
+                    )}
+                  >
+                    Continue
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                )
+              ) : (
                 <button
-                  type="button"
-                  onClick={() => navigateStep("next")}
+                  type="submit"
+                  disabled={isSubmitting}
                   className={cn(
                     buttonVariants({ variant: "default" }),
-                    "rounded-full px-10 py-6 text-lg font-semibold gap-2 group shadow-lg shadow-primary/20"
+                    "rounded-full px-10 py-6 text-lg font-semibold gap-2 group shadow-lg shadow-primary/20",
                   )}
                 >
-                  Continue
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  {isSubmitting && <Loader2 className="w-5 h-5 animate-spin" />}
+                  Proceed to Payment
                 </button>
-              )
-            ) : (
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className={cn(
-                  buttonVariants({ variant: "default" }),
-                  "rounded-full px-10 py-6 text-lg font-semibold gap-2 group shadow-lg shadow-primary/20"
-                )}
-              >
-                {isSubmitting && <Loader2 className="w-5 h-5 animate-spin" />}
-                Proceed to Payment
-              </button>
-            )}
+              )}
             </div>
           </form>
         </div>

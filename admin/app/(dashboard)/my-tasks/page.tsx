@@ -38,7 +38,7 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
 
     const members = await db.query.member.findMany({
         where: eq(schema.member.userId, session.user.id),
-        columns: { role: true, studioId: true }
+        columns: { id: true, role: true, studioId: true }
     });
     
     const adminRoles = ["owner", "admin", "developer", "manager", "receptionist"];
@@ -88,17 +88,14 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
         orderBy: (bookings, { asc }) => [asc(bookings.bookingDate)]
     }) : [];
 
+    const ownerStudioIds = members.filter((m: any) => m.role === "owner").map((m: any) => m.studioId);
+
     // Memory filter
     const myBookings = allBookings.filter((b: any) => {
         // Base where:
-        let matchesBase = false;
-        if (hasAdminRole) {
-            const isUnassignedInAdminStudio = (!b.memberId) && adminStudioIds.includes(b.studioId);
-            const isAssignedToMe = userMemberIds.includes(b.memberId);
-            matchesBase = isUnassignedInAdminStudio || isAssignedToMe;
-        } else {
-            matchesBase = userMemberIds.includes(b.memberId);
-        }
+        const isUnassignedInOwnerStudio = (!b.memberId) && ownerStudioIds.includes(b.studioId);
+        const isAssignedToMe = userMemberIds.includes(b.memberId);
+        const matchesBase = isUnassignedInOwnerStudio || isAssignedToMe;
 
         if (!matchesBase) return false;
 
@@ -113,8 +110,9 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
         return true;
     });
 
-    const title = hasAdminRole ? "Studio Tasks" : "My Tasks";
-    const desc = hasAdminRole ? "Manage unassigned bookings and your own assigned tasks." : "Manage and view your assigned bookings.";
+    const isOwner = ownerStudioIds.length > 0;
+    const title = isOwner ? "Studio Tasks" : "My Tasks";
+    const desc = isOwner ? "Manage unassigned bookings and your own assigned tasks." : "Manage and view your assigned bookings.";
 
     return (
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">
@@ -160,7 +158,7 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
                                         <TableHead>Service</TableHead>
                                         <TableHead>Studio</TableHead>
                                         <TableHead>Status</TableHead>
-                                        {canReassign && <TableHead className="w-[200px]">Assign To</TableHead>}
+                                        {canReassign && <TableHead className="w-50">Assign To</TableHead>}
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
