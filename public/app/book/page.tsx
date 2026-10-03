@@ -47,15 +47,7 @@ export default function BookingPage() {
   
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("");
-  const [rulesExpanded, setRulesExpanded] = useState(true);
-
-  useEffect(() => {
-    if ((currentStep === 1 && configStep === 1) || currentStep === 3) {
-      setRulesExpanded(true);
-    } else {
-      setRulesExpanded(false);
-    }
-  }, [currentStep, configStep]);
+  const [rulesExpanded, setRulesExpanded] = useState(false);
   
 
 
@@ -1097,19 +1089,18 @@ export default function BookingPage() {
             </div>
           </div>
           
-          <div className={cn("overflow-hidden transition-all duration-500", rulesExpanded ? "opacity-100 max-h-[1500px]" : "opacity-0 max-h-0")}>
+          <div className={cn("overflow-hidden transition-all duration-500", rulesExpanded ? "opacity-100 max-h-375" : "opacity-0 max-h-0")}>
             <div className="space-y-3 mt-4 pt-4 border-t border-border/50">
               <div>
+                <span className="font-semibold text-foreground block md:inline text-lg">NO REFUND</span>
+              </div>
+              <div>
                 <span className="font-semibold text-foreground block md:inline">PAYMENT VALIDATES BOOKING:</span>
-                <span className="text-muted-foreground md:ml-2 block md:inline">Secure your booking by paying a non-refundable deposit, and note Picture deliver won’t be possible unless full payment is settled.</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Secure your booking by paying a non-refundable deposit. Note Picture deliver won’t be possible unless full payment is settled, and make sure the full payment is settled by the date of your photo session or event.</span>
               </div>
               <div>
                 <span className="font-semibold text-foreground block md:inline">CLIENT COOPERATION:</span>
                 <span className="text-muted-foreground md:ml-2 block md:inline">To ensure a seamless photo session, clients are kindly expected to provide all necessary information and cooperate throughout the shoot.</span>
-              </div>
-              <div>
-                <span className="font-semibold text-foreground block md:inline">BOOKING AND PAYMENT:</span>
-                <span className="text-muted-foreground md:ml-2 block md:inline">Secure your booking by paying a non-refundable deposit, and make sure the full payment is settled by the date of your photo session or event.</span>
               </div>
               <div>
                 <span className="font-semibold text-foreground block md:inline">CANCELLATIONS AND RESCHEDULING:</span>
@@ -1120,12 +1111,8 @@ export default function BookingPage() {
                 <span className="text-muted-foreground md:ml-2 block md:inline">Expect your professionally edited images within the agreed-upon timeframe, and we’ll provide you with a download link for your high-resolution pictures.</span>
               </div>
               <div>
-                <span className="font-semibold text-foreground block md:inline">CLIENT COOPERATION:</span>
-                <span className="text-muted-foreground md:ml-2 block md:inline">Ensure a smooth photo session by providing necessary information and cooperating during the shoot. Notify us in advance if there are any delays or changes to the schedule.</span>
-              </div>
-              <div>
                 <span className="font-semibold text-foreground block md:inline">DELIVERY ERRORS:</span>
-                <span className="text-muted-foreground md:ml-2 block md:inline">Report any errors or issues with the delivered images within a specified timeframe to allow us address and rectify them promptly.</span>
+                <span className="text-muted-foreground md:ml-2 block md:inline">Report any errors or issues with the delivered images within a 24 hours timeframe to allow us address and rectify them promptly.</span>
               </div>
               <div>
                 <span className="font-semibold text-foreground block md:inline">ADDITIONAL SERVICES:</span>
@@ -1134,7 +1121,7 @@ export default function BookingPage() {
             </div>
 
             <div className="pt-4 border-t border-border/50 mt-4">
-              <p className="font-medium italic text-muted-foreground">Be rest assure that Gmax studioz renders the best service as long as these terms are being adhered to. Reach us at any time as we’re always available to be of service to you.</p>
+              <p className="font-medium italic text-muted-foreground">Be rest assure that Gmax Studioz renders the best service as long as these terms are being adhered to. Reach us at any time as we’re always available to be of service to you.</p>
             </div>
           </div>
         </div>
