@@ -27,7 +27,7 @@ export async function deliverBooking(bookingId: string) {
         },
     });
 
-    if (!bookingData) {
+    if (!booking) {
         throw new Error("Booking not found");
     }
 
@@ -35,7 +35,7 @@ export async function deliverBooking(bookingId: string) {
         where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
     });
 
-    if (!memberData) {
+    if (!member) {
         throw new Error("Unauthorized access to studio");
     }
 

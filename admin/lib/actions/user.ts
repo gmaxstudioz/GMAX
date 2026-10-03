@@ -37,5 +37,5 @@ export async function updateUserProfile(data: z.infer<typeof UpdateProfileSchema
     revalidatePath("/profile");
     revalidatePath("/", "layout");
     
-    return { success: true, user: updatedUser };
+    return { success: true, user };
 }

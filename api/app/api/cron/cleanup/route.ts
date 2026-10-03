@@ -26,11 +26,6 @@ export async function GET(req: Request) {
         return NextResponse.json({ success: true, deletedCount: deletedCount });
     } catch (error) {
         console.error("[Cron] Failed to clean up intents:", error);
-        getPostHogLogger()?.emit({
-            body: "abandoned booking intent cleanup failed",
-            severityNumber: SeverityNumber.ERROR,
-        });
-        after(flushPostHogLogs);
         return NextResponse.json({ success: false }, { status: 500 });
     }
 }

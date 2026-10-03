@@ -113,7 +113,7 @@ export async function getProduct(productId: string) {
             }
         });
 
-        if (!found) {
+        if (!product) {
             return { status: "error" as const, message: "Product not found" };
         }
 
