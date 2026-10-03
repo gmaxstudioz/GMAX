@@ -304,7 +304,7 @@ function Clients({ studioData, userRole }: { studioData: StudioWithRelations, us
                 <div className="flex flex-wrap items-center gap-2">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-2">
-                            <form className="relative w-full sm:w-[300px]">
+                            <form className="relative w-full sm:w-75">
                                 <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input 
                                     name="search" 
@@ -911,7 +911,7 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
                                 Add Booking
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[520px]">
+                        <DialogContent className="sm:max-w-130">
                             <DialogHeader>
                                 <DialogTitle className="text-2xl font-bold">Add Booking</DialogTitle>
                                 <DialogDescription>
@@ -949,7 +949,7 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
                                                                 autoFocus
                                                             />
                                                         </div>
-                                                        <div className="max-h-[200px] overflow-y-auto p-1">
+                                                        <div className="max-h-50 overflow-y-auto p-1">
                                                             {filteredClients.length > 0 ? filteredClients.map((c: any) => (
                                                                 <div
                                                                     key={c.id}
@@ -1021,7 +1021,7 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
                                                                 autoFocus
                                                             />
                                                         </div>
-                                                        <div className="max-h-[200px] overflow-y-auto p-1">
+                                                        <div className="max-h-50 overflow-y-auto p-1">
                                                             {filteredMainServices.length > 0 ? filteredMainServices.map((s: any) => (
                                                                 <div
                                                                     key={s.id}
@@ -1107,7 +1107,7 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
                             {flattenedAddons.length > 0 && (
                                 <Field>
                                     <FieldLabel>Add-ons <span className="text-muted-foreground font-normal">(Optional)</span></FieldLabel>
-                                    <div className="border rounded-lg max-h-[220px] overflow-y-auto">
+                                    <div className="border rounded-lg max-h-55 overflow-y-auto">
                                         {filteredAddonVariants.length > 0 ? filteredAddonVariants.map((item: any) => (
                                             <label
                                                 key={item.compositeId}

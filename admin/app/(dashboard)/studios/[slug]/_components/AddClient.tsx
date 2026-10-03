@@ -115,7 +115,7 @@ export default function AddClient({ studioId, onSuccess }: AddClientProps) {
                             control={form.control}
                             render={({ field }) => (
                                 <Field>
-                                    <FieldLabel>Email Address</FieldLabel>
+                                    <FieldLabel>Email Address (Optional)</FieldLabel>
                                     <Input
                                         {...field}
                                         value={field.value || ""}

@@ -643,7 +643,7 @@ export default function BookingPage() {
                                     }
                                   }}
                                   className={cn(
-                                    "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 group overflow-hidden flex flex-col justify-center min-h-[120px] hover:-translate-y-1 hover:shadow-lg active:scale-[0.98]",
+                                    "relative p-6 rounded-2xl border cursor-pointer transition-all duration-300 group overflow-hidden flex flex-col justify-center min-h-30 hover:-translate-y-1 hover:shadow-lg active:scale-[0.98]",
                                     isSelected
                                       ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1 shadow-md"
                                       : "border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5",
@@ -1301,7 +1301,7 @@ export default function BookingPage() {
               </div>
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                  Email
+                  Email <span className="normal-case opacity-70">(Optional)</span>
                 </Label>
                 <Input
                   type="email"
