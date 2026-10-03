@@ -52,6 +52,7 @@ export const getStudioBySlug = os.studio.getBySlug
                 services: foundStudio.services.filter(s => s.category === catName).map((s) => ({
                     id: s.id,
                     name: s.name,
+                    category: s.category,
                     isAddon: s.isAddon,
                     description: s.description,
                     features: s.features || [],
@@ -81,6 +82,7 @@ export const getStudioBySlug = os.studio.getBySlug
             addons: addons.map((a) => ({
                 id: a.id,
                 name: a.name,
+                category: a.category,
                 isAddon: a.isAddon,
                 description: a.description,
                 features: a.features || [],
