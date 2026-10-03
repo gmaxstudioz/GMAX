@@ -272,7 +272,7 @@ export async function rescheduleBooking(bookingId: string, newDate: string) {
                     minute: "2-digit"
                 }).format(targetDate);
 
-                const message = `Hi \${booking.client.name}, your booking for \${booking.service?.name} at \${booking.studio?.name} has been rescheduled to \${formattedDate}.`;
+                const message = `Hi ${booking.client.name}, your booking for ${booking.service?.name} at ${booking.studio?.name} has been rescheduled to ${formattedDate}.`;
                 await sendSMS(booking.client.phone, message);
 
                 await db.insert(schema.notification).values({
@@ -395,13 +395,13 @@ export async function uploadBookingPhoto(data: {
                     id: uuidv4(),
                     userId: admin.userId,
                     title: "New Photo Uploaded",
-                    message: `A new photo was uploaded for a booking by \${session.user.name || "staff"}.`,
+                    message: `A new photo was uploaded for a booking by ${session.user.name || "staff"}.`,
                     type: "PHOTO_UPLOAD",
                     bookingId: booking.id
                 });
                 if (admin.user?.phoneNumber) {
                     try {
-                        await sendSMS(admin.user.phoneNumber, `GMAX Studio: A new photo was uploaded for a booking by \${session.user.name || "staff"}. Please review it.`);
+                        await sendSMS(admin.user.phoneNumber, `GMAX Studio: A new photo was uploaded for a booking by ${session.user.name || "staff"}. Please review it.`);
                     } catch (err) {
                         console.error("SMS failed", err);
                     }
@@ -446,7 +446,7 @@ export async function approvePhoto(photoId: string) {
         const studioName = photo.booking?.studio?.name || "Studio";
         if (client?.phone?.length > 0) {
             const { sendSMS } = await import("../termii");
-            const message = `Hi \${client.name}! Your photos from \${studioName} are ready for viewing and download. Visit your booking page to access them.`;
+            const message = `Hi ${client.name}! Your photos from ${studioName} are ready for viewing and download. Visit your booking page to access them.`;
             try {
                 await sendSMS(client.phone, message);
             } catch (err) {
@@ -490,7 +490,7 @@ export async function rejectPhoto(photoId: string, reason?: string) {
                 id: uuidv4(),
                 userId: uploader.id,
                 title: "Photo Rejected",
-                message: `Your photo upload for a booking was rejected. Reason: \${reason || "No reason provided"}`,
+                message: `Your photo upload for a booking was rejected. Reason: ${reason || "No reason provided"}`,
                 type: "PHOTO_REJECTED",
                 bookingId: photo.bookingId
             });
@@ -498,7 +498,7 @@ export async function rejectPhoto(photoId: string, reason?: string) {
             if (uploader.phoneNumber) {
                 const { sendSMS } = await import("../termii");
                 try {
-                    await sendSMS(uploader.phoneNumber, `GMAX Studio: Your photo upload was rejected. Reason: \${reason || "Please check dashboard"}`);
+                    await sendSMS(uploader.phoneNumber, `GMAX Studio: Your photo upload was rejected. Reason: ${reason || "Please check dashboard"}`);
                 } catch(e){
                     console.error("SMS failed", e);
                 }
@@ -532,7 +532,7 @@ export async function deletePhoto(photoId: string) {
 
         try {
             const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-            await fetch(`\${baseUrl}/api/s3/delete`, {
+            await fetch(`${baseUrl}/api/s3/delete`, {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ key: photo.r2Key }),
@@ -574,13 +574,13 @@ export async function deleteBooking(bookingId: string) {
         if (booking.photos) {
             for (const photo of booking.photos) {
                 try {
-                    await fetch(`\${baseUrl}/api/s3/delete`, {
+                    await fetch(`${baseUrl}/api/s3/delete`, {
                         method: "DELETE",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ key: photo.r2Key }),
                     });
                 } catch (r2Error) {
-                    console.error(`[R2] Failed to delete photo \${photo.r2Key}:`, r2Error);
+                    console.error(`[R2] Failed to delete photo ${photo.r2Key}:`, r2Error);
                 }
             }
         }
@@ -738,7 +738,7 @@ export async function updateBookingFull(
                     id: uuidv4(),
                     userId: admin.userId,
                     title: "Price Approval Required",
-                    message: `Manager \${session.user.name || "staff"} requested a price change to ₦\${data.totalAmount} for a booking.`,
+                    message: `Manager ${session.user.name || "staff"} requested a price change to ₦${data.totalAmount} for a booking.`,
                     type: "SYSTEM",
                     bookingId: booking.id
                 });

@@ -206,6 +206,10 @@ export async function verifyPayment(reference: string) {
                 message: `Payment amount mismatch. Expected ₦${expectedAmountNaira}, got ₦${confirmedAmountNaira}.`,
             };
         }
+        const bookingId = payment.bookingId;
+        if (!bookingId) {
+            return { status: "error", message: "Payment is missing a booking association" };
+        }
 
         // Atomic transaction — update payment and booking status together.
         // All reads within this block see a consistent snapshot; concurrent
@@ -217,9 +221,6 @@ export async function verifyPayment(reference: string) {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     paystackResponse: paystackRes.data as any,
                 }).where(eq(schema.payment.id, payment.id));
-
-            const bookingId = payment.bookingId;
-            if (!bookingId) return;
 
             // Step 2: Re-read ALL payments for this booking within the transaction.
             // The payment updated above will already show PAID in this read.
