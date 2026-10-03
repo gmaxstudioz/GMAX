@@ -808,7 +808,7 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
     // Flatten addons into variants
     const flattenedAddons = useMemo(() => {
         return addonServices.flatMap((addon: any) => 
-            (addon.variants || []).map((variant: any) => ({
+            (addon.serviceVariants || []).map((variant: any) => ({
                 compositeId: `${addon.id}:${variant.id}`,
                 addon,
                 variant
@@ -838,7 +838,7 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
     const watchedTotalAmount    = useWatch({ control: form.control, name: "totalAmount" }) ?? 0;
 
     const selectedService = useMemo(() => allServices.find((s: any) => s.id === watchedServiceId), [allServices, watchedServiceId]);
-    const selectedVariant = useMemo(() => selectedService?.variants?.find((v: any) => v.id === watchedServiceVariantId), [selectedService, watchedServiceVariantId]);
+    const selectedVariant = useMemo(() => selectedService?.serviceVariants?.find((v: any) => v.id === watchedServiceVariantId), [selectedService, watchedServiceVariantId]);
     const selectedClient = useMemo(() => studioData.clients.find((c: any) => c.id === watchedClientId), [studioData.clients, watchedClientId]);
     const selectedAddonVariants = useMemo(() => flattenedAddons.filter((a: any) => selectedAddonIds.includes(a.compositeId)), [flattenedAddons, selectedAddonIds]);
 
@@ -1060,7 +1060,7 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
                                                     <SelectValue placeholder="Choose location type..." />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {selectedService.variants.map((v: any) => (
+                                                    {selectedService.serviceVariants.map((v: any) => (
                                                         <SelectItem key={v.id} value={v.id}>
                                                             {v.locationType} - ₦{Number(v.basePrice).toLocaleString()}
                                                             {v.maxPrice && ` to ₦${Number(v.maxPrice).toLocaleString()}`}

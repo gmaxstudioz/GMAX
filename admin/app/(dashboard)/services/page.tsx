@@ -45,7 +45,11 @@ export default async function ServicesPage() {
                             duration: true,
                         }
                     },
-                    serviceVariants: true,
+                    serviceVariants: {
+                        with: {
+                            serviceDeliverables: true
+                        }
+                    },
                     bookings: {
                         columns: { id: true }
                     }
@@ -58,7 +62,10 @@ export default async function ServicesPage() {
     const studioGroups = studios.map((studio: any) => {
         const mappedServices = studio.services.map((s: any) => ({
             ...s,
-            variants: s.serviceVariants,
+            variants: s.serviceVariants.map((v: any) => ({
+                ...v,
+                deliverables: v.serviceDeliverables || []
+            })),
             _count: { bookings: s.bookings?.length || 0 }
         }));
         
