@@ -118,7 +118,7 @@ export const getAllStudios = os.studio.getAll
         const studios = await db.query.studio.findMany({
             offset: (page - 1) * perPage,
             limit: perPage,
-            orderBy: (studio, { desc }) => [desc(studio.createdAt)],
+            orderBy: (studio, { asc }) => [asc(studio.createdAt)],
             extras: {
                 membersCount: sql<number>`(SELECT count(*)::int FROM "member" WHERE "member"."studioId" = "studio"."id")`.as("membersCount"),
                 bookingsCount: sql<number>`(SELECT count(*)::int FROM "booking" WHERE "booking"."studioId" = "studio"."id")`.as("bookingsCount"),
