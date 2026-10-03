@@ -811,7 +811,7 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
             (addon.serviceVariants || []).map((variant: any) => ({
                 compositeId: `${addon.id}:${variant.id}`,
                 addon,
-                variant
+                variant: { ...variant, deliverables: variant.serviceDeliverables || [] }
             }))
         );
     }, [addonServices]);
@@ -838,7 +838,10 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
     const watchedTotalAmount    = useWatch({ control: form.control, name: "totalAmount" }) ?? 0;
 
     const selectedService = useMemo(() => allServices.find((s: any) => s.id === watchedServiceId), [allServices, watchedServiceId]);
-    const selectedVariant = useMemo(() => selectedService?.serviceVariants?.find((v: any) => v.id === watchedServiceVariantId), [selectedService, watchedServiceVariantId]);
+    const selectedVariant = useMemo(() => {
+        const v = selectedService?.serviceVariants?.find((v: any) => v.id === watchedServiceVariantId);
+        return v ? { ...v, deliverables: v.serviceDeliverables || [] } : undefined;
+    }, [selectedService, watchedServiceVariantId]);
     const selectedClient = useMemo(() => studioData.clients.find((c: any) => c.id === watchedClientId), [studioData.clients, watchedClientId]);
     const selectedAddonVariants = useMemo(() => flattenedAddons.filter((a: any) => selectedAddonIds.includes(a.compositeId)), [flattenedAddons, selectedAddonIds]);
 
