@@ -4,7 +4,7 @@ import { z } from "zod";
 export const publicBookingSchema = z.object({
     studioId: z.string().min(1),
     clientName: z.string().min(2, "Name must be at least 2 characters"),
-    clientEmail: z.email("Please provide a valid email address"),
+    clientEmail: z.string().email("Please provide a valid email address"),
     useExisting: z.boolean(),
     existingClientId: z.string().optional(),
     clientPhone: z.string().optional(),

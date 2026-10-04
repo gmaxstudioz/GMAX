@@ -13,10 +13,9 @@ import { getPostHogClient } from "@/lib/auth";
 const os = implement(contract).$context<BaseContext>();
 
 async function captureEvent(event: string, properties: Record<string, string | number | boolean>) {
-    const posthog = getPostHogClient();
-    if (!posthog) return;
-
     try {
+        const posthog = getPostHogClient();
+        if (!posthog) return;
         posthog.capture({ event, properties });
         await posthog.flush();
     } catch (error) {

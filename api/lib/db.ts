@@ -7,7 +7,7 @@ const globalForDb = globalThis as unknown as {
   pool: Pool | undefined;
 };
 
-const connectionString = process.env.DATABASE_URL!;
+const connectionString = (process.env.NODE_ENV === 'production' ? process.env.DATABASE_URL : (process.env.DIRECT_URL || process.env.DATABASE_URL))!;
 
 const pool = globalForDb.pool ?? new Pool({
   connectionString,

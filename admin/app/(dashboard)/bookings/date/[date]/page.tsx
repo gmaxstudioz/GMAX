@@ -340,7 +340,7 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
                                                                             serviceId: booking.serviceId,
                                                                             serviceVariantId: booking.serviceVariantId ?? undefined,
                                                                             memberId: booking.memberId || "",
-                                                                            bookingDate: new Date(booking.bookingDate).toISOString(),
+                                                                            bookingDate: new Date(String(booking.bookingDate).replace(' ', 'T') + 'Z').toISOString(),
                                                                             addonIds: booking.bookingAddons?.map((addon: any) => addon.b) || [],
                                                                             totalAmount: Number(booking.totalAmount),
                                                                             paymentPlan: booking.paymentPlan,

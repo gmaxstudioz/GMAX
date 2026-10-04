@@ -257,8 +257,8 @@ export const getPublicPaymentDetails = os.payment.getPublicPaymentDetails
                 }
             });
 
-            if (!intent) {
-                throw new Error("Payment not found");
+            if (!intent || intent.status !== "PENDING" || new Date(intent.expiresAt) < new Date()) {
+                throw new Error("Payment not found or expired");
             }
 
             // Manually fetch service details to match the expected format
