@@ -107,7 +107,7 @@ export const PublicBookingSchema = BookingSchema.omit({
     bookingDate: true,
 }).extend({
     clientName: z.string().min(2, "Name must be at least 2 characters"),
-    clientEmail: z.email("Invalid email address").optional(),
+    clientEmail: z.email("Please provide a valid email address"),
     useExisting: z.boolean(),
     existingClientId: z.string().optional(),
     clientPhone: z.string().optional(),
@@ -124,14 +124,14 @@ export const PublicBookingSchema = BookingSchema.omit({
 }).superRefine((val, ctx) => {
     if (!val.useExisting && !val.clientPhone) {
         ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: "Phone number is required for new clients",
             path: ["clientPhone"],
         });
     }
     if (val.useExisting && !val.existingClientId) {
         ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: "Existing client ID is required",
             path: ["existingClientId"],
         });

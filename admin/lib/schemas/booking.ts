@@ -78,7 +78,7 @@ export type UpdateBookingInput = z.infer<typeof UpdateBookingSchema>;
 export const PublicBookingSchema = z.object({
     clientName:               z.string().min(2, "Name must be at least 2 characters"),
     clientPhone:              z.string().optional(),
-    clientEmail:              z.email("Invalid email address").optional(),
+    clientEmail:              z.union([z.string().email("Invalid email address"), z.literal("")]).optional(),
     useExisting:              z.boolean(),
     existingClientId:         z.string().optional(),
 

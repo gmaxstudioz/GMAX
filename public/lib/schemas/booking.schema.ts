@@ -4,7 +4,7 @@ import { z } from "zod";
 export const publicBookingSchema = z.object({
     studioId: z.string().min(1),
     clientName: z.string().min(2, "Name must be at least 2 characters"),
-    clientEmail: z.email("Invalid email address").optional(),
+    clientEmail: z.string().email("Please provide a valid email address"),
     useExisting: z.boolean(),
     existingClientId: z.string().optional(),
     clientPhone: z.string().optional(),
@@ -19,14 +19,14 @@ export const publicBookingSchema = z.object({
 }).superRefine((val, ctx) => {
     if (!val.useExisting && !val.clientPhone) {
         ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: "Phone number is required for new clients",
             path: ["clientPhone"],
         });
     }
     if (val.useExisting && !val.existingClientId) {
         ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: "Please select your existing profile",
             path: ["existingClientId"],
         });

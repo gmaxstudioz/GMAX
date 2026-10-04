@@ -1,7 +1,7 @@
 // router/payments.ts
 import { db } from "@/lib/db";
-import { payment, productAccess, buyerAccessToken, booking, buyer } from "@/lib/schema";
-import { eq, and } from "drizzle-orm";
+import { payment, productAccess, buyerAccessToken, booking, buyer, bookingIntent, service } from "@/lib/schema";
+import { eq, and, inArray } from "drizzle-orm";
 import { implement } from "@orpc/server";
 import { contract } from "@/app/contract";
 import { BaseContext, optionalAuthMiddleware } from "./middleware";
@@ -249,7 +249,57 @@ export const getPublicPaymentDetails = os.payment.getPublicPaymentDetails
         });
 
         if (!paymentRecord) {
-            throw new Error("Payment not found");
+            // Fallback: check bookingIntent (happens before payment is finalized)
+            const intent = await db.query.bookingIntent.findFirst({
+                where: eq(bookingIntent.paystackReference, input.reference),
+                with: {
+                    studio: true,
+                }
+            });
+
+            if (!intent || intent.status !== "PENDING" || new Date(intent.expiresAt) < new Date()) {
+                throw new Error("Payment not found or expired");
+            }
+
+            // Manually fetch service details to match the expected format
+            const serviceRecord = await db.query.service.findFirst({
+                where: eq(service.id, intent.serviceId),
+                with: { studioSession: true },
+            });
+
+            let addonsList: any[] = [];
+            if (intent.addonIds && intent.addonIds.length > 0) {
+                // addonIds format is likely "addonId" or "addonId:variantId"
+                const cleanAddonIds = intent.addonIds.map(id => id.split(":")[0]);
+                const addonsRecords = await db.query.service.findMany({
+                    where: inArray(service.id, cleanAddonIds),
+                });
+                addonsList = addonsRecords.map(a => ({ id: a.id, name: a.name }));
+            }
+
+            return {
+                amount: intent.amount.toString(),
+                status: "PENDING",
+                isAlreadyPaid: false,
+                booking: {
+                    sessionCount: intent.sessionCount,
+                    bookingDate: intent.bookingDate,
+                    client: {
+                        name: intent.clientName,
+                        email: intent.clientEmail || "",
+                    },
+                    service: serviceRecord ? {
+                        name: serviceRecord.name,
+                        duration: serviceRecord.studioSession?.duration || 45,
+                    } : null,
+                    studio: intent.studio ? {
+                        name: intent.studio.name,
+                        logo: intent.studio.logo,
+                    } : null,
+                    addons: addonsList,
+                },
+                productAccess: null,
+            };
         }
 
         const isAlreadyPaid = paymentRecord.status === "PAID";

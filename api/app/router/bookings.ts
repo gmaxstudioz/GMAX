@@ -13,11 +13,14 @@ import { getPostHogClient } from "@/lib/auth";
 const os = implement(contract).$context<BaseContext>();
 
 async function captureEvent(event: string, properties: Record<string, string | number | boolean>) {
-    const posthog = getPostHogClient();
-    if (!posthog) return;
-
-    posthog.capture({ event, properties });
-    await posthog.flush();
+    try {
+        const posthog = getPostHogClient();
+        if (!posthog) return;
+        posthog.capture({ event, properties });
+        await posthog.flush();
+    } catch (error) {
+        console.error("[PostHog] Failed to capture event:", error);
+    }
 }
 
 const mapBookingToOutput = (data: any) => {

@@ -10,7 +10,7 @@ export const ClientTypeEnum = z.enum([
 // Mirrors the Prisma Client model field-for-field
 export const ClientSchema = z.object({
     name:       z.string(),
-    email:      z.email().nullable().optional(),    // String? @unique
+    email:      z.union([z.string().email(), z.literal("")]).transform(v => v === "" ? null : v).nullable().optional(),    // String? @unique
     phone:      z.string(),                          // String  @unique — NOT an array
     altPhone:   z.string().nullable().optional(),    // String? (was missing)
     address:    z.string().nullable().optional(),
@@ -22,7 +22,7 @@ export const ClientSchemaOutput = z.object({
     id:         z.string(),
     image:      z.string().optional(),
     name:       z.string(),
-    email:      z.email().nullable().optional(),
+    email:      z.union([z.string().email(), z.literal("")]).transform(v => v === "" ? null : v).nullable().optional(),
     phone:      z.string(),                          // single string, not array
     altPhone:   z.string().nullable().optional(),
     type:       ClientTypeEnum,
