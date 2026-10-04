@@ -70,11 +70,11 @@ export function DateTimeSlotPicker({
                 continue;
             }
 
-            // Cannot book in the past
-            if (isBefore(curr, now)) {
-                curr = addMinutes(curr, 30);
-                continue;
-            }
+            // Cannot book in the past (disabled for admin to allow backdating)
+            // if (isBefore(curr, now)) {
+            //     curr = addMinutes(curr, 30);
+            //     continue;
+            // }
 
             // Check if this [curr, proposedEnd] overlaps with any existing booking interval
             const cStart = curr.getTime();
@@ -132,16 +132,15 @@ export function DateTimeSlotPicker({
                     mode="single"
                     selected={calendarDate}
                     onSelect={handleDateSelect}
-                    disabled={(date) => isBefore(endOfDay(date), new Date())} // disable past days
                 />
 
                 {calendarDate && (
-                    <div className="border-t sm:border-t-0 sm:border-l h-[200px] sm:h-[300px] w-[280px] sm:w-[140px] p-3 flex flex-col gap-2">
+                    <div className="border-t sm:border-t-0 sm:border-l h-50 sm:h-75 w-70 sm:w-35 p-3 flex flex-col gap-2">
                         <span className="text-sm font-semibold mb-2">Available Times</span>
-                        <ScrollArea className="flex-1 max-h-[150px] sm:max-h-full">
+                        <ScrollArea className="flex-1 h-full sm:max-h-full">
                             {proposedDuration > 0 ? (
                                 availableTimeSlots.length > 0 ? (
-                                    <div className="flex flex-col gap-2 pr-3 pb-4">
+                                    <div className="flex flex-col gap-2 pr-3 pb-4 h-full">
                                         {availableTimeSlots.map((slot) => {
                                             const isSelected = selectedDate && selectedDate.getTime() === slot.getTime();
                                             return (

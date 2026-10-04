@@ -16,8 +16,12 @@ async function captureEvent(event: string, properties: Record<string, string | n
     const posthog = getPostHogClient();
     if (!posthog) return;
 
-    posthog.capture({ event, properties });
-    await posthog.flush();
+    try {
+        posthog.capture({ event, properties });
+        await posthog.flush();
+    } catch (error) {
+        console.error("[PostHog] Failed to capture event:", error);
+    }
 }
 
 const mapBookingToOutput = (data: any) => {

@@ -95,6 +95,7 @@ export default function BookingPage() {
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [rulesExpanded, setRulesExpanded] = useState(false);
+  const [noEmail, setNoEmail] = useState(false);
 
   const {
     register,
@@ -113,6 +114,14 @@ export default function BookingPage() {
       paymentPlan: "FULL",
     },
   });
+
+  useEffect(() => {
+    if (noEmail) {
+      setValue("clientEmail", "gmaxstudios.dev@gmail.com");
+    } else {
+      setValue("clientEmail", "");
+    }
+  }, [noEmail, setValue]);
 
   const selectedStudioId = watch("studioId");
   const selectedStudioSlug = studiosList.find(
@@ -1300,19 +1309,34 @@ export default function BookingPage() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                  Email <span className="normal-case opacity-70">(Optional)</span>
-                </Label>
-                <Input
-                  type="email"
-                  placeholder="john@example.com"
-                  {...register("clientEmail")}
-                  className="rounded-xl bg-card/50 h-12"
-                />
-                {errors.clientEmail && (
-                  <p className="text-destructive text-sm">
-                    {errors.clientEmail.message}
-                  </p>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                    Email
+                  </Label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={noEmail}
+                      onChange={(e) => setNoEmail(e.target.checked)}
+                      className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                    />
+                    <span className="text-sm font-medium text-muted-foreground">I don't have an email</span>
+                  </label>
+                </div>
+                {!noEmail && (
+                  <>
+                    <Input
+                      type="email"
+                      placeholder="john@example.com"
+                      {...register("clientEmail")}
+                      className="rounded-xl bg-card/50 h-12"
+                    />
+                    {errors.clientEmail && (
+                      <p className="text-destructive text-sm">
+                        {errors.clientEmail.message}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </div>

@@ -63,6 +63,7 @@ async function request<T>(
 
     if (!res.ok) {
         const error = await res.json().catch(() => ({}));
+        console.error("API Error details:", JSON.stringify(error, null, 2));
         throw new ApiError(
             res.status,
             error?.message ?? `API error: ${res.status}`,

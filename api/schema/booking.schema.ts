@@ -107,7 +107,7 @@ export const PublicBookingSchema = BookingSchema.omit({
     bookingDate: true,
 }).extend({
     clientName: z.string().min(2, "Name must be at least 2 characters"),
-    clientEmail: z.union([z.email("Invalid email address"), z.literal("")]).optional(),
+    clientEmail: z.email("Please provide a valid email address"),
     useExisting: z.boolean(),
     existingClientId: z.string().optional(),
     clientPhone: z.string().optional(),
