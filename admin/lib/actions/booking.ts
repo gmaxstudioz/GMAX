@@ -51,11 +51,15 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
         const proposedStart = targetDate.getTime();
         const proposedEnd = proposedStart + (proposedDuration * 60 * 1000);
 
+        // Broaden the query window to catch overlapping bookings from adjacent days
+        const queryStart = new Date(start.getTime() - (24 * 60 * 60 * 1000));
+        const queryEnd = new Date(end.getTime() + (24 * 60 * 60 * 1000));
+
         const dailyBookings = await db.query.booking.findMany({
             where: and(
                 eq(schema.booking.studioId, studioId),
-                gte(schema.booking.bookingDate, start.toISOString()),
-                lte(schema.booking.bookingDate, end.toISOString())
+                gte(schema.booking.bookingDate, queryStart.toISOString()),
+                lte(schema.booking.bookingDate, queryEnd.toISOString())
             ),
             with: { service: { with: { studioSession: true } } }
         });
@@ -248,11 +252,15 @@ export async function rescheduleBooking(bookingId: string, newDate: string) {
         }
 
         // Check for overlaps with other bookings (exclude this booking)
+        // Broaden the query window to catch overlapping bookings from adjacent days
+        const queryStart = new Date(start.getTime() - (24 * 60 * 60 * 1000));
+        const queryEnd = new Date(end.getTime() + (24 * 60 * 60 * 1000));
+
         const dailyBookings = await db.query.booking.findMany({
             where: and(
                 eq(schema.booking.studioId, booking.studioId),
-                gte(schema.booking.bookingDate, start.toISOString()),
-                lte(schema.booking.bookingDate, end.toISOString()),
+                gte(schema.booking.bookingDate, queryStart.toISOString()),
+                lte(schema.booking.bookingDate, queryEnd.toISOString()),
                 ne(schema.booking.id, bookingId)
             ),
             with: { service: { with: { studioSession: true } } }
@@ -698,11 +706,15 @@ export async function updateBookingFull(
             }
 
             // Check overlaps
+            // Broaden the query window to catch overlapping bookings from adjacent days
+            const queryStart = new Date(start.getTime() - (24 * 60 * 60 * 1000));
+            const queryEnd = new Date(end.getTime() + (24 * 60 * 60 * 1000));
+
             const dailyBookings = await db.query.booking.findMany({
                 where: and(
                     eq(schema.booking.studioId, booking.studioId),
-                    gte(schema.booking.bookingDate, start.toISOString()),
-                    lte(schema.booking.bookingDate, end.toISOString()),
+                    gte(schema.booking.bookingDate, queryStart.toISOString()),
+                    lte(schema.booking.bookingDate, queryEnd.toISOString()),
                     ne(schema.booking.id, bookingId)
                 ),
                 with: { service: { with: { studioSession: true } } },
