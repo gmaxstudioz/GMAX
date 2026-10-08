@@ -195,6 +195,7 @@ export default async function BookingDetailPage({ params }: Props) {
         isAddon: s.isAddon,
         variants: s.serviceVariants.map((v: any) => ({
             id: v.id,
+            title: v.title,
             basePrice: v.basePrice.toString(),
             maxPrice: v.maxPrice?.toString() ?? null,
             locationType: v.locationType,

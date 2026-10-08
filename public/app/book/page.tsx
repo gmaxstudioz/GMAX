@@ -785,7 +785,7 @@ export default function BookingPage() {
                             )}
                             <div className="text-3xl mb-3">{meta.icon}</div>
                             <p className="font-semibold text-base">
-                              {meta.label}
+                              {variant.title || meta.label}
                             </p>
                             <p className="text-primary font-bold mt-1 text-sm">
                               ₦
@@ -1200,7 +1200,7 @@ export default function BookingPage() {
                                   </span>
                                   {addon.variants.length > 1 && (
                                     <span className="text-xs text-muted-foreground uppercase tracking-wider block mt-0.5">
-                                      {variant.locationType}
+                                      {variant.title || variant.locationType}
                                     </span>
                                   )}
                                   <span className="text-sm font-bold text-primary mt-1 block">
@@ -1454,7 +1454,7 @@ export default function BookingPage() {
                   <span className="text-muted-foreground">Service</span>
                   <span className="font-medium text-right">
                     {selectedService?.name || "Not selected"}{" "}
-                    {selectedVariant ? `(${selectedVariant.locationType})` : ""}
+                    {selectedVariant ? `(${selectedVariant.title || selectedVariant.locationType})` : ""}
                   </span>
                 </div>
                 <div className="flex justify-between">

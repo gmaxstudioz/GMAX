@@ -31,6 +31,7 @@ export const StudioSessionListOutputSchema = PaginatedOutput(StudioSessionOutput
 
 export const ServiceVariantOutputSchema = z.object({
   id: z.string(),
+  title: z.string().nullable().optional(),
   locationType: z.enum(["STUDIO", "OUTDOOR", "BOTH", "MULTIPLE"]),
   basePrice: z.string(), // Decimals from Prisma often serialize as strings
   maxPrice: z.string().nullable(),

@@ -136,6 +136,7 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
                     studioId: s.studioId,
                     variants: s.serviceVariants?.map((v: any) => ({
                         id: v.id,
+                        title: v.title,
                         serviceId: v.serviceId,
                         locationType: v.locationType,
                         basePrice: Number(v.basePrice),

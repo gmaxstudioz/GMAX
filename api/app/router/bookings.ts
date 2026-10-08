@@ -62,6 +62,7 @@ const mapBookingToOutput = (data: any) => {
             isAddon: data.service.isAddon,
             variants: data.service.serviceVariants ? data.service.serviceVariants.map((v: any) => ({
                 id: v.id,
+                title: v.title,
                 locationType: v.locationType,
                 basePrice: v.basePrice.toString(),
                 maxPrice: v.maxPrice ? v.maxPrice.toString() : null,
@@ -93,6 +94,7 @@ const mapBookingToOutput = (data: any) => {
             isAddon: a.isAddon,
             variants: a.serviceVariants ? a.serviceVariants.map((v: any) => ({
                 id: v.id,
+                title: v.title,
                 locationType: v.locationType,
                 basePrice: v.basePrice.toString(),
                 maxPrice: v.maxPrice ? v.maxPrice.toString() : null,
@@ -152,6 +154,7 @@ const mapBookingSummaryToOutput = (data: any) => {
             isAddon: data.service.isAddon,
             variants: data.service.serviceVariants ? data.service.serviceVariants.map((v: any) => ({
                 id: v.id,
+                title: v.title,
                 locationType: v.locationType,
                 basePrice: v.basePrice.toString(),
                 maxPrice: v.maxPrice ? v.maxPrice.toString() : null,

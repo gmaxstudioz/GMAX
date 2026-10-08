@@ -59,6 +59,7 @@ export const getStudioBySlug = os.studio.getBySlug
                     discountPercentage: s.discountPercentage || 0,
                     variants: s.serviceVariants.map((v) => ({
                         id: v.id,
+                        title: v.title,
                         locationType: v.locationType,
                         basePrice: v.basePrice.toString(),
                         maxPrice: v.maxPrice ? v.maxPrice.toString() : null,
@@ -89,6 +90,7 @@ export const getStudioBySlug = os.studio.getBySlug
                 discountPercentage: a.discountPercentage || 0,
                 variants: a.serviceVariants.map((v) => ({
                     id: v.id,
+                    title: v.title,
                     locationType: v.locationType,
                     basePrice: v.basePrice.toString(),
                     maxPrice: v.maxPrice ? v.maxPrice.toString() : null,

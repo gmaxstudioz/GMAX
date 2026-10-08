@@ -64,6 +64,7 @@ export default async function ServicesPage() {
             ...s,
             variants: s.serviceVariants.map((v: any) => ({
                 ...v,
+                title: v.title,
                 deliverables: v.serviceDeliverables || []
             })),
             _count: { bookings: s.bookings?.length || 0 }
