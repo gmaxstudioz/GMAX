@@ -78,7 +78,9 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
         const openTime = start.getTime() + (8 * 60 * 60 * 1000);
         const closeTime = start.getTime() + (20 * 60 * 60 * 1000);
 
-        if (proposedStart < openTime || proposedEnd > closeTime) {
+        // Admins and owners can bypass the operating hours check (e.g. for backdating)
+        const canBypassHours = ["owner", "admin", "manager", "developer"].includes(member.role);
+        if (!canBypassHours && (proposedStart < openTime || proposedEnd > closeTime)) {
             hasOverlap = true;
         }
 
@@ -240,7 +242,8 @@ export async function rescheduleBooking(bookingId: string, newDate: string) {
         const openTime = start.getTime() + (8 * 60 * 60 * 1000);
         const closeTime = start.getTime() + (20 * 60 * 60 * 1000);
 
-        if (proposedStart < openTime || proposedEnd > closeTime) {
+        const canBypassHours = ["owner", "admin", "manager", "developer"].includes(member.role);
+        if (!canBypassHours && (proposedStart < openTime || proposedEnd > closeTime)) {
             return { status: "error", message: "The selected time is outside operating hours (8am - 8pm)." };
         }
 
@@ -689,7 +692,8 @@ export async function updateBookingFull(
 
             const openTime = start.getTime() + (8 * 60 * 60 * 1000);
             const closeTime = start.getTime() + (20 * 60 * 60 * 1000);
-            if (proposedStart < openTime || proposedEnd > closeTime) {
+            const canBypassHours = ["owner", "admin", "manager", "developer"].includes(member.role);
+            if (!canBypassHours && (proposedStart < openTime || proposedEnd > closeTime)) {
                 return { status: "error", message: "The selected time is outside operating hours (8am - 8pm)." };
             }
 

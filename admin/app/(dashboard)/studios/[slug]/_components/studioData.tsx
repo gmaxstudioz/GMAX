@@ -1192,6 +1192,46 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
                                 />
                             </div>
 
+                            {/* Statuses (for admin backdating/importing) */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <Controller
+                                    control={form.control}
+                                    name="bookingStatus"
+                                    render={({ field }) => (
+                                        <Field className="flex flex-col gap-2">
+                                            <FieldLabel>Booking Status</FieldLabel>
+                                            <Select value={field.value} onValueChange={field.onChange}>
+                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="PENDING">Pending</SelectItem>
+                                                    <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                                                    <SelectItem value="COMPLETED">Completed</SelectItem>
+                                                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </Field>
+                                    )}
+                                />
+                                <Controller
+                                    control={form.control}
+                                    name="paymentStatus"
+                                    render={({ field }) => (
+                                        <Field className="flex flex-col gap-2">
+                                            <FieldLabel>Payment Status</FieldLabel>
+                                            <Select value={field.value} onValueChange={field.onChange}>
+                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="PENDING">Pending</SelectItem>
+                                                    <SelectItem value="PARTIALLY_PAID">Partially Paid</SelectItem>
+                                                    <SelectItem value="PAID">Paid</SelectItem>
+                                                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </Field>
+                                    )}
+                                />
+                            </div>
+
                             {/* Financials */}
                             <div className="grid grid-cols-2 gap-4">
                                 <Controller
