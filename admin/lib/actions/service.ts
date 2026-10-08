@@ -64,6 +64,7 @@ export async function createService(data: ServicePayload) {
                     await tx.insert(schema.serviceVariant).values({
                         id: variantId,
                         serviceId: newServiceId,
+                        title: (v as any).title,
                         locationType: (v as any).locationType,
                         basePrice: (v as any).basePrice.toString(),
                         maxPrice: (v as any).maxPrice ? (v as any).maxPrice.toString() : null,
@@ -147,6 +148,7 @@ export async function updateService(id: string, data: ServicePayload) {
 
             for (const variant of parsed.data.variants) {
                 const variantData = {
+                    title: (variant as any).title,
                     locationType: (variant as any).locationType,
                     basePrice: (variant as any).basePrice.toString(),
                     maxPrice: (variant as any).maxPrice ? (variant as any).maxPrice.toString() : null,
@@ -315,6 +317,7 @@ export async function cloneService(serviceId: string, targetStudioId: string) {
                 await tx.insert(schema.serviceVariant).values({
                     id: newVariantId,
                     serviceId: newServiceId,
+                    title: v.title,
                     locationType: v.locationType,
                     basePrice: v.basePrice.toString(),
                     maxPrice: v.maxPrice ? v.maxPrice.toString() : null,

@@ -7,7 +7,7 @@ import { CalendarIcon } from "lucide-react";
 import { format, isSameDay, startOfDay, addMinutes, isBefore, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useState, useMemo, useEffect } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 
 export function DateTimeSlotPicker({
     selectedDate,
@@ -114,58 +114,72 @@ export function DateTimeSlotPicker({
     };
 
     return (
-        <Popover>
-            <PopoverTrigger asChild>
-                <Button
-                    variant={"outline"}
-                    className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !selectedDate && "text-muted-foreground"
-                    )}
-                >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? format(selectedDate, "PPP 'at' p") : <span>Pick a date & time</span>}
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 flex flex-col sm:flex-row items-start" align="start">
-                <Calendar
-                    mode="single"
-                    selected={calendarDate}
-                    onSelect={handleDateSelect}
-                />
+        <div className="space-y-4">
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button
+                        variant={"outline"}
+                        className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !selectedDate && "text-muted-foreground"
+                        )}
+                    >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? format(selectedDate, "PPP 'at' p") : <span>Pick a date & time</span>}
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                        mode="single"
+                        selected={calendarDate}
+                        onSelect={handleDateSelect}
+                    />
+                </PopoverContent>
+            </Popover>
 
-                {calendarDate && (
-                    <div className="border-t sm:border-t-0 sm:border-l h-50 sm:h-75 w-70 sm:w-35 p-3 flex flex-col gap-2">
-                        <span className="text-sm font-semibold mb-2">Available Times</span>
-                        <ScrollArea className="flex-1 h-full sm:max-h-full">
-                            {proposedDuration > 0 ? (
-                                availableTimeSlots.length > 0 ? (
-                                    <div className="flex flex-col gap-2 pr-3 pb-4 h-full">
-                                        {availableTimeSlots.map((slot) => {
-                                            const isSelected = selectedDate && selectedDate.getTime() === slot.getTime();
-                                            return (
-                                                <Button
-                                                    key={slot.toISOString()}
-                                                    variant={isSelected ? "default" : "outline"}
-                                                    size="sm"
-                                                    onClick={() => handleTimeSelect(slot)}
-                                                    className="w-full text-xs"
-                                                >
-                                                    {format(slot, "h:mm a")}
-                                                </Button>
-                                            )
-                                        })}
-                                    </div>
-                                ) : (
-                                    <p className="text-xs text-muted-foreground pt-4">No available slots for this duration.</p>
-                                )
+            <div className="space-y-3">
+                <span className="text-sm font-medium text-foreground uppercase tracking-wider">
+                    Available Times
+                </span>
+                <div className="grid grid-cols-3 gap-3">
+                    {proposedDuration > 0 ? (
+                        calendarDate ? (
+                            availableTimeSlots.length > 0 ? (
+                                availableTimeSlots.map((slot) => {
+                                    const isSelected = selectedDate && selectedDate.getTime() === slot.getTime();
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={slot.toISOString()}
+                                            onClick={() => handleTimeSelect(slot)}
+                                            className={cn(
+                                                "py-2.5 px-3 text-sm font-medium rounded-xl border transition-all",
+                                                isSelected
+                                                    ? "bg-primary text-primary-foreground border-primary shadow-md"
+                                                    : "bg-card hover:border-primary/50 border-border"
+                                            )}
+                                        >
+                                            {format(slot, "h:mm a")}
+                                        </button>
+                                    )
+                                })
                             ) : (
-                                <p className="text-xs text-muted-foreground pt-4">Select a service and session count first.</p>
-                            )}
-                        </ScrollArea>
-                    </div>
-                )}
-            </PopoverContent>
-        </Popover>
+                                <div className="col-span-3 text-sm text-muted-foreground py-3 bg-muted/30 text-center rounded-xl border border-dashed border-border">
+                                    No available slots for this duration
+                                </div>
+                            )
+                        ) : (
+                            <div className="col-span-3 text-sm text-muted-foreground py-3 bg-muted/30 text-center rounded-xl border border-dashed border-border">
+                                Select a date to view times
+                            </div>
+                        )
+                    ) : (
+                        <div className="col-span-3 text-sm text-muted-foreground py-3 bg-muted/30 text-center rounded-xl border border-dashed border-border">
+                            Select a service and session count first
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
     );
 }

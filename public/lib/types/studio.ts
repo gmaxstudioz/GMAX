@@ -10,6 +10,7 @@ export interface ServiceDeliverableOutput {
 
 export interface ServiceVariantOutput {
     id: string;
+    title?: string | null;
     locationType: "STUDIO" | "OUTDOOR" | "BOTH" | "MULTIPLE";
     basePrice: string; // Comes from backend as a string
     maxPrice: string | null;
