@@ -494,12 +494,12 @@ export function AddBookingDialog({
         </DialogHeader>
 
         {loadingStudios && allStudios.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-12 gap-3 min-h-[300px]">
+          <div className="flex flex-col items-center justify-center p-12 gap-3 min-h-75">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground">Loading studios...</p>
           </div>
         ) : allStudios.length === 0 && !studio ? (
-          <div className="flex flex-col items-center justify-center p-12 gap-3 min-h-[300px] text-center">
+          <div className="flex flex-col items-center justify-center p-12 gap-3 min-h-75 text-center">
             <p className="text-sm text-muted-foreground">No eligible studios available for booking.</p>
           </div>
         ) : (

@@ -12,7 +12,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { LayoutDashboardIcon, ChartBarIcon, FolderIcon } from "lucide-react"
+import { LayoutDashboardIcon, ChartBarIcon, FolderIcon, UsersIcon } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { auth } from "@/lib/auth"
@@ -87,7 +87,7 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
         columns: { role: true, studioId: true }
       });
       
-      const adminRoles = ["owner", "developer", "admin"];
+      const adminRoles = ["owner", "developer", "admin", "manager"];
       const hasAdminRole = members.some(m => adminRoles.includes(m.role));
       isOnlyMinorRole = members.length > 0 && !hasAdminRole;
 
@@ -121,6 +121,11 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
         title: s.name,
         url: `/studios/${s.slug}`,
       })),
+    },
+    {
+      title: "Users",
+      url: "/users",
+      icon: <UsersIcon className="size-4" />,
     },
     {
       title: "Transactions",
