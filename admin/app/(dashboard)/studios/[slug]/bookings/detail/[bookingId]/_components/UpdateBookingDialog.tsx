@@ -244,7 +244,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                     <span className="hidden md:inline">Edit Booking</span>
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-130 max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Edit Booking</DialogTitle>
                     <DialogDescription>Update booking details, assignment, and statuses.</DialogDescription>
@@ -275,7 +275,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                                             autoFocus
                                         />
                                     </div>
-                                    <div className="max-h-[200px] overflow-y-auto p-1">
+                                    <div className="max-h-50 overflow-y-auto p-1">
                                         {filteredClients.length > 0 ? filteredClients.map(c => (
                                             <div
                                                 key={c.id}
@@ -511,7 +511,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                     {flattenedAddons.length > 0 && (
                         <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium">Add-ons <span className="text-muted-foreground font-normal">(Optional)</span></label>
-                            <div className="border rounded-lg max-h-[220px] overflow-y-auto">
+                            <div className="border rounded-lg max-h-55 overflow-y-auto">
                                 {flattenedAddons.map(item => (
                                     <label
                                         key={item.compositeId}

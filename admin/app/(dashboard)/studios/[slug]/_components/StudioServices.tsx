@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { createService, deleteService, updateService, cloneService, bulkUpdateServiceDiscounts } from "@/lib/actions/service";
+import { CloneServicesDialog, CloneDialogState } from "./CloneServicesDialog";
 import { ViewToggle } from "@/components/web/ViewToggle";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useSearchParams } from "next/navigation";
@@ -120,6 +121,10 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
     const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
     const [bulkDiscountOpen, setBulkDiscountOpen] = useState(false);
     const [bulkDiscountValue, setBulkDiscountValue] = useState(0);
+    const [cloneDialogState, setCloneDialogState] = useState<CloneDialogState>({
+        open: false,
+        mode: "single",
+    });
 
     const toggleSelection = (id: string) => {
         setSelectedServiceIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -256,13 +261,11 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
         });
     };
 
-    const handleCloneService = (serviceId: string) => {
-        const targetStudioId = studioData.id;
-        
-        startTransition(async () => {
-            const result = await cloneService(serviceId, targetStudioId);
-            if (result.status === "success") toast.success("Service cloned successfully!");
-            else toast.error(result.message);
+    const openCloneForSingleService = (service: any) => {
+        setCloneDialogState({
+            open: true,
+            mode: "single",
+            service,
         });
     };
 
@@ -293,9 +296,27 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                         </DialogContent>
                     </Dialog>
                     {selectedServiceIds.length > 0 && (
-                        <Button variant="outline" size="sm" onClick={() => setBulkDiscountOpen(true)}>
-                            Bulk Discount ({selectedServiceIds.length})
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => setBulkDiscountOpen(true)}>
+                                Bulk Discount ({selectedServiceIds.length})
+                            </Button>
+                            <Button
+                                variant="default"
+                                size="sm"
+                                className="gap-1.5"
+                                onClick={() => {
+                                    const selectedServices = studioData.services.filter((s: any) => selectedServiceIds.includes(s.id));
+                                    setCloneDialogState({
+                                        open: true,
+                                        mode: "group",
+                                        services: selectedServices,
+                                    });
+                                }}
+                            >
+                                <CopyIcon className="size-3.5" />
+                                Clone Selected ({selectedServiceIds.length})
+                            </Button>
+                        </div>
                     )}
                     <ViewToggle defaultView="list" />
                 </div>
@@ -329,7 +350,28 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                     </div>
                                 </AccordionTrigger>
                                 
-                                <div className="flex items-center pl-2 gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex items-center pl-2 gap-1.5 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {services.length > 0 && (
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="h-8 gap-1.5 text-xs font-medium"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                e.preventDefault();
+                                                setCloneDialogState({
+                                                    open: true,
+                                                    mode: "category",
+                                                    category,
+                                                    categoryCount: services.length,
+                                                });
+                                            }}
+                                            title={`Clone all ${services.length} services in ${categoryName} to another studio`}
+                                        >
+                                            <CopyIcon className="size-3.5" />
+                                            Clone Category
+                                        </Button>
+                                    )}
                                     <Button 
                                         variant="secondary" 
                                         size="sm" 
@@ -354,7 +396,22 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                             <Table>
                                                 <TableHeader>
                                                     <TableRow>
-                                                        <TableHead className="w-[50px]"></TableHead><TableHead>Service</TableHead>
+                                                        <TableHead className="w-[50px]">
+                                                            <input
+                                                                type="checkbox"
+                                                                className="size-4 rounded border-muted-foreground/30"
+                                                                checked={services.length > 0 && services.every((s: any) => selectedServiceIds.includes(s.id))}
+                                                                onChange={(e) => {
+                                                                    const catIds = services.map((s: any) => s.id);
+                                                                    if (e.target.checked) {
+                                                                        setSelectedServiceIds(prev => Array.from(new Set([...prev, ...catIds])));
+                                                                    } else {
+                                                                        setSelectedServiceIds(prev => prev.filter(id => !catIds.includes(id)));
+                                                                    }
+                                                                }}
+                                                                title="Select all in this category"
+                                                            />
+                                                        </TableHead><TableHead>Service</TableHead>
                                                         <TableHead>Base Price</TableHead>
                                                         <TableHead>Duration</TableHead>
                                                         <TableHead>Features</TableHead>
@@ -405,7 +462,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                         variant="ghost"
                                                                         size="icon"
                                                                         className="size-8 h-8 w-8 text-muted-foreground hover:text-primary"
-                                                                        onClick={() => handleCloneService(svc.id)}
+                                                                        onClick={() => openCloneForSingleService(svc)}
                                                                         title="Clone Service"
                                                                     >
                                                                         <CopyIcon className="size-4" />
@@ -510,7 +567,7 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 className="size-6 h-6 w-6 text-muted-foreground hover:text-primary"
-                                                                onClick={() => handleCloneService(svc.id)}
+                                                                onClick={() => openCloneForSingleService(svc)}
                                                                 title="Clone Service"
                                                             >
                                                                 <CopyIcon className="size-3" />
@@ -883,6 +940,19 @@ export default function StudioServices({ studioData }: { studioData: StudioWithR
                     </form>
                 </DialogContent>
             </Dialog>
+
+            <CloneServicesDialog
+                state={cloneDialogState}
+                onOpenChange={(open) => setCloneDialogState(prev => ({ ...prev, open }))}
+                currentStudio={{
+                    id: studioData.id,
+                    name: studioData.name,
+                    slug: studioData.slug,
+                }}
+                onSuccess={() => {
+                    setSelectedServiceIds([]);
+                }}
+            />
         </Card>
     );
 }
