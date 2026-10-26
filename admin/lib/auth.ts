@@ -3,7 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { organization, phoneNumber } from "better-auth/plugins";
 import { db } from "./db";
 import * as schema from "./schema";
-import { sendInvitationEmail } from "./termii";
+import { sendInvitationEmail, sendPasswordResetEmail } from "./termii";
 import { studioAc, photographer, videographer, receptionist, manager, owner, developer } from "./permissions";
 
 const BASE_URL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
@@ -16,6 +16,13 @@ export const auth = betterAuth({
     }),
     emailAndPassword: {
         enabled: true,
+        sendResetPassword: async ({ user, url }) => {
+            await sendPasswordResetEmail({
+                email: user.email,
+                userName: user.name,
+                resetLink: url,
+            });
+        },
     },
     plugins: [
         phoneNumber(),

@@ -1,3 +1,5 @@
+"use client"
+
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,6 +25,7 @@ import { authClient } from "@/lib/auth-client"
 import { toast } from "sonner"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useState, useTransition, Suspense } from "react"
+import Link from "next/link"
 
 function LoginFormContent({
   className,
@@ -116,12 +119,12 @@ function LoginFormContent({
                   <Field>
                     <div className="flex items-center">
                       <FieldLabel htmlFor="password">Password</FieldLabel>
-                      <a
-                        href="#"
+                      <Link
+                        href="/auth/reset-password"
                         className="ml-auto text-sm underline-offset-4 hover:underline"
                       >
                         Forgot your password?
-                      </a>
+                      </Link>
                     </div>
                     <Input 
                       {...field}

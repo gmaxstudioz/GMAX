@@ -17,10 +17,12 @@ import Image from "next/image"
 import Link from "next/link"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
-import { NavManagement } from "./nav-management"
+import { NavManagement, type NavManagementItem } from "./nav-management"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { School01Icon, ToolsIcon, WarehouseIcon, ShoppingCart01Icon, CreditCardIcon } from "@hugeicons/core-free-icons"
 import { db } from "@/lib/db"
+import * as schema from "@/lib/schema"
+import { inArray, asc } from "drizzle-orm"
 import { BriefcaseIcon } from "lucide-react"
 
 const data = {
@@ -60,50 +62,6 @@ const data = {
       ),
     },
   ],
-  navManagement: [
-    {
-      title: "Studios",
-      url: "/studios",
-      icon: (
-        <HugeiconsIcon icon={WarehouseIcon} />
-      ),
-    },
-    {
-      title: "Transactions",
-      url: "/transactions",
-      icon: (
-        <HugeiconsIcon icon={CreditCardIcon} />
-      ),
-    },
-    {
-      title: "Services",
-      url: "/services",
-      icon: (
-        <HugeiconsIcon icon={ToolsIcon} />
-      ),
-    },
-    {
-      title: "Academy",
-      url: "/academy",
-      icon: (
-        <HugeiconsIcon icon={School01Icon} />
-      ),
-    },
-    {
-      title: "Store",
-      url: "/store",
-      icon: (
-        <HugeiconsIcon icon={ShoppingCart01Icon} />
-      ),
-    },
-    {
-      title: "Portfolio",
-      url: "/portfolio",
-      icon: (
-        <FolderIcon />
-      ),
-    },
-  ],
 }
 
 export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -113,6 +71,7 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
   
   let isOnlyMinorRole = false;
   let isPhotoVideoRole = false;
+  let sidebarStudios: { name: string; slug: string }[] = [];
 
   if (session?.user) {
     const userData = await db.query.user.findFirst({
@@ -125,7 +84,7 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
     if (!isAdmin) {
       const members = await db.query.member.findMany({
         where: (member, { eq }) => eq(member.userId, session.user.id),
-        columns: { role: true }
+        columns: { role: true, studioId: true }
       });
       
       const adminRoles = ["owner", "developer", "admin"];
@@ -134,8 +93,61 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
 
       const photoVideoRoles = ["photographer", "videographer"];
       isPhotoVideoRole = members.length > 0 && members.every(m => photoVideoRoles.includes(m.role));
+
+      const memberStudioIds = members.map((m) => m.studioId);
+      if (memberStudioIds.length > 0) {
+        sidebarStudios = await db.query.studio.findMany({
+          where: inArray(schema.studio.id, memberStudioIds),
+          columns: { name: true, slug: true },
+          orderBy: [asc(schema.studio.createdAt)],
+          limit: 5,
+        });
+      }
+    } else {
+      sidebarStudios = await db.query.studio.findMany({
+        columns: { name: true, slug: true },
+        orderBy: [asc(schema.studio.createdAt)],
+        limit: 5,
+      });
     }
   }
+
+  const navManagement: NavManagementItem[] = [
+    {
+      title: "Studios",
+      url: "/studios",
+      icon: <HugeiconsIcon icon={WarehouseIcon} />,
+      subItems: sidebarStudios.map((s) => ({
+        title: s.name,
+        url: `/studios/${s.slug}`,
+      })),
+    },
+    {
+      title: "Transactions",
+      url: "/transactions",
+      icon: <HugeiconsIcon icon={CreditCardIcon} />,
+    },
+    {
+      title: "Services",
+      url: "/services",
+      icon: <HugeiconsIcon icon={ToolsIcon} />,
+    },
+    {
+      title: "Academy",
+      url: "/academy",
+      icon: <HugeiconsIcon icon={School01Icon} />,
+    },
+    {
+      title: "Store",
+      url: "/store",
+      icon: <HugeiconsIcon icon={ShoppingCart01Icon} />,
+    },
+    {
+      title: "Portfolio",
+      url: "/portfolio",
+      icon: <FolderIcon />,
+    },
+  ];
 
   let minorNavMain = [
     {
@@ -178,7 +190,7 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={isOnlyMinorRole ? minorNavMain : data.navMain} />
-        {!isOnlyMinorRole && <NavManagement items={data.navManagement} />}
+        {!isOnlyMinorRole && <NavManagement items={navManagement} />}
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={session?.user} />
