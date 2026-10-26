@@ -769,6 +769,7 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
                 {canAdd && (
                     <AddBookingDialog 
                         studio={studioData}
+                        syncWithUrl={true}
                         trigger={
                             <Button variant="outline">
                                 <PlusIcon className="mr-2 h-4 w-4" />

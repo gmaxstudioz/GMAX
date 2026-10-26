@@ -269,6 +269,23 @@ async function checkStudioManagePermission(userId: string, targetStudioId: strin
     return ["owner", "admin", "manager", "developer"].includes(member.role);
 }
 
+async function checkStudioViewPermission(userId: string, studioId: string): Promise<boolean> {
+    const user = await db.query.user.findFirst({
+        where: eq(schema.user.id, userId),
+        columns: { role: true }
+    });
+    if (user?.role === "admin") return true;
+
+    const member = await db.query.member.findFirst({
+        where: and(
+            eq(schema.member.userId, userId),
+            eq(schema.member.studioId, studioId)
+        ),
+        columns: { id: true }
+    });
+    return !!member;
+}
+
 export async function getClonableStudios(): Promise<{ id: string; name: string; slug: string }[]> {
     try {
         const session = await auth.api.getSession({ headers: await headers() });
@@ -436,6 +453,9 @@ export async function cloneService(serviceId: string, targetStudioId: string) {
 
         if (!existingService) return { status: "error", message: "Service not found" };
 
+        const hasSourcePermission = await checkStudioViewPermission(session.user.id, existingService.studioId);
+        if (!hasSourcePermission) return { status: "error", message: "Unauthorized access to source studio" };
+
         const { newServiceIds } = await cloneServicesListInternal(
             [existingService],
             targetStudioId,
@@ -483,7 +503,17 @@ export async function cloneServicesBulk(serviceIds: string[], targetStudioId: st
             return { status: "error", message: "No matching services found" };
         }
 
-        const sourceStudioId = servicesToClone[0].studioId;
+        const sourceStudioIds = Array.from(new Set(servicesToClone.map(s => s.studioId)));
+        if (sourceStudioIds.length > 1) {
+            return { status: "error", message: "Cannot clone services from multiple different studios in a single operation" };
+        }
+
+        const sourceStudioId = sourceStudioIds[0];
+        const hasSourcePermission = await checkStudioViewPermission(session.user.id, sourceStudioId);
+        if (!hasSourcePermission) {
+            return { status: "error", message: "Unauthorized access to source studio" };
+        }
+
         const { clonedCount } = await cloneServicesListInternal(
             servicesToClone,
             targetStudioId,
@@ -511,8 +541,11 @@ export async function cloneCategory(
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const hasPermission = await checkStudioManagePermission(session.user.id, targetStudioId);
-        if (!hasPermission) return { status: "error", message: "Unauthorized access to target studio" };
+        const hasSourcePermission = await checkStudioViewPermission(session.user.id, sourceStudioId);
+        if (!hasSourcePermission) return { status: "error", message: "Unauthorized access to source studio" };
+
+        const hasTargetPermission = await checkStudioManagePermission(session.user.id, targetStudioId);
+        if (!hasTargetPermission) return { status: "error", message: "Unauthorized access to target studio" };
 
         const servicesToClone = await db.query.service.findMany({
             where: and(

@@ -350,6 +350,19 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                                                 <span>Videography ({videoCount})</span>
                                             </button>
                                         )}
+                                        {othersCount > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedCategory("OTHERS")}
+                                                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors flex items-center gap-1 ${
+                                                    selectedCategory === "OTHERS"
+                                                        ? "bg-zinc-700 text-white shadow-xs"
+                                                        : "hover:bg-zinc-500/10 text-muted-foreground"
+                                                }`}
+                                            >
+                                                <span>Others ({othersCount})</span>
+                                            </button>
+                                        )}
                                     </div>
 
                                     <div className="max-h-60 overflow-y-auto p-1 divide-y divide-border/40">

@@ -17,10 +17,12 @@ export const auth = betterAuth({
     emailAndPassword: {
         enabled: true,
         sendResetPassword: async ({ user, url }) => {
-            await sendPasswordResetEmail({
+            sendPasswordResetEmail({
                 email: user.email,
                 userName: user.name,
                 resetLink: url,
+            }).catch((err) => {
+                console.error("[Auth] Failed to send password reset email:", err);
             });
         },
     },

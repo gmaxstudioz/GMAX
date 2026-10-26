@@ -817,3 +817,80 @@ export async function markTaskCompleted(bookingId: string) {
         return { status: "error", message: "Internal server error" };
     }
 }
+
+// ── Get Studios For Booking (Lazy Header / Global Loading) ─────────
+
+export async function getStudiosForBooking() {
+    try {
+        const session = await auth.api.getSession({
+            headers: await headers()
+        });
+        if (!session?.user) return [];
+
+        const members = await db.query.member.findMany({
+            where: eq(schema.member.userId, session.user.id),
+            columns: { role: true, studioId: true }
+        });
+
+        const bookingRoles = ["owner", "admin", "manager", "receptionist", "developer"];
+        const eligibleStudioIds = members
+            .filter((m: { role: string }) => bookingRoles.includes(m.role))
+            .map((m: { studioId: string }) => m.studioId);
+
+        if (eligibleStudioIds.length === 0) return [];
+
+        const studios = await db.query.studio.findMany({
+            where: inArray(schema.studio.id, eligibleStudioIds),
+            with: {
+                clients: {
+                    columns: { id: true, name: true, phone: true, email: true, image: true, type: true }
+                },
+                services: {
+                    with: {
+                        studioSession: true,
+                        serviceVariants: {
+                            with: { serviceDeliverables: true }
+                        }
+                    },
+                    orderBy: (services, { asc }) => [asc(services.category), asc(services.name)],
+                },
+                members: {
+                    with: {
+                        user: {
+                            columns: { id: true, name: true, email: true, image: true }
+                        }
+                    }
+                },
+                bookings: {
+                    where: (b, { gte }) => gte(b.bookingDate, new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
+                    columns: {
+                        id: true,
+                        bookingDate: true,
+                        sessionCount: true,
+                        serviceId: true,
+                        bookingStatus: true,
+                        studioId: true
+                    },
+                    with: {
+                        service: {
+                            with: {
+                                studioSession: {
+                                    columns: { duration: true }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        return JSON.parse(JSON.stringify(studios, (_key, value) =>
+            value !== null && typeof value === "object" && typeof value.toNumber === "function"
+                ? value.toNumber()
+                : value
+        ));
+    } catch (e) {
+        console.error("Failed to get studios for booking:", e);
+        return [];
+    }
+}

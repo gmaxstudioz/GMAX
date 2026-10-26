@@ -24,7 +24,19 @@ export default async function AuthLayout({
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
 
-  if (session?.user) {
+  const reqHeaders = await headers();
+  const currentPath =
+    reqHeaders.get("x-pathname") ||
+    reqHeaders.get("x-matched-path") ||
+    reqHeaders.get("x-invoke-path") ||
+    reqHeaders.get("next-url") ||
+    "";
+
+  const isExemptFromAuthRedirect =
+    currentPath.includes("reset-password") ||
+    currentPath.includes("accept-invitation");
+
+  if (!isExemptFromAuthRedirect && session?.user) {
     const user = await db.query.user.findFirst({
       where: eq(schema.user.id, session.user.id),
       columns: { role: true },

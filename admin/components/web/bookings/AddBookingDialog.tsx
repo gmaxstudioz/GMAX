@@ -4,7 +4,7 @@ import { useState, useTransition, useMemo, useEffect } from "react";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CreateBookingSchema, CreateBookingInput } from "@/lib/schemas/booking";
-import { createBooking } from "@/lib/actions/booking";
+import { createBooking, getStudiosForBooking } from "@/lib/actions/booking";
 import { tryCatch } from "@/hooks/try-catch";
 import { toast } from "sonner";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -141,6 +141,7 @@ interface AddBookingDialogProps {
   buttonSize?: "default" | "sm" | "lg" | "icon";
   buttonVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
   className?: string;
+  syncWithUrl?: boolean;
 }
 
 export function AddBookingDialog({
@@ -153,6 +154,7 @@ export function AddBookingDialog({
   buttonSize = "sm",
   buttonVariant = "default",
   className,
+  syncWithUrl = false,
 }: AddBookingDialogProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -173,11 +175,29 @@ export function AddBookingDialog({
 
 
 
+  const [lazyStudios, setLazyStudios] = useState<StudioForBooking[]>([]);
+  const [loadingStudios, setLoadingStudios] = useState(false);
+
+  // Lazy load studios if none were provided and dialog is open
+  useEffect(() => {
+    if (open && !studio && studios.length === 0 && lazyStudios.length === 0 && !loadingStudios) {
+      setLoadingStudios(true);
+      getStudiosForBooking()
+        .then((data) => {
+          setLazyStudios(data as StudioForBooking[]);
+        })
+        .finally(() => {
+          setLoadingStudios(false);
+        });
+    }
+  }, [open, studio, studios.length, lazyStudios.length, loadingStudios]);
+
   // Compile list of studios
   const allStudios = useMemo(() => {
     if (studio) return [studio];
-    return studios;
-  }, [studio, studios]);
+    if (studios.length > 0) return studios;
+    return lazyStudios;
+  }, [studio, studios, lazyStudios]);
 
   // Determine initial selected studio id from pathname or first studio
   const initialStudioId = useMemo(() => {
@@ -194,10 +214,10 @@ export function AddBookingDialog({
 
   // Sync studio if pathname changes or studios load
   useEffect(() => {
-    if (initialStudioId && !selectedStudioId) {
+    if (initialStudioId && (!selectedStudioId || !allStudios.some((s) => s.id === selectedStudioId))) {
       setSelectedStudioId(initialStudioId);
     }
-  }, [initialStudioId, selectedStudioId]);
+  }, [initialStudioId, selectedStudioId, allStudios]);
 
   const currentStudio = useMemo(() => {
     return allStudios.find((s) => s.id === selectedStudioId) || allStudios[0];
@@ -227,24 +247,24 @@ export function AddBookingDialog({
     },
   });
 
-  // Listen to URL query params for ?action=add-booking&date=...
+  // Listen to URL query params for ?action=add-booking&date=... (only when syncWithUrl is enabled)
   useEffect(() => {
-    if (searchParams?.get("action") === "add-booking") {
+    if (syncWithUrl && searchParams?.get("action") === "add-booking") {
       setOpen(true);
       const dateStr = searchParams.get("date");
       if (dateStr && !isNaN(new Date(dateStr).getTime())) {
         form.setValue("bookingDate", new Date(dateStr));
       }
     }
-  }, [searchParams, form]);
+  }, [syncWithUrl, searchParams, form]);
 
   // Reset dependent selections when studio changes
   const handleStudioChange = (newStudioId: string) => {
     setSelectedStudioId(newStudioId);
     form.setValue("clientId", "");
     form.setValue("serviceId", "");
-    form.setValue("serviceVariantId", "");
-    form.setValue("memberId", "");
+    form.setValue("serviceVariantId", undefined);
+    form.setValue("memberId", undefined);
     form.setValue("addonIds", []);
     setSelectedAddonIds([]);
     setServiceSearch("");
@@ -449,16 +469,18 @@ export function AddBookingDialog({
         if (!v) handleReset();
       }}
     >
-      <DialogTrigger asChild>
-        {trigger ? (
-          trigger
-        ) : (
-          <Button size={buttonSize} variant={buttonVariant} className={className}>
-            <CalendarPlusIcon className="mr-1.5 h-4 w-4" />
-            <span>Add Booking</span>
-          </Button>
-        )}
-      </DialogTrigger>
+      {trigger !== null && (trigger || !isControlled) && (
+        <DialogTrigger asChild>
+          {trigger ? (
+            trigger
+          ) : (
+            <Button size={buttonSize} variant={buttonVariant} className={className}>
+              <CalendarPlusIcon className="mr-1.5 h-4 w-4" />
+              <span>Add Booking</span>
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
 
       <DialogContent className="sm:max-w-xl max-h-[92vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-2">
@@ -471,10 +493,20 @@ export function AddBookingDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-col flex-1 overflow-y-auto px-6 py-2 gap-4"
-        >
+        {loadingStudios && allStudios.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-12 gap-3 min-h-[300px]">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Loading studios...</p>
+          </div>
+        ) : allStudios.length === 0 && !studio ? (
+          <div className="flex flex-col items-center justify-center p-12 gap-3 min-h-[300px] text-center">
+            <p className="text-sm text-muted-foreground">No eligible studios available for booking.</p>
+          </div>
+        ) : (
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="flex flex-col flex-1 overflow-y-auto px-6 py-2 gap-4"
+          >
           {/* Studio Selector (when user has multiple studios) */}
           {allStudios.length > 1 && (
             <Field>
@@ -728,7 +760,7 @@ export function AddBookingDialog({
                                 key={s.id}
                                 onClick={() => {
                                   field.onChange(s.id);
-                                  form.setValue("serviceVariantId", "");
+                                  form.setValue("serviceVariantId", undefined);
                                   setServiceOpen(false);
                                   setServiceSearch("");
                                 }}
@@ -1170,6 +1202,7 @@ export function AddBookingDialog({
             </Button>
           </div>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );
