@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { updateBookingFull } from "@/lib/actions/booking";
 import { tryCatch } from "@/hooks/try-catch";
 import { toast } from "sonner";
-import { Loader2, ChevronDown } from "lucide-react";
+import { Loader2, ChevronDown, CameraIcon, VideoIcon, LayersIcon } from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AlertCircleIcon, PencilEdit02Icon } from "@hugeicons/core-free-icons";
 import { useForm, Controller, useWatch } from "react-hook-form";
@@ -88,11 +88,29 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
         return clients.filter(c => c.name.toLowerCase().includes(q) || c.phone.includes(q));
     }, [clients, clientSearch]);
 
+    const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+
+    const photoCount = useMemo(() => mainServices.filter(s => (s.category || "").toUpperCase() === "PHOTOGRAPHY").length, [mainServices]);
+    const videoCount = useMemo(() => mainServices.filter(s => (s.category || "").toUpperCase() === "VIDEOGRAPHY").length, [mainServices]);
+    const othersCount = useMemo(() => mainServices.filter(s => !["PHOTOGRAPHY", "VIDEOGRAPHY"].includes((s.category || "").toUpperCase())).length, [mainServices]);
+
     const filteredMainServices = useMemo(() => {
-        if (!serviceSearch.trim()) return mainServices;
-        const q = serviceSearch.toLowerCase();
-        return mainServices.filter(s => s.name.toLowerCase().includes(q));
-    }, [mainServices, serviceSearch]);
+        let list = mainServices;
+        if (selectedCategory !== "ALL") {
+            list = list.filter(s => (s.category || "").toUpperCase() === selectedCategory);
+        }
+        if (serviceSearch.trim()) {
+            const q = serviceSearch.toLowerCase();
+            list = list.filter(s => s.name.toLowerCase().includes(q) || (s.category || "").toLowerCase().includes(q));
+        }
+        return [...list].sort((a, b) => {
+            const order: Record<string, number> = { PHOTOGRAPHY: 1, VIDEOGRAPHY: 2, OTHERS: 3 };
+            const aCat = order[(a.category || "").toUpperCase()] || 4;
+            const bCat = order[(b.category || "").toUpperCase()] || 4;
+            if (aCat !== bCat) return aCat - bCat;
+            return a.name.localeCompare(b.name);
+        });
+    }, [mainServices, selectedCategory, serviceSearch]);
 
     const form = useForm<UpdateBookingInput>({
         resolver: zodResolver(UpdateBookingSchema),
@@ -205,7 +223,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                     <span className="hidden md:inline">Edit Booking</span>
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-130 max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Edit Booking</DialogTitle>
                     <DialogDescription>Update booking details, assignment, and statuses.</DialogDescription>
@@ -236,7 +254,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                                             autoFocus
                                         />
                                     </div>
-                                    <div className="max-h-[200px] overflow-y-auto p-1">
+                                    <div className="max-h-50 overflow-y-auto p-1">
                                         {filteredClients.length > 0 ? filteredClients.map(c => (
                                             <div
                                                 key={c.id}
@@ -279,32 +297,88 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                                 <ChevronDown className="h-4 w-4 opacity-50" />
                             </button>
                             {serviceOpen && (
-                                <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg">
+                                <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-xl">
                                     <div className="p-2 border-b">
                                         <Input
                                             placeholder="Search services..."
                                             value={serviceSearch}
                                             onChange={(e) => setServiceSearch(e.target.value)}
-                                            className="h-8"
+                                            className="h-8 text-xs"
                                             autoFocus
                                         />
                                     </div>
-                                    <div className="max-h-[200px] overflow-y-auto p-1">
-                                        {filteredMainServices.length > 0 ? filteredMainServices.map(s => (
-                                            <div
-                                                key={s.id}
-                                                onClick={() => { form.setValue("serviceId", s.id, { shouldValidate: true }); form.setValue("serviceVariantId", undefined, { shouldValidate: true }); setServiceOpen(false); setServiceSearch(""); }}
-                                                className={`flex items-center justify-between px-3 py-2 cursor-pointer text-sm rounded-md transition-colors hover:bg-accent ${watchedServiceId === s.id ? "bg-accent font-medium" : ""}`}
+
+                                    {/* Category Filter Pills */}
+                                    <div className="flex items-center gap-1 p-1.5 border-b bg-muted/30 overflow-x-auto text-xs">
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedCategory("ALL")}
+                                            className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors flex items-center gap-1 ${
+                                                selectedCategory === "ALL"
+                                                    ? "bg-primary text-primary-foreground shadow-xs"
+                                                    : "hover:bg-muted text-muted-foreground"
+                                            }`}
+                                        >
+                                            <LayersIcon className="h-3 w-3" />
+                                            <span>All ({mainServices.length})</span>
+                                        </button>
+                                        {photoCount > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedCategory("PHOTOGRAPHY")}
+                                                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors flex items-center gap-1 ${
+                                                    selectedCategory === "PHOTOGRAPHY"
+                                                        ? "bg-blue-600 text-white shadow-xs"
+                                                        : "hover:bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                                                }`}
                                             >
-                                                <div className="flex items-center gap-2">
-                                                    <span>{s.name}</span>
-                                                    <Badge variant="outline" className="text-[10px] capitalize">{s.isAddon ? "ADDON" : "SERVICE"}</Badge>
+                                                <CameraIcon className="h-3 w-3" />
+                                                <span>Photography ({photoCount})</span>
+                                            </button>
+                                        )}
+                                        {videoCount > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedCategory("VIDEOGRAPHY")}
+                                                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors flex items-center gap-1 ${
+                                                    selectedCategory === "VIDEOGRAPHY"
+                                                        ? "bg-purple-600 text-white shadow-xs"
+                                                        : "hover:bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                                                }`}
+                                            >
+                                                <VideoIcon className="h-3 w-3" />
+                                                <span>Videography ({videoCount})</span>
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="max-h-60 overflow-y-auto p-1 divide-y divide-border/40">
+                                        {filteredMainServices.length > 0 ? filteredMainServices.map(s => {
+                                            const cat = (s.category || "").toUpperCase();
+                                            const badgeClass = cat === "PHOTOGRAPHY"
+                                                ? "border-blue-500/30 text-blue-600 bg-blue-500/10"
+                                                : cat === "VIDEOGRAPHY"
+                                                ? "border-purple-500/30 text-purple-600 bg-purple-500/10"
+                                                : "border-muted-foreground/30 text-muted-foreground";
+
+                                            return (
+                                                <div
+                                                    key={s.id}
+                                                    onClick={() => { form.setValue("serviceId", s.id, { shouldValidate: true }); form.setValue("serviceVariantId", undefined, { shouldValidate: true }); setServiceOpen(false); setServiceSearch(""); }}
+                                                    className={`flex items-center justify-between px-3 py-2 cursor-pointer text-sm rounded-md transition-colors hover:bg-accent ${watchedServiceId === s.id ? "bg-accent font-medium" : ""}`}
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <span>{s.name}</span>
+                                                        <Badge variant="outline" className={`text-[9px] uppercase font-semibold px-1.5 py-0 ${badgeClass}`}>
+                                                            {s.category}
+                                                        </Badge>
+                                                    </div>
+                                                    <span className="text-muted-foreground font-mono text-xs">
+                                                        ₦{Number(s.variants?.[0]?.basePrice ?? 0).toLocaleString()}
+                                                    </span>
                                                 </div>
-                                                <span className="text-muted-foreground font-mono text-xs">
-                                                    ₦{Number(s.variants?.[0]?.basePrice ?? 0).toLocaleString()}
-                                                </span>
-                                            </div>
-                                        )) : (
+                                            );
+                                        }) : (
                                             <p className="text-sm text-muted-foreground text-center py-3">No services found</p>
                                         )}
                                     </div>
@@ -369,7 +443,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                     {flattenedAddons.length > 0 && (
                         <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium">Add-ons <span className="text-muted-foreground font-normal">(Optional)</span></label>
-                            <div className="border rounded-lg max-h-[220px] overflow-y-auto">
+                            <div className="border rounded-lg max-h-55 overflow-y-auto">
                                 {flattenedAddons.map(item => (
                                     <label
                                         key={item.compositeId}

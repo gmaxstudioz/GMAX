@@ -186,12 +186,14 @@ export default async function BookingDetailPage({ params }: Props) {
 
     const studioServicesRaw = await db.query.service.findMany({
         where: eq(schema.service.studioId, studio.id),
-        with: { serviceVariants: { with: { serviceDeliverables: true } } }
+        with: { serviceVariants: { with: { serviceDeliverables: true } } },
+        orderBy: (services, { asc }) => [asc(services.category), asc(services.name)],
     });
 
     const studioServices = studioServicesRaw.map((s: any) => ({
         id: s.id,
         name: s.name,
+        category: s.category,
         isAddon: s.isAddon,
         variants: s.serviceVariants.map((v: any) => ({
             id: v.id,
