@@ -1,21 +1,17 @@
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
-import { CirclePlusIcon, UsersIcon, WrenchIcon, Building2Icon, CalendarPlusIcon } from "lucide-react"
+import { Building2Icon } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { db } from "@/lib/db"
 import * as schema from "@/lib/schema"
 import { eq } from "drizzle-orm"
 import Link from "next/link"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { GlobalSearch } from "./global-search"
 import { NotificationArea } from "../NotificationArea"
+import { AddBookingDialog } from "./bookings/AddBookingDialog"
+import { HeaderMobileActions } from "./header-mobile-actions"
 
 export async function SiteHeader() {
   const session = await auth.api.getSession({
@@ -30,15 +26,24 @@ export async function SiteHeader() {
   if (session?.user) {
     const members = await db.query.member.findMany({
       where: eq(schema.member.userId, session.user.id),
-      columns: { role: true }
+      columns: { role: true, studioId: true }
     });
     
-    canCreateStudio = members.some((m: any) => ["owner", "developer"].includes(m.role));
-    canCreateService = members.some((m: any) => ["owner", "developer", "manager"].includes(m.role));
+    canCreateStudio = members.some((m: { role: string }) => ["owner", "developer"].includes(m.role));
+    canCreateService = members.some((m: { role: string }) => ["owner", "developer", "manager"].includes(m.role));
     
     // If they have NO roles, or their only roles are photographer/videographer, they can't create clients/bookings
-    if (members.length === 0 || members.every((m: any) => ["photographer", "videographer"].includes(m.role))) {
+    if (members.length === 0 || members.every((m: { role: string }) => ["photographer", "videographer"].includes(m.role))) {
       canCreateClient = false;
+      canCreateBooking = false;
+    }
+
+    const bookingRoles = ["owner", "admin", "manager", "receptionist", "developer"];
+    const eligibleStudioIds = members
+      .filter((m: { role: string }) => bookingRoles.includes(m.role))
+      .map((m: { studioId: string }) => m.studioId);
+
+    if (eligibleStudioIds.length === 0) {
       canCreateBooking = false;
     }
   }
@@ -61,8 +66,16 @@ export async function SiteHeader() {
       
       <div className="px-4 lg:px-6 flex items-center gap-2">
         <NotificationArea />
+
+        {/* Desktop Add Booking Button */}
+        {canCreateBooking && (
+          <div className="hidden md:flex items-center">
+            <AddBookingDialog />
+          </div>
+        )}
+
         {canCreateStudio && (
-          <Button size="sm" asChild>
+          <Button size="sm" variant="outline" asChild className="hidden md:flex">
             <Link href="/studios/create">
               <Building2Icon className="mr-2 h-4 w-4" />
               Create Studio
@@ -73,46 +86,12 @@ export async function SiteHeader() {
         {/* Mobile Dropdown for small screens */}
         <div className="md:hidden">
           {(canCreateBooking || canCreateClient || canCreateService || canCreateStudio) && (
-            <DropdownMenu>
-              <DropdownMenuTrigger className={buttonVariants({ size: "sm" })}>
-                  <CirclePlusIcon className="h-4 w-4" />
-                  <span className="sr-only">Create New</span>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                {canCreateBooking && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/bookings" className="cursor-pointer">
-                      <CalendarPlusIcon className="mr-2 h-4 w-4" />
-                      <span>Add Booking</span>
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-                {canCreateClient && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/clients" className="cursor-pointer">
-                      <UsersIcon className="mr-2 h-4 w-4" />
-                      <span>Add Client</span>
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-                {canCreateService && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/services" className="cursor-pointer">
-                      <WrenchIcon className="mr-2 h-4 w-4" />
-                      <span>Add Service</span>
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-                {canCreateStudio && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/studios/create" className="cursor-pointer">
-                      <Building2Icon className="mr-2 h-4 w-4" />
-                      <span>Create Studio</span>
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <HeaderMobileActions
+              canCreateBooking={canCreateBooking}
+              canCreateClient={canCreateClient}
+              canCreateService={canCreateService}
+              canCreateStudio={canCreateStudio}
+            />
           )}
         </div>
       </div>

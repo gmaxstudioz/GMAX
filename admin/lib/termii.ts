@@ -158,8 +158,8 @@ export async function sendPasswordResetEmail(params: {
 }) {
     if (!TERMII_RESET_TEMPLATE_ID) {
         console.warn(
-            "[Termii] TERMI_RESET_TEMPLATE_ID not set — skipping password reset email.",
-            { to: params.email, link: params.resetLink },
+            "[Termii] TERMII_RESET_TEMPLATE_ID not set — skipping password reset email.",
+            { to: params.email },
         );
         return;
     }

@@ -251,18 +251,195 @@ export async function deleteService(id: string) {
     }
 }
 
+async function checkStudioManagePermission(userId: string, targetStudioId: string): Promise<boolean> {
+    const user = await db.query.user.findFirst({
+        where: eq(schema.user.id, userId),
+        columns: { role: true }
+    });
+    if (user?.role === "admin") return true;
+
+    const member = await db.query.member.findFirst({
+        where: and(
+            eq(schema.member.userId, userId),
+            eq(schema.member.studioId, targetStudioId)
+        ),
+        columns: { role: true }
+    });
+    if (!member) return false;
+    return ["owner", "admin", "manager", "developer"].includes(member.role);
+}
+
+async function checkStudioViewPermission(userId: string, studioId: string): Promise<boolean> {
+    const user = await db.query.user.findFirst({
+        where: eq(schema.user.id, userId),
+        columns: { role: true }
+    });
+    if (user?.role === "admin") return true;
+
+    const member = await db.query.member.findFirst({
+        where: and(
+            eq(schema.member.userId, userId),
+            eq(schema.member.studioId, studioId)
+        ),
+        columns: { id: true }
+    });
+    return !!member;
+}
+
+export async function getClonableStudios(): Promise<{ id: string; name: string; slug: string }[]> {
+    try {
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (!session?.user) return [];
+
+        const user = await db.query.user.findFirst({
+            where: eq(schema.user.id, session.user.id),
+            columns: { role: true }
+        });
+        const isPlatformAdmin = user?.role === "admin";
+
+        if (isPlatformAdmin) {
+            return await db.query.studio.findMany({
+                columns: { id: true, name: true, slug: true },
+                orderBy: (s, { asc }) => [asc(s.name)]
+            });
+        }
+
+        const members = await db.query.member.findMany({
+            where: and(
+                eq(schema.member.userId, session.user.id),
+                inArray(schema.member.role, ["owner", "admin", "manager", "developer"])
+            ),
+            with: {
+                studio: {
+                    columns: { id: true, name: true, slug: true }
+                }
+            }
+        });
+
+        const studios = members
+            .map(m => m.studio)
+            .filter((s): s is { id: string; name: string; slug: string } => !!s);
+
+        return Array.from(new Map(studios.map(s => [s.id, s])).values());
+    } catch (e) {
+        console.error("Failed to get clonable studios:", e);
+        return [];
+    }
+}
+
+async function cloneServicesListInternal(
+    servicesToClone: any[],
+    targetStudioId: string,
+    sourceStudioId: string
+) {
+    const isSameStudio = targetStudioId === sourceStudioId;
+
+    // Cache existing target studio sessions to avoid duplicates
+    const existingTargetSessions = await db.query.studioSession.findMany({
+        where: eq(schema.studioSession.studioId, targetStudioId)
+    });
+
+    const sessionCache = new Map<string, string>();
+    for (const s of existingTargetSessions) {
+        sessionCache.set(`${s.name.trim().toLowerCase()}-${s.duration}`, s.id);
+    }
+
+    let clonedCount = 0;
+    const newServiceIds: string[] = [];
+
+    await db.transaction(async (tx) => {
+        for (const existingService of servicesToClone) {
+            let targetSessionId: string | null = null;
+
+            if (existingService.studioSession) {
+                const sessionKey = `${existingService.studioSession.name.trim().toLowerCase()}-${existingService.studioSession.duration}`;
+                if (sessionCache.has(sessionKey)) {
+                    targetSessionId = sessionCache.get(sessionKey)!;
+                } else {
+                    targetSessionId = uuidv4();
+                    await tx.insert(schema.studioSession).values({
+                        id: targetSessionId,
+                        name: existingService.studioSession.name,
+                        duration: existingService.studioSession.duration,
+                        studioId: targetStudioId,
+                    });
+                    sessionCache.set(sessionKey, targetSessionId);
+                }
+            } else {
+                const defaultKey = "standard session-45";
+                if (sessionCache.has(defaultKey)) {
+                    targetSessionId = sessionCache.get(defaultKey)!;
+                } else {
+                    targetSessionId = uuidv4();
+                    await tx.insert(schema.studioSession).values({
+                        id: targetSessionId,
+                        name: "Standard Session",
+                        duration: 45,
+                        studioId: targetStudioId,
+                    });
+                    sessionCache.set(defaultKey, targetSessionId);
+                }
+            }
+
+            const newServiceId = uuidv4();
+            newServiceIds.push(newServiceId);
+            const serviceName = isSameStudio ? `${existingService.name} (Copy)` : existingService.name;
+
+            await tx.insert(schema.service).values({
+                id: newServiceId,
+                name: serviceName,
+                description: existingService.description || "",
+                features: existingService.features || [],
+                isAddon: existingService.isAddon,
+                isActive: existingService.isActive,
+                discountPercentage: existingService.discountPercentage || 0,
+                category: existingService.category as any,
+                studioId: targetStudioId,
+                studioSessionId: targetSessionId,
+            });
+
+            if (existingService.serviceVariants && existingService.serviceVariants.length > 0) {
+                for (const v of existingService.serviceVariants) {
+                    const newVariantId = uuidv4();
+                    await tx.insert(schema.serviceVariant).values({
+                        id: newVariantId,
+                        serviceId: newServiceId,
+                        title: v.title ?? null,
+                        locationType: v.locationType,
+                        basePrice: v.basePrice.toString(),
+                        maxPrice: v.maxPrice ? v.maxPrice.toString() : null,
+                        sessionDurationMins: v.sessionDurationMins,
+                        logisticsIncluded: v.logisticsIncluded,
+                    });
+
+                    if (v.serviceDeliverables && v.serviceDeliverables.length > 0) {
+                        const deliverablesToInsert = v.serviceDeliverables.map((d: any) => ({
+                            id: uuidv4(),
+                            variantId: newVariantId,
+                            label: d.label,
+                            quantity: d.quantity ?? null,
+                            detail: d.detail ?? null,
+                            isFree: d.isFree ?? false,
+                        }));
+                        await tx.insert(schema.serviceDeliverable).values(deliverablesToInsert);
+                    }
+                }
+            }
+
+            clonedCount++;
+        }
+    });
+
+    return { clonedCount, newServiceIds };
+}
+
 export async function cloneService(serviceId: string, targetStudioId: string) {
     try {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const member = await db.query.member.findFirst({
-            where: and(
-                eq(schema.member.userId, session.user.id),
-                eq(schema.member.studioId, targetStudioId)
-            )
-        });
-        if (!member) return { status: "error", message: "Unauthorized access to target studio" };
+        const hasPermission = await checkStudioManagePermission(session.user.id, targetStudioId);
+        if (!hasPermission) return { status: "error", message: "Unauthorized access to target studio" };
 
         const existingService = await db.query.service.findFirst({
             where: eq(schema.service.id, serviceId),
@@ -276,79 +453,132 @@ export async function cloneService(serviceId: string, targetStudioId: string) {
 
         if (!existingService) return { status: "error", message: "Service not found" };
 
-        let targetSessionId = "";
-        
-        const existingSession = await db.query.studioSession.findFirst({
-            where: and(
-                eq(schema.studioSession.studioId, targetStudioId),
-                eq(schema.studioSession.name, existingService.studioSession.name),
-                eq(schema.studioSession.duration, existingService.studioSession.duration)
-            )
-        });
+        const hasSourcePermission = await checkStudioViewPermission(session.user.id, existingService.studioId);
+        if (!hasSourcePermission) return { status: "error", message: "Unauthorized access to source studio" };
 
-        if (existingSession) {
-            targetSessionId = existingSession.id;
-        } else {
-            targetSessionId = uuidv4();
-            await db.insert(schema.studioSession).values({
-                id: targetSessionId,
-                name: existingService.studioSession.name,
-                duration: existingService.studioSession.duration,
-                studioId: targetStudioId
-            });
+        const { newServiceIds } = await cloneServicesListInternal(
+            [existingService],
+            targetStudioId,
+            existingService.studioId
+        );
+
+        const newService = newServiceIds[0]
+            ? await db.query.service.findFirst({
+                where: eq(schema.service.id, newServiceIds[0]),
+                with: { serviceVariants: { with: { serviceDeliverables: true } } }
+            })
+            : null;
+
+        revalidatePath(`/studios/[slug]`, "page");
+        return { status: "success", message: `Service "${existingService.name}" cloned successfully`, data: newService };
+    } catch (e) {
+        console.error("Failed to clone service:", e);
+        return { status: "error", message: "Failed to clone service" };
+    }
+}
+
+export async function cloneServicesBulk(serviceIds: string[], targetStudioId: string) {
+    try {
+        if (!serviceIds || serviceIds.length === 0) {
+            return { status: "error", message: "No services selected to clone" };
         }
 
-        const newServiceId = uuidv4();
-        await db.transaction(async (tx) => {
-            await tx.insert(schema.service).values({
-                id: newServiceId,
-                name: existingService.name,
-                description: existingService.description,
-                features: existingService.features,
-                isAddon: existingService.isAddon,
-                isActive: existingService.isActive,
-                category: existingService.category as any,
-                studioId: targetStudioId,
-                studioSessionId: targetSessionId,
-            });
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-            for (const v of existingService.serviceVariants) {
-                const newVariantId = uuidv4();
-                await tx.insert(schema.serviceVariant).values({
-                    id: newVariantId,
-                    serviceId: newServiceId,
-                    title: v.title,
-                    locationType: v.locationType,
-                    basePrice: v.basePrice.toString(),
-                    maxPrice: v.maxPrice ? v.maxPrice.toString() : null,
-                    sessionDurationMins: v.sessionDurationMins,
-                    logisticsIncluded: v.logisticsIncluded,
-                });
+        const hasPermission = await checkStudioManagePermission(session.user.id, targetStudioId);
+        if (!hasPermission) return { status: "error", message: "Unauthorized access to target studio" };
 
-                if (v.serviceDeliverables && v.serviceDeliverables.length > 0) {
-                    const deliverablesToInsert = v.serviceDeliverables.map((d: any) => ({
-                        id: uuidv4(),
-                        variantId: newVariantId,
-                        label: d.label,
-                        quantity: d.quantity,
-                        detail: d.detail,
-                        isFree: d.isFree,
-                    }));
-                    await tx.insert(schema.serviceDeliverable).values(deliverablesToInsert);
+        const servicesToClone = await db.query.service.findMany({
+            where: inArray(schema.service.id, serviceIds),
+            with: {
+                studioSession: true,
+                serviceVariants: {
+                    with: { serviceDeliverables: true }
                 }
             }
         });
 
-        const newService = await db.query.service.findFirst({
-            where: eq(schema.service.id, newServiceId),
-            with: { serviceVariants: { with: { serviceDeliverables: true } } }
-        });
+        if (servicesToClone.length === 0) {
+            return { status: "error", message: "No matching services found" };
+        }
+
+        const sourceStudioIds = Array.from(new Set(servicesToClone.map(s => s.studioId)));
+        if (sourceStudioIds.length > 1) {
+            return { status: "error", message: "Cannot clone services from multiple different studios in a single operation" };
+        }
+
+        const sourceStudioId = sourceStudioIds[0];
+        const hasSourcePermission = await checkStudioViewPermission(session.user.id, sourceStudioId);
+        if (!hasSourcePermission) {
+            return { status: "error", message: "Unauthorized access to source studio" };
+        }
+
+        const { clonedCount } = await cloneServicesListInternal(
+            servicesToClone,
+            targetStudioId,
+            sourceStudioId
+        );
 
         revalidatePath(`/studios/[slug]`, "page");
-        return { status: "success", message: "Service cloned successfully", data: newService };
+        return {
+            status: "success",
+            message: `Successfully cloned ${clonedCount} service${clonedCount > 1 ? 's' : ''}`,
+            clonedCount
+        };
     } catch (e) {
-        console.error("Failed to clone service:", e);
-        return { status: "error", message: "Failed to clone service" };
+        console.error("Failed to bulk clone services:", e);
+        return { status: "error", message: "Failed to clone selected services" };
+    }
+}
+
+export async function cloneCategory(
+    sourceStudioId: string,
+    category: "PHOTOGRAPHY" | "VIDEOGRAPHY" | "OTHERS",
+    targetStudioId: string
+) {
+    try {
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (!session?.user) return { status: "error", message: "Unauthorized" };
+
+        const hasSourcePermission = await checkStudioViewPermission(session.user.id, sourceStudioId);
+        if (!hasSourcePermission) return { status: "error", message: "Unauthorized access to source studio" };
+
+        const hasTargetPermission = await checkStudioManagePermission(session.user.id, targetStudioId);
+        if (!hasTargetPermission) return { status: "error", message: "Unauthorized access to target studio" };
+
+        const servicesToClone = await db.query.service.findMany({
+            where: and(
+                eq(schema.service.studioId, sourceStudioId),
+                eq(schema.service.category, category)
+            ),
+            with: {
+                studioSession: true,
+                serviceVariants: {
+                    with: { serviceDeliverables: true }
+                }
+            }
+        });
+
+        if (servicesToClone.length === 0) {
+            return { status: "error", message: `No services found in category ${category}` };
+        }
+
+        const { clonedCount } = await cloneServicesListInternal(
+            servicesToClone,
+            targetStudioId,
+            sourceStudioId
+        );
+
+        revalidatePath(`/studios/[slug]`, "page");
+        return {
+            status: "success",
+            message: `Successfully cloned ${clonedCount} ${category.toLowerCase()} service${clonedCount > 1 ? 's' : ''}`,
+            clonedCount
+        };
+    } catch (e) {
+        console.error("Failed to clone category:", e);
+        return { status: "error", message: "Failed to clone category" };
     }
 }
 

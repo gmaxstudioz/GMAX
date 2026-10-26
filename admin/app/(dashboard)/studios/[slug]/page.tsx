@@ -41,7 +41,8 @@ export default async function StudioDetails({ params }: StudioDetailsProps) {
             },
             invitations: true,
             services: {
-                with: { studioSession: true, serviceVariants: { with: { serviceDeliverables: true } } }
+                with: { studioSession: true, serviceVariants: { with: { serviceDeliverables: true } } },
+                orderBy: (services, { asc }) => [asc(services.category), asc(services.name)],
             },
             studioSessions: true,
             clients: {
