@@ -4,7 +4,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, ClockIcon } from "lucide-react";
-import { format, isSameDay, startOfDay, addMinutes, isBefore } from "date-fns";
+import { format, startOfDay, addMinutes, isBefore, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
@@ -41,8 +41,14 @@ export function DateTimeSlotPicker({
     const availableTimeSlots = useMemo(() => {
         if (!calendarDate) return [];
 
-        // Filter bookings onto this specific day
-        const todaysBookings = bookings.filter(b => isSameDay(new Date(b.bookingDate), calendarDate));
+        const dayStart = startOfDay(calendarDate).getTime();
+        const dayEnd = endOfDay(calendarDate).getTime();
+        const todaysBookings = bookings.filter((booking) => {
+            const start = new Date(booking.bookingDate).getTime();
+            const duration = (booking.service?.studioSession?.duration || 45) * booking.sessionCount;
+            const end = start + duration * 60 * 1000;
+            return start <= dayEnd && end > dayStart;
+        });
 
         // Map bookings into `[start, end]` intervals in ms
         const intervals = todaysBookings.map(b => {

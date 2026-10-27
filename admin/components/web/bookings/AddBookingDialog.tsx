@@ -1167,7 +1167,7 @@ export function AddBookingDialog({
                   </div>
                   {isPriceOverridden && watchedTotalAmount !== grandTotal && (
                     <span className="text-[10px] text-amber-600 dark:text-amber-400">
-                      Custom price applied (Calculated: ₦{grandTotal.toLocaleString()})
+                      Requested total: ₦{Number(watchedTotalAmount).toLocaleString()} (pending manager approval when set by a manager). Current calculated total: ₦{grandTotal.toLocaleString()}.
                     </span>
                   )}
                   {form.formState.errors.totalAmount && (

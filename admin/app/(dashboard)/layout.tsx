@@ -45,7 +45,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             }
         >
             <AppSidebar variant="inset" />
-            <SidebarInset className="min-w-0 overflow-x-hidden">
+            <SidebarInset className="min-w-0 overflow-x-auto">
             <SiteHeader />
             <div className="flex flex-1 flex-col min-w-0">
                 <div className="@container/main flex flex-1 flex-col gap-2 min-w-0">

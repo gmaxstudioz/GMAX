@@ -64,6 +64,23 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
         if (addonVariantRefs.some(([serviceId, variantId]) => !serviceId || !variantId)) {
             return { status: "error", message: "One or more selected add-ons are invalid." };
         }
+        const addonServiceIds = addonVariantRefs.map(([serviceId]) => serviceId);
+        if (new Set(addonServiceIds).size !== addonServiceIds.length) {
+            return { status: "error", message: "A service can only be selected once as an add-on." };
+        }
+        const addonServices = addonServiceIds.length > 0
+            ? await db.query.service.findMany({
+                where: and(
+                    inArray(schema.service.id, addonServiceIds),
+                    eq(schema.service.studioId, studioId),
+                    eq(schema.service.isAddon, true),
+                ),
+                columns: { id: true },
+            })
+            : [];
+        if (addonServices.length !== addonServiceIds.length) {
+            return { status: "error", message: "One or more selected add-ons are invalid." };
+        }
         const addonVariantIds = addonVariantRefs.map(([, variantId]) => variantId);
         const addonVariants = addonVariantIds.length > 0
             ? await db.query.serviceVariant.findMany({
@@ -125,52 +142,52 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
         }
 
         const bookingId = uuidv4();
-        const [booking] = await db.insert(schema.booking).values({
-            id: bookingId,
-            ...bookingData,
-            bookingDate: bookingData.bookingDate.toISOString(),
-            totalAmount: managerPriceApprovalRequired
-                ? (expectedTotalCents / 100).toFixed(2)
-                : bookingData.totalAmount.toFixed(2),
-            ...(managerPriceApprovalRequired
-                ? {
-                    pendingTotalAmount: bookingData.totalAmount.toFixed(2),
-                    priceApprovalStatus: "PENDING_APPROVAL" as const,
-                    priceChangedBy: member.id,
-                }
-                : {}),
-            studioId,
-            createdBy: session.user.id,
-        }).returning();
+        const booking = await db.transaction(async (tx) => {
+            const [createdBooking] = await tx.insert(schema.booking).values({
+                id: bookingId,
+                ...bookingData,
+                bookingDate: bookingData.bookingDate.toISOString(),
+                totalAmount: managerPriceApprovalRequired
+                    ? (expectedTotalCents / 100).toFixed(2)
+                    : bookingData.totalAmount.toFixed(2),
+                ...(managerPriceApprovalRequired
+                    ? {
+                        pendingTotalAmount: bookingData.totalAmount.toFixed(2),
+                        priceApprovalStatus: "PENDING_APPROVAL" as const,
+                        priceChangedBy: member.id,
+                    }
+                    : {}),
+                studioId,
+                createdBy: session.user.id,
+            }).returning();
 
-        if (addonIds && addonIds.length > 0) {
-            await Promise.all(
-                addonIds.map(async (id) => {
-                    const addonId = id.split(":")[0];
-                    await db.insert(schema.bookingAddons).values({
+            if (addonIds && addonIds.length > 0) {
+                await Promise.all(
+                    addonIds.map((id) => tx.insert(schema.bookingAddons).values({
                         a: bookingId,
-                        b: addonId
-                    });
-                })
-            );
-        }
+                        b: id.split(":")[0],
+                    }))
+                );
+            }
 
-        if (managerPriceApprovalRequired) {
-            const approvers = await db.query.member.findMany({
-                where: and(
-                    eq(schema.member.studioId, studioId),
-                    inArray(schema.member.role, ["admin", "owner", "developer"]),
-                ),
-            });
-            await Promise.all(approvers.map((approver) => db.insert(schema.userNotification).values({
-                id: uuidv4(),
-                userId: approver.userId,
-                title: "Price Approval Required",
-                message: `Manager ${session.user.name || "staff"} requested a custom price of ₦${bookingData.totalAmount} for a new booking.`,
-                type: "SYSTEM",
-                bookingId,
-            })));
-        }
+            if (managerPriceApprovalRequired) {
+                const approvers = await tx.query.member.findMany({
+                    where: and(
+                        eq(schema.member.studioId, studioId),
+                        inArray(schema.member.role, ["admin", "owner", "developer"]),
+                    ),
+                });
+                await Promise.all(approvers.map((approver) => tx.insert(schema.userNotification).values({
+                    id: uuidv4(),
+                    userId: approver.userId,
+                    title: "Price Approval Required",
+                    message: `Manager ${session.user.name || "staff"} requested a custom price of ₦${bookingData.totalAmount} for a new booking.`,
+                    type: "SYSTEM",
+                    bookingId,
+                })));
+            }
+            return createdBooking;
+        });
 
         revalidatePath(`/studios`, "layout");
         return { status: "success", data: booking };

@@ -53,6 +53,7 @@ export default function NavBar() {
         tlRef.current?.kill();
         tlRef.current = null;
         gsap.set(nav, { clearProps: "all" });
+        gsap.set(nav, { display: "none" });
         gsap.set([topBarRef.current, midBarRef.current, botBarRef.current], {
             clearProps: "transform,opacity",
         });
