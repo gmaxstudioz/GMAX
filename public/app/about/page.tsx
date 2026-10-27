@@ -53,10 +53,10 @@ export default function AboutPage() {
   }, []);
 
   return (
-    <main className="min-h-screen pt-32 pb-24 w-full">
+    <main className="min-h-screen pt-24 md:pt-32 pb-16 md:pb-24 w-full">
       {/* Hero Section */}
-      <section ref={heroRef} className="px-4 sm:px-6 md:px-20 max-w-[100rem] mx-auto mb-24">
-        <h1 className="about-title text-[12vw] leading-none font-heading font-extrabold mb-12 flex flex-wrap gap-x-6 overflow-hidden">
+      <section ref={heroRef} className="px-4 sm:px-6 md:px-20 max-w-[100rem] mx-auto mb-16 md:mb-24">
+        <h1 className="about-title text-[10vw] sm:text-[12vw] leading-none font-heading font-extrabold mb-8 md:mb-12 flex flex-wrap gap-x-3 sm:gap-x-6 overflow-hidden">
           <span className="inline-block transform translate-y-full">THE</span>
           <span className="inline-block transform translate-y-full">VISION</span>
           <span className="inline-block text-primary italic transform translate-y-full">BEHIND</span>
@@ -66,7 +66,7 @@ export default function AboutPage() {
           </span>
         </h1>
         
-        <div ref={imageRef} className="relative w-full h-[60vh] md:h-[80vh] rounded-[2rem] overflow-hidden opacity-0">
+        <div ref={imageRef} className="relative w-full h-[45vh] sm:h-[60vh] md:h-[80vh] rounded-2xl md:rounded-[2rem] overflow-hidden opacity-0">
           <Image 
             src="/works/image-2.jpg" 
             alt="About GMAX Studio" 
@@ -80,20 +80,20 @@ export default function AboutPage() {
       </section>
 
       {/* Mission / Story Section */}
-      <section ref={missionRef} className="px-4 sm:px-6 md:px-20 max-w-7xl mx-auto py-20 flex flex-col md:flex-row gap-16 items-start">
+      <section ref={missionRef} className="px-4 sm:px-6 md:px-20 max-w-7xl mx-auto py-12 md:py-20 flex flex-col md:flex-row gap-8 md:gap-16 items-start">
         <div className="w-full md:w-1/3">
-          <div className="flex items-center gap-2 mb-6 mission-text opacity-0 transform translate-y-10">
+          <div className="flex items-center gap-2 mb-4 md:mb-6 mission-text opacity-0 transform translate-y-10">
             <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-primary"></div>
-            <h2 className="text-xl md:text-2xl uppercase tracking-widest text-gray-400 font-medium">Our Story</h2>
+            <h2 className="text-lg md:text-2xl uppercase tracking-widest text-gray-400 font-medium">Our Story</h2>
           </div>
         </div>
         
-        <div className="w-full md:w-2/3 flex flex-col gap-10">
-          <p className="mission-text text-3xl md:text-5xl font-heading leading-tight opacity-0 transform translate-y-10">
+        <div className="w-full md:w-2/3 flex flex-col gap-6 md:gap-10">
+          <p className="mission-text text-2xl sm:text-3xl md:text-5xl font-heading leading-tight opacity-0 transform translate-y-10">
             We are a collective of visual storytellers, obsessed with capturing the raw emotion and undeniable beauty of every moment.
           </p>
           
-          <div className="mission-text grid grid-cols-1 md:grid-cols-2 gap-10 text-base md:text-lg text-gray-400 leading-relaxed opacity-0 transform translate-y-10">
+          <div className="mission-text grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 text-base md:text-lg text-gray-400 leading-relaxed opacity-0 transform translate-y-10">
             <p>
               Founded with a passion for excellence, GMAX Studioz has evolved into a premier destination for luxury videography and photography. We don&apos;t just point and shoot; we craft cinematic legacies. Whether it&apos;s an intimate portrait or a grand wedding, our lens finds the magic that others naturally miss.
             </p>
@@ -105,8 +105,8 @@ export default function AboutPage() {
       </section>
 
       {/* Core Values Section */}
-      <section className="px-4 sm:px-6 md:px-20 max-w-7xl mx-auto py-20 mt-12 border-t border-white/10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+      <section className="px-4 sm:px-6 md:px-20 max-w-7xl mx-auto py-12 md:py-20 mt-8 md:mt-12 border-t border-white/10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
           <div className="flex flex-col gap-4 group">
             <h3 className="text-4xl md:text-6xl font-heading font-bold text-gray-800 transition-colors duration-500 group-hover:text-white">01.</h3>
             <h4 className="text-2xl font-medium text-white mt-2">Cinematic Approach</h4>

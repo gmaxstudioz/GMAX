@@ -146,7 +146,7 @@ export default async function StudioDailyBookingsPage({ params, searchParams }: 
                 ) : (
                     <div className="md:col-span-2">
                         {isListView ? (
-                            <div className="border rounded-lg overflow-hidden bg-card">
+                            <div className="border rounded-lg overflow-hidden bg-card overflow-x-auto">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>

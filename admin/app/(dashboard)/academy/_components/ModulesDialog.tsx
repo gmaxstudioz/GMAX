@@ -53,7 +53,7 @@ export function ModulesDialog({ open, onOpenChange, course }: { open: boolean, o
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[85dvh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Modules for {course.title}</DialogTitle>
                 </DialogHeader>

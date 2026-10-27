@@ -223,7 +223,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                     <span className="hidden md:inline">Edit Booking</span>
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-130 max-h-[90vh] overflow-y-auto">
+            <DialogContent className="w-[95vw] sm:max-w-xl max-h-[92dvh] overflow-y-auto px-4 sm:px-6">
                 <DialogHeader>
                     <DialogTitle>Edit Booking</DialogTitle>
                     <DialogDescription>Update booking details, assignment, and statuses.</DialogDescription>
@@ -487,7 +487,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                     )}
 
                     {/* Assigned Member + Session Count */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Controller
                             control={form.control}
                             name="memberId"
@@ -610,7 +610,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                     <Separator />
 
                     {/* Financials */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Controller
                             control={form.control}
                             name="paymentPlan"
@@ -652,7 +652,7 @@ export function UpdateBookingDialog({ bookingId, currentData, clients, services,
                                 </Field>
                             )}
                         />
-                        <div className="col-span-2 bg-muted p-3 rounded-md flex justify-between items-center text-sm">
+                        <div className="sm:col-span-2 bg-muted p-3 rounded-md flex flex-col sm:flex-row justify-between sm:items-center gap-1 text-sm">
                             <span className="font-medium">Amount Due Now ({watchedPaymentPlan}):</span>
                             <span className="font-bold text-lg">
                                 ₦{(watchedTotalAmount * (watchedPaymentPlan === "FULL" ? 1 : watchedPaymentPlan === "HALF" ? 0.5 : 0.25)).toLocaleString()}

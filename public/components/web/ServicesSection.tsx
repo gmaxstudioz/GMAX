@@ -46,10 +46,10 @@ export default function ServicesSection() {
   }, []);
 
   return (
-    <section className="relative w-full max-w-7xl mx-auto h-auto py-24 px-4 sm:px-6 flex flex-col gap-9">
+    <section className="relative w-full max-w-7xl mx-auto h-auto py-12 md:py-24 px-4 sm:px-6 flex flex-col gap-6 md:gap-9">
       <div className="flex items-center gap-2">
         <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-primary"></div>
-        <h1 className="text-4xl font-heading font-bold">What we do</h1>
+        <h1 className="text-3xl sm:text-4xl font-heading font-bold">What we do</h1>
         <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-primary"></div>
       </div>
       <div className="flex flex-col gap-4">
@@ -68,15 +68,15 @@ export default function ServicesSection() {
               onMouseLeave={() => setHoveredService(null)}
               onClick={() => setActiveService(isActive ? null : service.id)}
             >
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-4">
+              <div className="flex items-center justify-between w-full gap-3">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                   {/* Inline Thumbnail */}
                   <div
                     className={cn(
                       "relative overflow-hidden transition-all duration-500 ease-out shrink-0",
                       isActive
-                        ? "w-16 h-16 rounded-xl md:w-20 md:h-20"
-                        : "w-20 h-10 rounded-full md:w-24 md:h-12"
+                        ? "w-12 h-12 sm:w-16 sm:h-16 rounded-xl md:w-20 md:h-20"
+                        : "w-14 h-8 sm:w-20 sm:h-10 rounded-full md:w-24 md:h-12"
                     )}
                   >
                     {service.type === "video" ? (
@@ -98,11 +98,11 @@ export default function ServicesSection() {
                       />
                     )}
                   </div>
-                  <h3 className="text-3xl md:text-7xl font-medium tracking-tight">{service.title}</h3>
+                  <h3 className="text-2xl sm:text-4xl md:text-7xl font-medium tracking-tight truncate sm:overflow-visible">{service.title}</h3>
                 </div>
 
-                <div className="flex-shrink-0 flex items-center justify-center w-10 h-10">
-                  {isActive ? <Minus size={44} /> : <Plus size={44} />}
+                <div className="shrink-0 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10">
+                  {isActive ? <Minus className="size-6 sm:size-8" /> : <Plus className="size-6 sm:size-8" />}
                 </div>
               </div>
 

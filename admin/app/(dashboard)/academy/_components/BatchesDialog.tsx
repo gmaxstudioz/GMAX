@@ -77,36 +77,35 @@ export function BatchesDialog({ open, onOpenChange, course }: BatchesDialogProps
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[85dvh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Manage Batches - {course.title}</DialogTitle>
                     <DialogDescription>Add or remove batches for this course.</DialogDescription>
                 </DialogHeader>
                 
                 <div className="space-y-4 py-4">
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         {batches.map((batch) => (
-                            <div key={batch.id} className="flex items-center gap-4 p-3 border rounded-md">
-                                <div className="flex-1 font-medium">{batch.name}</div>
-                                <div className="text-sm text-muted-foreground w-32">
-                                    {format(new Date(batch.startDate), "MMM d, yyyy")}
+                            <div key={batch.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 border rounded-md">
+                                <div className="font-medium">{batch.name}</div>
+                                <div className="flex items-center gap-3 text-xs sm:text-sm text-muted-foreground">
+                                    <span>{format(new Date(batch.startDate), "MMM d, yyyy")}</span>
+                                    <span>–</span>
+                                    <span>{format(new Date(batch.endDate), "MMM d, yyyy")}</span>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="text-destructive h-8 w-8 ml-auto sm:ml-0"
+                                        onClick={() => handleDeleteBatch(batch.id)}
+                                        disabled={isLoading}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
                                 </div>
-                                <div className="text-sm text-muted-foreground w-32">
-                                    {format(new Date(batch.endDate), "MMM d, yyyy")}
-                                </div>
-                                <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="text-destructive"
-                                    onClick={() => handleDeleteBatch(batch.id)}
-                                    disabled={isLoading}
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
                             </div>
                         ))}
                         {batches.length === 0 && (
-                            <div className="text-center p-4 border border-dashed rounded-md text-muted-foreground">
+                            <div className="text-center p-4 border border-dashed rounded-md text-muted-foreground text-sm">
                                 No batches added yet.
                             </div>
                         )}
@@ -114,7 +113,7 @@ export function BatchesDialog({ open, onOpenChange, course }: BatchesDialogProps
 
                     <div className="border-t pt-4 mt-4 space-y-4">
                         <h4 className="font-medium text-sm">Add New Batch</h4>
-                        <div className="flex items-end gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
                             <div className="grid gap-2 flex-1">
                                 <Label>Batch Name (e.g. Batch A)</Label>
                                 <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Batch Name" />
@@ -127,7 +126,7 @@ export function BatchesDialog({ open, onOpenChange, course }: BatchesDialogProps
                                 <Label>End Date</Label>
                                 <Input type="date" value={newEndDate} onChange={e => setNewEndDate(e.target.value)} />
                             </div>
-                            <Button onClick={handleAddBatch} disabled={isLoading}>
+                            <Button onClick={handleAddBatch} disabled={isLoading} className="w-full sm:w-auto">
                                 <Plus className="h-4 w-4 mr-2" /> Add
                             </Button>
                         </div>

@@ -156,7 +156,7 @@ export function StoreView({
         <div className="flex flex-col gap-6">
 
             {/* Stats Header */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Card>
                     <CardContent className="p-6">
                         <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
@@ -239,7 +239,7 @@ export function StoreView({
                         <ViewToggle defaultView="grid" />
                         <Link
                             href="/store/create"
-                            className={buttonVariants({ variant: "default", className: "h-10 ml-auto xl:ml-0" })}
+                            className={buttonVariants({ variant: "default", className: "h-10 w-full sm:w-auto ml-auto xl:ml-0" })}
                         >
                             Add Product
                         </Link>
@@ -260,7 +260,7 @@ export function StoreView({
             ) : (
                 <div className="flex flex-col gap-6">
                     {isListView ? (
-                        <div className="border rounded-md">
+                        <div className="border rounded-md overflow-x-auto">
                             <Table>
                                 <TableHeader>
                                     <TableRow>

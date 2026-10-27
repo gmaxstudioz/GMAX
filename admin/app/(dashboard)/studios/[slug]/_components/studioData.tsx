@@ -980,8 +980,8 @@ function StudioData({ studioData, userRole }: { studioData: StudioWithRelations,
     return (
         <div className="w-full flex">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-full">
-                <div className="w-full overflow-x-auto no-scrollbar mt-4 flex items-center">
-                    <TabsList className="w-max mx-auto">
+                <div className="w-full overflow-x-auto no-scrollbar mt-4 flex items-center pb-1">
+                    <TabsList className="w-max justify-start sm:mx-auto">
                         {canViewOverview && (
                             <TabsTrigger 
                                 value="overview" 

@@ -168,7 +168,7 @@ export function ClientsView({ studioGroups, canEdit = true }: { studioGroups: St
                     {paginatedGroups.map((group) => (
                         <Card key={group.id} className="flex flex-col gap-4">
                             {/* Studio Section Header */}
-                            <CardHeader className="flex items-center justify-between pb-3">
+                            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3">
                                 <div className="flex items-center gap-3">
                                     <h2 className="text-xl font-bold">{group.name}</h2>
                                     <Badge variant="secondary">{group.clients.length} {group.clients.length === 1 ? "client" : "clients"}</Badge>
@@ -185,7 +185,7 @@ export function ClientsView({ studioGroups, canEdit = true }: { studioGroups: St
 
                             {/* Client Grid/List */}
                             {isListView ? (
-                                <div className="border-t">
+                                <div className="border-t overflow-x-auto">
                                     <Table>
                                         <TableHeader>
                                             <TableRow>

@@ -112,7 +112,7 @@ export function DataTable({ data }: { data: RecentBooking[] }) {
   return (
     <div className="flex flex-col gap-4 px-4 lg:px-6">
       <h3 className="text-lg font-semibold tracking-tight">Recent Bookings</h3>
-      <div className="rounded-md border bg-card">
+      <div className="rounded-md border bg-card overflow-x-auto">
         <Table>
           <TableHeader className="bg-muted/50">
             {table.getHeaderGroups().map((headerGroup) => (

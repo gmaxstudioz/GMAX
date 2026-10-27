@@ -58,21 +58,21 @@ export default function WorksPage() {
   }, [activeCategory, filteredWorks.length]);
 
   return (
-    <main className="min-h-screen pt-32 pb-24 px-4 sm:px-6 w-full mx-auto flex flex-col justify-center items-center">
-      <div className="flex flex-col items-center text-center mb-16">
-        <div className="flex items-center gap-2 mb-6">
-          <div className="w-4 h-4 rounded-full bg-primary"></div>
-          <h1 className="text-5xl md:text-7xl font-heading font-bold">Our Portfolio</h1>
-          <div className="w-4 h-4 rounded-full bg-primary"></div>
+    <main className="min-h-screen pt-24 md:pt-32 pb-16 md:pb-24 px-4 sm:px-6 w-full mx-auto flex flex-col justify-center items-center">
+      <div className="flex flex-col items-center text-center mb-10 md:mb-16">
+        <div className="flex items-center gap-2 mb-4 md:mb-6">
+          <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-primary"></div>
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-heading font-bold">Our Portfolio</h1>
+          <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-primary"></div>
         </div>
-        <p className="text-gray-400 text-lg md:text-xl max-w-2xl">
+        <p className="text-gray-400 text-base sm:text-lg md:text-xl max-w-2xl">
           Explore our collection of cinematic visual stories, frozen moments in time, and scroll-stopping imagery.
         </p>
       </div>
 
       {/* Category Filters */}
-      <div className="flex items-center justify-between mb-16 w-80">
-        <p>{activeCategory}</p>
+      <div className="flex items-center justify-between mb-8 md:mb-16 w-full max-w-xs sm:w-80 px-2">
+        <p className="font-medium text-sm sm:text-base">{activeCategory}</p>
         <Popover open={isOpen} onOpenChange={setIsOpen}>
           <PopoverTrigger asChild>
             <Button size="icon-lg" className="shadow-xl">
@@ -118,7 +118,7 @@ export default function WorksPage() {
 
       {/* Grid */}
       {!loading && filteredWorks.length > 0 && (
-        <div ref={gridRef} className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 w-full h-auto px-4 md:px-40">
+        <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6 w-full h-auto px-0 sm:px-4 md:px-12 lg:px-24">
           {filteredWorks.map((work) => {
             const isActive = activeWorkIndex === work.id;
             return (
@@ -131,7 +131,7 @@ export default function WorksPage() {
                   src={getImageUrl(work.r2Key)}
                   alt={work.title || work.category}
                   fill
-                  sizes="(max-width: 768px) 50vw, 25vw"
+                  sizes="(max-width: 639px) 50vw, (max-width: 767px) 33vw, 25vw"
                   className={cn(
                     "object-cover rounded-xl transition-transform duration-700 md:group-hover:scale-105",
                     isActive && "scale-105"

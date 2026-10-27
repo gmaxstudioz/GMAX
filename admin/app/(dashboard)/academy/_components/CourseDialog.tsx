@@ -101,7 +101,7 @@ export function CourseDialog({ open, onOpenChange, course }: { open: boolean, on
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent>
+            <DialogContent className="w-[95vw] sm:max-w-xl max-h-[90dvh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>{course ? "Edit Course" : "New Course"}</DialogTitle>
                 </DialogHeader>
@@ -114,7 +114,7 @@ export function CourseDialog({ open, onOpenChange, course }: { open: boolean, on
                         <Label htmlFor="description">Description</Label>
                         <Textarea id="description" name="description" defaultValue={course?.description} required rows={3} />
                     </div>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="price">Price (₦)</Label>
                             <Input id="price" name="price" type="number" defaultValue={course?.price ? Number(course.price) : ""} required min="0" />

@@ -13,7 +13,7 @@ import { TrendingUpIcon, TrendingDownIcon } from "lucide-react"
 
 export function AcademyStatsCards() {
   return (
-    <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
       <Card className="@container/card">
         <CardHeader>
           <CardDescription>Number of courses</CardDescription>

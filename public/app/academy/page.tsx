@@ -50,12 +50,12 @@ export default function AcademyPage() {
     }, [loading, courses]);
 
     return (
-        <main className="min-h-screen pt-32 pb-24 px-6 md:px-12 max-w-7xl mx-auto">
-            <div className="max-w-2xl mb-16">
-                <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6">
+        <main className="min-h-screen pt-24 md:pt-32 pb-16 md:pb-24 px-4 sm:px-6 md:px-12 max-w-7xl mx-auto">
+            <div className="max-w-2xl mb-10 md:mb-16">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight mb-4 sm:mb-6">
                     GMAX <span className="text-neutral-500">Academy</span>
                 </h1>
-                <p className="text-xl text-neutral-400">
+                <p className="text-base sm:text-lg md:text-xl text-neutral-400">
                     Master the art of photography and studio management. Join our expert-led courses and elevate your skills.
                 </p>
             </div>
@@ -69,7 +69,7 @@ export default function AcademyPage() {
                     <p className="text-neutral-500">No courses available at the moment. Check back soon!</p>
                 </div>
             ) : (
-                <div ref={containerRef} className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+                <div ref={containerRef} className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 lg:gap-12">
                     {courses.map(course => (
                         <Link key={course.id} href={`/academy/${course.id}`} className="course-card group block">
                             <div className="bg-primary/20 border border-primary/30 rounded-2xl overflow-hidden hover:border-primary/60 transition-colors">
@@ -87,23 +87,23 @@ export default function AcademyPage() {
                                         </div>
                                     )}
                                 </div>
-                                <div className="p-8">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <h2 className="text-2xl md:text-3xl font-semibold line-clamp-2 pr-4 text-foreground">{course.title}</h2>
-                                        <span className="text-primary-foreground font-medium bg-primary px-4 py-2 rounded-full text-base whitespace-nowrap">
+                                <div className="p-5 sm:p-8">
+                                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
+                                        <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold line-clamp-2 text-foreground">{course.title}</h2>
+                                        <span className="self-start sm:self-auto text-primary-foreground font-medium bg-primary px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-sm sm:text-base whitespace-nowrap">
                                             {formatCurrency(Number(course.price))}
                                         </span>
                                     </div>
-                                    <p className="text-foreground/80 text-base md:text-lg line-clamp-2 mb-8">
+                                    <p className="text-foreground/80 text-sm sm:text-base md:text-lg line-clamp-2 mb-6 sm:mb-8">
                                         {course.description}
                                     </p>
-                                    <div className="flex items-center justify-between text-base text-primary/80 font-medium">
-                                        <div className="flex items-center gap-2">
-                                            <Calendar className="w-5 h-5" />
+                                    <div className="flex items-center justify-between text-sm sm:text-base text-primary/80 font-medium">
+                                        <div className="flex items-center gap-1.5 sm:gap-2">
+                                            <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
                                             <span>{course.duration || "Self-paced"}</span>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <BookOpen className="w-5 h-5" />
+                                        <div className="flex items-center gap-1.5 sm:gap-2">
+                                            <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
                                             <span>{course.modules?.length || 0} Modules</span>
                                         </div>
                                     </div>

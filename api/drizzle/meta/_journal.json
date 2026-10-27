@@ -8,6 +8,13 @@
       "when": 1790672113986,
       "tag": "0000_orange_liz_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793096592471,
+      "tag": "0001_add_cashouts",
+      "breakpoints": true
     }
   ]
 }

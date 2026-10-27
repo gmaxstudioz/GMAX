@@ -72,6 +72,8 @@ export default async function PaymentPage({ params }: Props) {
                             <Image
                                 src={`${r2PublicUrl}/${studio.logo}`}
                                 alt={studio.name || "Studio"}
+                                width={64}
+                                height={64}
                                 className="h-full w-full object-cover"
                             />
                         </div>

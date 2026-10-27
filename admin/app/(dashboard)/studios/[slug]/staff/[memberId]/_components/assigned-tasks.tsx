@@ -154,7 +154,7 @@ export function AssignedTasksList({
                                 )}
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
+                        <DialogContent className="w-[95vw] sm:max-w-[425px] max-h-[90dvh] overflow-y-auto">
                             <DialogHeader className="flex flex-row items-center justify-between">
                                 <div className="flex flex-col space-y-1.5">
                                     <DialogTitle>Filter Tasks</DialogTitle>
@@ -214,7 +214,7 @@ export function AssignedTasksList({
                             No tasks found
                         </div>
                     ) : (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 pb-4">
                             {tasks.map((bookingItem) => {
                                 const isOverdue = bookingItem.deliveryStatus === 'PENDING' && isBookingOverdue(new Date(bookingItem.bookingDate));
                                 return (

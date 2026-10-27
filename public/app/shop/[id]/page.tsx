@@ -79,7 +79,7 @@ export default function ProductPage() {
       <div className="flex flex-col md:flex-row gap-12 lg:gap-20 items-center justify-center">
 
         {/* Left: Image — now 3/5 width, taller aspect ratio */}
-        <div className="w-full h-[50vh] md:w-3/5 relative aspect-[3/4] rounded-[2rem] overflow-hidden bg-[#1f1f1f] shadow-2xl">
+        <div className="w-full max-h-[60vh] md:max-h-none md:w-3/5 relative aspect-[3/4] rounded-2xl md:rounded-[2rem] overflow-hidden bg-[#1f1f1f] shadow-2xl">
           {product.thumbnailSignedUrl ? (
             <Image
               src={product.thumbnailSignedUrl}
@@ -100,33 +100,33 @@ export default function ProductPage() {
         <div className="w-full md:w-2/5 flex flex-col justify-center md:sticky md:top-32">
 
           {/* Category badge */}
-          <span className="inline-flex items-center gap-1.5 self-start mb-5 px-3 py-1 rounded-full border border-primary/40 bg-primary/10 text-primary text-sm font-medium tracking-wide uppercase">
+          <span className="inline-flex items-center gap-1.5 self-start mb-4 sm:mb-5 px-3 py-1 rounded-full border border-primary/40 bg-primary/10 text-primary text-xs sm:text-sm font-medium tracking-wide uppercase">
             <Tag size={13} />
             {product.category?.name || "No category"}
           </span>
 
-          <h1 className="text-4xl md:text-6xl font-heading font-extrabold mb-6 leading-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-heading font-extrabold mb-4 sm:mb-6 leading-tight">
             {product.title}
           </h1>
 
-          <div className="flex items-center gap-3 mb-10">
+          <div className="flex items-center gap-3 mb-6 sm:mb-10">
             {product.salePrice != null ? (
               <>
-                <p className="text-3xl text-primary font-medium">
+                <p className="text-2xl sm:text-3xl text-primary font-medium">
                   {formatPrice(product.salePrice)}
                 </p>
-                <p className="text-xl text-gray-600 line-through">
+                <p className="text-lg sm:text-xl text-gray-600 line-through">
                   {formatPrice(product.price)}
                 </p>
               </>
             ) : (
-              <p className="text-3xl text-primary font-medium">
+              <p className="text-2xl sm:text-3xl text-primary font-medium">
                 {formatPrice(product.price)}
               </p>
             )}
           </div>
 
-          <p className="text-gray-400 text-lg md:text-xl leading-relaxed mb-12">
+          <p className="text-gray-400 text-base sm:text-lg md:text-xl leading-relaxed mb-8 sm:mb-12">
             {product.description}
           </p>
 
@@ -134,12 +134,14 @@ export default function ProductPage() {
             <Magnetic>
               <Button
                 size="lg"
-                className="w-full md:w-auto px-12 pr-4 h-16 text-xl rounded-full"
+                className="w-full sm:w-auto px-6 sm:px-12 pr-4 h-14 sm:h-16 text-base sm:text-xl rounded-full justify-between sm:justify-center"
                 onClick={() => router.push(`/shop/${product.id}/checkout`)}
               >
-                <ShoppingCart className="size-6 mr-2" />
-                Buy now
-                <span className="bg-white rounded-full px-4 py-1 text-black">
+                <span className="inline-flex items-center">
+                  <ShoppingCart className="size-5 sm:size-6 mr-2" />
+                  Buy now
+                </span>
+                <span className="bg-white rounded-full px-3 sm:px-4 py-1 text-black font-semibold text-xs sm:text-sm ml-2">
                   {formatPrice(effectivePrice)}
                 </span>
               </Button>

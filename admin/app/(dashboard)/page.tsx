@@ -29,7 +29,7 @@ export default async function Page() {
     columns: { role: true, studioId: true }
   });
   
-  const adminRoles = ["owner", "developer"];
+  const adminRoles = ["owner", "developer", "manager"];
   const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
   const isOnlyMinorRole = members.length > 0 && !hasAdminRole;
 

@@ -195,7 +195,7 @@ export function ServicesView({ studioGroups }: { studioGroups: StudioGroup[] }) 
                     {paginatedGroups.map((group) => (
                         <Card key={group.id} className="flex flex-col gap-4">
                             {/* Studio Section Header */}
-                            <CardHeader className="flex items-center justify-between pb-3">
+                            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3">
                                 <div className="flex items-center gap-3">
                                     <h2 className="text-xl font-bold">{group.name}</h2>
                                     <Badge variant="secondary">
@@ -214,7 +214,7 @@ export function ServicesView({ studioGroups }: { studioGroups: StudioGroup[] }) 
 
                             {/* Categories within this studio */}
                             {group.categories.map((category) => (
-                                <div key={category.id} className="px-6 pb-4">
+                                <div key={category.id} className="px-4 sm:px-6 pb-4">
                                     <div className="flex items-center gap-2 mb-4">
                                         <h3 className="text-base font-semibold text-foreground/80">{category.name}</h3>
                                         <Badge variant="outline" className="text-xs">{category.type}</Badge>
