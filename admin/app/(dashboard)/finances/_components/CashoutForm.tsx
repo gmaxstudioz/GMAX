@@ -41,6 +41,16 @@ export function CashoutForm({
     const formRef = useRef<HTMLFormElement>(null);
     const isCustomCategory = category === "__new_category__";
 
+    function handleOpenChange(nextOpen: boolean) {
+        if (!nextOpen) {
+            formRef.current?.reset();
+            setCategory(cashout?.category ?? "");
+            setCustomCategory("");
+            setStudioId(cashout?.studioId ?? (studios.length === 1 ? studios[0].id : ""));
+        }
+        setOpen(nextOpen);
+    }
+
     function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
@@ -55,18 +65,12 @@ export function CashoutForm({
             }
 
             toast.success(result.message);
-            formRef.current?.reset();
-            if (!cashout) {
-                setCategory("");
-                setCustomCategory("");
-                setStudioId(studios.length === 1 ? studios[0].id : "");
-            }
-            setOpen(false);
+            handleOpenChange(false);
         });
     }
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
                 <Button
                     variant={cashout ? "ghost" : "default"}
@@ -179,7 +183,7 @@ export function CashoutForm({
                         />
                     </div>
                     <div className="flex justify-end gap-2">
-                        <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
+                        <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isPending}>
                             Cancel
                         </Button>
                         <Button type="submit" disabled={isPending || studios.length === 0}>

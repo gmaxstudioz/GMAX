@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { v4 as uuidv4 } from "uuid";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/schema";
@@ -81,7 +81,7 @@ async function getFinanceAccess(studioId: string) {
     const canManageStudio = memberships.some(
         (membership) =>
             membership.studioId === studioId &&
-            ["owner", "manager", "receptionist", "developer"].includes(membership.role),
+            ["owner", "manager", "developer"].includes(membership.role),
     );
 
     if (!isPlatformAdmin && !canManageStudio) {
@@ -147,12 +147,20 @@ export async function updateCashout(
             return { status: "error", message: originalStudioAccess.error };
         }
 
-        await db.update(schema.cashout)
+        const [updatedCashout] = await db.update(schema.cashout)
             .set({
                 ...input,
                 notes: input.notes || null,
             })
-            .where(eq(schema.cashout.id, cashoutId));
+            .where(and(
+                eq(schema.cashout.id, cashoutId),
+                eq(schema.cashout.studioId, cashout.studioId),
+            ))
+            .returning({ id: schema.cashout.id });
+
+        if (!updatedCashout) {
+            return { status: "error", message: "This cashout changed while you were editing it. Refresh the page and try again." };
+        }
 
         revalidatePath("/finances");
         return { status: "success", message: "Cashout updated." };

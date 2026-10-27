@@ -53,7 +53,7 @@ export default async function FinancesPage({
     const isPlatformAdmin = user?.role === "admin";
     const managedStudioIds = [...new Set(
         memberships
-            .filter((membership) => ["owner", "manager", "receptionist", "developer"].includes(membership.role))
+            .filter((membership) => ["owner", "manager", "developer"].includes(membership.role))
             .map((membership) => membership.studioId),
     )];
 

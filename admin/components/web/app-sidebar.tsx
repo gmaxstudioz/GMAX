@@ -90,7 +90,7 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
       
       const adminRoles = ["owner", "developer", "admin", "manager"];
       const hasAdminRole = members.some(m => adminRoles.includes(m.role));
-      canManageFinances = members.some(m => ["owner", "developer", "manager", "receptionist"].includes(m.role));
+      canManageFinances = members.some(m => ["owner", "developer", "manager"].includes(m.role));
       isOnlyMinorRole = members.length > 0 && !hasAdminRole;
 
       const photoVideoRoles = ["photographer", "videographer"];
