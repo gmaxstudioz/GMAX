@@ -9,7 +9,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { sendSMS } from "../termii";
-import type { MemberRole } from "../schemas/studio";
+import { MemberRoleEnum, type MemberRole } from "../schemas/studio";
 
 const UpdateProfileSchema = z.object({
     name: z.string().min(2, "Name must be at least 2 characters"),
@@ -50,7 +50,7 @@ export interface UserForManagement {
     name: string;
     email: string;
     image: string | null;
-    phoneNumber: string | null;
+    phoneNumber?: string | null;
     role: string;
     createdAt: string;
     emailVerified: boolean;
@@ -70,6 +70,7 @@ export interface ManagedStudio {
     id: string;
     name: string;
     slug: string;
+    role: string | null;
 }
 
 export interface PendingInvitation {
@@ -119,7 +120,7 @@ export async function getUsersForManagement() {
         }
 
         // Load studios caller has authority to manage
-        const managedStudios = isPlatformAdmin
+        const studios = isPlatformAdmin
             ? await db.query.studio.findMany({
                 columns: { id: true, name: true, slug: true },
                 orderBy: (s, { asc }) => [asc(s.name)]
@@ -129,16 +130,28 @@ export async function getUsersForManagement() {
                 columns: { id: true, name: true, slug: true },
                 orderBy: (s, { asc }) => [asc(s.name)]
             });
+        const managedStudios: ManagedStudio[] = studios.map((studio) => ({
+            ...studio,
+            role: callerMemberships.find((membership) => membership.studioId === studio.id)?.role ?? null,
+        }));
 
-        // Load all users with studio membership info
+        // Load users with studio membership info for studios the caller can manage
         const users = await db.query.user.findMany({
+            where: isPlatformAdmin
+                ? undefined
+                : inArray(
+                    schema.user.id,
+                    db.select({ userId: schema.member.userId })
+                        .from(schema.member)
+                        .where(inArray(schema.member.studioId, managedStudioIds)),
+                ),
             orderBy: (u, { desc }) => [desc(u.createdAt)],
             columns: {
                 id: true,
                 name: true,
                 email: true,
                 image: true,
-                phoneNumber: true,
+                phoneNumber: isPlatformAdmin,
                 role: true,
                 createdAt: true,
                 emailVerified: true
@@ -150,6 +163,11 @@ export async function getUsersForManagement() {
                         role: true,
                         studioId: true
                     },
+                    ...(isPlatformAdmin
+                        ? {}
+                        : {
+                            where: (member, { inArray }) => inArray(member.studioId, managedStudioIds),
+                        }),
                     with: {
                         studio: {
                             columns: {
@@ -165,7 +183,12 @@ export async function getUsersForManagement() {
 
         // Load pending invitations
         const invitations = await db.query.invitation.findMany({
-            where: eq(schema.invitation.status, "pending"),
+            where: isPlatformAdmin
+                ? eq(schema.invitation.status, "pending")
+                : and(
+                    eq(schema.invitation.status, "pending"),
+                    inArray(schema.invitation.studioId, managedStudioIds),
+                ),
             columns: {
                 id: true,
                 email: true,
@@ -211,6 +234,12 @@ export async function assignUserToStudio(data: {
     role: MemberRole;
 }) {
     try {
+        const parsedRole = MemberRoleEnum.safeParse(data.role);
+        if (!parsedRole.success) {
+            return { status: "error" as const, message: "Invalid member role." };
+        }
+        const role = parsedRole.data;
+
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) {
             return { status: "error" as const, message: "Unauthorized" };
@@ -240,7 +269,7 @@ export async function assignUserToStudio(data: {
         }
 
         // Only studio owners or platform admins can assign the Owner role
-        if (data.role === "owner" && !isPlatformAdmin && callerMembership?.role !== "owner") {
+        if (role === "owner" && !isPlatformAdmin && callerMembership?.role !== "owner") {
             return {
                 status: "error" as const,
                 message: "Only studio owners or platform admins can assign the Owner role."
@@ -281,7 +310,7 @@ export async function assignUserToStudio(data: {
             id: memberId,
             userId: data.userId,
             studioId: data.studioId,
-            role: data.role,
+            role,
         });
 
         // Mark any pending invitation for this email and studio as accepted
@@ -297,7 +326,7 @@ export async function assignUserToStudio(data: {
 
         // Send SMS notification if phone number is present
         if (targetUser.phoneNumber) {
-            const roleName = data.role.charAt(0).toUpperCase() + data.role.slice(1);
+            const roleName = role.charAt(0).toUpperCase() + role.slice(1);
             const smsMessage = `Welcome to GMAX! You have been granted access to ${studio.name} as a ${roleName}. You can now access your dashboard.`;
             await sendSMS(targetUser.phoneNumber, smsMessage).catch(err => {
                 console.error("[UserManagement] Failed to send assignment SMS:", err);
@@ -310,7 +339,7 @@ export async function assignUserToStudio(data: {
 
         return {
             status: "success" as const,
-            message: `Successfully assigned ${targetUser.name} as ${data.role} to ${studio.name}.`
+            message: `Successfully assigned ${targetUser.name} as ${role} to ${studio.name}.`
         };
     } catch (error) {
         console.error("[UserManagement] assignUserToStudio error:", error);
@@ -354,7 +383,7 @@ export async function removeUserMembership(memberId: string, studioId: string) {
         }
 
         const targetMember = await db.query.member.findFirst({
-            where: eq(schema.member.id, memberId),
+            where: and(eq(schema.member.id, memberId), eq(schema.member.studioId, studioId)),
             with: { user: true }
         });
 
@@ -366,7 +395,9 @@ export async function removeUserMembership(memberId: string, studioId: string) {
             return { status: "error" as const, message: "Only studio owners or platform admins can remove an Owner." };
         }
 
-        await db.delete(schema.member).where(eq(schema.member.id, memberId));
+        await db.delete(schema.member).where(
+            and(eq(schema.member.id, memberId), eq(schema.member.studioId, studioId))
+        );
 
         revalidatePath("/users");
         revalidatePath("/", "layout");

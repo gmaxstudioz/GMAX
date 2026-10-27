@@ -42,16 +42,17 @@ export default async function FinancesPage() {
         }),
     ]);
 
-    const hasGlobalAccess = user?.role === "admin" ||
-        memberships.some((membership) => ["owner", "developer"].includes(membership.role));
+    const isPlatformAdmin = user?.role === "admin";
     const managedStudioIds = [...new Set(
-        memberships.filter((membership) => membership.role === "manager").map((membership) => membership.studioId),
+        memberships
+            .filter((membership) => ["owner", "manager", "developer"].includes(membership.role))
+            .map((membership) => membership.studioId),
     )];
 
-    if (!hasGlobalAccess && managedStudioIds.length === 0) redirect("/");
+    if (!isPlatformAdmin && managedStudioIds.length === 0) redirect("/");
 
     const studios = await db.query.studio.findMany({
-        where: hasGlobalAccess ? undefined : inArray(schema.studio.id, managedStudioIds),
+        where: isPlatformAdmin ? undefined : inArray(schema.studio.id, managedStudioIds),
         columns: { id: true, name: true },
         orderBy: (studio, { asc }) => [asc(studio.name)],
     });
@@ -94,6 +95,7 @@ export default async function FinancesPage() {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const yearStart = new Date(now.getFullYear(), 0, 1);
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
     const income = bookings.flatMap((booking) =>
         booking.payments
             .filter((payment) => payment.status === "PAID" || payment.status === "PARTIALLY_PAID")
@@ -114,8 +116,8 @@ export default async function FinancesPage() {
     const thisMonthIncome = sumAmounts(income.filter((entry) => isInPeriod(entry.date, monthStart, now)));
     const thisYearIncome = sumAmounts(income.filter((entry) => isInPeriod(entry.date, yearStart, now)));
     const totalExpenses = sumAmounts(expenses);
-    const monthExpenses = sumAmounts(expenses.filter((entry) => isInPeriod(entry.date, monthStart, now)));
-    const yearExpenses = sumAmounts(expenses.filter((entry) => isInPeriod(entry.date, yearStart, now)));
+    const monthExpenses = sumAmounts(expenses.filter((entry) => isInPeriod(entry.date, monthStart, endOfToday)));
+    const yearExpenses = sumAmounts(expenses.filter((entry) => isInPeriod(entry.date, yearStart, endOfToday)));
 
     const incomeByCategory = REVENUE_CATEGORIES.map((category) => ({
         category,

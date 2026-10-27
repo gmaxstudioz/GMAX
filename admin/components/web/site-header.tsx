@@ -49,7 +49,7 @@ export async function SiteHeader() {
   }
 
   return (
-    <header className="flex h-(--header-height) shrink-0 items-center justify-between border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
+    <header className="@container/header flex h-(--header-height) shrink-0 items-center justify-between border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
       <div className="flex flex-1 items-center min-w-0 gap-1 px-2 sm:px-4 lg:gap-2 lg:px-6">
         <SidebarTrigger className="-ml-1" />
         <Separator
@@ -69,13 +69,13 @@ export async function SiteHeader() {
 
         {/* Desktop Add Booking Button */}
         {canCreateBooking && (
-          <div className="hidden md:flex items-center">
+          <div className="hidden @4xl/header:flex items-center">
             <AddBookingDialog />
           </div>
         )}
 
         {canCreateStudio && (
-          <Button size="sm" variant="outline" asChild className="hidden md:flex">
+          <Button size="sm" variant="outline" asChild className="hidden @4xl/header:flex">
             <Link href="/studios/create">
               <Building2Icon className="mr-2 h-4 w-4" />
               Create Studio
@@ -84,7 +84,7 @@ export async function SiteHeader() {
         )}
         
         {/* Mobile Dropdown for small screens */}
-        <div className="md:hidden">
+        <div className="@4xl/header:hidden">
           {(canCreateBooking || canCreateClient || canCreateService || canCreateStudio) && (
             <HeaderMobileActions
               canCreateBooking={canCreateBooking}

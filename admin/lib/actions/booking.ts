@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import * as schema from "@/lib/schema";
-import { eq, and, or, inArray, desc, gte, lte, ne } from "drizzle-orm";
+import { eq, and, or, inArray, desc, gte, lte } from "drizzle-orm";
 import { auth } from "../auth";
 import { headers } from "next/headers";
 import { CreateBookingInput, PaymentPlan } from "../schemas/booking";
@@ -46,7 +46,48 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
         });
 
         if (!targetService) return { status: "error", message: "Service not found." };
-        
+
+        const selectedVariant = bookingData.serviceVariantId
+            ? await db.query.serviceVariant.findFirst({
+                where: and(
+                    eq(schema.serviceVariant.id, bookingData.serviceVariantId),
+                    eq(schema.serviceVariant.serviceId, bookingData.serviceId),
+                ),
+                columns: { basePrice: true },
+            })
+            : null;
+        if (bookingData.serviceVariantId && !selectedVariant) {
+            return { status: "error", message: "Select a valid service variant." };
+        }
+
+        const addonVariantRefs = (addonIds ?? []).map((value) => value.split(":"));
+        if (addonVariantRefs.some(([serviceId, variantId]) => !serviceId || !variantId)) {
+            return { status: "error", message: "One or more selected add-ons are invalid." };
+        }
+        const addonVariantIds = addonVariantRefs.map(([, variantId]) => variantId);
+        const addonVariants = addonVariantIds.length > 0
+            ? await db.query.serviceVariant.findMany({
+                where: inArray(schema.serviceVariant.id, addonVariantIds),
+                columns: { id: true, serviceId: true, basePrice: true },
+            })
+            : [];
+        if (addonVariants.length !== addonVariantRefs.length || addonVariantRefs.some(([serviceId, variantId]) =>
+            !addonVariants.some((variant) => variant.id === variantId && variant.serviceId === serviceId)
+        )) {
+            return { status: "error", message: "One or more selected add-ons are invalid." };
+        }
+
+        const expectedTotalCents = Math.round(Number(selectedVariant?.basePrice ?? 0) * 100) * bookingData.sessionCount
+            + addonVariants.reduce((total, variant) => total + Math.round(Number(variant.basePrice) * 100), 0);
+        if (!Number.isFinite(bookingData.totalAmount) || bookingData.totalAmount <= 0) {
+            return { status: "error", message: "Enter a valid booking total." };
+        }
+        const isCustomTotal = Math.round(bookingData.totalAmount * 100) !== expectedTotalCents;
+        if (isCustomTotal && member.role === "receptionist") {
+            return { status: "error", message: "Receptionists cannot set a custom booking total." };
+        }
+        const managerPriceApprovalRequired = isCustomTotal && member.role === "manager";
+
         const proposedDuration = (targetService.studioSession?.duration || 45) * bookingData.sessionCount;
         const proposedStart = targetDate.getTime();
         const proposedEnd = proposedStart + (proposedDuration * 60 * 1000);
@@ -88,7 +129,16 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
             id: bookingId,
             ...bookingData,
             bookingDate: bookingData.bookingDate.toISOString(),
-            totalAmount: bookingData.totalAmount.toString(),
+            totalAmount: managerPriceApprovalRequired
+                ? (expectedTotalCents / 100).toFixed(2)
+                : bookingData.totalAmount.toFixed(2),
+            ...(managerPriceApprovalRequired
+                ? {
+                    pendingTotalAmount: bookingData.totalAmount.toFixed(2),
+                    priceApprovalStatus: "PENDING_APPROVAL" as const,
+                    priceChangedBy: member.id,
+                }
+                : {}),
             studioId,
             createdBy: session.user.id,
         }).returning();
@@ -103,6 +153,23 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
                     });
                 })
             );
+        }
+
+        if (managerPriceApprovalRequired) {
+            const approvers = await db.query.member.findMany({
+                where: and(
+                    eq(schema.member.studioId, studioId),
+                    inArray(schema.member.role, ["admin", "owner", "developer"]),
+                ),
+            });
+            await Promise.all(approvers.map((approver) => db.insert(schema.userNotification).values({
+                id: uuidv4(),
+                userId: approver.userId,
+                title: "Price Approval Required",
+                message: `Manager ${session.user.name || "staff"} requested a custom price of ₦${bookingData.totalAmount} for a new booking.`,
+                type: "SYSTEM",
+                bookingId,
+            })));
         }
 
         revalidatePath(`/studios`, "layout");
@@ -187,46 +254,6 @@ export async function rescheduleBooking(bookingId: string, newDate: string) {
         }
 
         const targetDate = new Date(newDate);
-        const start = startOfDay(targetDate);
-        const end = endOfDay(targetDate);
-
-        const duration = (booking.service?.studioSession?.duration || 45) * booking.sessionCount;
-        const proposedStart = targetDate.getTime();
-        const proposedEnd = proposedStart + (duration * 60 * 1000);
-
-        const openTime = start.getTime() + (8 * 60 * 60 * 1000);
-        const closeTime = start.getTime() + (20 * 60 * 60 * 1000);
-
-        const canBypassHours = ["owner", "admin", "manager", "developer"].includes(member.role);
-        if (!canBypassHours && (proposedStart < openTime || proposedEnd > closeTime)) {
-            return { status: "error", message: "The selected time is outside operating hours (8am - 8pm)." };
-        }
-
-        // Check for overlaps with other bookings (exclude this booking)
-        // Broaden the query window to catch overlapping bookings from adjacent days
-        const queryStart = new Date(start.getTime() - (24 * 60 * 60 * 1000));
-        const queryEnd = new Date(end.getTime() + (24 * 60 * 60 * 1000));
-
-        const dailyBookings = await db.query.booking.findMany({
-            where: and(
-                eq(schema.booking.studioId, booking.studioId),
-                gte(schema.booking.bookingDate, queryStart.toISOString()),
-                lte(schema.booking.bookingDate, queryEnd.toISOString()),
-                ne(schema.booking.id, bookingId)
-            ),
-            with: { service: { with: { studioSession: true } } }
-        });
-
-        for (const other of dailyBookings) {
-            const bDur = (other.service?.studioSession?.duration || 45) * other.sessionCount;
-            const bStart = new Date(other.bookingDate).getTime();
-            const bEnd = bStart + (bDur * 60 * 1000);
-
-            if (proposedStart < bEnd && proposedEnd > bStart) {
-                return { status: "error", message: "This time overlaps with another booking. Please choose a different time." };
-            }
-        }
-
         await db.update(schema.booking)
             .set({ bookingDate: targetDate.toISOString() })
             .where(eq(schema.booking.id, bookingId));
@@ -637,49 +664,6 @@ export async function updateBookingFull(
 
         if (data.bookingDate) {
             const targetDate = new Date(data.bookingDate);
-            const serviceForDuration = data.serviceId
-                ? await db.query.service.findFirst({ where: eq(schema.service.id, data.serviceId), with: { studioSession: true } })
-                : booking.service;
-
-            const sessionCount = data.sessionCount ?? booking.sessionCount;
-            const duration = (serviceForDuration?.studioSession?.duration || 45) * sessionCount;
-            const proposedStart = targetDate.getTime();
-            const proposedEnd = proposedStart + (duration * 60 * 1000);
-
-            const start = startOfDay(targetDate);
-            const end = endOfDay(targetDate);
-
-            const openTime = start.getTime() + (8 * 60 * 60 * 1000);
-            const closeTime = start.getTime() + (20 * 60 * 60 * 1000);
-            const canBypassHours = ["owner", "admin", "manager", "developer"].includes(member.role);
-            if (!canBypassHours && (proposedStart < openTime || proposedEnd > closeTime)) {
-                return { status: "error", message: "The selected time is outside operating hours (8am - 8pm)." };
-            }
-
-            // Check overlaps
-            // Broaden the query window to catch overlapping bookings from adjacent days
-            const queryStart = new Date(start.getTime() - (24 * 60 * 60 * 1000));
-            const queryEnd = new Date(end.getTime() + (24 * 60 * 60 * 1000));
-
-            const dailyBookings = await db.query.booking.findMany({
-                where: and(
-                    eq(schema.booking.studioId, booking.studioId),
-                    gte(schema.booking.bookingDate, queryStart.toISOString()),
-                    lte(schema.booking.bookingDate, queryEnd.toISOString()),
-                    ne(schema.booking.id, bookingId)
-                ),
-                with: { service: { with: { studioSession: true } } },
-            });
-
-            for (const other of dailyBookings) {
-                const bDur = (other.service?.studioSession?.duration || 45) * other.sessionCount;
-                const bStart = new Date(other.bookingDate).getTime();
-                const bEnd = bStart + (bDur * 60 * 1000);
-                if (proposedStart < bEnd && proposedEnd > bStart) {
-                    return { status: "error", message: "This time overlaps with another booking. Please choose a different time." };
-                }
-            }
-
             updateData.bookingDate = targetDate.toISOString();
         }
 

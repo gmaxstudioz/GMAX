@@ -61,13 +61,14 @@ export async function addCashout(
                 columns: { role: true, studioId: true },
             }),
         ]);
-        const hasGlobalAccess = user?.role === "admin" ||
-            memberships.some((membership) => ["owner", "developer"].includes(membership.role));
+        const isPlatformAdmin = user?.role === "admin";
         const canManageStudio = memberships.some(
-            (membership) => membership.studioId === studioId && membership.role === "manager",
+            (membership) =>
+                membership.studioId === studioId &&
+                ["owner", "manager", "developer"].includes(membership.role),
         );
 
-        if (!hasGlobalAccess && !canManageStudio) {
+        if (!isPlatformAdmin && !canManageStudio) {
             return { status: "error", message: "You do not have permission to record a cashout for this studio." };
         }
 

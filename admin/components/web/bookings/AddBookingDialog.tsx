@@ -1155,7 +1155,7 @@ export function AddBookingDialog({
                     <Input
                       type="number"
                       min={0}
-                      step={100}
+                      step="any"
                       value={field.value ?? 0}
                       onChange={(e) => {
                         setIsPriceOverridden(true);

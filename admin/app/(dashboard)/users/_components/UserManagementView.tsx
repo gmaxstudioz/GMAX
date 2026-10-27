@@ -726,7 +726,9 @@ export function UserManagementView({
                   <SelectItem value="photographer">Photographer (Shoots & bookings)</SelectItem>
                   <SelectItem value="videographer">Videographer (Shoots & bookings)</SelectItem>
                   <SelectItem value="receptionist">Receptionist (Bookings & clients)</SelectItem>
-                  {isPlatformAdmin && <SelectItem value="owner">Owner (Full studio control)</SelectItem>}
+                  {(isPlatformAdmin || managedStudios.some((studio) => studio.id === targetStudioId && studio.role === "owner")) && (
+                    <SelectItem value="owner">Owner (Full studio control)</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>

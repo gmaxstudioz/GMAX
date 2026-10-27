@@ -45,6 +45,19 @@ export default function NavBar() {
         }
     }, []);
 
+    useEffect(() => {
+        const nav = menuRef.current;
+        if (isMobile || !nav) return;
+
+        setMenuOpen(false);
+        tlRef.current?.kill();
+        tlRef.current = null;
+        gsap.set(nav, { clearProps: "all" });
+        gsap.set([topBarRef.current, midBarRef.current, botBarRef.current], {
+            clearProps: "transform,opacity",
+        });
+    }, [isMobile]);
+
     // Animate mobile menu open/close
     useEffect(() => {
         if (!isMobile || !menuRef.current) return;

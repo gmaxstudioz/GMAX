@@ -131,7 +131,7 @@ export default function WorksPage() {
                   src={getImageUrl(work.r2Key)}
                   alt={work.title || work.category}
                   fill
-                  sizes="(max-width: 768px) 50vw, 25vw"
+                  sizes="(max-width: 639px) 50vw, (max-width: 767px) 33vw, 25vw"
                   className={cn(
                     "object-cover rounded-xl transition-transform duration-700 md:group-hover:scale-105",
                     isActive && "scale-105"
