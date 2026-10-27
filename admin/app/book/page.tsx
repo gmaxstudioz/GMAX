@@ -75,6 +75,8 @@ export default async function BookPage() {
                                             <Image
                                                 src={`${r2PublicUrl}/${studio.logo}`}
                                                 alt={studio.name}
+                                                width={640}
+                                                height={320}
                                                 className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                                             />
                                         ) : (

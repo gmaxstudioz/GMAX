@@ -23,7 +23,7 @@ import { School01Icon, ToolsIcon, WarehouseIcon, ShoppingCart01Icon, CreditCardI
 import { db } from "@/lib/db"
 import * as schema from "@/lib/schema"
 import { inArray, asc } from "drizzle-orm"
-import { BriefcaseIcon } from "lucide-react"
+import { BriefcaseIcon, Wallet } from "lucide-react"
 
 const data = {
   user: {
@@ -71,6 +71,7 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
   
   let isOnlyMinorRole = false;
   let isPhotoVideoRole = false;
+  let canManageFinances = false;
   let sidebarStudios: { name: string; slug: string }[] = [];
 
   if (session?.user) {
@@ -89,6 +90,7 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
       
       const adminRoles = ["owner", "developer", "admin", "manager"];
       const hasAdminRole = members.some(m => adminRoles.includes(m.role));
+      canManageFinances = members.some(m => ["owner", "developer", "manager"].includes(m.role));
       isOnlyMinorRole = members.length > 0 && !hasAdminRole;
 
       const photoVideoRoles = ["photographer", "videographer"];
@@ -104,6 +106,7 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
         });
       }
     } else {
+      canManageFinances = true;
       sidebarStudios = await db.query.studio.findMany({
         columns: { name: true, slug: true },
         orderBy: [asc(schema.studio.createdAt)],
@@ -132,6 +135,11 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
       url: "/transactions",
       icon: <HugeiconsIcon icon={CreditCardIcon} />,
     },
+    ...(canManageFinances ? [{
+      title: "Finances",
+      url: "/finances",
+      icon: <Wallet className="size-4" />,
+    }] : []),
     {
       title: "Services",
       url: "/services",
