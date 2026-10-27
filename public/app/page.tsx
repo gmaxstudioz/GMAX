@@ -227,7 +227,7 @@ export default function Home() {
                 🎉 Special discounts are currently available on select services and add-ons! <Link href="/book" className="underline font-bold">Book now</Link>
             </div>
         )}
-        <section className="hero-section relative flex flex-col items-center justify-center w-full min-h-screen overflow-hidden">
+        <section className="hero-section relative flex flex-col items-center justify-center w-full min-h-[100dvh] overflow-hidden">
             {heroItems.map((image, index) => (
               <div 
                 key={index}
@@ -235,8 +235,8 @@ export default function Home() {
                     imagesRef.current[index] = el;
                 }}
                 className={cn(
-                  "absolute z-0 pointer-events-none w-[90px] h-[120px] md:w-[150px] md:h-[200px]",
-                  index >= 8 && "hidden md:block"
+                  "absolute z-0 pointer-events-none w-[80px] h-[105px] sm:w-[90px] sm:h-[120px] md:w-[150px] md:h-[200px]",
+                  index >= 4 && "hidden md:block"
                 )}
                 style={{
                   ...(image.top && { top: image.top }),
@@ -249,29 +249,29 @@ export default function Home() {
                   src={image.src}
                   alt={`Hero Image ${index + 1}`}
                   fill
-                  sizes="(max-width: 768px) 90px, 150px"
+                  sizes="(max-width: 768px) 80px, 150px"
                   className="rounded-xl object-cover shadow-2xl"
                   priority={index < 4}
                 />
               </div>
             ))}
 
-            <div className="relative z-10 flex flex-col items-center justify-center h-screen text-center mt-[-20vh]">
-                <div className="flex items-center justify-center gap-6 md:gap-12">
-                    <div className="w-4 h-4 md:w-8 md:h-8 rounded-full bg-primary"></div>
-                    <h1 className="font-extrabold font-heading text-7xl md:text-9xl text-center">GMAX</h1>
-                    <div className="w-4 h-4 md:w-8 md:h-8 rounded-full bg-primary"></div>
+            <div className="relative z-10 flex flex-col items-center justify-center min-h-[85dvh] text-center mt-[-6vh] md:mt-[-20vh] px-4">
+                <div className="flex items-center justify-center gap-3 sm:gap-6 md:gap-12">
+                    <div className="w-2.5 h-2.5 sm:w-4 sm:h-4 md:w-8 md:h-8 rounded-full bg-primary shrink-0"></div>
+                    <h1 className="font-extrabold font-heading text-5xl sm:text-7xl md:text-9xl text-center tracking-tight">GMAX</h1>
+                    <div className="w-2.5 h-2.5 sm:w-4 sm:h-4 md:w-8 md:h-8 rounded-full bg-primary shrink-0"></div>
                 </div>
-                <p ref={textRef} className="text-5xl md:text-7xl font-heading text-center">CREATIVE</p>
-                <div className="flex flex-wrap items-center gap-2 md:flex-row mt-12">
+                <p ref={textRef} className="text-3xl sm:text-5xl md:text-7xl font-heading text-center">CREATIVE</p>
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-8 md:mt-12">
                     <Magnetic>
                         <Link
                             href="/book"
                             className={cn("inline-flex items-center gap-2")}
                         >
-                            <span className={cn(buttonVariants({ variant: "default", size: "lg" }), "px-10 py-6 text-xl")}>Book Us</span>
-                            <span className={cn(buttonVariants({ variant: "default", size: "icon-lg" }), "p-6")}>
-                                <ArrowUpRight className="size-6" />
+                            <span className={cn(buttonVariants({ variant: "default", size: "lg" }), "px-6 py-5 sm:px-10 sm:py-6 text-lg sm:text-xl")}>Book Us</span>
+                            <span className={cn(buttonVariants({ variant: "default", size: "icon-lg" }), "p-4 sm:p-6")}>
+                                <ArrowUpRight className="size-5 sm:size-6" />
                             </span>
                         </Link>
                     </Magnetic>
@@ -280,19 +280,20 @@ export default function Home() {
         </section>
 
         {/* Short About Section */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 py-32 md:py-48 flex flex-col md:flex-row gap-16 items-center">
+        {/* Short About Section */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16 md:py-48 flex flex-col md:flex-row gap-8 md:gap-16 items-center">
           <div className="w-full md:w-1/2 flex flex-col gap-6">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-primary"></div>
               <h2 className="text-xl md:text-2xl uppercase tracking-widest text-gray-400 font-medium"> {APP_NAME} </h2>
             </div>
-            <h3 className="text-4xl md:text-6xl font-heading font-bold leading-tight">
+            <h3 className="text-3xl sm:text-4xl md:text-6xl font-heading font-bold leading-tight">
               We craft cinematic legacies.
             </h3>
-            <p className="text-gray-400 text-lg md:text-xl leading-relaxed">
+            <p className="text-gray-400 text-base sm:text-lg md:text-xl leading-relaxed">
               We are a collective of visual storytellers, obsessed with capturing the raw emotion and undeniable beauty of every moment. From intimate portraits to grand celebrations, our lens finds the magic that others naturally miss.
             </p>
-            <div className="mt-8">
+            <div className="mt-4 md:mt-8">
               <Magnetic>
                 <Link
                   href="/about"
@@ -306,7 +307,7 @@ export default function Home() {
               </Magnetic>
             </div>
           </div>
-          <div className="w-full md:w-1/2 relative aspect-[4/3] rounded-[2rem] overflow-hidden group">
+          <div className="w-full md:w-1/2 relative aspect-[4/3] rounded-2xl md:rounded-[2rem] overflow-hidden group">
             <Image
               src="/works/image-10.jpg"
               alt="About GMAX"
@@ -318,13 +319,13 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="w-full mb-60">
+        <section className="w-full mb-16 md:mb-60">
           <ServicesSection />
         </section>
-        <section className="max-w-7xl mx-auto h-scree px-4">
-          <div className="mb-15 flex items-center gap-2">
+        <section className="max-w-7xl mx-auto px-4">
+          <div className="mb-8 md:mb-15 flex items-center gap-2">
             <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-primary"></div>
-            <h1 className="text-4xl font-heading font-bold">Our Works</h1>
+            <h1 className="text-3xl sm:text-4xl font-heading font-bold">Our Works</h1>
             <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-primary"></div>
           </div>
 

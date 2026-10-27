@@ -391,7 +391,7 @@ export function CreateProductForm({ categories: initialCategories }: CreateProdu
                                         Add New Category
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent>
+                                <DialogContent className="w-[95vw] sm:max-w-md">
                                     <DialogHeader>
                                         <DialogTitle>Add Product Category</DialogTitle>
                                         <DialogDescription>

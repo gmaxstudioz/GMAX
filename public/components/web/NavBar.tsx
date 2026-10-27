@@ -109,7 +109,7 @@ export default function NavBar() {
     return (
         <header className="fixed w-full z-50 backdrop-blur-md bg-background/80">
             {/* Top bar */}
-            <div className="flex justify-between items-center py-4 px-6 md:px-20">
+            <div className="flex justify-between items-center py-4 px-4 sm:px-6 md:px-20">
                 <div className="flex items-center">
                     <Image
                         src="/gmax-logo.png"
@@ -120,89 +120,83 @@ export default function NavBar() {
                 </div>
 
                 {/* Desktop nav */}
-                {!isMobile && (
-                    <nav className="flex gap-10">
-                        {navLinks.map((link) => (
-                            <Link
-                                key={link.href}
-                                href={link.href}
-                                className={buttonVariants({ variant: "link", size: "lg" })}
-                            >
-                                {link.label}
-                            </Link>
-                        ))}
-                    </nav>
-                )}
+                <nav className="hidden md:flex gap-6 lg:gap-10">
+                    {navLinks.map((link) => (
+                        <Link
+                            key={link.href}
+                            href={link.href}
+                            className={buttonVariants({ variant: "link", size: "lg" })}
+                        >
+                            {link.label}
+                        </Link>
+                    ))}
+                </nav>
 
                 {/* Desktop CTA */}
-                {!isMobile && (
+                <div className="hidden md:block">
                     <Magnetic>
                         <Link
                             href="/book"
                             className={cn("inline-flex items-center gap-2")}
                         >
-                            <span className={cn(buttonVariants({ variant: "default", size: "lg" }), "px-10 py-6 text-xl")}>Book Us</span>
-                            <span className={cn(buttonVariants({ variant: "default", size: "icon-lg" }), "p-6")}>
-                                <ArrowUpRight className="size-6" />
+                            <span className={cn(buttonVariants({ variant: "default", size: "lg" }), "px-6 lg:px-10 py-5 lg:py-6 text-lg lg:text-xl")}>Book Us</span>
+                            <span className={cn(buttonVariants({ variant: "default", size: "icon-lg" }), "p-5 lg:p-6")}>
+                                <ArrowUpRight className="size-5 lg:size-6" />
                             </span>
                         </Link>
                     </Magnetic>
-                )}
+                </div>
 
                 {/* Mobile hamburger – custom 3-bar icon for GSAP morphing */}
-                {isMobile && (
-                    <button
-                        onClick={handleToggle}
-                        className="relative flex flex-col justify-center items-center w-10 h-10 gap-[5px] p-2 text-foreground"
-                        aria-label="Toggle menu"
-                    >
-                        <span
-                            ref={topBarRef}
-                            className="block w-6 h-[2px] bg-foreground rounded-full origin-center"
-                        />
-                        <span
-                            ref={midBarRef}
-                            className="block w-6 h-[2px] bg-foreground rounded-full origin-center"
-                        />
-                        <span
-                            ref={botBarRef}
-                            className="block w-6 h-[2px] bg-foreground rounded-full origin-center"
-                        />
-                    </button>
-                )}
+                <button
+                    onClick={handleToggle}
+                    className="flex md:hidden relative flex-col justify-center items-center w-10 h-10 gap-[5px] p-2 text-foreground"
+                    aria-label="Toggle menu"
+                >
+                    <span
+                        ref={topBarRef}
+                        className="block w-6 h-[2px] bg-foreground rounded-full origin-center"
+                    />
+                    <span
+                        ref={midBarRef}
+                        className="block w-6 h-[2px] bg-foreground rounded-full origin-center"
+                    />
+                    <span
+                        ref={botBarRef}
+                        className="block w-6 h-[2px] bg-foreground rounded-full origin-center"
+                    />
+                </button>
             </div>
 
             {/* Mobile menu – always rendered, animated via GSAP */}
-            {isMobile && (
-                <nav
-                    ref={menuRef}
-                    className="flex-col gap-2 px-6 pb-6 overflow-hidden items-center"
-                    style={{ display: "none", height: 0, opacity: 0 }}
-                >
-                    {navLinks.map((link) => (
-                        <Link
-                            key={link.href}
-                            href={link.href}
-                            className={cn("mobile-nav-link", buttonVariants({ variant: "link", size: "lg" }))}
-                            onClick={handleLinkClick}
-                        >
-                            {link.label}
-                        </Link>
-                    ))}
-                    <Magnetic>
-                        <Link
-                            href="/book"
-                            className={cn("mobile-nav-link inline-flex items-center gap-2 mt-2")}
-                            onClick={handleLinkClick}
-                        >
-                            <span className={cn(buttonVariants({ variant: "default", size: "lg" }), "px-10 py-6 text-xl font-bold")}>Book Us</span>
-                            <span className={cn(buttonVariants({ variant: "default", size: "icon-lg" }), "w-16 h-[52px]")}>
-                                <ArrowUpRight size={28} />
-                            </span>
-                        </Link>
-                    </Magnetic>
-                </nav>
-            )}
+            <nav
+                ref={menuRef}
+                className="flex md:hidden flex-col gap-2 px-6 pb-6 overflow-y-auto max-h-[85dvh] items-center"
+                style={{ display: "none", height: 0, opacity: 0 }}
+            >
+                {navLinks.map((link) => (
+                    <Link
+                        key={link.href}
+                        href={link.href}
+                        className={cn("mobile-nav-link", buttonVariants({ variant: "link", size: "lg" }))}
+                        onClick={handleLinkClick}
+                    >
+                        {link.label}
+                    </Link>
+                ))}
+                <Magnetic>
+                    <Link
+                        href="/book"
+                        className={cn("mobile-nav-link inline-flex items-center gap-2 mt-2")}
+                        onClick={handleLinkClick}
+                    >
+                        <span className={cn(buttonVariants({ variant: "default", size: "lg" }), "px-8 py-5 text-lg font-bold")}>Book Us</span>
+                        <span className={cn(buttonVariants({ variant: "default", size: "icon-lg" }), "w-14 h-12")}>
+                            <ArrowUpRight size={24} />
+                        </span>
+                    </Link>
+                </Magnetic>
+            </nav>
         </header>
     );
 }

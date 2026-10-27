@@ -49,22 +49,22 @@ export async function SiteHeader() {
   }
 
   return (
-    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
-      <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
+    <header className="flex h-(--header-height) shrink-0 items-center justify-between border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
+      <div className="flex flex-1 items-center min-w-0 gap-1 px-2 sm:px-4 lg:gap-2 lg:px-6">
         <SidebarTrigger className="-ml-1" />
         <Separator
           orientation="vertical"
           className="mx-2 data-[orientation=vertical]:h-full hidden md:block"
         />
-        <div className="hidden md:block">
+        <div className="hidden md:block shrink-0">
           <h1 className="text-base font-medium">Dashboard</h1>
         </div>
-        <div className="ml-auto flex-1 md:ml-4 lg:ml-8 max-w-sm">
+        <div className="ml-auto flex-1 min-w-[100px] md:ml-4 lg:ml-8 max-w-xs sm:max-w-sm">
           <GlobalSearch />
         </div>
       </div>
       
-      <div className="px-4 lg:px-6 flex items-center gap-2">
+      <div className="shrink-0 px-2 sm:px-4 lg:px-6 flex items-center gap-1.5 sm:gap-2">
         <NotificationArea />
 
         {/* Desktop Add Booking Button */}

@@ -26,8 +26,8 @@ export default async function ProfilePage() {
     return (
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6 max-w-4xl mx-auto w-full">
             <div className="flex flex-col gap-1">
-                <h1 className="text-2xl font-bold">Profile Settings</h1>
-                <p className="text-muted-foreground">Manage your personal information, avatar, and account settings.</p>
+                <h1 className="text-xl sm:text-2xl font-bold">Profile Settings</h1>
+                <p className="text-sm text-muted-foreground">Manage your personal information, avatar, and account settings.</p>
             </div>
             <div className="flex flex-col gap-6 w-full">
                 <ProfileForm user={fullUser} />

@@ -31,10 +31,10 @@ export default async function MemberPage({ params }: MemberPageProps) {
 
     return (
         <div className="flex flex-col gap-4 py-4 px-4 md:gap-6 md:py-6 md:px-6">
-            <div className="flex items-center justify-between w-full">
+            <div className="flex flex-wrap items-center justify-between gap-4 w-full">
                 <div className="flex items-center gap-4">
                     <BackButton />
-                    <h1 className="text-2xl font-bold">Staff Profile</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold">Staff Profile</h1>
                 </div>
                 {memberData?.user && memberData?.studio && (
                     <EditStaffDialog 
@@ -52,12 +52,12 @@ export default async function MemberPage({ params }: MemberPageProps) {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="flex flex-col gap-4">
-                    <Card className="@container/card h-[220px]">
+                    <Card className="@container/card min-h-[200px] h-fit">
                         <CardHeader>
-                            <div className="flex flex-row gap-4">
-                                <Image src={memberData?.user.image || "/images/placeholder.jpg"} alt="Profile" width={120} height={120} className="rounded-lg" />
+                            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                                <Image src={memberData?.user.image || "/images/placeholder.jpg"} alt="Profile" width={120} height={120} className="rounded-lg object-cover" />
                                 <div className="flex flex-col gap-1">
-                                    <h1 className="text-2xl font-bold">{memberData?.user.name}</h1>
+                                    <h1 className="text-xl sm:text-2xl font-bold">{memberData?.user.name}</h1>
                                     <Badge>
                                         {memberData?.role.toUpperCase()}
                                     </Badge>

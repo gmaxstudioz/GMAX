@@ -204,7 +204,7 @@ export function PortfolioView({
 
                         {/* Category filter */}
                         <Select value={filterCategory} onValueChange={(v) => setFilterCategory(v)}>
-                            <SelectTrigger className="h-10 w-40">
+                            <SelectTrigger className="h-10 w-full sm:w-40">
                                 <SelectValue placeholder="Category" />
                             </SelectTrigger>
                             <SelectContent>
@@ -218,7 +218,7 @@ export function PortfolioView({
                         {/* Status filter */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="outline" className="h-10 min-w-28 justify-between">
+                                <Button variant="outline" className="h-10 min-w-28 justify-between flex-1 sm:flex-none">
                                     <span className="flex items-center gap-2">
                                         <HugeiconsIcon icon={Filter} className="size-4" />
                                         {filterType === "ALL" ? "All" : filterType === "PUBLISHED" ? "Visible" : "Hidden"}
@@ -242,7 +242,7 @@ export function PortfolioView({
                         {/* Upload */}
                         <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
                             <DialogTrigger asChild>
-                                <Button className="h-10 ml-auto xl:ml-0 gap-2">
+                                <Button className="h-10 ml-auto xl:ml-0 gap-2 w-full sm:w-auto">
                                     <Plus className="size-4" /> Upload Work
                                 </Button>
                             </DialogTrigger>
@@ -562,7 +562,7 @@ function UploadDialog({
     };
 
     return (
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="w-[95vw] sm:max-w-lg max-h-[90dvh] overflow-y-auto">
             <DialogHeader>
                 <DialogTitle>Upload Portfolio Works</DialogTitle>
                 <DialogDescription>

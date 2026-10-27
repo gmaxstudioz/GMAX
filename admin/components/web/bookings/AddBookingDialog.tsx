@@ -261,10 +261,12 @@ export function AddBookingDialog({
   // Reset dependent selections when studio changes
   const handleStudioChange = (newStudioId: string) => {
     setSelectedStudioId(newStudioId);
+    setIsPriceOverridden(false);
     form.setValue("clientId", "");
     form.setValue("serviceId", "");
     form.setValue("serviceVariantId", undefined);
     form.setValue("memberId", undefined);
+    form.setValue("extraPicturesCount", 0);
     form.setValue("addonIds", []);
     setSelectedAddonIds([]);
     setServiceSearch("");
@@ -361,6 +363,8 @@ export function AddBookingDialog({
   const watchedSessionCount = useWatch({ control: form.control, name: "sessionCount" }) ?? 1;
   const watchedClientId = useWatch({ control: form.control, name: "clientId" });
   const watchedPaymentPlan = useWatch({ control: form.control, name: "paymentPlan" }) ?? "FULL";
+  const watchedTotalAmount = useWatch({ control: form.control, name: "totalAmount" });
+  const [isPriceOverridden, setIsPriceOverridden] = useState(false);
 
   const selectedService = useMemo(
     () => allServices.find((s) => s.id === watchedServiceId),
@@ -394,8 +398,10 @@ export function AddBookingDialog({
   const grandTotal = sessionTotal + addonsTotal;
 
   useEffect(() => {
-    form.setValue("totalAmount", grandTotal);
-  }, [grandTotal, form]);
+    if (!isPriceOverridden) {
+      form.setValue("totalAmount", grandTotal);
+    }
+  }, [grandTotal, isPriceOverridden, form]);
 
   function toggleAddon(compositeId: string) {
     setSelectedAddonIds((prev) => {
@@ -415,6 +421,7 @@ export function AddBookingDialog({
 
   function handleReset() {
     form.reset();
+    setIsPriceOverridden(false);
     setSelectedAddonIds([]);
     setServiceSearch("");
     setClientSearch("");
@@ -482,8 +489,8 @@ export function AddBookingDialog({
         </DialogTrigger>
       )}
 
-      <DialogContent className="sm:max-w-xl max-h-[92vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-2">
+      <DialogContent className="w-[95vw] sm:max-w-xl max-h-[92dvh] flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             <CalendarPlusIcon className="h-5 w-5 text-primary" />
             Add Booking
@@ -494,18 +501,18 @@ export function AddBookingDialog({
         </DialogHeader>
 
         {loadingStudios && allStudios.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-12 gap-3 min-h-75">
+          <div className="flex flex-col items-center justify-center p-8 sm:p-12 gap-3 min-h-75">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground">Loading studios...</p>
           </div>
         ) : allStudios.length === 0 && !studio ? (
-          <div className="flex flex-col items-center justify-center p-12 gap-3 min-h-75 text-center">
+          <div className="flex flex-col items-center justify-center p-8 sm:p-12 gap-3 min-h-75 text-center">
             <p className="text-sm text-muted-foreground">No eligible studios available for booking.</p>
           </div>
         ) : (
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="flex flex-col flex-1 overflow-y-auto px-6 py-2 gap-4"
+            className="flex flex-col flex-1 overflow-y-auto px-4 sm:px-6 py-2 gap-4"
           >
           {/* Studio Selector (when user has multiple studios) */}
           {allStudios.length > 1 && (
@@ -761,6 +768,7 @@ export function AddBookingDialog({
                                 onClick={() => {
                                   field.onChange(s.id);
                                   form.setValue("serviceVariantId", undefined);
+                                  setIsPriceOverridden(false);
                                   setServiceOpen(false);
                                   setServiceSearch("");
                                 }}
@@ -816,7 +824,13 @@ export function AddBookingDialog({
                     <FieldLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       Select Variant (Location Type) *
                     </FieldLabel>
-                    <Select value={field.value || ""} onValueChange={field.onChange}>
+                    <Select
+                      value={field.value || ""}
+                      onValueChange={(val) => {
+                        field.onChange(val);
+                        setIsPriceOverridden(false);
+                      }}
+                    >
                       <SelectTrigger className="h-9">
                         <SelectValue placeholder="Choose location type..." />
                       </SelectTrigger>
@@ -961,42 +975,43 @@ export function AddBookingDialog({
             />
           )}
 
-          {/* Date & Time Slot Picker + Session Count */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Controller
-              name="bookingDate"
-              control={form.control}
-              render={({ field }) => (
-                <Field className="sm:col-span-2">
-                  <FieldLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Booking Date & Time *
-                  </FieldLabel>
-                  <DateTimeSlotPicker
-                    selectedDate={field.value || null}
-                    onDateChange={field.onChange}
-                    proposedDuration={
-                      (selectedService?.studioSession?.duration || 45) *
-                      (watchedSessionCount || 1)
-                    }
-                    bookings={
-                      currentStudio?.bookings?.map((b) => ({
-                        bookingDate: b.bookingDate,
-                        sessionCount: b.sessionCount,
-                        service: b.service?.studioSession
-                          ? { studioSession: { duration: b.service.studioSession.duration ?? undefined } }
-                          : undefined,
-                      })) || []
-                    }
-                  />
-                  {form.formState.errors.bookingDate && (
-                    <p className="text-xs text-destructive mt-1">
-                      {form.formState.errors.bookingDate.message}
-                    </p>
-                  )}
-                </Field>
-              )}
-            />
+          {/* Date & Time Slot Picker */}
+          <Controller
+            name="bookingDate"
+            control={form.control}
+            render={({ field }) => (
+              <Field>
+                <FieldLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Booking Date & Time *
+                </FieldLabel>
+                <DateTimeSlotPicker
+                  selectedDate={field.value || null}
+                  onDateChange={field.onChange}
+                  proposedDuration={
+                    (selectedService?.studioSession?.duration || 45) *
+                    (watchedSessionCount || 1)
+                  }
+                  bookings={
+                    currentStudio?.bookings?.map((b) => ({
+                      bookingDate: b.bookingDate,
+                      sessionCount: b.sessionCount,
+                      service: b.service?.studioSession
+                        ? { studioSession: { duration: b.service.studioSession.duration ?? undefined } }
+                        : undefined,
+                    })) || []
+                  }
+                />
+                {form.formState.errors.bookingDate && (
+                  <p className="text-xs text-destructive mt-1">
+                    {form.formState.errors.bookingDate.message}
+                  </p>
+                )}
+              </Field>
+            )}
+          />
 
+          {/* Session Count & Extra Pictures Count */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Controller
               name="sessionCount"
               control={form.control}
@@ -1011,6 +1026,27 @@ export function AddBookingDialog({
                     {...field}
                     onChange={(e) => field.onChange(Number(e.target.value))}
                     className="h-9 text-xs"
+                  />
+                </Field>
+              )}
+            />
+
+            <Controller
+              name="extraPicturesCount"
+              control={form.control}
+              render={({ field }) => (
+                <Field>
+                  <FieldLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Extra Pictures
+                  </FieldLabel>
+                  <Input
+                    type="number"
+                    min={0}
+                    {...field}
+                    value={field.value ?? 0}
+                    onChange={(e) => field.onChange(Number(e.target.value))}
+                    className="h-9 text-xs"
+                    placeholder="0"
                   />
                 </Field>
               )}
@@ -1090,14 +1126,58 @@ export function AddBookingDialog({
               )}
             />
 
-            <Field>
-              <FieldLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Total Amount
-              </FieldLabel>
-              <div className="h-9 px-3 flex items-center rounded-md border bg-muted/30 font-mono text-sm font-semibold">
-                ₦{grandTotal.toLocaleString()}
-              </div>
-            </Field>
+            <Controller
+              control={form.control}
+              name="totalAmount"
+              render={({ field }) => (
+                <Field>
+                  <div className="flex items-center justify-between">
+                    <FieldLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Total Price (₦) *
+                    </FieldLabel>
+                    {isPriceOverridden && watchedTotalAmount !== grandTotal && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsPriceOverridden(false);
+                          form.setValue("totalAmount", grandTotal);
+                        }}
+                        className="text-[10px] text-primary hover:underline cursor-pointer"
+                      >
+                        Reset to ₦{grandTotal.toLocaleString()}
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-xs text-muted-foreground font-mono font-semibold">
+                      ₦
+                    </span>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={100}
+                      value={field.value ?? 0}
+                      onChange={(e) => {
+                        setIsPriceOverridden(true);
+                        field.onChange(Number(e.target.value));
+                      }}
+                      className="h-9 pl-7 font-mono font-semibold text-xs"
+                      placeholder="0"
+                    />
+                  </div>
+                  {isPriceOverridden && watchedTotalAmount !== grandTotal && (
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400">
+                      Custom price applied (Calculated: ₦{grandTotal.toLocaleString()})
+                    </span>
+                  )}
+                  {form.formState.errors.totalAmount && (
+                    <p className="text-xs text-destructive mt-1">
+                      {form.formState.errors.totalAmount.message}
+                    </p>
+                  )}
+                </Field>
+              )}
+            />
 
             <div className="sm:col-span-2 bg-primary/5 border border-primary/20 p-2.5 rounded-md flex justify-between items-center text-xs">
               <span className="font-medium text-foreground">
@@ -1106,7 +1186,7 @@ export function AddBookingDialog({
               <span className="font-bold text-base font-mono text-primary">
                 ₦
                 {(
-                  grandTotal *
+                  ((watchedTotalAmount ?? grandTotal) || 0) *
                   (watchedPaymentPlan === "FULL"
                     ? 1
                     : watchedPaymentPlan === "HALF"

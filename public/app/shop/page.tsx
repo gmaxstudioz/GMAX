@@ -65,28 +65,28 @@ export default function ShopPage() {
   };
 
   return (
-    <main className="min-h-screen pt-32 pb-24 w-full">
-      <div className="flex flex-col items-center text-center mb-12 px-4">
-        <div className="flex items-center gap-2 mb-6">
-          <div className="w-3 h-3 rounded-full bg-primary"></div>
-          <h1 className="text-5xl md:text-7xl font-heading font-bold">The Studio Shop</h1>
-          <div className="w-3 h-3 rounded-full bg-primary"></div>
+    <main className="min-h-screen pt-24 md:pt-32 pb-16 md:pb-24 w-full">
+      <div className="flex flex-col items-center text-center mb-8 md:mb-12 px-4">
+        <div className="flex items-center gap-2 mb-4 md:mb-6">
+          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-primary"></div>
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-heading font-bold">The Studio Shop</h1>
+          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-primary"></div>
         </div>
-        <p className="text-gray-400 text-lg md:text-xl max-w-2xl">
+        <p className="text-gray-400 text-base sm:text-lg md:text-xl max-w-2xl">
           Elevate your craft with our premium curated digital assets, presets, and limited edition prints.
         </p>
       </div>
 
       {/* Search + Access Link */}
-      <div className="max-w-7xl mx-auto px-4 md:px-6 mb-12 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 mb-8 md:mb-12 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         <Link
           href="/shop/access"
-          className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-primary transition-colors whitespace-nowrap"
+          className="inline-flex items-center justify-center sm:justify-start gap-2 text-sm text-gray-400 hover:text-primary transition-colors whitespace-nowrap py-1"
         >
           <PackageOpen size={16} />
           Access Purchases
         </Link>
-        <div className="relative w-full md:w-72">
+        <div className="relative w-full sm:w-72">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search size={18} className="text-gray-500" />
           </div>
@@ -95,7 +95,7 @@ export default function ShopPage() {
             placeholder="Search products..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#1a1a1a] border border-white/10 text-white rounded-full py-2.5 pl-10 pr-4 focus:outline-none focus:border-primary/50 transition-colors"
+            className="w-full bg-[#1a1a1a] border border-white/10 text-white rounded-full py-2.5 pl-10 pr-4 focus:outline-none focus:border-primary/50 transition-colors text-sm"
           />
         </div>
       </div>
@@ -116,7 +116,7 @@ export default function ShopPage() {
 
       {/* Products Grid */}
       {!loading && !error && (
-        <div ref={containerRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto px-4 md:px-6 min-h-[40vh]">
+        <div ref={containerRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 max-w-7xl mx-auto px-4 md:px-6 min-h-[40vh]">
           {filteredProducts.map((product) => (
             <Link href={`/shop/${product.id}`} key={product.id} className="shop-item group flex flex-col gap-4 cursor-pointer">
               <div className="relative aspect-[4/5] w-full rounded-[2rem] overflow-hidden bg-[#1f1f1f]">

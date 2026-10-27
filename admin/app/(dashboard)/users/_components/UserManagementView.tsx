@@ -265,7 +265,7 @@ export function UserManagementView({
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card className="hover:border-primary/50 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -348,7 +348,7 @@ export function UserManagementView({
               onValueChange={(v) => setActiveTab(v as typeof activeTab)}
               className="w-full md:w-auto"
             >
-              <TabsList className="grid grid-cols-4 w-full md:w-auto">
+              <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full md:w-auto h-auto p-1">
                 <TabsTrigger value="ALL">All ({totalUsersCount})</TabsTrigger>
                 <TabsTrigger value="WAITING" className="gap-1.5">
                   Waiting
@@ -654,7 +654,7 @@ export function UserManagementView({
 
       {/* Assign User to Studio Dialog */}
       <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[95vw] sm:max-w-md max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
               <UserPlusIcon className="size-5 text-primary" />
@@ -807,7 +807,7 @@ export function UserManagementView({
 
       {/* Remove Member Confirmation Dialog */}
       <Dialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[95vw] sm:max-w-md max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive text-lg">
               <Trash2Icon className="size-5" />

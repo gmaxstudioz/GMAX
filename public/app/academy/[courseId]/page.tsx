@@ -74,22 +74,22 @@ export default function CoursePage() {
     }
 
     return (
-        <main className="min-h-screen pt-32 pb-24 px-6 md:px-12 max-w-7xl mx-auto">
+        <main className="min-h-screen pt-28 md:pt-32 pb-16 md:pb-24 px-4 sm:px-6 md:px-12 max-w-7xl mx-auto">
             <Link href="/academy" className="inline-flex items-center gap-2 text-neutral-400 hover:text-white transition-colors mb-8 text-sm">
                 <ArrowLeft className="w-4 h-4" /> Back to Courses
             </Link>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-                <div className="lg:col-span-7 space-y-10">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+                <div className="lg:col-span-7 space-y-8 sm:space-y-10">
                     <div>
-                        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">{course.title}</h1>
-                        <p className="text-lg text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                        <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4 sm:mb-6">{course.title}</h1>
+                        <p className="text-base sm:text-lg text-muted-foreground leading-relaxed whitespace-pre-wrap">
                             {course.description}
                         </p>
                     </div>
 
                     <Card className="bg-card text-card-foreground border-border shadow-sm py-0">
-                        <CardContent className="flex flex-wrap gap-6 p-6">
+                        <CardContent className="flex flex-wrap gap-4 sm:gap-6 p-4 sm:p-6">
                             <div className="flex items-center gap-3">
                                 <div className="p-3 bg-muted rounded-lg">
                                     <Calendar className="w-5 h-5 text-muted-foreground" />
@@ -126,15 +126,15 @@ export default function CoursePage() {
 
                     {course.modules && course.modules.length > 0 && (
                         <div>
-                            <h2 className="text-2xl font-bold mb-6">What you will learn</h2>
+                            <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">What you will learn</h2>
                             <div className="space-y-4">
                                     <Card className="bg-card border-border shadow-sm py-0 rounded-xl">
-                                        <CardContent className="p-5 flex flex-col gap-4">
+                                        <CardContent className="p-4 sm:p-5 flex flex-col gap-4">
                                             {course.modules.map((mod: CourseModule, idx: number) => (
-                                                <div key={mod.id} className="flex gap-0">
-                                                    <div className="text-2xl font-bold text-muted-foreground w-8">{idx + 1}</div>
+                                                <div key={mod.id} className="flex gap-2 sm:gap-3">
+                                                    <div className="text-xl sm:text-2xl font-bold text-muted-foreground w-6 sm:w-8 shrink-0">{idx + 1}</div>
                                                     <div>
-                                                        <h3 className="text-lg font-regular text-foreground mb-1">{mod.title}</h3>
+                                                        <h3 className="text-base sm:text-lg font-regular text-foreground mb-1">{mod.title}</h3>
                                                         {mod.description && (
                                                             <p className="text-sm text-muted-foreground">{mod.description}</p>
                                                         )}
@@ -149,7 +149,7 @@ export default function CoursePage() {
                 </div>
 
                 <div className="lg:col-span-5">
-                    <div className="sticky top-32">
+                    <div className="sticky top-28 md:top-32">
                         <Card className="overflow-hidden border-border bg-card shadow-lg py-0">
                             <div className="aspect-[4/3] bg-muted relative overflow-hidden">
                                 {course.thumbnail ? (
@@ -165,9 +165,9 @@ export default function CoursePage() {
                                     </div>
                                 )}
                             </div>
-                            <CardContent className="p-6 lg:p-8 pt-6">
-                                <div className="flex items-end gap-2 mb-8 border-b border-border pb-6">
-                                    <span className="text-4xl font-bold text-foreground tracking-tight">
+                            <CardContent className="p-4 sm:p-6 lg:p-8 pt-4 sm:pt-6">
+                                <div className="flex items-end gap-2 mb-6 sm:mb-8 border-b border-border pb-4 sm:pb-6">
+                                    <span className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
                                         {formatCurrency(Number(course.price))}
                                     </span>
                                 </div>

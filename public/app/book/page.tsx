@@ -731,7 +731,7 @@ export default function BookingPage() {
                       Select your preferred location type for this session.
                     </p>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {selectedService.variants
                       .filter(
                         (v: ServiceVariantOutput) =>
@@ -964,7 +964,7 @@ export default function BookingPage() {
                     <Label className="text-sm font-medium text-foreground uppercase tracking-wider">
                       Available Times
                     </Label>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                       {selectedDate ? (
                         timeSlots.map((time) => {
                           const isBooked = isSlotBooked(time, selectedDate);
@@ -1622,17 +1622,17 @@ export default function BookingPage() {
   };
 
   return (
-    <main className="min-h-screen pt-32 pb-20 px-4">
+    <main className="min-h-screen pt-28 md:pt-32 pb-16 md:pb-20 px-4 sm:px-6 md:px-8">
       <div className="max-w-4xl mx-auto" ref={containerRef}>
-        <div className="text-center mb-16">
+        <div className="text-center mb-10 md:mb-16">
           <div className="flex items-center justify-center gap-2 mb-4">
             <div className="w-2 h-2 rounded-full bg-primary"></div>
-            <h1 className="text-4xl md:text-6xl font-heading font-bold uppercase tracking-wide">
+            <h1 className="text-3xl sm:text-5xl md:text-6xl font-heading font-bold uppercase tracking-wide">
               Book a Session
             </h1>
             <div className="w-2 h-2 rounded-full bg-primary"></div>
           </div>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+          <p className="text-muted-foreground text-base sm:text-lg max-w-2xl mx-auto">
             Reserve your spot at {studio?.name || APP_NAME}
             {studio?.metadata &&
             typeof studio.metadata === "object" &&
@@ -1646,7 +1646,7 @@ export default function BookingPage() {
         </div>
 
         {/* Booking Rules and Guidelines */}
-        <div className="bg-muted/30 rounded-2xl p-6 border border-border/50 text-sm mb-12 transition-all duration-300">
+        <div className="bg-muted/30 rounded-2xl p-4 sm:p-6 border border-border/50 text-sm mb-8 md:mb-12 transition-all duration-300">
           <div
             className={cn(
               "flex flex-col sm:flex-row sm:items-start justify-between gap-4 cursor-pointer",
@@ -1655,7 +1655,7 @@ export default function BookingPage() {
             onClick={() => setRulesExpanded(!rulesExpanded)}
           >
             <div>
-              <h4 className="font-semibold text-xl md:text-2xl text-primary flex items-center gap-2 font-heading">
+              <h4 className="font-semibold text-lg sm:text-xl md:text-2xl text-primary flex items-center gap-2 font-heading">
                 Booking Rules and Guidelines
               </h4>
               <p className="text-muted-foreground mt-1">
@@ -1761,6 +1761,21 @@ export default function BookingPage() {
           </div>
         </div>
 
+        {/* Stepper (Mobile) */}
+        <div className="mb-6 flex md:hidden items-center justify-between bg-card/60 backdrop-blur-md border border-border/50 rounded-xl px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <span className="w-7 h-7 rounded-full bg-primary text-primary-foreground font-bold text-xs flex items-center justify-center">
+              {currentStep}
+            </span>
+            <span className="font-semibold text-sm">
+              {steps[currentStep - 1]?.title}
+            </span>
+          </div>
+          <span className="text-xs text-muted-foreground">
+            Step {currentStep} of {steps.length}
+          </span>
+        </div>
+
         {/* Stepper (Desktop) */}
         <div className="mb-12 relative hidden md:block">
           <div className="absolute top-1/2 left-0 w-full h-0.5 bg-border/50 -translate-y-1/2 z-0"></div>
@@ -1814,32 +1829,32 @@ export default function BookingPage() {
           </div>
         </div>
 
-          <button
-            type="button"
-            onClick={() => navigateStep("prev")}
-            disabled={(currentStep === 1 && configStep === 1) || isSubmitting}
-            className={cn(
-              "inline-flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all mb-10 border border-foreground/30",
-              currentStep === 1 && configStep === 1
-                ? "opacity-0 pointer-events-none"
-                : "hover:bg-secondary/50 text-foreground",
-            )}
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </button>
+        <button
+          type="button"
+          onClick={() => navigateStep("prev")}
+          disabled={(currentStep === 1 && configStep === 1) || isSubmitting}
+          className={cn(
+            "inline-flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 rounded-full font-medium transition-all mb-6 sm:mb-10 border border-foreground/30 text-sm sm:text-base",
+            currentStep === 1 && configStep === 1
+              ? "opacity-0 pointer-events-none"
+              : "hover:bg-secondary/50 text-foreground",
+          )}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </button>
+
         {/* Form Area */}
-        <div className="bg-card/50 backdrop-blur-xl border border-border/50 rounded-[2rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
+        <div className="bg-card/50 backdrop-blur-xl border border-border/50 rounded-2xl md:rounded-[2rem] p-4 sm:p-6 md:p-10 shadow-2xl relative overflow-hidden">
           {/* Subtle gradient background */}
           <div className="absolute top-0 right-0 w-125 h-125 bg-primary/5 rounded-full blur-[100px] -z-10 pointer-events-none translate-x-1/2 -translate-y-1/2"></div>
-
 
           <form onSubmit={handleSubmit(onSubmit)}>
             <div ref={formRef} className="min-h-100">
               {renderStepContent()}
             </div>
 
-            <div className="mt-12 pt-6 border-t border-border/50 flex justify-between items-center">
+            <div className="mt-8 sm:mt-12 pt-6 border-t border-border/50 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
               {currentStep < 3 ? (
                 (currentStep === 2 ||
                   (currentStep === 1 && configStep === 5)) && (
@@ -1848,7 +1863,7 @@ export default function BookingPage() {
                     onClick={() => navigateStep("next")}
                     className={cn(
                       buttonVariants({ variant: "default" }),
-                      "rounded-full px-10 py-6 text-lg font-semibold gap-2 group shadow-lg shadow-primary/20",
+                      "w-full sm:w-auto rounded-full px-8 sm:px-10 py-5 sm:py-6 text-base sm:text-lg font-semibold gap-2 group shadow-lg shadow-primary/20",
                     )}
                   >
                     Continue
@@ -1861,7 +1876,7 @@ export default function BookingPage() {
                   disabled={isSubmitting}
                   className={cn(
                     buttonVariants({ variant: "default" }),
-                    "rounded-full px-10 py-6 text-lg font-semibold gap-2 group shadow-lg shadow-primary/20",
+                    "w-full sm:w-auto rounded-full px-8 sm:px-10 py-5 sm:py-6 text-base sm:text-lg font-semibold gap-2 group shadow-lg shadow-primary/20",
                   )}
                 >
                   {isSubmitting && <Loader2 className="w-5 h-5 animate-spin" />}

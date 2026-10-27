@@ -209,7 +209,7 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
 
                         return (
                             <div key={group.studio.id} className="space-y-4">
-                                <div className="flex items-center justify-between border-b pb-2">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2">
                                     <div className="flex items-center gap-3">
                                         <h2 className="text-xl font-bold">{group.studio.name}</h2>
                                         <Badge variant={percentFilled >= 100 ? "destructive" : "secondary"}>
@@ -224,7 +224,7 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
                                 </div>
 
                                 {isListView ? (
-                                    <div className="border rounded-lg overflow-hidden bg-card">
+                                    <div className="border rounded-lg overflow-hidden bg-card overflow-x-auto">
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>

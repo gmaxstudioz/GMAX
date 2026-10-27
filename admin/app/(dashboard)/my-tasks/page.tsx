@@ -118,12 +118,12 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold">{title}</h1>
-                    <p className="text-muted-foreground">{desc}</p>
+                    <h1 className="text-xl sm:text-2xl font-bold">{title}</h1>
+                    <p className="text-sm text-muted-foreground">{desc}</p>
                 </div>
-                <div className="flex items-center gap-4 w-full sm:w-auto">
-                    <form method="GET" action="/my-tasks" className="flex items-center gap-2 w-full sm:w-auto">
-                        <div className="relative w-full sm:w-64">
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 w-full sm:w-auto">
+                    <form method="GET" action="/my-tasks" className="flex items-center gap-2 flex-1 sm:flex-initial w-full sm:w-auto">
+                        <div className="relative flex-1 sm:w-64">
                             <HugeiconsIcon icon={Search01Icon} className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 name="q"
@@ -133,7 +133,7 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
                                 className="pl-8 bg-background"
                             />
                         </div>
-                        <Button type="submit" variant="secondary">Search</Button>
+                        <Button type="submit" variant="secondary" className="shrink-0">Search</Button>
                     </form>
                     <ViewToggle defaultView="grid" />
                 </div>
@@ -149,7 +149,7 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
             ) : (
                 <div className="mt-4">
                     {isListView ? (
-                        <div className="border rounded-lg overflow-hidden bg-card">
+                        <div className="border rounded-lg overflow-hidden bg-card overflow-x-auto">
                             <Table>
                                 <TableHeader>
                                     <TableRow>

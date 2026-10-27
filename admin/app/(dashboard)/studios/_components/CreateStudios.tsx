@@ -162,12 +162,12 @@ export default function CreateStudios({
                                         </Field>
                                     )}
                                 />
-                                <div className="flex items-end gap-2">
+                                <div className="flex flex-col sm:flex-row sm:items-end gap-2">
                                     <Controller
                                         name="slug"
                                         control={form.control}
                                         render={({ field, fieldState }) => (
-                                            <Field>
+                                            <Field className="flex-1 min-w-0">
                                                 <FieldLabel htmlFor="slug">Studio Slug</FieldLabel>
                                                 <Input
                                                     {...field}
@@ -185,7 +185,7 @@ export default function CreateStudios({
                                         )}
                                     />
 
-                                    <Button type="button" className="w-fit" onClick={() => {
+                                    <Button type="button" className="w-full sm:w-auto shrink-0" onClick={() => {
                                         const titleValue = form.getValues("name")
                                         const slug = slugify(titleValue);
 

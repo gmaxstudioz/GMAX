@@ -78,58 +78,9 @@ export async function createBooking(data: CreateBookingInput, studioId: string) 
             }
         }
 
-        // Bound to open hours (8am - 8pm)
-        const openTime = start.getTime() + (8 * 60 * 60 * 1000);
-        const closeTime = start.getTime() + (20 * 60 * 60 * 1000);
-
-        // Admins and owners can bypass the operating hours check (e.g. for backdating)
-        const canBypassHours = ["owner", "admin", "manager", "developer"].includes(member.role);
-        if (!canBypassHours && (proposedStart < openTime || proposedEnd > closeTime)) {
-            hasOverlap = true;
-        }
-
+        // Staff and owners are not limited by operating hours or time overlap when adding bookings
         if (hasOverlap) {
-            // Find an alternative studio
-            const currentStudio = await db.query.studio.findFirst({ where: eq(schema.studio.id, studioId) });
-            const myCity = (currentStudio?.metadata as { city?: string })?.city;
-
-            let altMessage = `The selected time slot is fully booked or outside operating hours. Please choose another time or day.`;
-
-            if (myCity) {
-                // Fetch all other studios to find a location match with capacity
-                const allStudios = await db.query.studio.findMany({ 
-                    with: { 
-                        bookings: { 
-                            where: (bookings, { and, gte, lte }) => and(
-                                gte(bookings.bookingDate, start.toISOString()),
-                                lte(bookings.bookingDate, end.toISOString())
-                            ),
-                            with: { service: { with: { studioSession: true } } } 
-                        } 
-                    } 
-                });
-
-                const alternative = allStudios.find((s: any) => {
-                    if (s.id === studioId) return false;
-                    const sCity = (s.metadata as { city?: string })?.city;
-                    if (!sCity || sCity.toLowerCase() !== myCity.toLowerCase()) return false;
-                    
-                    const altOverlaps = s.bookings.some((b: any) => {
-                        const bDur = b.service?.studioSession?.duration || 45;
-                        const bStart = new Date(b.bookingDate).getTime();
-                        const bEnd = bStart + (bDur * b.sessionCount * 60 * 1000);
-                        return proposedStart < bEnd && proposedEnd > bStart;
-                    });
-                    
-                    return !altOverlaps;
-                });
-                
-                if (alternative) {
-                    altMessage = `That time is fully booked! We recommend ${alternative.name} which is also in ${myCity} and has availability at this exact time, or choose another time slot.`;
-                }
-            }
-
-            return { status: "error", message: altMessage };
+            console.log(`[createBooking] Info: Staff created booking overlapping with existing booking on ${targetDate.toISOString()}`);
         }
 
         const bookingId = uuidv4();

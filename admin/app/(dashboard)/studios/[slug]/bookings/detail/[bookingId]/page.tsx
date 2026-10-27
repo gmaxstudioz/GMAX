@@ -241,7 +241,7 @@ export default async function BookingDetailPage({ params }: Props) {
                     <h1 className="text-xl sm:text-2xl font-bold">Booking Details</h1>
                     <p className="text-muted-foreground text-sm">{studio.name}</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     {canDeliver && serializedBooking.photos.length > 0 && (
                         <DeliverAssetsButton 
                             bookingId={serializedBooking.id} 

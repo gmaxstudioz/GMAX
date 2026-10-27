@@ -143,7 +143,7 @@ export function ProfileForm({ user }: { user: { name?: string | null; image?: st
                     </div>
 
                     <div className="flex justify-end pt-4">
-                        <Button type="submit" disabled={isPending}>
+                        <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
                             {isPending ? (
                                 <>
                                     <Loader2Icon className="animate-spin mr-2 h-4 w-4" />
