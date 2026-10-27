@@ -438,6 +438,31 @@ export const payment = pgTable("Payment", {
 		}).onUpdate("cascade").onDelete("set null"),
 ]);
 
+export const cashout = pgTable("cashout", {
+	id: text().primaryKey().notNull(),
+	studioId: text().notNull(),
+	description: text().notNull(),
+	category: text().notNull(),
+	amount: numeric({ precision: 12, scale:  2 }).notNull(),
+	expenseDate: timestamp({ precision: 3, mode: 'string' }).notNull(),
+	notes: text(),
+	recordedById: text(),
+	createdAt: timestamp({ precision: 3, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+}, (table) => [
+	index("cashout_studioId_idx").using("btree", table.studioId.asc().nullsLast().op("text_ops")),
+	index("cashout_expenseDate_idx").using("btree", table.expenseDate.asc().nullsLast().op("timestamp_ops")),
+	foreignKey({
+			columns: [table.studioId],
+			foreignColumns: [studio.id],
+			name: "cashout_studioId_fkey"
+		}).onUpdate("cascade").onDelete("cascade"),
+	foreignKey({
+			columns: [table.recordedById],
+			foreignColumns: [user.id],
+			name: "cashout_recordedById_fkey"
+		}).onUpdate("cascade").onDelete("set null"),
+]);
+
 export const photo = pgTable("Photo", {
 	id: text().primaryKey().notNull(),
 	bookingId: text().notNull(),

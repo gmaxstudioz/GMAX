@@ -1,6 +1,6 @@
 # GMAX API Documentation
 
-+*Note: For production, run `npx prisma migrate deploy` to apply tracked migrations safely.*
+*Note: Apply committed PostgreSQL migrations from this directory with `npx drizzle-kit migrate`. Do not use schema-push commands against the shared database.*
 
 ## Booking Lifecycle and Automated Cleanup
 
