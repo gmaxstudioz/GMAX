@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import * as schema from "@/lib/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, notExists, or } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -139,11 +139,18 @@ export async function getUsersForManagement() {
         const users = await db.query.user.findMany({
             where: isPlatformAdmin
                 ? undefined
-                : inArray(
-                    schema.user.id,
-                    db.select({ userId: schema.member.userId })
-                        .from(schema.member)
-                        .where(inArray(schema.member.studioId, managedStudioIds)),
+                : or(
+                    inArray(
+                        schema.user.id,
+                        db.select({ userId: schema.member.userId })
+                            .from(schema.member)
+                            .where(inArray(schema.member.studioId, managedStudioIds)),
+                    ),
+                    notExists(
+                        db.select({ id: schema.member.id })
+                            .from(schema.member)
+                            .where(eq(schema.member.userId, schema.user.id)),
+                    ),
                 ),
             orderBy: (u, { desc }) => [desc(u.createdAt)],
             columns: {

@@ -4,7 +4,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, ClockIcon } from "lucide-react";
-import { format, startOfDay, addMinutes, isBefore, endOfDay } from "date-fns";
+import { format, startOfDay, addMinutes, isBefore } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
@@ -41,13 +41,16 @@ export function DateTimeSlotPicker({
     const availableTimeSlots = useMemo(() => {
         if (!calendarDate) return [];
 
-        const dayStart = startOfDay(calendarDate).getTime();
-        const dayEnd = endOfDay(calendarDate).getTime();
+        const openTime = addMinutes(startOfDay(calendarDate), 6 * 60);
+        const closeTime = addMinutes(startOfDay(calendarDate), 23 * 60 + 30);
+        const duration = proposedDuration > 0 ? proposedDuration : 45;
+        const slotRangeStart = openTime.getTime();
+        const slotRangeEnd = addMinutes(closeTime, duration).getTime();
         const todaysBookings = bookings.filter((booking) => {
             const start = new Date(booking.bookingDate).getTime();
             const duration = (booking.service?.studioSession?.duration || 45) * booking.sessionCount;
             const end = start + duration * 60 * 1000;
-            return start <= dayEnd && end > dayStart;
+            return start < slotRangeEnd && end > slotRangeStart;
         });
 
         // Map bookings into `[start, end]` intervals in ms
@@ -59,10 +62,6 @@ export function DateTimeSlotPicker({
         });
 
         // 6:00 AM to 11:30 PM (full day coverage)
-        const openTime = addMinutes(startOfDay(calendarDate), 6 * 60);
-        const closeTime = addMinutes(startOfDay(calendarDate), 23 * 60 + 30);
-
-        const duration = proposedDuration > 0 ? proposedDuration : 45;
         const slots: { slot: Date; overlaps: boolean }[] = [];
         let curr = openTime;
 

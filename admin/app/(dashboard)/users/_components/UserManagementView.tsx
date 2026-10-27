@@ -695,7 +695,18 @@ export function UserManagementView({
               <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Studio *
               </Label>
-              <Select value={targetStudioId} onValueChange={setTargetStudioId}>
+              <Select
+                value={targetStudioId}
+                onValueChange={(studioId) => {
+                  setTargetStudioId(studioId);
+                  const canAssignOwner = isPlatformAdmin || managedStudios.some(
+                    (studio) => studio.id === studioId && studio.role === "owner",
+                  );
+                  if (!canAssignOwner && targetRole === "owner") {
+                    setTargetRole("photographer");
+                  }
+                }}
+              >
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder="Select studio..." />
                 </SelectTrigger>
