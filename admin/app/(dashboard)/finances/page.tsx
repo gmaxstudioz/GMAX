@@ -191,9 +191,10 @@ export default async function FinancesPage({
     const pendingCount = paymentTransactions.filter((payment) => payment.status === "PENDING").length;
     const partiallyPaidCount = paymentTransactions.filter((payment) => payment.status === "PARTIALLY_PAID").length;
     const cancelledCount = paymentTransactions.filter((payment) => payment.status === "CANCELLED").length;
-    const collectedAmount = sumAmounts(paymentTransactions.filter(
+    const bookingCollectedAmount = sumAmounts(paymentTransactions.filter(
         (payment) => payment.status === "PAID" || payment.status === "PARTIALLY_PAID",
-    )) + totalAcademyRevenue;
+    ));
+    const collectedAmount = bookingCollectedAmount + totalAcademyRevenue;
 
     return (
         <main className="flex flex-col gap-6 px-4 py-6 lg:px-6">
@@ -316,7 +317,7 @@ export default async function FinancesPage({
                         <CardHeader>
                             <CardTitle>Booking transactions</CardTitle>
                             <CardDescription>
-                                Track payment status across your studios. Collected: <span className="font-semibold text-primary">{formatPrice(collectedAmount)}</span>
+                                Track payment status across your studios. Collected: <span className="font-semibold text-primary">{formatPrice(bookingCollectedAmount)}</span>
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
