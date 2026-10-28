@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { desc, eq, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { ArrowDownRight, ArrowUpRight, Building2, CalendarDays, Camera, CircleDollarSign, Wallet, CheckCircle2 } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, BookOpen, Building2, CalendarDays, Camera, CircleDollarSign, Wallet, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +21,7 @@ export const metadata: Metadata = {
 };
 
 const REVENUE_CATEGORIES = ["Wedding", "Photography", "Videography", "Others"] as const;
+const ACADEMY_REVENUE_CATEGORY = "Academy";
 
 function sumAmounts<T extends { amount: number }>(items: T[]) {
     return items.reduce((total, item) => total + item.amount, 0);
@@ -51,6 +52,8 @@ export default async function FinancesPage({
     ]);
 
     const isPlatformAdmin = user?.role === "admin";
+    const canViewAcademyRevenue = isPlatformAdmin ||
+        memberships.some((membership) => ["owner", "developer"].includes(membership.role));
     const managedStudioIds = [...new Set(
         memberships
             .filter((membership) => ["owner", "manager", "developer"].includes(membership.role))
@@ -75,7 +78,7 @@ export default async function FinancesPage({
         );
     }
 
-    const [bookings, cashouts] = await Promise.all([
+    const [bookings, cashouts, academyStudents] = await Promise.all([
         db.query.booking.findMany({
             where: inArray(schema.booking.studioId, studioIds),
             with: {
@@ -97,6 +100,12 @@ export default async function FinancesPage({
             .from(schema.cashout)
             .where(inArray(schema.cashout.studioId, studioIds))
             .orderBy(desc(schema.cashout.expenseDate)),
+        canViewAcademyRevenue
+            ? db.query.academyStudent.findMany({
+                where: eq(schema.academyStudent.paymentStatus, "SUCCESS"),
+                columns: { amountPaid: true, updatedAt: true },
+            })
+            : Promise.resolve([]),
     ]);
 
     const now = new Date();
@@ -111,23 +120,42 @@ export default async function FinancesPage({
                 category: getRevenueCategory(booking.service?.name ?? "", booking.service?.category ?? "OTHERS"),
             }],
     );
+    const academyIncome = academyStudents.map((student) => ({
+        amount: Number(student.amountPaid),
+        date: new Date(student.updatedAt),
+        category: ACADEMY_REVENUE_CATEGORY,
+    }));
+    const bookingRevenue = sumAmounts(income);
+    const totalAcademyRevenue = sumAmounts(academyIncome);
+    const totalRevenue = bookingRevenue + totalAcademyRevenue;
+    const monthAcademyRevenue = sumAmounts(
+        academyIncome.filter((entry) => isInPeriod(entry.date, monthStart, now)),
+    );
+    const yearAcademyRevenue = sumAmounts(
+        academyIncome.filter((entry) => isInPeriod(entry.date, yearStart, now)),
+    );
     const expenses = cashouts.map((cashout) => ({
         ...cashout,
         amount: Number(cashout.amount),
         date: new Date(cashout.expenseDate),
     }));
 
-    const totalIncome = sumAmounts(income);
-    const thisMonthIncome = sumAmounts(income.filter((entry) => isInPeriod(entry.date, monthStart, now)));
-    const thisYearIncome = sumAmounts(income.filter((entry) => isInPeriod(entry.date, yearStart, now)));
+    const thisMonthIncome = sumAmounts(income.filter((entry) => isInPeriod(entry.date, monthStart, now))) + monthAcademyRevenue;
+    const thisYearIncome = sumAmounts(income.filter((entry) => isInPeriod(entry.date, yearStart, now))) + yearAcademyRevenue;
     const totalExpenses = sumAmounts(expenses);
     const monthExpenses = sumAmounts(expenses.filter((entry) => isInPeriod(entry.date, monthStart, endOfToday)));
     const yearExpenses = sumAmounts(expenses.filter((entry) => isInPeriod(entry.date, yearStart, endOfToday)));
 
-    const incomeByCategory = REVENUE_CATEGORIES.map((category) => ({
-        category,
-        amount: sumAmounts(income.filter((entry) => entry.category === category)),
-    }));
+    const incomeByCategory = [
+        ...REVENUE_CATEGORIES.map((category) => ({
+            category,
+            amount: sumAmounts(income.filter((entry) => entry.category === category)),
+        })),
+        ...(canViewAcademyRevenue ? [{
+            category: ACADEMY_REVENUE_CATEGORY,
+            amount: totalAcademyRevenue,
+        }] : []),
+    ];
     const highestCategoryIncome = Math.max(...incomeByCategory.map((entry) => entry.amount), 1);
     const incomeByStudio = studios.map((studio) => {
         const studioIncome = income.filter((entry) => entry.studioId === studio.id);
@@ -163,9 +191,10 @@ export default async function FinancesPage({
     const pendingCount = paymentTransactions.filter((payment) => payment.status === "PENDING").length;
     const partiallyPaidCount = paymentTransactions.filter((payment) => payment.status === "PARTIALLY_PAID").length;
     const cancelledCount = paymentTransactions.filter((payment) => payment.status === "CANCELLED").length;
-    const collectedAmount = sumAmounts(paymentTransactions.filter(
+    const bookingCollectedAmount = sumAmounts(paymentTransactions.filter(
         (payment) => payment.status === "PAID" || payment.status === "PARTIALLY_PAID",
     ));
+    const collectedAmount = bookingCollectedAmount + totalAcademyRevenue;
 
     return (
         <main className="flex flex-col gap-6 px-4 py-6 lg:px-6">
@@ -186,10 +215,20 @@ export default async function FinancesPage({
                 overview={
                     <>
                     <section aria-label="Income and expenses" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-                <MetricCard title="Booked revenue · all time" value={totalIncome} detail="From non-cancelled bookings" icon={<CircleDollarSign className="size-4" />} />
-                <MetricCard title="Booked revenue · this month" value={thisMonthIncome} detail={`${formatPrice(monthExpenses)} spent this month`} icon={<CalendarDays className="size-4" />} />
-                <MetricCard title="Booked revenue · this year" value={thisYearIncome} detail={`${formatPrice(yearExpenses)} spent this year`} icon={<ArrowUpRight className="size-4" />} />
-                <MetricCard title="Collected · all time" value={collectedAmount} detail="From recorded booking payments" icon={<CheckCircle2 className="size-4" />} />
+                <MetricCard
+                    title="Total revenue · all time"
+                    value={totalRevenue}
+                    detail={canViewAcademyRevenue ? "Bookings and paid Academy registrations" : "Bookings (Academy revenue is owner-only)"}
+                    icon={<CircleDollarSign className="size-4" />}
+                />
+                <MetricCard title="Total revenue · this month" value={thisMonthIncome} detail={`${formatPrice(monthExpenses)} spent this month`} icon={<CalendarDays className="size-4" />} />
+                <MetricCard title="Total revenue · this year" value={thisYearIncome} detail={`${formatPrice(yearExpenses)} spent this year`} icon={<ArrowUpRight className="size-4" />} />
+                <MetricCard
+                    title="Collected · all time"
+                    value={collectedAmount}
+                    detail={canViewAcademyRevenue ? "Booking payments and paid Academy registrations" : "Booking payments"}
+                    icon={<CheckCircle2 className="size-4" />}
+                />
                 <MetricCard title="Cashouts · all time" value={totalExpenses} detail={`${expenses.length} recorded expenses`} icon={<ArrowDownRight className="size-4" />} negative />
                 <Card className="border-primary/20 bg-primary/[0.04]">
                     <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
@@ -197,26 +236,31 @@ export default async function FinancesPage({
                         <Wallet className="size-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                        <div className={`text-xl font-semibold tracking-tight ${totalIncome - totalExpenses < 0 ? "text-destructive" : ""}`}>
-                            {formatPrice(totalIncome - totalExpenses)}
+                        <div className={`text-xl font-semibold tracking-tight ${totalRevenue - totalExpenses < 0 ? "text-destructive" : ""}`}>
+                            {formatPrice(totalRevenue - totalExpenses)}
                         </div>
-                        <p className="mt-1 text-xs text-muted-foreground">Booked revenue minus recorded cashouts</p>
+                        <p className="mt-1 text-xs text-muted-foreground">Total revenue minus recorded cashouts</p>
                     </CardContent>
                 </Card>
             </section>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><Camera className="size-4 text-primary" />Booking revenue</CardTitle>
+                            <CardTitle className="flex items-center gap-2"><Camera className="size-4 text-primary" />Revenue by source</CardTitle>
                             <CardDescription>
-                                {formatPrice(totalIncome)} total from non-cancelled bookings, grouped by service category.
+                                {canViewAcademyRevenue
+                                    ? `${formatPrice(totalRevenue)} from bookings and paid Academy registrations.`
+                                    : `${formatPrice(totalRevenue)} from bookings. Academy revenue is visible to owners and developers.`}
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-5">
                             {incomeByCategory.map(({ category, amount }) => (
                                 <div key={category} className="space-y-2">
                                     <div className="flex items-center justify-between gap-3 text-sm">
-                                        <span className="font-medium">{category}</span>
+                                        <span className="flex items-center gap-2 font-medium">
+                                            {category === ACADEMY_REVENUE_CATEGORY && <BookOpen className="size-3.5 text-primary" />}
+                                            {category}
+                                        </span>
                                         <span className="tabular-nums text-muted-foreground">{formatPrice(amount)}</span>
                                     </div>
                                     <div className="h-2 overflow-hidden rounded-full bg-muted">
@@ -273,7 +317,7 @@ export default async function FinancesPage({
                         <CardHeader>
                             <CardTitle>Booking transactions</CardTitle>
                             <CardDescription>
-                                Track payment status across your studios. Collected: <span className="font-semibold text-primary">{formatPrice(collectedAmount)}</span>
+                                Track payment status across your studios. Collected: <span className="font-semibold text-primary">{formatPrice(bookingCollectedAmount)}</span>
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
