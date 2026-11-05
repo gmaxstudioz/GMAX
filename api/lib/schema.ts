@@ -211,6 +211,33 @@ export const member = pgTable("member", {
 		}).onUpdate("cascade").onDelete("cascade"),
 ]);
 
+export const bookingBackfillAccess = pgTable("booking_backfill_access", {
+	id: text().primaryKey().notNull(),
+	studioId: text().notNull(),
+	userId: text().notNull(),
+	grantedById: text().notNull(),
+	expiresAt: timestamp({ precision: 3, mode: 'string' }).notNull(),
+	createdAt: timestamp({ precision: 3, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+}, (table) => [
+	uniqueIndex("booking_backfill_access_studio_user_key").using("btree", table.studioId.asc().nullsLast().op("text_ops"), table.userId.asc().nullsLast().op("text_ops")),
+	index("booking_backfill_access_userId_expiresAt_idx").using("btree", table.userId.asc().nullsLast().op("text_ops"), table.expiresAt.asc().nullsLast().op("timestamp_ops")),
+	foreignKey({
+			columns: [table.studioId],
+			foreignColumns: [studio.id],
+			name: "booking_backfill_access_studioId_fkey"
+		}).onUpdate("cascade").onDelete("cascade"),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [user.id],
+			name: "booking_backfill_access_userId_fkey"
+		}).onUpdate("cascade").onDelete("cascade"),
+	foreignKey({
+			columns: [table.grantedById],
+			foreignColumns: [user.id],
+			name: "booking_backfill_access_grantedById_fkey"
+		}).onUpdate("cascade").onDelete("cascade"),
+]);
+
 export const invitation = pgTable("invitation", {
 	id: text().primaryKey().notNull(),
 	studioId: text().notNull(),

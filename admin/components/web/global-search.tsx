@@ -31,7 +31,7 @@ import { getGlobalSearchData } from "@/lib/actions/search";
 
 type SearchData = Awaited<ReturnType<typeof getGlobalSearchData>>;
 
-export function GlobalSearch() {
+export function GlobalSearch({ canAccessRestrictedSections }: { canAccessRestrictedSections: boolean }) {
   const [open, setOpen] = React.useState(false);
   const [data, setData] = React.useState<SearchData | null>(null);
   const router = useRouter();
@@ -95,14 +95,18 @@ export function GlobalSearch() {
               <UsersIcon className="mr-2 h-4 w-4" />
               <span>Clients</span>
             </CommandItem>
-            <CommandItem onSelect={() => runCommand(() => router.push("/store"))}>
-              <StoreIcon className="mr-2 h-4 w-4" />
-              <span>Store & Products</span>
-            </CommandItem>
-            <CommandItem onSelect={() => runCommand(() => router.push("/portfolio"))}>
-              <FolderOpenIcon className="mr-2 h-4 w-4" />
-              <span>Portfolio</span>
-            </CommandItem>
+            {canAccessRestrictedSections && (
+              <>
+                <CommandItem onSelect={() => runCommand(() => router.push("/store"))}>
+                  <StoreIcon className="mr-2 h-4 w-4" />
+                  <span>Store & Products</span>
+                </CommandItem>
+                <CommandItem onSelect={() => runCommand(() => router.push("/portfolio"))}>
+                  <FolderOpenIcon className="mr-2 h-4 w-4" />
+                  <span>Portfolio</span>
+                </CommandItem>
+              </>
+            )}
           </CommandGroup>
           
           <CommandSeparator />
@@ -124,7 +128,7 @@ export function GlobalSearch() {
             </CommandGroup>
           )}
 
-          {data?.products && data.products.length > 0 && (
+          {canAccessRestrictedSections && data?.products && data.products.length > 0 && (
             <CommandGroup heading="Store Products">
               {data.products.map((product) => (
                 <CommandItem
@@ -184,10 +188,12 @@ export function GlobalSearch() {
               <Building2Icon className="mr-2 h-4 w-4" />
               <span>Studios & Staff</span>
             </CommandItem>
-            <CommandItem onSelect={() => runCommand(() => router.push("/academy"))}>
-              <SettingsIcon className="mr-2 h-4 w-4" />
-              <span>Academy</span>
-            </CommandItem>
+            {canAccessRestrictedSections && (
+              <CommandItem onSelect={() => runCommand(() => router.push("/academy"))}>
+                <SettingsIcon className="mr-2 h-4 w-4" />
+                <span>Academy</span>
+              </CommandItem>
+            )}
           </CommandGroup>
           
           <CommandSeparator />

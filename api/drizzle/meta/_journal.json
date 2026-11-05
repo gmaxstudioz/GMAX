@@ -15,6 +15,13 @@
       "when": 1793096592471,
       "tag": "0001_add_cashouts",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793899759744,
+      "tag": "0002_booking_backfill_access",
+      "breakpoints": true
     }
   ]
 }

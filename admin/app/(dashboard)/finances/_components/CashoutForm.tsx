@@ -78,7 +78,7 @@ export function CashoutForm({
                     aria-label={cashout ? `Edit ${cashout.description}` : undefined}
                     disabled={studios.length === 0}
                 >
-                    {cashout ? <Pencil className="size-4" /> : <><Plus className="size-4" />Add transaction</>}
+                    {cashout ? <Pencil className="size-4" /> : <><Plus className="size-4" />Add cashout</>}
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
@@ -187,7 +187,7 @@ export function CashoutForm({
                             Cancel
                         </Button>
                         <Button type="submit" disabled={isPending || studios.length === 0}>
-                            {isPending ? "Saving..." : cashout ? "Save changes" : "Save transaction"}
+                            {isPending ? "Saving..." : cashout ? "Save changes" : "Save cashout"}
                         </Button>
                     </div>
                 </form>

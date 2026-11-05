@@ -23,7 +23,7 @@ export async function getGlobalSearchData() {
 
     const isPlatformAdmin = user?.role === "admin";
     const accessibleStudioIds = isPlatformAdmin ? [] : members.map((member) => member.studioId);
-    const hasStoreAccess = isPlatformAdmin || members.some((member) => ["owner", "developer", "manager"].includes(member.role));
+    const hasStoreAccess = isPlatformAdmin || members.some((member) => ["owner", "developer"].includes(member.role));
 
     const inAccessibleStudios = (col: any) => accessibleStudioIds.length > 0 ? inArray(col, accessibleStudioIds) : sql`false`;
 

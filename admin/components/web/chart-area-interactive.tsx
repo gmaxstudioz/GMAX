@@ -44,33 +44,35 @@ const chartConfig = {
 
 export function ChartAreaInteractive({ data }: { data: ChartDataPoint[] }) {
   const isMobile = useIsMobile()
-  const [timeRange, setTimeRange] = React.useState("90d")
+  const [timeRange, setTimeRange] = React.useState<string | null>(null)
+  const selectedTimeRange = timeRange ?? (isMobile ? "7d" : "90d")
 
-  React.useEffect(() => {
-    if (isMobile) {
-      setTimeRange("7d")
-    }
-  }, [isMobile])
-
-  // Get dynamic reference date (the most recent date in data, or today)
-  const referenceDate = React.useMemo(() => {
-    if (data.length === 0) return new Date();
-    const maxTimestamp = Math.max(...data.map(item => Date.parse(item.date)));
-    return new Date(maxTimestamp);
-  }, [data]);
+  const referenceDate = React.useMemo(
+    () => data.reduce(
+      (latest, item) => item.date > latest ? item.date : latest,
+      new Date().toISOString().slice(0, 10),
+    ),
+    [data],
+  )
 
   const filteredData = data.filter((item) => {
-    const date = new Date(item.date)
-    let daysToSubtract = 90
-    if (timeRange === "30d") {
-      daysToSubtract = 30
-    } else if (timeRange === "7d") {
-      daysToSubtract = 7
+    let daysToShow = 90
+    if (selectedTimeRange === "30d") {
+      daysToShow = 30
+    } else if (selectedTimeRange === "7d") {
+      daysToShow = 7
     }
-    const startDate = new Date(referenceDate)
-    startDate.setDate(startDate.getDate() - daysToSubtract)
-    return date >= startDate
+    const startDate = new Date(`${referenceDate}T00:00:00.000Z`)
+    startDate.setUTCDate(startDate.getUTCDate() - daysToShow + 1)
+    const startDateKey = startDate.toISOString().slice(0, 10)
+    return item.date >= startDateKey && item.date <= referenceDate
   })
+
+  const formatChartDate = (value: string | number) =>
+    new Date(`${String(value)}T00:00:00`).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    })
 
   return (
     <Card className="@container/card">
@@ -78,14 +80,14 @@ export function ChartAreaInteractive({ data }: { data: ChartDataPoint[] }) {
         <CardTitle>Total Revenue</CardTitle>
         <CardDescription>
           <span className="hidden @[540px]/card:block">
-            Revenue for the last {timeRange === '90d' ? '3 months' : timeRange === '30d' ? '30 days' : '7 days'}
+            Revenue for the last {selectedTimeRange === '90d' ? '3 months' : selectedTimeRange === '30d' ? '30 days' : '7 days'}
           </span>
-          <span className="@[540px]/card:hidden">Last {timeRange.replace('d', ' days')}</span>
+          <span className="@[540px]/card:hidden">Last {selectedTimeRange.replace('d', ' days')}</span>
         </CardDescription>
         <CardAction>
           <ToggleGroup
             type="single"
-            value={timeRange}
+            value={selectedTimeRange}
             onValueChange={(val) => val && setTimeRange(val)}
             variant="outline"
             className="hidden *:data-[slot=toggle-group-item]:px-4! @[767px]/card:flex"
@@ -94,7 +96,7 @@ export function ChartAreaInteractive({ data }: { data: ChartDataPoint[] }) {
             <ToggleGroupItem value="30d">Last 30 days</ToggleGroupItem>
             <ToggleGroupItem value="7d">Last 7 days</ToggleGroupItem>
           </ToggleGroup>
-          <Select value={timeRange} onValueChange={setTimeRange}>
+          <Select value={selectedTimeRange} onValueChange={setTimeRange}>
             <SelectTrigger
               className="flex w-40 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden"
               size="sm"
@@ -143,20 +145,14 @@ export function ChartAreaInteractive({ data }: { data: ChartDataPoint[] }) {
               axisLine={false}
               tickMargin={8}
               minTickGap={32}
-              tickFormatter={(value) => {
-                const date = new Date(value as any)
-                return date.toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })
-              }}
+              tickFormatter={formatChartDate}
             />
             <ChartTooltip
               cursor={false}
               content={
                 <ChartTooltipContent
                   labelFormatter={(value) => {
-                    return new Date(value as any).toLocaleDateString("en-US", {
+                    return new Date(`${String(value)}T00:00:00`).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
                       year: "numeric"

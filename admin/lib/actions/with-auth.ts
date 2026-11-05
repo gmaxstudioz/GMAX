@@ -30,6 +30,28 @@ export async function requireSession(): Promise<
     return { status: "ok", session };
 }
 
+export async function requireOwnerDeveloperOrPlatformAdmin() {
+    const sessionResult = await requireSession();
+    if (sessionResult.status === "error") return sessionResult;
+
+    const [user, memberships] = await Promise.all([
+        db.query.user.findFirst({
+            where: eq(schema.user.id, sessionResult.session.user.id),
+            columns: { role: true },
+        }),
+        db.query.member.findMany({
+            where: eq(schema.member.userId, sessionResult.session.user.id),
+            columns: { role: true },
+        }),
+    ]);
+
+    if (user?.role !== "admin" && !memberships.some(({ role }) => ["owner", "developer"].includes(role))) {
+        return { status: "error" as const, message: "Unauthorized" };
+    }
+
+    return sessionResult;
+}
+
 // ── Require studio membership ────────────────────────────────────────────────
 // Verifies the current user is an active member of the given studio.
 // Returns session + member or an ApiResponse error.

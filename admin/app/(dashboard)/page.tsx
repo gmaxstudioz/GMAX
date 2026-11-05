@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { db } from "@/lib/db"
 import * as schema from "@/lib/schema"
-import { eq, inArray, and, not, gte, desc } from "drizzle-orm"
+import { eq, inArray, and, not, desc } from "drizzle-orm"
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -34,6 +34,10 @@ export default async function Page() {
   const isOnlyMinorRole = members.length > 0 && !hasAdminRole;
 
   if (isOnlyMinorRole) {
+    if (members.some((m) => m.role === "receptionist")) {
+      redirect("/finances?tab=cashouts");
+    }
+
     const photoVideoRoles = ["photographer", "videographer"];
     const isPhotoVideoRole = members.every((m: any) => photoVideoRoles.includes(m.role));
 
@@ -60,7 +64,9 @@ export default async function Page() {
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
-  const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const ninetyDaysAgo = new Date(todayUtc);
+  ninetyDaysAgo.setUTCDate(ninetyDaysAgo.getUTCDate() - 89);
 
   // Fetch all bookings for metrics (exclude cancelled ones from positive metrics if desired, but let's include all non-cancelled)
   let allRelevantBookings: any[] = [];
@@ -74,8 +80,14 @@ export default async function Page() {
     });
   }
 
-  const recentBookings = allRelevantBookings.filter((b: any) => b.createdAt >= thirtyDaysAgo);
-  const previousBookings = allRelevantBookings.filter((b: any) => b.createdAt >= sixtyDaysAgo && b.createdAt < thirtyDaysAgo);
+  const recentBookings = allRelevantBookings.filter((b: any) => {
+    const bookingTimestamp = new Date(b.bookingDate).getTime();
+    return bookingTimestamp >= thirtyDaysAgo.getTime() && bookingTimestamp <= now.getTime();
+  });
+  const previousBookings = allRelevantBookings.filter((b: any) => {
+    const bookingTimestamp = new Date(b.bookingDate).getTime();
+    return bookingTimestamp >= sixtyDaysAgo.getTime() && bookingTimestamp < thirtyDaysAgo.getTime();
+  });
 
   const totalRevenueRecent = recentBookings.reduce((sum: any, b: any) => sum + Number(b.totalAmount), 0);
   const totalRevenuePrev = previousBookings.reduce((sum: any, b: any) => sum + Number(b.totalAmount), 0);
@@ -85,8 +97,19 @@ export default async function Page() {
   const totalBookingsPrev = previousBookings.length;
   const bookingsGrowth = totalBookingsPrev === 0 ? (totalBookingsRecent > 0 ? 100 : 0) : ((totalBookingsRecent - totalBookingsPrev) / totalBookingsPrev) * 100;
 
-  const activeClientsRecent = new Set(recentBookings.map((b: any) => b.clientId)).size;
-  const activeClientsPrev = new Set(previousBookings.map((b: any) => b.clientId)).size;
+  const clientBookingCounts = new Map<string, number>();
+  allRelevantBookings.forEach((booking: any) => {
+    clientBookingCounts.set(booking.clientId, (clientBookingCounts.get(booking.clientId) ?? 0) + 1);
+  });
+  const repeatClientIds = new Set(
+    [...clientBookingCounts].filter(([, bookingCount]) => bookingCount > 1).map(([clientId]) => clientId),
+  );
+  const activeClientsRecent = new Set(
+    recentBookings.filter((booking: any) => repeatClientIds.has(booking.clientId)).map((booking: any) => booking.clientId),
+  ).size;
+  const activeClientsPrev = new Set(
+    previousBookings.filter((booking: any) => repeatClientIds.has(booking.clientId)).map((booking: any) => booking.clientId),
+  ).size;
   const clientsGrowth = activeClientsPrev === 0 ? (activeClientsRecent > 0 ? 100 : 0) : ((activeClientsRecent - activeClientsPrev) / activeClientsPrev) * 100;
 
   const completedRecent = recentBookings.filter((b: any) => b.bookingStatus === "COMPLETED").length;
@@ -100,24 +123,24 @@ export default async function Page() {
     revenueGrowth,
     totalBookings: allRelevantBookings.length,
     bookingsGrowth,
-    activeClients: new Set(allRelevantBookings.map((b: any) => b.clientId)).size,
+    activeClients: repeatClientIds.size,
     clientsGrowth,
     completionRate: allRelevantBookings.length === 0 ? 0 : (allRelevantBookings.filter((b: any) => b.bookingStatus === "COMPLETED").length / allRelevantBookings.length) * 100,
     completionRateGrowth
   };
 
   // Chart Data (last 90 days aggregated by day)
-  const bookingsLast90Days = allRelevantBookings.filter((b: any) => b.createdAt >= ninetyDaysAgo);
+  const bookingsLast90Days = allRelevantBookings.filter((b: any) => new Date(b.bookingDate) >= ninetyDaysAgo);
   const chartDataMap = new Map<string, number>();
   
-  // Pre-fill the map with 0s for the last 90 days
-  for(let i=0; i<90; i++) {
-      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+  for (let i = 0; i < 90; i++) {
+      const d = new Date(todayUtc);
+      d.setUTCDate(todayUtc.getUTCDate() - i);
       chartDataMap.set(d.toISOString().split('T')[0], 0);
   }
 
   bookingsLast90Days.forEach((b: any) => {
-      const dateStr = b.createdAt.toISOString().split('T')[0];
+      const dateStr = new Date(b.bookingDate).toISOString().split('T')[0];
       if (chartDataMap.has(dateStr)) {
           chartDataMap.set(dateStr, chartDataMap.get(dateStr)! + Number(b.totalAmount));
       }
@@ -132,7 +155,7 @@ export default async function Page() {
   if (studioIds.length > 0) {
     rawRecentBookings = await db.query.booking.findMany({
       where: inArray(schema.booking.studioId, studioIds),
-      orderBy: [desc(schema.booking.createdAt)],
+      orderBy: [desc(schema.booking.bookingDate)],
       limit: 10,
       with: { client: true, service: true }
     });
@@ -143,9 +166,7 @@ export default async function Page() {
       clientName: b.client?.name ?? 'Unknown',
       clientImage: b.client?.image ?? null,
       serviceName: b.service?.name ?? 'Unknown',
-      bookingDate: b.bookingDate && typeof (b.bookingDate as any).getTime === 'function' && !isNaN((b.bookingDate as any).getTime()) 
-          ? (b.bookingDate as any).toISOString() 
-          : (typeof b.bookingDate === 'string' ? b.bookingDate : null),
+      bookingDate: b.bookingDate ? new Date(b.bookingDate).toISOString() : null,
       totalAmount: Number(b.totalAmount),
       bookingStatus: b.bookingStatus
   }));
