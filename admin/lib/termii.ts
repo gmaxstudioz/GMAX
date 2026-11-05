@@ -157,11 +157,15 @@ export async function sendPasswordResetEmail(params: {
     resetLink: string;
 }) {
     if (!TERMII_RESET_TEMPLATE_ID) {
-        console.warn(
-            "[Termii] TERMII_RESET_TEMPLATE_ID not set — skipping password reset email.",
-            { to: params.email },
-        );
-        return;
+        throw new Error("[Termii] TERMII_RESET_TEMPLATE_ID is not set.");
+    }
+
+    if (!TERMII_API_KEY) {
+        throw new Error("[Termii] TERMII_API_KEY is not set.");
+    }
+
+    if (!TERMII_EMAIL_CONFIG_ID) {
+        throw new Error("[Termii] TERMII_EMAIL_CONFIG_ID is not set.");
     }
 
     return sendTemplateEmail({
@@ -171,6 +175,8 @@ export async function sendPasswordResetEmail(params: {
         variables: {
             user_name: params.userName,
             reset_link: params.resetLink,
+            invite_link: params.resetLink,
+            message: `We received a request to reset the password for your ${APP_NAME} account. If you did not request this, you can ignore this email.`,
         },
     });
 }
