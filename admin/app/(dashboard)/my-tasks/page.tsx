@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import * as schema from "@/lib/schema";
-import { eq, inArray, or, and, notInArray, ilike } from "drizzle-orm";
+import { eq, inArray, and, notInArray } from "drizzle-orm";
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -41,32 +41,15 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
         columns: { id: true, role: true, studioId: true }
     });
     
-    const adminRoles = ["owner", "admin", "developer", "manager", "receptionist"];
-    const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
     const canReassign = members.some((m: any) => ["owner", "admin", "developer", "manager"].includes(m.role));
 
-    // For Drizzle, we will do the query slightly differently or manually filter if relations are complex.
-    // Wait, Drizzle doesn't have deep ILIKE directly in `findMany` across relation tables easily without manual joins,
-    // but we can query `booking` and just do the base conditions, then filter in memory for search, or do a joined query.
-    // Since this is for tasks, let's just use `db.query.booking.findMany` and fetch, then filter `q` in memory to be safe 
-    // and keep it simple for Drizzle's relational query API.
-
-    const adminStudioIds = members.filter((m: any) => adminRoles.includes(m.role)).map((m: any) => m.studioId);
-    
-    const condition = hasAdminRole
-        ? or(
-            and(
-                eq(schema.booking.memberId, ""), // Drizzle null check or empty check? It's likely a null or empty string, let's just fetch both if possible, actually let's use a function to filter in memory for now to guarantee no errors, or just let Drizzle do it.
-                adminStudioIds.length > 0 ? inArray(schema.booking.studioId, adminStudioIds) : undefined
-            ),
-            inArray(schema.booking.studioId, members.map((m: any) => m.studioId)) // A bit broader, we'll filter in JS to be exactly correct based on memberId.
-        )
-        : undefined; // We will fetch the user's bookings. Wait, `member: { userId: session.user.id }` means we need to find bookings where `memberId` is in the user's member IDs.
-    
     const userMemberIds = members.map((m: any) => m.id);
-
-    // Let's do a simpler approach: fetch all bookings for studios the user is in, and then filter.
     const allStudioIds = members.map((m: any) => m.studioId);
+    const studiosWithUnassignedTasks = new Set(
+        members
+            .filter((member: any) => ["owner", "manager", "receptionist"].includes(member.role))
+            .map((member: any) => member.studioId),
+    );
     
     const allBookings = allStudioIds.length > 0 ? await db.query.booking.findMany({
         where: and(
@@ -88,14 +71,10 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
         orderBy: (bookings, { asc }) => [asc(bookings.bookingDate)]
     }) : [];
 
-    const ownerStudioIds = members.filter((m: any) => m.role === "owner").map((m: any) => m.studioId);
-
-    // Memory filter
     const myBookings = allBookings.filter((b: any) => {
-        // Base where:
-        const isUnassignedInOwnerStudio = (!b.memberId) && ownerStudioIds.includes(b.studioId);
+        const isUnassignedInManagedStudio = !b.memberId && studiosWithUnassignedTasks.has(b.studioId);
         const isAssignedToMe = userMemberIds.includes(b.memberId);
-        const matchesBase = isUnassignedInOwnerStudio || isAssignedToMe;
+        const matchesBase = isUnassignedInManagedStudio || isAssignedToMe;
 
         if (!matchesBase) return false;
 
@@ -110,9 +89,11 @@ export default async function MyTasksPage({ searchParams }: MyTasksProps) {
         return true;
     });
 
-    const isOwner = ownerStudioIds.length > 0;
-    const title = isOwner ? "Studio Tasks" : "My Tasks";
-    const desc = isOwner ? "Manage unassigned bookings and your own assigned tasks." : "Manage and view your assigned bookings.";
+    const canViewUnassignedTasks = studiosWithUnassignedTasks.size > 0;
+    const title = canViewUnassignedTasks ? "Studio Tasks" : "My Tasks";
+    const desc = canViewUnassignedTasks
+        ? "Manage unassigned bookings and your own assigned tasks."
+        : "Manage and view your assigned bookings.";
 
     return (
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">

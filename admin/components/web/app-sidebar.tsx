@@ -71,6 +71,8 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
   
   let isOnlyMinorRole = false;
   let isPhotoVideoRole = false;
+  let canAccessBookingsAndClients = false;
+  let canAccessServices = false;
   let canAccessFinances = false;
   let canAccessRestrictedSections = false;
   let canAccessBackfill = false;
@@ -81,30 +83,37 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
       where: (user, { eq }) => eq(user.id, session.user.id),
       columns: { role: true }
     });
+    const members = await db.query.member.findMany({
+      where: (member, { eq }) => eq(member.userId, session.user.id),
+      columns: { role: true, studioId: true }
+    });
+    const ownerStudioIds = members.filter((member) => member.role === "owner").map((member) => member.studioId);
 
     const isAdmin = userData?.role === "admin";
 
     if (!isAdmin) {
-      const members = await db.query.member.findMany({
-        where: (member, { eq }) => eq(member.userId, session.user.id),
-        columns: { role: true, studioId: true }
-      });
-      
       const adminRoles = ["owner", "developer", "admin", "manager"];
       const hasAdminRole = members.some(m => adminRoles.includes(m.role));
+      canAccessBookingsAndClients = members.some((m) =>
+        ["owner", "developer", "receptionist"].includes(m.role),
+      );
+      canAccessServices = members.some((m) => ["owner", "developer"].includes(m.role));
       canAccessFinances = members.some(m => ["owner", "developer", "manager", "receptionist"].includes(m.role));
       canAccessRestrictedSections = members.some(m => ["owner", "developer"].includes(m.role));
-      const ownerStudioIds = members.filter((m) => m.role === "owner").map((m) => m.studioId);
-      const backfillGrants = await db.query.bookingBackfillAccess.findMany({
-        where: and(
-          eq(schema.bookingBackfillAccess.userId, session.user.id),
-          gt(schema.bookingBackfillAccess.expiresAt, new Date().toISOString()),
-        ),
-        columns: { studioId: true },
-      });
-      canAccessBackfill = ownerStudioIds.length > 0 || backfillGrants.some((grant) =>
-        members.some((membership) => membership.studioId === grant.studioId),
-      );
+      if (ownerStudioIds.length > 0) {
+        canAccessBackfill = true;
+      } else {
+        const backfillGrants = await db.query.bookingBackfillAccess.findMany({
+          where: and(
+            eq(schema.bookingBackfillAccess.userId, session.user.id),
+            gt(schema.bookingBackfillAccess.expiresAt, new Date().toISOString()),
+          ),
+          columns: { studioId: true },
+        });
+        canAccessBackfill = backfillGrants.some((grant) =>
+          members.some((membership) => membership.studioId === grant.studioId),
+        );
+      }
       isOnlyMinorRole = members.length > 0 && !hasAdminRole;
 
       const photoVideoRoles = ["photographer", "videographer"];
@@ -120,9 +129,11 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
         });
       }
     } else {
+      canAccessBookingsAndClients = true;
+      canAccessServices = true;
       canAccessFinances = true;
       canAccessRestrictedSections = true;
-      canAccessBackfill = false;
+      canAccessBackfill = ownerStudioIds.length > 0;
       sidebarStudios = await db.query.studio.findMany({
         columns: { name: true, slug: true },
         orderBy: [asc(schema.studio.createdAt)],
@@ -151,11 +162,11 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
       url: "/finances",
       icon: <Wallet className="size-4" />,
     }] : []),
-    {
+    ...(canAccessServices ? [{
       title: "Services",
       url: "/services",
       icon: <HugeiconsIcon icon={ToolsIcon} />,
-    },
+    }] : []),
     ...(canAccessRestrictedSections ? [{
       title: "Academy",
       url: "/academy",
@@ -184,6 +195,18 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
       url: "/my-tasks",
       icon: <BriefcaseIcon />,
     },
+    ...(canAccessBookingsAndClients ? [
+      {
+        title: "Bookings",
+        url: "/bookings",
+        icon: <ChartBarIcon />,
+      },
+      {
+        title: "Clients",
+        url: "/clients",
+        icon: <FolderIcon />,
+      },
+    ] : []),
     {
       title: "Studios",
       url: "/studios",
@@ -195,7 +218,7 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
       icon: <Wallet className="size-4" />,
     }] : []),
     ...(canAccessBackfill ? [{
-      title: "Backfill Bookings",
+      title: "Bulk Bookings",
       url: "/bookings/backfill",
       icon: <ChartBarIcon />,
     }] : []),
@@ -205,9 +228,11 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
     minorNavMain = minorNavMain.filter(item => item.url !== "/studios");
   }
   const navMain = [
-    ...data.navMain,
+    ...data.navMain.filter((item) =>
+      (item.url !== "/bookings" && item.url !== "/clients") || canAccessBookingsAndClients,
+    ),
     ...(canAccessBackfill ? [{
-      title: "Backfill Bookings",
+      title: "Bulk Bookings",
       url: "/bookings/backfill",
       icon: <ChartBarIcon />,
     }] : []),
