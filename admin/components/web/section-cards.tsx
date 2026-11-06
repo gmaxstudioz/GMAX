@@ -98,7 +98,7 @@ export function SectionCards({ metrics }: { metrics: DashboardMetrics }) {
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           {renderGrowthFooter(metrics.clientsGrowth, "Growing audience by", "Shrinking audience by")}
-          <div className="text-muted-foreground">Unique clients who booked</div>
+          <div className="text-muted-foreground">Clients with more than one booking</div>
         </CardFooter>
       </Card>
 

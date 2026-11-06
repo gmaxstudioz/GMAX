@@ -4,10 +4,10 @@ import { db } from "@/lib/db";
 import * as schema from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { requireSession } from "./with-auth";
+import { requireOwnerDeveloperOrPlatformAdmin } from "./with-auth";
 
 export async function deleteProduct(productId: string) {
-    const authResult = await requireSession();
+    const authResult = await requireOwnerDeveloperOrPlatformAdmin();
     if (authResult.status === "error") {
         return { status: "error" as const, message: "Unauthorized" };
     }
@@ -24,7 +24,7 @@ export async function deleteProduct(productId: string) {
 }
 
 export async function FetchProducts() {
-    const authResult = await requireSession();
+    const authResult = await requireOwnerDeveloperOrPlatformAdmin();
     if (authResult.status === "error") {
         return { status: "error" as const, message: "Unauthorized" };
     }
@@ -67,7 +67,7 @@ export async function createProduct(data: {
     fileSize: number;
     mimeType: string;
 }) {
-    const authResult = await requireSession();
+    const authResult = await requireOwnerDeveloperOrPlatformAdmin();
     if (authResult.status === "error") {
         return { status: "error" as const, message: "Unauthorized" };
     }
@@ -97,7 +97,7 @@ export async function createProduct(data: {
 }
 
 export async function getProduct(productId: string) {
-    const authResult = await requireSession();
+    const authResult = await requireOwnerDeveloperOrPlatformAdmin();
     if (authResult.status === "error") {
         return { status: "error" as const, message: "Unauthorized" };
     }
@@ -146,7 +146,7 @@ export async function updateProduct(
         mimeType: string;
     }
 ) {
-    const authResult = await requireSession();
+    const authResult = await requireOwnerDeveloperOrPlatformAdmin();
     if (authResult.status === "error") {
         return { status: "error" as const, message: "Unauthorized" };
     }
@@ -178,7 +178,7 @@ export async function updateProduct(
 }
 
 export async function togglePublish(productId: string, isPublished: boolean) {
-    const authResult = await requireSession();
+    const authResult = await requireOwnerDeveloperOrPlatformAdmin();
     if (authResult.status === "error") {
         return { status: "error" as const, message: "Unauthorized" };
     }

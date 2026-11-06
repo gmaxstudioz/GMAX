@@ -5,10 +5,10 @@ import * as schema from "@/lib/schema";
 import { eq, or, ilike } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { revalidatePath } from "next/cache";
-import { requireSession } from "./with-auth";
+import { requireOwnerDeveloperOrPlatformAdmin } from "./with-auth";
 
 export async function getProductCategories() {
-    const authResult = await requireSession();
+    const authResult = await requireOwnerDeveloperOrPlatformAdmin();
     if (authResult.status === "error") {
         return { status: "error" as const, message: "Unauthorized" };
     }
@@ -36,7 +36,7 @@ export async function getProductCategories() {
 }
 
 export async function createProductCategory(data: { name: string }) {
-    const authResult = await requireSession();
+    const authResult = await requireOwnerDeveloperOrPlatformAdmin();
     if (authResult.status === "error") {
         return { status: "error" as const, message: "Unauthorized" };
     }
@@ -74,7 +74,7 @@ export async function createProductCategory(data: { name: string }) {
 }
 
 export async function deleteProductCategory(categoryId: string) {
-    const authResult = await requireSession();
+    const authResult = await requireOwnerDeveloperOrPlatformAdmin();
     if (authResult.status === "error") {
         return { status: "error" as const, message: "Unauthorized" };
     }

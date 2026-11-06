@@ -22,7 +22,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { School01Icon, ToolsIcon, WarehouseIcon, ShoppingCart01Icon } from "@hugeicons/core-free-icons"
 import { db } from "@/lib/db"
 import * as schema from "@/lib/schema"
-import { inArray, asc } from "drizzle-orm"
+import { and, eq, inArray, asc, gt } from "drizzle-orm"
 import { BriefcaseIcon, Wallet } from "lucide-react"
 
 const data = {
@@ -71,7 +71,11 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
   
   let isOnlyMinorRole = false;
   let isPhotoVideoRole = false;
-  let canManageFinances = false;
+  let canAccessBookingsAndClients = false;
+  let canAccessServices = false;
+  let canAccessFinances = false;
+  let canAccessRestrictedSections = false;
+  let canAccessBackfill = false;
   let sidebarStudios: { name: string; slug: string }[] = [];
 
   if (session?.user) {
@@ -79,18 +83,37 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
       where: (user, { eq }) => eq(user.id, session.user.id),
       columns: { role: true }
     });
+    const members = await db.query.member.findMany({
+      where: (member, { eq }) => eq(member.userId, session.user.id),
+      columns: { role: true, studioId: true }
+    });
+    const ownerStudioIds = members.filter((member) => member.role === "owner").map((member) => member.studioId);
 
     const isAdmin = userData?.role === "admin";
 
     if (!isAdmin) {
-      const members = await db.query.member.findMany({
-        where: (member, { eq }) => eq(member.userId, session.user.id),
-        columns: { role: true, studioId: true }
-      });
-      
       const adminRoles = ["owner", "developer", "admin", "manager"];
       const hasAdminRole = members.some(m => adminRoles.includes(m.role));
-      canManageFinances = members.some(m => ["owner", "developer", "manager"].includes(m.role));
+      canAccessBookingsAndClients = members.some((m) =>
+        ["owner", "developer", "admin", "manager", "receptionist"].includes(m.role),
+      );
+      canAccessServices = members.some((m) => ["owner", "developer"].includes(m.role));
+      canAccessFinances = members.some(m => ["owner", "developer", "manager", "receptionist"].includes(m.role));
+      canAccessRestrictedSections = members.some(m => ["owner", "developer"].includes(m.role));
+      if (ownerStudioIds.length > 0) {
+        canAccessBackfill = true;
+      } else {
+        const backfillGrants = await db.query.bookingBackfillAccess.findMany({
+          where: and(
+            eq(schema.bookingBackfillAccess.userId, session.user.id),
+            gt(schema.bookingBackfillAccess.expiresAt, new Date().toISOString()),
+          ),
+          columns: { studioId: true },
+        });
+        canAccessBackfill = backfillGrants.some((grant) =>
+          members.some((membership) => membership.studioId === grant.studioId),
+        );
+      }
       isOnlyMinorRole = members.length > 0 && !hasAdminRole;
 
       const photoVideoRoles = ["photographer", "videographer"];
@@ -106,7 +129,11 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
         });
       }
     } else {
-      canManageFinances = true;
+      canAccessBookingsAndClients = true;
+      canAccessServices = true;
+      canAccessFinances = true;
+      canAccessRestrictedSections = true;
+      canAccessBackfill = ownerStudioIds.length > 0;
       sidebarStudios = await db.query.studio.findMany({
         columns: { name: true, slug: true },
         orderBy: [asc(schema.studio.createdAt)],
@@ -130,31 +157,31 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
       url: "/users",
       icon: <UsersIcon className="size-4" />,
     },
-    ...(canManageFinances ? [{
+    ...(canAccessFinances ? [{
       title: "Finances",
       url: "/finances",
       icon: <Wallet className="size-4" />,
     }] : []),
-    {
+    ...(canAccessServices ? [{
       title: "Services",
       url: "/services",
       icon: <HugeiconsIcon icon={ToolsIcon} />,
-    },
-    {
+    }] : []),
+    ...(canAccessRestrictedSections ? [{
       title: "Academy",
       url: "/academy",
       icon: <HugeiconsIcon icon={School01Icon} />,
-    },
-    {
+    }] : []),
+    ...(canAccessRestrictedSections ? [{
       title: "Store",
       url: "/store",
       icon: <HugeiconsIcon icon={ShoppingCart01Icon} />,
-    },
-    {
+    }] : []),
+    ...(canAccessRestrictedSections ? [{
       title: "Portfolio",
       url: "/portfolio",
       icon: <FolderIcon />,
-    },
+    }] : []),
   ];
 
   let minorNavMain = [
@@ -168,21 +195,48 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
       url: "/my-tasks",
       icon: <BriefcaseIcon />,
     },
+    ...(canAccessBookingsAndClients ? [
+      {
+        title: "Bookings",
+        url: "/bookings",
+        icon: <ChartBarIcon />,
+      },
+      {
+        title: "Clients",
+        url: "/clients",
+        icon: <FolderIcon />,
+      },
+    ] : []),
     {
       title: "Studios",
       url: "/studios",
       icon: <HugeiconsIcon icon={WarehouseIcon} />,
     },
-    ...(canManageFinances ? [{
+    ...(canAccessFinances ? [{
       title: "Finances",
       url: "/finances",
       icon: <Wallet className="size-4" />,
+    }] : []),
+    ...(canAccessBackfill ? [{
+      title: "Bulk Bookings",
+      url: "/bookings/backfill",
+      icon: <ChartBarIcon />,
     }] : []),
   ];
 
   if (isPhotoVideoRole) {
     minorNavMain = minorNavMain.filter(item => item.url !== "/studios");
   }
+  const navMain = [
+    ...data.navMain.filter((item) =>
+      (item.url !== "/bookings" && item.url !== "/clients") || canAccessBookingsAndClients,
+    ),
+    ...(canAccessBackfill ? [{
+      title: "Bulk Bookings",
+      url: "/bookings/backfill",
+      icon: <ChartBarIcon />,
+    }] : []),
+  ];
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -202,7 +256,7 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={isOnlyMinorRole ? minorNavMain : data.navMain} />
+        <NavMain items={isOnlyMinorRole ? minorNavMain : navMain} />
         {!isOnlyMinorRole && <NavManagement items={navManagement} />}
       </SidebarContent>
       <SidebarFooter>

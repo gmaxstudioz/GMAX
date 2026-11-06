@@ -63,7 +63,7 @@ function parseCashoutForm(
     };
 }
 
-async function getFinanceAccess(studioId: string) {
+async function getFinanceAccess(studioId: string, allowReceptionistCashout = false) {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) return { ok: false as const, error: "You must be signed in to manage cashouts." };
 
@@ -81,7 +81,10 @@ async function getFinanceAccess(studioId: string) {
     const canManageStudio = memberships.some(
         (membership) =>
             membership.studioId === studioId &&
-            ["owner", "manager", "developer"].includes(membership.role),
+            (
+                ["owner", "manager", "developer"].includes(membership.role) ||
+                (allowReceptionistCashout && membership.role === "receptionist")
+            ),
     );
 
     if (!isPlatformAdmin && !canManageStudio) {
@@ -105,7 +108,7 @@ export async function addCashout(
     const input = parsed.data;
 
     try {
-        const access = await getFinanceAccess(input.studioId);
+        const access = await getFinanceAccess(input.studioId, true);
         if (!access.ok) return { status: "error", message: access.error };
 
         await db.insert(schema.cashout).values({

@@ -54,27 +54,53 @@ export default async function FinancesPage({
     const isPlatformAdmin = user?.role === "admin";
     const canViewAcademyRevenue = isPlatformAdmin ||
         memberships.some((membership) => ["owner", "developer"].includes(membership.role));
+    const receptionistStudioIds = [...new Set(
+        memberships
+            .filter((membership) => membership.role === "receptionist")
+            .map((membership) => membership.studioId),
+    )];
     const managedStudioIds = [...new Set(
         memberships
             .filter((membership) => ["owner", "manager", "developer"].includes(membership.role))
             .map((membership) => membership.studioId),
     )];
+    const isReceptionistOnly = !isPlatformAdmin && managedStudioIds.length === 0 && receptionistStudioIds.length > 0;
+    const accessibleStudioIds = isReceptionistOnly ? receptionistStudioIds : managedStudioIds;
 
-    if (!isPlatformAdmin && managedStudioIds.length === 0) redirect("/");
+    if (!isPlatformAdmin && accessibleStudioIds.length === 0) redirect("/");
 
     const studios = await db.query.studio.findMany({
-        where: isPlatformAdmin ? undefined : inArray(schema.studio.id, managedStudioIds),
+        where: isPlatformAdmin ? undefined : inArray(schema.studio.id, accessibleStudioIds),
         columns: { id: true, name: true },
         orderBy: (studio, { asc }) => [asc(studio.name)],
     });
     const studioIds = studios.map((studio) => studio.id);
+    const today = new Date().toISOString().slice(0, 10);
 
     if (studioIds.length === 0) {
         return (
             <div className="px-4 py-8 lg:px-6">
                 <h1 className="text-2xl font-semibold">Finances</h1>
-                <p className="mt-2 text-sm text-muted-foreground">No studios are available to report on.</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                    {isReceptionistOnly
+                        ? "No studios are available to record a cashout for."
+                        : "No studios are available to report on."}
+                </p>
             </div>
+        );
+    }
+
+    if (isReceptionistOnly) {
+        return (
+            <main className="flex flex-col gap-6 px-4 py-6 lg:px-6">
+                <div>
+                    <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Add a cashout</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">Record a cashout for your studio.</p>
+                </div>
+                <div>
+                    <CashoutForm studios={studios} categories={[]} today={today} />
+                </div>
+            </main>
         );
     }
 
@@ -115,7 +141,7 @@ export default async function FinancesPage({
     const income = bookings.flatMap((booking) =>
         booking.bookingStatus === "CANCELLED" ? [] : [{
                 amount: Number(booking.totalAmount),
-                date: new Date(booking.createdAt),
+                date: new Date(booking.bookingDate),
                 studioId: booking.studioId,
                 category: getRevenueCategory(booking.service?.name ?? "", booking.service?.category ?? "OTHERS"),
             }],
@@ -175,7 +201,6 @@ export default async function FinancesPage({
         }))
         .sort((a, b) => b.amount - a.amount);
     const studioNameById = new Map(studios.map((studio) => [studio.id, studio.name]));
-    const today = new Date().toISOString().slice(0, 10);
     const paymentTransactions = bookings.flatMap((booking) => booking.payments.map((payment) => ({
         id: payment.id,
         receiptNumber: payment.receiptNumber,

@@ -23,17 +23,20 @@ export async function getGlobalSearchData() {
 
     const isPlatformAdmin = user?.role === "admin";
     const accessibleStudioIds = isPlatformAdmin ? [] : members.map((member) => member.studioId);
-    const hasStoreAccess = isPlatformAdmin || members.some((member) => ["owner", "developer", "manager"].includes(member.role));
+    const hasStoreAccess = isPlatformAdmin || members.some((member) => ["owner", "developer"].includes(member.role));
+    const canAccessBookingsAndClients = isPlatformAdmin || members.some((member) =>
+        ["owner", "developer", "admin", "manager", "receptionist"].includes(member.role),
+    );
 
     const inAccessibleStudios = (col: any) => accessibleStudioIds.length > 0 ? inArray(col, accessibleStudioIds) : sql`false`;
 
     const [clients, products, services, studios] = await Promise.all([
-        db.query.client.findMany({
+        canAccessBookingsAndClients ? db.query.client.findMany({
             where: isPlatformAdmin ? undefined : inAccessibleStudios(clientSchema.studioId),
             columns: { id: true, name: true, email: true },
             limit: 100,
             orderBy: desc(clientSchema.createdAt)
-        }),
+        }) : Promise.resolve([]),
         hasStoreAccess
             ? db.query.product.findMany({
                 columns: { id: true, title: true, isPublished: true },
