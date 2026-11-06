@@ -161,15 +161,18 @@ export default async function Page() {
     });
   }
 
-  const tableData = rawRecentBookings.map((b: any) => ({
-      id: b.id,
-      clientName: b.client?.name ?? 'Unknown',
-      clientImage: b.client?.image ?? null,
-      serviceName: b.service?.name ?? 'Unknown',
-      bookingDate: b.bookingDate ? new Date(b.bookingDate).toISOString() : null,
-      totalAmount: Number(b.totalAmount),
-      bookingStatus: b.bookingStatus
-  }));
+  const tableData = rawRecentBookings.map((b: any) => {
+      const bookingDate = b.bookingDate ? new Date(b.bookingDate) : null;
+      return {
+          id: b.id,
+          clientName: b.client?.name ?? 'Unknown',
+          clientImage: b.client?.image ?? null,
+          serviceName: b.service?.name ?? 'Unknown',
+          bookingDate: bookingDate && Number.isFinite(bookingDate.getTime()) ? bookingDate.toISOString() : null,
+          totalAmount: Number(b.totalAmount),
+          bookingStatus: b.bookingStatus
+      };
+  });
 
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">

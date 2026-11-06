@@ -42,6 +42,10 @@ const chartConfig = {
   }
 } satisfies ChartConfig
 
+function formatChartDate(value: unknown, options: Intl.DateTimeFormatOptions) {
+  return new Date(`${String(value)}T00:00:00`).toLocaleDateString("en-US", options)
+}
+
 export function ChartAreaInteractive({ data }: { data: ChartDataPoint[] }) {
   const isMobile = useIsMobile()
   const [timeRange, setTimeRange] = React.useState<string | null>(null)
@@ -67,12 +71,6 @@ export function ChartAreaInteractive({ data }: { data: ChartDataPoint[] }) {
     const startDateKey = startDate.toISOString().slice(0, 10)
     return item.date >= startDateKey && item.date <= referenceDate
   })
-
-  const formatChartDate = (value: string | number) =>
-    new Date(`${String(value)}T00:00:00`).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    })
 
   return (
     <Card className="@container/card">
@@ -145,19 +143,21 @@ export function ChartAreaInteractive({ data }: { data: ChartDataPoint[] }) {
               axisLine={false}
               tickMargin={8}
               minTickGap={32}
-              tickFormatter={formatChartDate}
+              tickFormatter={(value) =>
+                formatChartDate(value, { month: "short", day: "numeric" })
+              }
             />
             <ChartTooltip
               cursor={false}
               content={
                 <ChartTooltipContent
-                  labelFormatter={(value) => {
-                    return new Date(`${String(value)}T00:00:00`).toLocaleDateString("en-US", {
+                  labelFormatter={(value) =>
+                    formatChartDate(value, {
                       month: "short",
                       day: "numeric",
-                      year: "numeric"
+                      year: "numeric",
                     })
-                  }}
+                  }
                   indicator="dot"
                 />
               }

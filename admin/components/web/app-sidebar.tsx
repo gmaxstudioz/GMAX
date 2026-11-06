@@ -95,7 +95,7 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
       const adminRoles = ["owner", "developer", "admin", "manager"];
       const hasAdminRole = members.some(m => adminRoles.includes(m.role));
       canAccessBookingsAndClients = members.some((m) =>
-        ["owner", "developer", "receptionist"].includes(m.role),
+        ["owner", "developer", "admin", "manager", "receptionist"].includes(m.role),
       );
       canAccessServices = members.some((m) => ["owner", "developer"].includes(m.role));
       canAccessFinances = members.some(m => ["owner", "developer", "manager", "receptionist"].includes(m.role));

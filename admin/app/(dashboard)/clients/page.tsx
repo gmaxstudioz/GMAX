@@ -20,13 +20,13 @@ export default async function ClientsPage() {
         columns: { role: true, studioId: true }
     });
     
-    const adminRoles = ["owner", "developer", "receptionist"];
+    const adminRoles = ["owner", "developer", "admin", "manager", "receptionist"];
     const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
     if (members.length > 0 && !hasAdminRole) {
         redirect("/my-tasks");
     }
 
-    const canEdit = members.some((m: any) => ["owner", "developer", "admin"].includes(m.role));
+    const canEdit = members.some((m: any) => ["owner", "developer", "admin", "manager"].includes(m.role));
 
     const studioIds = members.map((m: any) => m.studioId);
 

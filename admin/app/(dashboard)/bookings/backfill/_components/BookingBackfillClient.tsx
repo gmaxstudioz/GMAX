@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 import { Plus, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createHistoricalBookings, grantBookingBackfillAccess, revokeBookingBackfillAccess } from "@/lib/actions/booking-backfill";
@@ -23,6 +24,7 @@ type BookingEntry = {
 };
 
 const csvHeaders = ["bookingDate", "clientName", "clientPhone", "clientEmail", "serviceName", "totalAmount", "bookingStatus", "paymentStatus", "notes"];
+const clientEmailSchema = z.union([z.literal(""), z.string().trim().email().max(254)]);
 
 function emptyEntry(): BookingEntry {
     return {
@@ -144,6 +146,12 @@ export function BookingBackfillClient({
     const [durationUnit, setDurationUnit] = useState<"hours" | "days">("days");
     const [isPending, startTransition] = useTransition();
     const nowMs = new Date(now).getTime();
+    const [currentTimeMs, setCurrentTimeMs] = useState(nowMs);
+
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTimeMs(Date.now()), 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     const studioServices = useMemo(
         () => services.filter((service) => service.studioId === studioId),
@@ -158,7 +166,7 @@ export function BookingBackfillClient({
             entry.bookingDate && entry.clientName.trim().length >= 2 &&
             entry.clientPhone.trim().length >= 3 && entry.serviceId &&
             /^\d{1,10}(?:\.\d{1,2})?$/.test(entry.totalAmount) &&
-            new Date(entry.bookingDate).getTime() < nowMs,
+            new Date(entry.bookingDate).getTime() < currentTimeMs,
         );
 
     function updateManualEntry(index: number, patch: Partial<BookingEntry>) {
@@ -194,9 +202,19 @@ export function BookingBackfillClient({
                 const matchingServices = studioServices.filter((service) => service.name.trim().toLowerCase() === serviceName);
                 const service = matchingServices.length === 1 ? matchingServices[0] : undefined;
                 const totalAmount = value("totalAmount");
+                const clientName = value("clientName").trim();
+                const clientPhone = value("clientPhone").trim();
+                const clientEmail = value("clientEmail").trim();
+                const notes = value("notes");
+                const hasValidClientName = clientName.length >= 2 && clientName.length <= 120;
+                const hasValidClientPhone = clientPhone.length >= 3 && clientPhone.length <= 40;
+                const hasValidClientEmail = clientEmailSchema.safeParse(clientEmail).success;
+                const hasValidNotes = notes.length <= 2000;
                 if (!bookingDate) issues.push(`Line ${lineNumber}: bookingDate must be a valid past date/time.`);
-                if (!value("clientName").trim()) issues.push(`Line ${lineNumber}: clientName is required.`);
-                if (!value("clientPhone").trim()) issues.push(`Line ${lineNumber}: clientPhone is required.`);
+                if (!hasValidClientName) issues.push(`Line ${lineNumber}: clientName must be 2 to 120 characters after trimming.`);
+                if (!hasValidClientPhone) issues.push(`Line ${lineNumber}: clientPhone must be 3 to 40 characters after trimming.`);
+                if (!hasValidClientEmail) issues.push(`Line ${lineNumber}: clientEmail must be a valid email address of 254 characters or fewer.`);
+                if (!hasValidNotes) issues.push(`Line ${lineNumber}: notes must be 2000 characters or fewer.`);
                 if (!service) issues.push(`Line ${lineNumber}: serviceName must match one studio service exactly.`);
                 if (!/^\d{1,10}(?:\.\d{1,2})?$/.test(totalAmount) || Number(totalAmount) <= 0) {
                     issues.push(`Line ${lineNumber}: totalAmount must be greater than zero with up to 2 decimals.`);
@@ -210,20 +228,21 @@ export function BookingBackfillClient({
                 if (!["PENDING", "CANCELLED", "PAID", "PARTIALLY_PAID"].includes(paymentStatus)) {
                     issues.push(`Line ${lineNumber}: invalid paymentStatus.`);
                 }
-                if (bookingDate && service && value("clientName").trim() && value("clientPhone").trim() &&
+                if (bookingDate && service && hasValidClientName && hasValidClientPhone &&
+                    hasValidClientEmail && hasValidNotes &&
                     /^\d{1,10}(?:\.\d{1,2})?$/.test(totalAmount) && Number(totalAmount) > 0 &&
                     ["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"].includes(bookingStatus) &&
                     ["PENDING", "CANCELLED", "PAID", "PARTIALLY_PAID"].includes(paymentStatus)) {
                     prepared.push({
                         bookingDate,
-                        clientName: value("clientName").trim(),
-                        clientPhone: value("clientPhone").trim(),
-                        clientEmail: value("clientEmail").trim(),
+                        clientName,
+                        clientPhone,
+                        clientEmail,
                         serviceId: service.id,
                         totalAmount,
                         bookingStatus: bookingStatus as BookingEntry["bookingStatus"],
                         paymentStatus: paymentStatus as BookingEntry["paymentStatus"],
-                        notes: value("notes"),
+                        notes,
                     });
                 }
             });

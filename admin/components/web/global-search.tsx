@@ -31,7 +31,13 @@ import { getGlobalSearchData } from "@/lib/actions/search";
 
 type SearchData = Awaited<ReturnType<typeof getGlobalSearchData>>;
 
-export function GlobalSearch({ canAccessRestrictedSections }: { canAccessRestrictedSections: boolean }) {
+export function GlobalSearch({
+  canAccessBookingsAndClients,
+  canAccessRestrictedSections,
+}: {
+  canAccessBookingsAndClients: boolean;
+  canAccessRestrictedSections: boolean;
+}) {
   const [open, setOpen] = React.useState(false);
   const [data, setData] = React.useState<SearchData | null>(null);
   const router = useRouter();
@@ -87,14 +93,18 @@ export function GlobalSearch({ canAccessRestrictedSections }: { canAccessRestric
               <ListTodoIcon className="mr-2 h-4 w-4" />
               <span>My Tasks</span>
             </CommandItem>
-            <CommandItem onSelect={() => runCommand(() => router.push("/bookings"))}>
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              <span>Bookings</span>
-            </CommandItem>
-            <CommandItem onSelect={() => runCommand(() => router.push("/clients"))}>
-              <UsersIcon className="mr-2 h-4 w-4" />
-              <span>Clients</span>
-            </CommandItem>
+            {canAccessBookingsAndClients && (
+              <>
+                <CommandItem onSelect={() => runCommand(() => router.push("/bookings"))}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  <span>Bookings</span>
+                </CommandItem>
+                <CommandItem onSelect={() => runCommand(() => router.push("/clients"))}>
+                  <UsersIcon className="mr-2 h-4 w-4" />
+                  <span>Clients</span>
+                </CommandItem>
+              </>
+            )}
             {canAccessRestrictedSections && (
               <>
                 <CommandItem onSelect={() => runCommand(() => router.push("/store"))}>
@@ -111,7 +121,7 @@ export function GlobalSearch({ canAccessRestrictedSections }: { canAccessRestric
           
           <CommandSeparator />
           
-          {data?.clients && data.clients.length > 0 && (
+          {canAccessBookingsAndClients && data?.clients && data.clients.length > 0 && (
             <CommandGroup heading="Clients">
               {data.clients.map((client) => (
                 <CommandItem

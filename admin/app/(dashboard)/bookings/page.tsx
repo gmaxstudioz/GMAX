@@ -22,7 +22,7 @@ export default async function GlobalBookingsPage() {
         columns: { role: true, studioId: true }
     });
     
-    const adminRoles = ["owner", "developer", "receptionist"];
+    const adminRoles = ["owner", "developer", "admin", "manager", "receptionist"];
     const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
     if (members.length > 0 && !hasAdminRole) {
         redirect("/my-tasks");

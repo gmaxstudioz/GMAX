@@ -159,7 +159,18 @@ export async function revokeBookingBackfillAccess(input: unknown) {
 export async function createHistoricalBookings(input: unknown) {
     const parsed = batchSchema.safeParse(input);
     if (!parsed.success) {
-        return { status: "error" as const, message: parsed.error.issues[0]?.message ?? "Check the booking details." };
+        const issue = parsed.error.issues[0];
+        if (issue) {
+            const [entriesKey, rowIndex, field] = issue.path;
+            if (entriesKey === "entries" && typeof rowIndex === "number" && typeof field === "string") {
+                return {
+                    status: "error" as const,
+                    message: `Booking row ${rowIndex + 1}, ${field}: ${issue.message}`,
+                };
+            }
+            return { status: "error" as const, message: issue.message };
+        }
+        return { status: "error" as const, message: "Check the booking details." };
     }
 
     const { studioId, entries } = parsed.data;

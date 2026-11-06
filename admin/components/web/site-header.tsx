@@ -23,6 +23,7 @@ export async function SiteHeader() {
   let canCreateClient = true; // All roles can create clients/bookings right now based on permissions.ts
   let canCreateBooking = true;
   let canAccessRestrictedSections = false;
+  let canAccessBookingsAndClients = false;
 
   if (session?.user) {
     const [user, members] = await Promise.all([
@@ -38,6 +39,10 @@ export async function SiteHeader() {
 
     canAccessRestrictedSections = user?.role === "admin" ||
       members.some((m: { role: string }) => ["owner", "developer"].includes(m.role));
+    canAccessBookingsAndClients = user?.role === "admin" ||
+      members.some((m: { role: string }) =>
+        ["owner", "developer", "admin", "manager", "receptionist"].includes(m.role),
+      );
     
     canCreateStudio = members.some((m: { role: string }) => ["owner", "developer"].includes(m.role));
     canCreateService = members.some((m: { role: string }) => ["owner", "developer", "manager"].includes(m.role));
@@ -70,7 +75,10 @@ export async function SiteHeader() {
           <h1 className="text-base font-medium">Dashboard</h1>
         </div>
         <div className="ml-auto flex-1 min-w-[100px] md:ml-4 lg:ml-8 max-w-xs sm:max-w-sm">
-          <GlobalSearch canAccessRestrictedSections={canAccessRestrictedSections} />
+          <GlobalSearch
+            canAccessBookingsAndClients={canAccessBookingsAndClients}
+            canAccessRestrictedSections={canAccessRestrictedSections}
+          />
         </div>
       </div>
       
