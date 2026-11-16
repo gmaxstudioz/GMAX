@@ -1,8 +1,23 @@
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardLoading() {
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+      {/* Header Skeleton */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 lg:px-6">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2.5">
+            <Skeleton className="h-8 w-28 rounded-lg" />
+            <Skeleton className="h-5 w-24 rounded-full" />
+          </div>
+          <Skeleton className="h-4 w-72 max-w-sm rounded" />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Skeleton className="h-8 w-36 rounded-lg" />
+          <Skeleton className="h-8 w-44 rounded-lg" />
+        </div>
+      </div>
+
       {/* Section Cards Skeleton */}
       <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
@@ -22,21 +37,7 @@ export default function DashboardLoading() {
         ))}
       </div>
 
-      {/* Chart Skeleton */}
-      <div className="px-4 lg:px-6">
-        <div className="rounded-xl border bg-card p-6 shadow-xs">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex flex-col gap-2 space-y-2">
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-4 w-48" />
-            </div>
-            <Skeleton className="h-9 w-64 rounded-lg" />
-          </div>
-          <Skeleton className="h-62.5 w-full rounded-lg" />
-        </div>
-      </div>
-
-      {/* Data Table Skeleton */}
+      {/* Recent Bookings Data Table Skeleton */}
       <div className="px-4 lg:px-6">
         <div className="rounded-xl border bg-card shadow-xs">
           <div className="flex items-center justify-between p-4">
@@ -61,5 +62,5 @@ export default function DashboardLoading() {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
-import { ChartAreaInteractive } from "@/components/web/chart-area-interactive"
 import { DataTable } from "@/components/web/data-table"
 import { SectionCards } from "@/components/web/section-cards"
+import { OverviewDatePicker } from "@/components/web/overview-date-picker"
+import { OverviewStudioSelector } from "@/components/web/overview-studio-selector"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { db } from "@/lib/db"
 import * as schema from "@/lib/schema"
 import { eq, inArray, and, not, desc } from "drizzle-orm"
 import { redirect } from "next/navigation";
+import { format, parseISO, startOfDay, endOfDay, subDays, isValid, isToday } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -15,7 +18,27 @@ export const metadata: Metadata = {
     "View your studio analytics, performance metrics, and recent activity at a glance.",
 };
 
-export default async function Page() {
+interface PageProps {
+  searchParams?: Promise<{
+    date?: string;
+    studio?: string;
+  }>;
+}
+
+function parseBookingDate(dateVal: string | Date | null | undefined): Date | null {
+  if (!dateVal) return null;
+  if (dateVal instanceof Date) {
+    return isNaN(dateVal.getTime()) ? null : dateVal;
+  }
+  const str = String(dateVal).trim();
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) return d;
+  const dIso = new Date(str.replace(' ', 'T') + (str.endsWith('Z') ? '' : 'Z'));
+  if (!isNaN(dIso.getTime())) return dIso;
+  return null;
+}
+
+export default async function Page({ searchParams }: PageProps) {
   const session = await auth.api.getSession({
     headers: await headers()
   });
@@ -24,14 +47,27 @@ export default async function Page() {
     redirect("/auth/login");
   }
 
-  const members = await db.query.member.findMany({
-    where: eq(schema.member.userId, session.user.id),
-    columns: { role: true, studioId: true }
-  });
+  const [user, members] = await Promise.all([
+    db.query.user.findFirst({
+      where: eq(schema.user.id, session.user.id),
+      columns: { role: true },
+    }),
+    db.query.member.findMany({
+      where: eq(schema.member.userId, session.user.id),
+      columns: { role: true, studioId: true }
+    }),
+  ]);
   
-  const adminRoles = ["owner", "developer", "manager"];
-  const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
-  const isOnlyMinorRole = members.length > 0 && !hasAdminRole;
+  const isPlatformAdmin = user?.role === "admin";
+  const isOwner = members.some((m) => m.role === "owner");
+  const isDeveloper = members.some((m) => m.role === "developer");
+  const isGlobalAdmin = isPlatformAdmin || isOwner || isDeveloper;
+
+  const managerMemberships = members.filter((m) => m.role === "manager");
+  const isManager = !isGlobalAdmin && managerMemberships.length > 0;
+
+  const hasManagementRole = isGlobalAdmin || isManager;
+  const isOnlyMinorRole = !hasManagementRole && members.length > 0;
 
   if (isOnlyMinorRole) {
     if (members.some((m) => m.role === "receptionist")) {
@@ -39,7 +75,7 @@ export default async function Page() {
     }
 
     const photoVideoRoles = ["photographer", "videographer"];
-    const isPhotoVideoRole = members.every((m: any) => photoVideoRoles.includes(m.role));
+    const isPhotoVideoRole = members.every((m) => photoVideoRoles.includes(m.role));
 
     if (isPhotoVideoRole) {
       redirect("/my-tasks");
@@ -58,128 +94,225 @@ export default async function Page() {
     redirect("/my-tasks");
   }
 
-  // === ADMIN DATA AGGREGATION ===
-  const studioIds = members.filter((m: any) => adminRoles.includes(m.role)).map((m: any) => m.studioId);
+  // === STUDIO ACCESS DETERMINATION ===
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const requestedStudio = resolvedSearchParams?.studio;
+  const dateParam = resolvedSearchParams?.date;
 
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
-  const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const ninetyDaysAgo = new Date(todayUtc);
-  ninetyDaysAgo.setUTCDate(ninetyDaysAgo.getUTCDate() - 89);
+  let accessibleStudios: { id: string; name: string; slug: string }[] = [];
 
-  // Fetch all bookings for metrics (exclude cancelled ones from positive metrics if desired, but let's include all non-cancelled)
-  let allRelevantBookings: any[] = [];
-  if (studioIds.length > 0) {
-    allRelevantBookings = await db.query.booking.findMany({
-      where: and(
-        inArray(schema.booking.studioId, studioIds),
-        not(eq(schema.booking.bookingStatus, "CANCELLED"))
-      ),
-      with: { client: true, service: true }
+  if (isPlatformAdmin) {
+    accessibleStudios = await db.query.studio.findMany({
+      columns: { id: true, name: true, slug: true },
+      orderBy: (s, { asc }) => [asc(s.name)]
     });
+  } else if (isOwner || isDeveloper) {
+    const ownerStudioIds = members
+      .filter((m) => ["owner", "developer"].includes(m.role))
+      .map((m) => m.studioId);
+    if (ownerStudioIds.length > 0) {
+      accessibleStudios = await db.query.studio.findMany({
+        where: inArray(schema.studio.id, ownerStudioIds),
+        columns: { id: true, name: true, slug: true },
+        orderBy: (s, { asc }) => [asc(s.name)]
+      });
+    }
+  } else if (isManager) {
+    const managerStudioIds = managerMemberships.map((m) => m.studioId);
+    if (managerStudioIds.length > 0) {
+      accessibleStudios = await db.query.studio.findMany({
+        where: inArray(schema.studio.id, managerStudioIds),
+        columns: { id: true, name: true, slug: true },
+        orderBy: (s, { asc }) => [asc(s.name)]
+      });
+    }
   }
 
-  const recentBookings = allRelevantBookings.filter((b: any) => {
-    const bookingTimestamp = new Date(b.bookingDate).getTime();
-    return bookingTimestamp >= thirtyDaysAgo.getTime() && bookingTimestamp <= now.getTime();
+  // For a manager: ALWAYS restrict to the studio they manage.
+  // If multiple managed studios exist, let them toggle between them (defaulting to the first).
+  // If global admin, default to all accessible studios unless a specific studio is chosen.
+  let selectedStudio: { id: string; name: string; slug: string } | null = null;
+  let studioIds: string[] = [];
+
+  if (isManager) {
+    if (accessibleStudios.length > 0) {
+      const matched = requestedStudio
+        ? accessibleStudios.find((s) => s.slug === requestedStudio || s.id === requestedStudio)
+        : null;
+      selectedStudio = matched || accessibleStudios[0];
+      studioIds = [selectedStudio.id];
+    }
+  } else if (isGlobalAdmin) {
+    if (requestedStudio && requestedStudio !== "all") {
+      const matched = accessibleStudios.find((s) => s.slug === requestedStudio || s.id === requestedStudio);
+      if (matched) {
+        selectedStudio = matched;
+        studioIds = [matched.id];
+      } else {
+        studioIds = accessibleStudios.map((s) => s.id);
+      }
+    } else {
+      studioIds = accessibleStudios.map((s) => s.id);
+    }
+  }
+
+  // If no studios accessible
+  if (studioIds.length === 0) {
+    return (
+      <div className="flex flex-col gap-4 py-8 px-4 lg:px-6">
+        <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
+        <p className="text-sm text-muted-foreground">
+          No studio assigned. Please contact your studio administrator to assign you to a studio.
+        </p>
+      </div>
+    );
+  }
+
+  // Parse target date (defaults to today)
+  const now = new Date();
+  let targetDate = now;
+  if (dateParam) {
+    const parsed = parseISO(dateParam);
+    if (isValid(parsed)) {
+      targetDate = parsed;
+    }
+  }
+
+  const isTodaySelected = isToday(targetDate);
+  const targetDateStr = format(targetDate, "yyyy-MM-dd");
+  const prevDate = subDays(targetDate, 1);
+  const comparisonLabel = isTodaySelected ? "yesterday" : `previous day (${format(prevDate, "MMM d")})`;
+
+  const targetDayStart = startOfDay(targetDate).getTime();
+  const targetDayEnd = endOfDay(targetDate).getTime();
+  const prevDayStart = startOfDay(prevDate).getTime();
+  const prevDayEnd = endOfDay(prevDate).getTime();
+
+  // Fetch all non-cancelled bookings for studioIds
+  const allRelevantBookings = await db.query.booking.findMany({
+    where: and(
+      inArray(schema.booking.studioId, studioIds),
+      not(eq(schema.booking.bookingStatus, "CANCELLED"))
+    ),
+    with: { client: true, service: true }
   });
-  const previousBookings = allRelevantBookings.filter((b: any) => {
-    const bookingTimestamp = new Date(b.bookingDate).getTime();
-    return bookingTimestamp >= sixtyDaysAgo.getTime() && bookingTimestamp < thirtyDaysAgo.getTime();
+
+  // Filter bookings for target day and previous day
+  const targetDayBookings = allRelevantBookings.filter((b) => {
+    const d = parseBookingDate(b.bookingDate);
+    if (!d) return false;
+    const time = d.getTime();
+    return time >= targetDayStart && time <= targetDayEnd;
   });
 
-  const totalRevenueRecent = recentBookings.reduce((sum: any, b: any) => sum + Number(b.totalAmount), 0);
-  const totalRevenuePrev = previousBookings.reduce((sum: any, b: any) => sum + Number(b.totalAmount), 0);
-  const revenueGrowth = totalRevenuePrev === 0 ? (totalRevenueRecent > 0 ? 100 : 0) : ((totalRevenueRecent - totalRevenuePrev) / totalRevenuePrev) * 100;
-
-  const totalBookingsRecent = recentBookings.length;
-  const totalBookingsPrev = previousBookings.length;
-  const bookingsGrowth = totalBookingsPrev === 0 ? (totalBookingsRecent > 0 ? 100 : 0) : ((totalBookingsRecent - totalBookingsPrev) / totalBookingsPrev) * 100;
-
-  const clientBookingCounts = new Map<string, number>();
-  allRelevantBookings.forEach((booking: any) => {
-    clientBookingCounts.set(booking.clientId, (clientBookingCounts.get(booking.clientId) ?? 0) + 1);
+  const prevDayBookings = allRelevantBookings.filter((b) => {
+    const d = parseBookingDate(b.bookingDate);
+    if (!d) return false;
+    const time = d.getTime();
+    return time >= prevDayStart && time <= prevDayEnd;
   });
-  const repeatClientIds = new Set(
-    [...clientBookingCounts].filter(([, bookingCount]) => bookingCount > 1).map(([clientId]) => clientId),
-  );
-  const activeClientsRecent = new Set(
-    recentBookings.filter((booking: any) => repeatClientIds.has(booking.clientId)).map((booking: any) => booking.clientId),
-  ).size;
-  const activeClientsPrev = new Set(
-    previousBookings.filter((booking: any) => repeatClientIds.has(booking.clientId)).map((booking: any) => booking.clientId),
-  ).size;
-  const clientsGrowth = activeClientsPrev === 0 ? (activeClientsRecent > 0 ? 100 : 0) : ((activeClientsRecent - activeClientsPrev) / activeClientsPrev) * 100;
 
-  const completedRecent = recentBookings.filter((b: any) => b.bookingStatus === "COMPLETED").length;
-  const completedPrev = previousBookings.filter((b: any) => b.bookingStatus === "COMPLETED").length;
-  const completionRateRecent = totalBookingsRecent === 0 ? 0 : (completedRecent / totalBookingsRecent) * 100;
+  // Calculate daily metrics
+  const totalRevenueTarget = targetDayBookings.reduce((sum, b) => sum + Number(b.totalAmount || 0), 0);
+  const totalRevenuePrev = prevDayBookings.reduce((sum, b) => sum + Number(b.totalAmount || 0), 0);
+  const revenueGrowth = totalRevenuePrev === 0 
+    ? (totalRevenueTarget > 0 ? 100 : 0) 
+    : ((totalRevenueTarget - totalRevenuePrev) / totalRevenuePrev) * 100;
+
+  const totalBookingsTarget = targetDayBookings.length;
+  const totalBookingsPrev = prevDayBookings.length;
+  const bookingsGrowth = totalBookingsPrev === 0 
+    ? (totalBookingsTarget > 0 ? 100 : 0) 
+    : ((totalBookingsTarget - totalBookingsPrev) / totalBookingsPrev) * 100;
+
+  const activeClientsTarget = new Set(targetDayBookings.map((b) => b.clientId).filter(Boolean)).size;
+  const activeClientsPrev = new Set(prevDayBookings.map((b) => b.clientId).filter(Boolean)).size;
+  const clientsGrowth = activeClientsPrev === 0 
+    ? (activeClientsTarget > 0 ? 100 : 0) 
+    : ((activeClientsTarget - activeClientsPrev) / activeClientsPrev) * 100;
+
+  const completedTarget = targetDayBookings.filter((b) => b.bookingStatus === "COMPLETED").length;
+  const completedPrev = prevDayBookings.filter((b) => b.bookingStatus === "COMPLETED").length;
+  const completionRateTarget = totalBookingsTarget === 0 ? 0 : (completedTarget / totalBookingsTarget) * 100;
   const completionRatePrev = totalBookingsPrev === 0 ? 0 : (completedPrev / totalBookingsPrev) * 100;
-  const completionRateGrowth = completionRateRecent - completionRatePrev;
+  const completionRateGrowth = completionRateTarget - completionRatePrev;
 
   const metrics = {
-    totalRevenue: allRelevantBookings.reduce((sum: any, b: any) => sum + Number(b.totalAmount), 0),
+    totalRevenue: totalRevenueTarget,
     revenueGrowth,
-    totalBookings: allRelevantBookings.length,
+    totalBookings: totalBookingsTarget,
     bookingsGrowth,
-    activeClients: repeatClientIds.size,
+    activeClients: activeClientsTarget,
     clientsGrowth,
-    completionRate: allRelevantBookings.length === 0 ? 0 : (allRelevantBookings.filter((b: any) => b.bookingStatus === "COMPLETED").length / allRelevantBookings.length) * 100,
+    completionRate: completionRateTarget,
     completionRateGrowth
   };
 
-  // Chart Data (last 90 days aggregated by day)
-  const bookingsLast90Days = allRelevantBookings.filter((b: any) => new Date(b.bookingDate) >= ninetyDaysAgo);
-  const chartDataMap = new Map<string, number>();
-  
-  for (let i = 0; i < 90; i++) {
-      const d = new Date(todayUtc);
-      d.setUTCDate(todayUtc.getUTCDate() - i);
-      chartDataMap.set(d.toISOString().split('T')[0], 0);
-  }
-
-  bookingsLast90Days.forEach((b: any) => {
-      const dateStr = new Date(b.bookingDate).toISOString().split('T')[0];
-      if (chartDataMap.has(dateStr)) {
-          chartDataMap.set(dateStr, chartDataMap.get(dateStr)! + Number(b.totalAmount));
-      }
-  });
-
-  const chartData = Array.from(chartDataMap.entries())
-      .map(([date, revenue]) => ({ date, revenue }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-
   // Recent Bookings for Data Table
-  let rawRecentBookings: any[] = [];
-  if (studioIds.length > 0) {
-    rawRecentBookings = await db.query.booking.findMany({
-      where: inArray(schema.booking.studioId, studioIds),
-      orderBy: [desc(schema.booking.bookingDate)],
-      limit: 10,
-      with: { client: true, service: true }
-    });
-  }
-
-  const tableData = rawRecentBookings.map((b: any) => {
-      const bookingDate = b.bookingDate ? new Date(b.bookingDate) : null;
-      return {
-          id: b.id,
-          clientName: b.client?.name ?? 'Unknown',
-          clientImage: b.client?.image ?? null,
-          serviceName: b.service?.name ?? 'Unknown',
-          bookingDate: bookingDate && Number.isFinite(bookingDate.getTime()) ? bookingDate.toISOString() : null,
-          totalAmount: Number(b.totalAmount),
-          bookingStatus: b.bookingStatus
-      };
+  const rawRecentBookings = await db.query.booking.findMany({
+    where: inArray(schema.booking.studioId, studioIds),
+    orderBy: [desc(schema.booking.bookingDate)],
+    limit: 10,
+    with: { client: true, service: true }
   });
+
+  const tableData = rawRecentBookings.map((b) => {
+    const bookingDate = parseBookingDate(b.bookingDate);
+    return {
+      id: b.id,
+      clientName: b.client?.name ?? 'Unknown',
+      clientImage: b.client?.image ?? null,
+      serviceName: b.service?.name ?? 'Unknown',
+      bookingDate: bookingDate && Number.isFinite(bookingDate.getTime()) ? bookingDate.toISOString() : null,
+      totalAmount: Number(b.totalAmount || 0),
+      bookingStatus: b.bookingStatus
+    };
+  });
+
+  const studioDisplayName = selectedStudio ? selectedStudio.name : "All Studios";
 
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-      <SectionCards metrics={metrics} />
-      <div className="px-4 lg:px-6">
-        <ChartAreaInteractive data={chartData} />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 lg:px-6">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
+            <Badge variant="outline" className="px-2 py-0.5 text-xs font-semibold">
+              {studioDisplayName}
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {selectedStudio
+              ? isTodaySelected 
+                ? `Daily performance metrics and studio activity for ${selectedStudio.name} for today, ${format(targetDate, "EEEE, MMMM do, yyyy")}.`
+                : `Performance metrics and studio activity for ${selectedStudio.name} for ${format(targetDate, "EEEE, MMMM do, yyyy")}.`
+              : isTodaySelected
+                ? `Daily performance metrics and studio activity across all studios for today, ${format(targetDate, "EEEE, MMMM do, yyyy")}.`
+                : `Performance metrics and studio activity across all studios for ${format(targetDate, "EEEE, MMMM do, yyyy")}.`}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {accessibleStudios.length > 1 && (
+            <OverviewStudioSelector
+              studios={accessibleStudios}
+              selectedStudioSlug={selectedStudio?.slug ?? null}
+              showAllOption={isGlobalAdmin}
+              isManager={isManager}
+            />
+          )}
+          <OverviewDatePicker 
+            selectedDateString={targetDateStr}
+            currentStudioSlug={selectedStudio?.slug ?? (isGlobalAdmin ? "all" : undefined)}
+          />
+        </div>
       </div>
+
+      <SectionCards 
+        metrics={metrics} 
+        isToday={isTodaySelected} 
+        comparisonLabel={comparisonLabel} 
+      />
+
       <DataTable data={tableData} />
     </div>
   )

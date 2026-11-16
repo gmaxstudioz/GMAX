@@ -80,7 +80,7 @@ export default function WorksPage() {
               <FilterIcon className="size-4" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-[240px] p-2 flex flex-col gap-1 rounded-xl bg-card border border-border shadow-2xl">
+          <PopoverContent className="w-60 p-2 flex flex-col gap-1 rounded-xl bg-card border border-border shadow-2xl">
             <Button
               variant={activeCategory === "All" ? "default" : "ghost"}
               className="justify-start w-full rounded-lg"
@@ -138,7 +138,7 @@ export default function WorksPage() {
                   )}
                 />
                 <div className={cn(
-                  "absolute inset-0 rounded-xl bg-gradient-to-t from-black/80 via-black/20 to-transparent transition-all duration-500 flex flex-col justify-end p-6",
+                  "absolute inset-0 rounded-xl bg-linear-to-t from-black/80 via-black/20 to-transparent transition-all duration-500 flex flex-col justify-end p-6",
                   "md:opacity-0 md:group-hover:opacity-100",
                   isActive ? "opacity-100" : "opacity-0"
                 )}>

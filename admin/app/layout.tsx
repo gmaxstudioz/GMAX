@@ -23,8 +23,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: `${APP_NAME} — Studio Management Platform`,
-    template: `%s | ${APP_NAME}`,
+    default: `${APP_NAME}`,
+    template: `%s`,
   },
   description:
     `${APP_NAME} is a professional studio management platform for booking sessions, managing clients, and growing your creative business.`,
