@@ -136,7 +136,7 @@ export default async function Page({ searchParams }: PageProps) {
 
   if (isManager) {
     if (accessibleStudios.length > 0) {
-      const matched = requestedStudio
+      const matched = requestedStudio && requestedStudio !== "all"
         ? accessibleStudios.find((s) => s.slug === requestedStudio || s.id === requestedStudio)
         : null;
       selectedStudio = matched || accessibleStudios[0];

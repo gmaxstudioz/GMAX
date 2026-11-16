@@ -149,7 +149,7 @@ export default async function FinancesPage({ searchParams }: PageProps) {
 
     if (isManager) {
         if (allAccessibleStudios.length > 0) {
-            const matched = requestedStudio
+            const matched = requestedStudio && requestedStudio !== "all"
                 ? allAccessibleStudios.find((s) => s.slug === requestedStudio || s.id === requestedStudio)
                 : null;
             selectedStudio = matched || allAccessibleStudios[0];
@@ -445,18 +445,26 @@ export default async function FinancesPage({ searchParams }: PageProps) {
 
     if (isAllTime) {
         let earliestDate = now;
+        let latestDate = endDate;
         rangeIncome.forEach((item) => {
             if (item.date.getTime() < earliestDate.getTime()) {
                 earliestDate = item.date;
+            }
+            if (item.date.getTime() > latestDate.getTime()) {
+                latestDate = item.date;
             }
         });
         rangeAcademyIncome.forEach((item) => {
             if (item.date.getTime() < earliestDate.getTime()) {
                 earliestDate = item.date;
             }
+            if (item.date.getTime() > latestDate.getTime()) {
+                latestDate = item.date;
+            }
         });
         const chartStart = startOfDay(earliestDate);
-        const intervalDays = eachDayOfInterval({ start: chartStart, end: endDate });
+        const chartEnd = endOfDay(latestDate);
+        const intervalDays = eachDayOfInterval({ start: chartStart, end: chartEnd });
         intervalDays.forEach((d) => {
             chartDataMap.set(format(d, "yyyy-MM-dd"), 0);
         });

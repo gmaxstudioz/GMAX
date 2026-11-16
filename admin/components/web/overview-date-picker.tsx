@@ -37,7 +37,7 @@ export function OverviewDatePicker({
     if (dateStr) {
       params.set("date", dateStr);
     }
-    if (currentStudioSlug && currentStudioSlug !== "all") {
+    if (currentStudioSlug) {
       params.set("studio", currentStudioSlug);
     }
     const qs = params.toString();
