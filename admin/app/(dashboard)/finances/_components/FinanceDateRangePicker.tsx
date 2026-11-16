@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
-import { format, parseISO, isValid, subDays, startOfMonth, startOfYear } from "date-fns"
+import { format, parseISO, isValid } from "date-fns"
 import type { DateRange } from "react-day-picker"
 import { CalendarIcon, CheckIcon, Loader2, RotateCcwIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -116,26 +116,10 @@ export function FinanceDateRangePicker({
   }
 
   const applyPopoverPreset = (preset: DateRangePreset) => {
-    const now = new Date()
-    let from = now
-    const to = now
-
-    if (preset === "7d") {
-      from = subDays(now, 6)
-    } else if (preset === "30d") {
-      from = subDays(now, 29)
-    } else if (preset === "90d") {
-      from = subDays(now, 89)
-    } else if (preset === "month") {
-      from = startOfMonth(now)
-    } else if (preset === "year") {
-      from = startOfYear(now)
+    if (preset === "custom") {
+      return
     }
-
-    setLocalRange({ from, to })
-    const fromStr = format(from, "yyyy-MM-dd")
-    const toStr = format(to, "yyyy-MM-dd")
-    navigateTo("custom", fromStr, toStr)
+    navigateTo(preset)
     setPopoverOpen(false)
     setLocalRange(undefined)
   }
@@ -284,7 +268,7 @@ export function FinanceDateRangePicker({
               variant="ghost"
               size="sm"
               className="h-7 text-xs"
-              onClick={() => setPopoverOpen(false)}
+              onClick={() => handleOpenChange(false)}
             >
               Cancel
             </Button>

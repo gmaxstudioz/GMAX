@@ -49,7 +49,7 @@ export function OverviewStudioSelector({
 
   const handleSelect = (val: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (val === "all" || !val) {
+    if (!val) {
       params.delete("studio");
     } else {
       params.set("studio", val);

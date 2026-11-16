@@ -355,32 +355,37 @@ export default async function FinancesPage({ searchParams }: PageProps) {
         category: getRevenueCategory(b.service?.name ?? "", b.service?.category ?? "OTHERS"),
     }));
 
+    const isAllStudios = selectedStudio === null;
+    const showAcademyRevenue = canViewAcademyRevenue && isAllStudios;
+
     const allAcademyIncome = academyStudents.map((student) => ({
         amount: Number(student.amountPaid || 0),
         date: parseDate(student.updatedAt) ?? new Date(student.updatedAt),
         category: ACADEMY_REVENUE_CATEGORY,
     }));
+    const activeAcademyIncome = showAcademyRevenue ? allAcademyIncome : [];
 
     // All-time totals
-    const totalRevenueAllTime = sumAmounts(allIncome) + sumAmounts(allAcademyIncome);
+    const totalRevenueAllTime = sumAmounts(allIncome) + sumAmounts(activeAcademyIncome);
     const totalExpensesAllTime = sumAmounts(expenses);
     const netAllTime = totalRevenueAllTime - totalExpensesAllTime;
 
     // === FILTERED RANGE CALCULATIONS ===
-    const rangeIncome = allIncome.filter((entry) => isInRange(entry.date, startDate, endDate));
-    const rangeAcademyIncome = allAcademyIncome.filter((entry) => isInRange(entry.date, startDate, endDate));
-    const rangeRevenue = sumAmounts(rangeIncome) + sumAmounts(rangeAcademyIncome);
+    const isAllTime = rangePreset === "all";
+    const rangeIncome = isAllTime ? allIncome : allIncome.filter((entry) => isInRange(entry.date, startDate, endDate));
+    const rangeAcademyIncome = isAllTime ? activeAcademyIncome : activeAcademyIncome.filter((entry) => isInRange(entry.date, startDate, endDate));
+    const rangeRevenue = isAllTime ? totalRevenueAllTime : sumAmounts(rangeIncome) + sumAmounts(rangeAcademyIncome);
 
-    const rangeExpensesList = expenses.filter((entry) => isInRange(entry.date, startDate, endDate));
-    const rangeExpenses = sumAmounts(rangeExpensesList);
-    const rangeNet = rangeRevenue - rangeExpenses;
+    const rangeExpensesList = isAllTime ? expenses : expenses.filter((entry) => isInRange(entry.date, startDate, endDate));
+    const rangeExpenses = isAllTime ? totalExpensesAllTime : sumAmounts(rangeExpensesList);
+    const rangeNet = isAllTime ? netAllTime : rangeRevenue - rangeExpenses;
 
     // Comparison period calculation for growth trend
     let revenueGrowth: number | null = null;
-    let growthDetail = `${rangeLabel.toLowerCase()} total`;
-    if (comparisonStartDate && comparisonEndDate) {
+    let growthDetail = isAllTime ? "all time total" : `${rangeLabel.toLowerCase()} total`;
+    if (!isAllTime && comparisonStartDate && comparisonEndDate) {
         const prevIncome = allIncome.filter((entry) => isInRange(entry.date, comparisonStartDate!, comparisonEndDate!));
-        const prevAcademy = allAcademyIncome.filter((entry) => isInRange(entry.date, comparisonStartDate!, comparisonEndDate!));
+        const prevAcademy = activeAcademyIncome.filter((entry) => isInRange(entry.date, comparisonStartDate!, comparisonEndDate!));
         const prevRevenue = sumAmounts(prevIncome) + sumAmounts(prevAcademy);
 
         if (prevRevenue > 0) {
@@ -417,13 +422,17 @@ export default async function FinancesPage({ searchParams }: PageProps) {
             return timeB - timeA;
         });
 
-    const rangePayments = paymentTransactions.filter((p) => isInRange(p.paymentDate, startDate, endDate));
-    const rangeCollected =
-        sumAmounts(rangePayments.filter((p) => p.status === "PAID" || p.status === "PARTIALLY_PAID")) +
-        sumAmounts(rangeAcademyIncome);
     const allCollected =
         sumAmounts(paymentTransactions.filter((p) => p.status === "PAID" || p.status === "PARTIALLY_PAID")) +
-        sumAmounts(allAcademyIncome);
+        sumAmounts(activeAcademyIncome);
+
+    const rangePayments = isAllTime
+        ? paymentTransactions
+        : paymentTransactions.filter((p) => isInRange(p.paymentDate, startDate, endDate));
+    const rangeCollected = isAllTime
+        ? allCollected
+        : sumAmounts(rangePayments.filter((p) => p.status === "PAID" || p.status === "PARTIALLY_PAID")) +
+          sumAmounts(rangeAcademyIncome);
 
     // Transaction stats for the range
     const rangePaidCount = rangePayments.filter((p) => p.status === "PAID").length;
@@ -434,15 +443,19 @@ export default async function FinancesPage({ searchParams }: PageProps) {
     // === BUILD DAILY CHART DATA FOR RANGE ===
     const chartDataMap = new Map<string, number>();
 
-    if (rangePreset === "all") {
-        let earliestDate = subDays(now, 90);
+    if (isAllTime) {
+        let earliestDate = now;
         rangeIncome.forEach((item) => {
             if (item.date.getTime() < earliestDate.getTime()) {
                 earliestDate = item.date;
             }
         });
-        const maxEarliest = subDays(now, 365);
-        const chartStart = earliestDate.getTime() < maxEarliest.getTime() ? maxEarliest : startOfDay(earliestDate);
+        rangeAcademyIncome.forEach((item) => {
+            if (item.date.getTime() < earliestDate.getTime()) {
+                earliestDate = item.date;
+            }
+        });
+        const chartStart = startOfDay(earliestDate);
         const intervalDays = eachDayOfInterval({ start: chartStart, end: endDate });
         intervalDays.forEach((d) => {
             chartDataMap.set(format(d, "yyyy-MM-dd"), 0);
@@ -486,10 +499,10 @@ export default async function FinancesPage({ searchParams }: PageProps) {
             category,
             amount: sumAmounts(rangeIncome.filter((entry) => entry.category === category)),
         })),
-        ...(canViewAcademyRevenue
+        ...(showAcademyRevenue
             ? [
                   {
-                      category: ACADEMY_REVENUE_CATEGORY,
+                      category: `${ACADEMY_REVENUE_CATEGORY} (All Studios)`,
                       amount: sumAmounts(rangeAcademyIncome),
                   },
               ]
@@ -593,7 +606,7 @@ export default async function FinancesPage({ searchParams }: PageProps) {
                                 title={`Collected · ${rangeLabel}`}
                                 value={rangeCollected}
                                 detail={
-                                    canViewAcademyRevenue
+                                    showAcademyRevenue
                                         ? "Booking payments and paid Academy in period"
                                         : "Booking payments collected in period"
                                 }
@@ -628,9 +641,11 @@ export default async function FinancesPage({ searchParams }: PageProps) {
                                 title="Total revenue · all time"
                                 value={totalRevenueAllTime}
                                 detail={
-                                    canViewAcademyRevenue
+                                    showAcademyRevenue
                                         ? "Bookings and paid Academy (all time)"
-                                        : "Bookings all time (Academy is owner-only)"
+                                        : selectedStudio
+                                          ? `All-time bookings for ${selectedStudio.name}`
+                                          : "Bookings all time (Academy is owner-only)"
                                 }
                                 icon={<CircleDollarSign className="size-4" />}
                             />
@@ -670,9 +685,11 @@ export default async function FinancesPage({ searchParams }: PageProps) {
                                     Revenue by source · {rangeLabel}
                                 </CardTitle>
                                 <CardDescription>
-                                    {canViewAcademyRevenue
-                                        ? `${formatPrice(rangeRevenue)} in ${rangeLabel.toLowerCase()} from bookings and paid Academy registrations.`
-                                        : `${formatPrice(rangeRevenue)} in ${rangeLabel.toLowerCase()} from bookings. Academy revenue is visible to owners and developers.`}
+                                    {showAcademyRevenue
+                                        ? `${formatPrice(rangeRevenue)} in ${rangeLabel.toLowerCase()} from bookings and paid Academy registrations (all studios).`
+                                        : selectedStudio
+                                          ? `${formatPrice(rangeRevenue)} in ${rangeLabel.toLowerCase()} from bookings for ${selectedStudio.name}.`
+                                          : `${formatPrice(rangeRevenue)} in ${rangeLabel.toLowerCase()} from bookings. Academy revenue is visible to owners and developers.`}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-5">
@@ -680,7 +697,7 @@ export default async function FinancesPage({ searchParams }: PageProps) {
                                     <div key={category} className="space-y-2">
                                         <div className="flex items-center justify-between gap-3 text-sm">
                                             <span className="flex items-center gap-2 font-medium">
-                                                {category === ACADEMY_REVENUE_CATEGORY && (
+                                                {category.startsWith(ACADEMY_REVENUE_CATEGORY) && (
                                                     <BookOpen className="size-3.5 text-primary" />
                                                 )}
                                                 {category}

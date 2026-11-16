@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { format, parseISO, addDays, subDays, isToday as checkIsToday } from "date-fns"
+import { format, parseISO, addDays, subDays } from "date-fns"
 import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon, Loader2, RotateCcwIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -12,21 +12,25 @@ import { cn } from "@/lib/utils"
 
 export function OverviewDatePicker({
   selectedDateString,
+  todayDateString,
   currentStudioSlug,
 }: {
   selectedDateString: string; // Format: YYYY-MM-DD
+  todayDateString?: string;   // Format: YYYY-MM-DD from server
   currentStudioSlug?: string | null;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
   const [popoverOpen, setPopoverOpen] = React.useState(false);
 
+  const serverTodayStr = todayDateString ?? format(new Date(), "yyyy-MM-dd");
+
   const selectedDate = React.useMemo(() => {
     const parsed = parseISO(selectedDateString);
     return isNaN(parsed.getTime()) ? new Date() : parsed;
   }, [selectedDateString]);
 
-  const isCurrentDayToday = checkIsToday(selectedDate);
+  const isCurrentDayToday = selectedDateString === serverTodayStr;
 
   const buildUrl = (dateStr: string | null) => {
     const params = new URLSearchParams();
@@ -42,10 +46,9 @@ export function OverviewDatePicker({
 
   const navigateToDate = (newDate: Date) => {
     const formatted = format(newDate, "yyyy-MM-dd");
-    const todayFormatted = format(new Date(), "yyyy-MM-dd");
 
     startTransition(() => {
-      if (formatted === todayFormatted) {
+      if (formatted === serverTodayStr) {
         router.push(buildUrl(null));
       } else {
         router.push(buildUrl(formatted));

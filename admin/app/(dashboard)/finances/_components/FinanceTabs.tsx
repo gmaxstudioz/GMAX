@@ -20,9 +20,12 @@ export function FinanceTabs({
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
+    const rawTab = searchParams.get("tab");
+    const activeTab: "overview" | "transactions" | "cashouts" =
+        rawTab === "overview" || rawTab === "transactions" || rawTab === "cashouts"
+            ? rawTab
+            : (defaultTab || "overview");
     const [isPending, startTransition] = useTransition();
-
-    const activeTab = searchParams.get("tab") || defaultTab || "overview";
 
     const handleTabChange = (newTab: string) => {
         const params = new URLSearchParams(searchParams.toString());

@@ -7,7 +7,7 @@ import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { db } from "@/lib/db"
 import * as schema from "@/lib/schema"
-import { eq, inArray, and, not, desc } from "drizzle-orm"
+import { eq, inArray, and, not, desc, gte, lte } from "drizzle-orm"
 import { redirect } from "next/navigation";
 import { format, parseISO, startOfDay, endOfDay, subDays, isValid, isToday } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -188,14 +188,33 @@ export default async function Page({ searchParams }: PageProps) {
   const prevDayStart = startOfDay(prevDate).getTime();
   const prevDayEnd = endOfDay(prevDate).getTime();
 
-  // Fetch all non-cancelled bookings for studioIds
-  const allRelevantBookings = await db.query.booking.findMany({
-    where: and(
-      inArray(schema.booking.studioId, studioIds),
-      not(eq(schema.booking.bookingStatus, "CANCELLED"))
-    ),
-    with: { client: true, service: true }
-  });
+  const prevDayStartDate = startOfDay(prevDate);
+  const targetDayEndDate = endOfDay(targetDate);
+
+  // Fetch bookings constrained to target and previous day, parallelized with recent bookings
+  const [allRelevantBookings, rawRecentBookings] = await Promise.all([
+    db.query.booking.findMany({
+      where: and(
+        inArray(schema.booking.studioId, studioIds),
+        not(eq(schema.booking.bookingStatus, "CANCELLED")),
+        gte(schema.booking.bookingDate, prevDayStartDate.toISOString()),
+        lte(schema.booking.bookingDate, targetDayEndDate.toISOString())
+      ),
+      columns: {
+        id: true,
+        bookingDate: true,
+        totalAmount: true,
+        bookingStatus: true,
+        clientId: true,
+      },
+    }),
+    db.query.booking.findMany({
+      where: inArray(schema.booking.studioId, studioIds),
+      orderBy: [desc(schema.booking.bookingDate)],
+      limit: 10,
+      with: { client: true, service: true }
+    }),
+  ]);
 
   // Filter bookings for target day and previous day
   const targetDayBookings = allRelevantBookings.filter((b) => {
@@ -248,14 +267,6 @@ export default async function Page({ searchParams }: PageProps) {
     completionRateGrowth
   };
 
-  // Recent Bookings for Data Table
-  const rawRecentBookings = await db.query.booking.findMany({
-    where: inArray(schema.booking.studioId, studioIds),
-    orderBy: [desc(schema.booking.bookingDate)],
-    limit: 10,
-    with: { client: true, service: true }
-  });
-
   const tableData = rawRecentBookings.map((b) => {
     const bookingDate = parseBookingDate(b.bookingDate);
     return {
@@ -302,6 +313,7 @@ export default async function Page({ searchParams }: PageProps) {
           )}
           <OverviewDatePicker 
             selectedDateString={targetDateStr}
+            todayDateString={format(now, "yyyy-MM-dd")}
             currentStudioSlug={selectedStudio?.slug ?? (isGlobalAdmin ? "all" : undefined)}
           />
         </div>
