@@ -41,13 +41,13 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     siteName: APP_NAME,
-    title: `${APP_NAME} — Studio Management Platform`,
+    title: `${APP_NAME}`,
     description:
       "Professional studio management platform for booking sessions, managing clients, and growing your creative business.",
   },
   twitter: {
     card: "summary_large_image",
-    title: `${APP_NAME} — Studio Management Platform`,
+    title: `${APP_NAME}`,
     description:
       "Professional studio management platform for booking sessions, managing clients, and growing your creative business.",
   },

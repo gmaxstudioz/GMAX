@@ -39,6 +39,9 @@ export default async function StudioDetails({ params }: StudioDetailsProps) {
             members: {
                 with: { user: true }
             },
+            pastMembers: {
+                orderBy: (pastMembers, { desc }) => [desc(pastMembers.leftAt)],
+            },
             invitations: true,
             services: {
                 with: { studioSession: true, serviceVariants: { with: { serviceDeliverables: true } } },
@@ -88,7 +91,7 @@ export default async function StudioDetails({ params }: StudioDetailsProps) {
                 </div>
             </div>
             {canViewStats && <StudioStatsCards data={serialized} />}
-            <StudioData studioData={serialized} userRole={userRole} />
+            <StudioData studioData={serialized} userRole={userRole} currentUserId={session.user.id} />
         </div>
     )
 }

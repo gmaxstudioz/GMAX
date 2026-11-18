@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import * as schema from "@/lib/schema";
-import { eq, and, inArray, notExists, or } from "drizzle-orm";
+import { eq, and, inArray, notExists, or, not } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -86,6 +86,29 @@ export interface PendingInvitation {
     } | null;
 }
 
+export interface PastMemberRecord {
+    id: string;
+    userId: string | null;
+    studioId: string | null;
+    name: string;
+    email: string;
+    phoneNumber: string | null;
+    image: string | null;
+    role: string;
+    joinedAt: string;
+    leftAt: string;
+    removedById: string | null;
+    removedByName: string | null;
+    reason: string;
+    totalBookings: number;
+    createdAt: string;
+    studio?: {
+        id: string;
+        name: string;
+        slug: string;
+    } | null;
+}
+
 // ── Get Users for Management ───────────────────────────────────────
 
 export async function getUsersForManagement() {
@@ -119,6 +142,9 @@ export async function getUsersForManagement() {
             };
         }
 
+        const isOwner = callerMemberships.some((m: { role: string }) => m.role === "owner");
+        const canDeleteAccounts = isPlatformAdmin || isOwner;
+
         // Load studios caller has authority to manage
         const studios = isPlatformAdmin
             ? await db.query.studio.findMany({
@@ -135,23 +161,26 @@ export async function getUsersForManagement() {
             role: callerMemberships.find((membership) => membership.studioId === studio.id)?.role ?? null,
         }));
 
-        // Load users with studio membership info for studios the caller can manage
+        // Load users with studio membership info for studios the caller can manage (excluding deleted accounts)
         const users = await db.query.user.findMany({
-            where: isPlatformAdmin
-                ? undefined
-                : or(
-                    inArray(
-                        schema.user.id,
-                        db.select({ userId: schema.member.userId })
-                            .from(schema.member)
-                            .where(inArray(schema.member.studioId, managedStudioIds)),
+            where: and(
+                not(eq(schema.user.role, "deleted")),
+                isPlatformAdmin
+                    ? undefined
+                    : or(
+                        inArray(
+                            schema.user.id,
+                            db.select({ userId: schema.member.userId })
+                                .from(schema.member)
+                                .where(inArray(schema.member.studioId, managedStudioIds)),
+                        ),
+                        notExists(
+                            db.select({ id: schema.member.id })
+                                .from(schema.member)
+                                .where(eq(schema.member.userId, schema.user.id)),
+                        ),
                     ),
-                    notExists(
-                        db.select({ id: schema.member.id })
-                            .from(schema.member)
-                            .where(eq(schema.member.userId, schema.user.id)),
-                    ),
-                ),
+            ),
             orderBy: (u, { desc }) => [desc(u.createdAt)],
             columns: {
                 id: true,
@@ -214,13 +243,36 @@ export async function getUsersForManagement() {
             }
         });
 
+        // Load past staff records for studios the caller manages
+        const pastMembers = await db.query.pastMember.findMany({
+            where: isPlatformAdmin
+                ? undefined
+                : or(
+                    inArray(schema.pastMember.studioId, managedStudioIds),
+                    isOwner ? eq(schema.pastMember.removedById, session.user.id) : undefined
+                ),
+            with: {
+                studio: {
+                    columns: {
+                        id: true,
+                        name: true,
+                        slug: true
+                    }
+                }
+            },
+            orderBy: (pm, { desc }) => [desc(pm.leftAt)],
+        });
+
         return {
             status: "success" as const,
             data: {
                 users: users as unknown as UserForManagement[],
                 managedStudios: managedStudios as ManagedStudio[],
                 pendingInvitations: invitations as unknown as PendingInvitation[],
-                isPlatformAdmin
+                pastStaff: pastMembers as unknown as PastMemberRecord[],
+                isPlatformAdmin,
+                canDeleteAccounts,
+                currentUserId: session.user.id,
             }
         };
     } catch (error) {
@@ -368,7 +420,7 @@ export async function removeUserMembership(memberId: string, studioId: string) {
 
         const callerUser = await db.query.user.findFirst({
             where: eq(schema.user.id, session.user.id),
-            columns: { role: true }
+            columns: { id: true, name: true, role: true }
         });
         const isPlatformAdmin = callerUser?.role === "admin";
 
@@ -391,7 +443,11 @@ export async function removeUserMembership(memberId: string, studioId: string) {
 
         const targetMember = await db.query.member.findFirst({
             where: and(eq(schema.member.id, memberId), eq(schema.member.studioId, studioId)),
-            with: { user: true }
+            with: {
+                user: true,
+                studio: true,
+                bookings: true,
+            }
         });
 
         if (!targetMember) {
@@ -402,16 +458,38 @@ export async function removeUserMembership(memberId: string, studioId: string) {
             return { status: "error" as const, message: "Only studio owners or platform admins can remove an Owner." };
         }
 
+        // Record who worked with us before
+        await db.insert(schema.pastMember).values({
+            id: uuidv4(),
+            userId: targetMember.userId,
+            studioId: studioId,
+            name: targetMember.user?.name || "Staff Member",
+            email: targetMember.user?.email || "",
+            phoneNumber: targetMember.user?.phoneNumber || null,
+            image: targetMember.user?.image || null,
+            role: targetMember.role,
+            joinedAt: targetMember.createdAt,
+            leftAt: new Date().toISOString(),
+            removedById: session.user.id,
+            removedByName: callerUser?.name || "Admin",
+            reason: "REMOVED_FROM_STUDIO",
+            totalBookings: targetMember.bookings?.length || 0,
+        });
+
         await db.delete(schema.member).where(
             and(eq(schema.member.id, memberId), eq(schema.member.studioId, studioId))
         );
 
+        if (targetMember.studio?.slug) {
+            revalidatePath(`/studios/${targetMember.studio.slug}`);
+        }
         revalidatePath("/users");
+        revalidatePath("/studios");
         revalidatePath("/", "layout");
 
         return {
             status: "success" as const,
-            message: `Removed ${targetMember.user?.name || "member"} from the studio.`
+            message: `Removed ${targetMember.user?.name || "member"} from ${targetMember.studio?.name || "the studio"}. Work history preserved in Past Staff.`
         };
     } catch (error) {
         console.error("[UserManagement] removeUserMembership error:", error);
@@ -419,5 +497,185 @@ export async function removeUserMembership(memberId: string, studioId: string) {
             status: "error" as const,
             message: error instanceof Error ? error.message : "Failed to remove member."
         };
+    }
+}
+
+// ── Delete User Account (Owner / Platform Admin Only) ───────────────
+
+export async function deleteUserAccount(targetUserId: string) {
+    try {
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (!session?.user) {
+            return { status: "error" as const, message: "Unauthorized" };
+        }
+
+        if (session.user.id === targetUserId) {
+            return { status: "error" as const, message: "You cannot delete your own account." };
+        }
+
+        const callerUser = await db.query.user.findFirst({
+            where: eq(schema.user.id, session.user.id),
+            columns: { id: true, name: true, role: true }
+        });
+        const isPlatformAdmin = callerUser?.role === "admin";
+
+        const callerMemberships = await db.query.member.findMany({
+            where: eq(schema.member.userId, session.user.id),
+            columns: { role: true, studioId: true }
+        });
+
+        const isOwner = callerMemberships.some((m) => m.role === "owner");
+        const ownedStudioIds = callerMemberships
+            .filter((m) => m.role === "owner")
+            .map((m) => m.studioId);
+
+        if (!isPlatformAdmin && !isOwner) {
+            return {
+                status: "error" as const,
+                message: "Unauthorized: Only studio owners or platform admins can delete accounts."
+            };
+        }
+
+        const targetUser = await db.query.user.findFirst({
+            where: eq(schema.user.id, targetUserId),
+            with: {
+                members: {
+                    with: {
+                        studio: true,
+                        bookings: true,
+                    }
+                }
+            }
+        });
+
+        if (!targetUser) {
+            return { status: "error" as const, message: "User not found." };
+        }
+
+        if (targetUser.role === "admin" && !isPlatformAdmin) {
+            return {
+                status: "error" as const,
+                message: "Only platform administrators can delete another administrator account."
+            };
+        }
+
+        const targetIsOwner = targetUser.members.some((m) => m.role === "owner");
+        if (targetIsOwner && !isPlatformAdmin && !isOwner) {
+            return {
+                status: "error" as const,
+                message: "Only studio owners or platform admins can delete an Owner's account."
+            };
+        }
+
+        // If caller is an owner (not platform admin), ensure target belongs to their owned studio or is unassigned
+        if (!isPlatformAdmin) {
+            const hasForeignStudio = targetUser.members.some((m) => !ownedStudioIds.includes(m.studioId));
+            if (hasForeignStudio) {
+                return {
+                    status: "error" as const,
+                    message: "You can only delete accounts of staff in studios you own or unassigned users."
+                };
+            }
+        }
+
+        // 1. Record in past_member for all studios the user was part of
+        for (const m of targetUser.members) {
+            await db.insert(schema.pastMember).values({
+                id: uuidv4(),
+                userId: targetUser.id,
+                studioId: m.studioId,
+                name: targetUser.name,
+                email: targetUser.email,
+                phoneNumber: targetUser.phoneNumber || null,
+                image: targetUser.image || null,
+                role: m.role,
+                joinedAt: m.createdAt,
+                leftAt: new Date().toISOString(),
+                removedById: session.user.id,
+                removedByName: callerUser?.name || "Owner",
+                reason: "ACCOUNT_DELETED",
+                totalBookings: m.bookings?.length || 0,
+            });
+        }
+
+        // If user had no studio memberships (unassigned user), record an archive entry
+        if (targetUser.members.length === 0) {
+            await db.insert(schema.pastMember).values({
+                id: uuidv4(),
+                userId: targetUser.id,
+                studioId: ownedStudioIds[0] || null,
+                name: targetUser.name,
+                email: targetUser.email,
+                phoneNumber: targetUser.phoneNumber || null,
+                image: targetUser.image || null,
+                role: targetUser.role || "user",
+                joinedAt: targetUser.createdAt,
+                leftAt: new Date().toISOString(),
+                removedById: session.user.id,
+                removedByName: callerUser?.name || "Owner",
+                reason: "ACCOUNT_DELETED",
+                totalBookings: 0,
+            });
+        }
+
+        // 2. Clean up credentials, active sessions, invitations, and memberships
+        await Promise.all([
+            db.delete(schema.session).where(eq(schema.session.userId, targetUserId)),
+            db.delete(schema.account).where(eq(schema.account.userId, targetUserId)),
+            db.delete(schema.invitation).where(eq(schema.invitation.email, targetUser.email.toLowerCase())),
+            db.delete(schema.bookingBackfillAccess).where(eq(schema.bookingBackfillAccess.userId, targetUserId)),
+            db.delete(schema.member).where(eq(schema.member.userId, targetUserId)),
+            db.delete(schema.userNotification).where(eq(schema.userNotification.userId, targetUserId)),
+        ]);
+
+        // 3. Mark user row as deleted, scramble email to release unique constraint while preserving foreign key integrity
+        await db.update(schema.user)
+            .set({
+                role: "deleted",
+                email: `deleted_${Date.now()}_${targetUser.email}`,
+                phoneNumber: null,
+            })
+            .where(eq(schema.user.id, targetUserId));
+
+        for (const m of targetUser.members) {
+            if (m.studio?.slug) {
+                revalidatePath(`/studios/${m.studio.slug}`);
+            }
+        }
+        revalidatePath("/users");
+        revalidatePath("/studios");
+        revalidatePath("/", "layout");
+
+        return {
+            status: "success" as const,
+            message: `Successfully deleted account for ${targetUser.name}. A record of their work history has been preserved in Past Staff.`
+        };
+    } catch (error) {
+        console.error("[UserManagement] deleteUserAccount error:", error);
+        return {
+            status: "error" as const,
+            message: error instanceof Error ? error.message : "Failed to delete account."
+        };
+    }
+}
+
+// ── Get Studio Past Members ─────────────────────────────────────────
+
+export async function getStudioPastMembers(studioId: string) {
+    try {
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (!session?.user) {
+            return { status: "error" as const, data: [] };
+        }
+
+        const pastMembers = await db.query.pastMember.findMany({
+            where: eq(schema.pastMember.studioId, studioId),
+            orderBy: (pm, { desc }) => [desc(pm.leftAt)],
+        });
+
+        return { status: "success" as const, data: pastMembers as PastMemberRecord[] };
+    } catch (error) {
+        console.error("[UserManagement] getStudioPastMembers error:", error);
+        return { status: "error" as const, data: [] };
     }
 }

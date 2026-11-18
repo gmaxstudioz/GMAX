@@ -211,6 +211,32 @@ export const member = pgTable("member", {
 		}).onUpdate("cascade").onDelete("cascade"),
 ]);
 
+export const pastMember = pgTable("past_member", {
+	id: text().primaryKey().notNull(),
+	userId: text(),
+	studioId: text(),
+	name: text().notNull(),
+	email: text().notNull(),
+	phoneNumber: text(),
+	image: text(),
+	role: text().notNull(),
+	joinedAt: timestamp({ precision: 3, mode: 'string' }).notNull(),
+	leftAt: timestamp({ precision: 3, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+	removedById: text(),
+	removedByName: text(),
+	reason: text().default('REMOVED_FROM_STUDIO').notNull(),
+	totalBookings: integer().default(0).notNull(),
+	createdAt: timestamp({ precision: 3, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+}, (table) => [
+	index("past_member_studioId_idx").using("btree", table.studioId.asc().nullsLast().op("text_ops")),
+	index("past_member_userId_idx").using("btree", table.userId.asc().nullsLast().op("text_ops")),
+	foreignKey({
+		columns: [table.studioId],
+		foreignColumns: [studio.id],
+		name: "past_member_studioId_fkey"
+	}).onUpdate("cascade").onDelete("set null"),
+]);
+
 export const bookingBackfillAccess = pgTable("booking_backfill_access", {
 	id: text().primaryKey().notNull(),
 	studioId: text().notNull(),
