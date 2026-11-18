@@ -22,6 +22,7 @@ export interface PictureSnapshotCardProps {
   growthDetail?: string;
   comparisonLabel?: string;
   studioName?: string;
+  totalScopeLabel?: string;
   maxRows?: number;
   unavailable?: boolean;
 }
@@ -39,6 +40,7 @@ export function PictureSnapshotCard({
   growthDetail,
   comparisonLabel,
   studioName,
+  totalScopeLabel,
   unavailable = false,
 }: PictureSnapshotCardProps) {
   if (unavailable) {
@@ -155,14 +157,20 @@ export function PictureSnapshotCard({
                 All-Time Total
               </span>
               <Badge variant="secondary" className="text-xs font-normal">
-                Lifetime
+                {totalScopeLabel ?? "Lifetime"}
               </Badge>
             </div>
             <div className="text-2xl font-semibold tracking-tight tabular-nums">
               {derivedAllTimeTotal.toLocaleString()}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              {studioName ? `All-time total for ${studioName}` : "Cumulative pictures recorded"}
+              {totalScopeLabel
+                ? studioName
+                  ? `${totalScopeLabel} for ${studioName}`
+                  : totalScopeLabel
+                : studioName
+                  ? `All-time total for ${studioName}`
+                  : "Cumulative pictures recorded"}
             </p>
           </div>
 

@@ -469,20 +469,28 @@ export async function removeUserMembership(memberId: string, studioId: string) {
             if (!isPlatformAdmin && callerMembership?.role !== "owner") {
                 return { status: "error" as const, message: "Only studio owners or platform admins can remove an Owner." };
             }
-            const otherOwner = await db.query.member.findFirst({
-                where: and(
-                    eq(schema.member.studioId, studioId),
-                    eq(schema.member.role, "owner"),
-                    not(eq(schema.member.id, memberId))
-                )
-            });
-            if (!otherOwner) {
-                return { status: "error" as const, message: "Cannot remove the only owner of this studio. Please assign another owner first." };
-            }
         }
 
         // Record who worked with us before and delete membership in one transaction
         await db.transaction(async (tx) => {
+            if (targetMember.role === "owner") {
+                const ownerRows = await tx
+                    .select({ id: schema.member.id })
+                    .from(schema.member)
+                    .where(
+                        and(
+                            eq(schema.member.studioId, studioId),
+                            eq(schema.member.role, "owner")
+                        )
+                    )
+                    .for("update");
+
+                const otherOwners = ownerRows.filter((r) => r.id !== memberId);
+                if (otherOwners.length === 0) {
+                    throw new Error("Cannot remove the only owner of this studio. Please assign another owner first.");
+                }
+            }
+
             await tx.insert(schema.pastMember).values({
                 id: uuidv4(),
                 userId: targetMember.userId,
@@ -596,24 +604,6 @@ export async function deleteUserAccount(targetUserId: string) {
             };
         }
 
-        // Verify each affected studio will retain another owner
-        const ownerMemberships = targetUser.members.filter((m) => m.role === "owner");
-        for (const om of ownerMemberships) {
-            const otherOwner = await db.query.member.findFirst({
-                where: and(
-                    eq(schema.member.studioId, om.studioId),
-                    eq(schema.member.role, "owner"),
-                    not(eq(schema.member.userId, targetUserId))
-                )
-            });
-            if (!otherOwner) {
-                return {
-                    status: "error" as const,
-                    message: `Cannot delete account: user is the sole owner of ${om.studio?.name || "a studio"}. Assign another owner before deleting.`
-                };
-            }
-        }
-
         // If caller is an owner (not platform admin), ensure target belongs to their owned studio or is unassigned
         if (!isPlatformAdmin) {
             const hasForeignStudio = targetUser.members.some((m) => !ownedStudioIds.includes(m.studioId));
@@ -627,6 +617,29 @@ export async function deleteUserAccount(targetUserId: string) {
 
         // Execute archive inserts, credential/session cleanup, and user update within one transaction
         await db.transaction(async (tx) => {
+            // Verify each affected studio will retain another owner under row lock
+            const ownerMemberships = targetUser.members.filter((m) => m.role === "owner");
+            const sortedOwnerMemberships = [...ownerMemberships].sort((a, b) => a.studioId.localeCompare(b.studioId));
+            for (const om of sortedOwnerMemberships) {
+                const ownerRows = await tx
+                    .select({ id: schema.member.id, userId: schema.member.userId })
+                    .from(schema.member)
+                    .where(
+                        and(
+                            eq(schema.member.studioId, om.studioId),
+                            eq(schema.member.role, "owner")
+                        )
+                    )
+                    .for("update");
+
+                const otherOwners = ownerRows.filter((r) => r.userId !== targetUserId);
+                if (otherOwners.length === 0) {
+                    throw new Error(
+                        `Cannot delete account: user is the sole owner of ${om.studio?.name || "a studio"}. Assign another owner before deleting.`
+                    );
+                }
+            }
+
             // 1. Record in past_member for all studios the user was part of
             for (const m of targetUser.members) {
                 await tx.insert(schema.pastMember).values({

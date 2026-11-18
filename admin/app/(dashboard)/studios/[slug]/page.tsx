@@ -67,6 +67,12 @@ export default async function StudioDetails({ params }: StudioDetailsProps) {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) redirect("/auth/login");
 
+    const callerUser = await db.query.user.findFirst({
+        where: eq(schema.user.id, session.user.id),
+        columns: { role: true },
+    });
+    const isPlatformAdmin = callerUser?.role === "admin";
+
     const myMembership = studioData.members.find((m: any) => m.userId === session.user.id);
     if (!myMembership) {
         redirect("/");
@@ -78,7 +84,6 @@ export default async function StudioDetails({ params }: StudioDetailsProps) {
     const canViewPastMembers = managementRoles.includes(userRole);
 
     // Strip pastMembers entirely for non-management callers, and redact phoneNumber for non-platform-admin callers
-    const isPlatformAdmin = userRole === "admin";
     const filteredPastMembers = canViewPastMembers
         ? (studioData.pastMembers as any[]).map((pm: any) =>
               isPlatformAdmin ? pm : { ...pm, phoneNumber: null }

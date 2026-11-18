@@ -334,8 +334,10 @@ export function BookingBackfillClient({
                 return;
             }
             toast.success(result.message);
-            if (mode === "manual") setManualEntries([emptyEntry()]);
-            else {
+            if (mode === "manual") {
+                setManualEntries([emptyEntry()]);
+                setManualDateOverrides(new Set());
+            } else {
                 setCsvText("");
                 setCsvEntries([]);
                 setCsvErrors([]);
@@ -387,6 +389,7 @@ export function BookingBackfillClient({
                             setCsvEntries([]);
                             setCsvErrors([]);
                             setManualEntries([emptyEntry()]);
+                            setManualDateOverrides(new Set());
                         }}
                         className="h-10 rounded-md border bg-background px-3 text-sm"
                     >
@@ -491,7 +494,7 @@ export function BookingBackfillClient({
                                 </label>
                                 {manualEntries.length > 1 && (
                                     <div className="sm:col-span-2 lg:col-span-3">
-                                        <Button type="button" variant="ghost" size="sm" onClick={() => setManualEntries((current) => current.filter((_, row) => row !== index))}>
+                                        <Button type="button" variant="ghost" size="sm" onClick={() => removeManualEntry(index)}>
                                             <Trash2 className="mr-2 size-4" />Remove row
                                         </Button>
                                     </div>

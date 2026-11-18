@@ -353,6 +353,7 @@ export default async function Page({ searchParams }: PageProps) {
           growthDetail={picturesGrowth === null ? "No prior-day pictures" : `${picturesGrowth >= 0 ? "+" : ""}${picturesGrowth.toFixed(1)}% vs ${comparisonLabel}`}
           comparisonLabel={comparisonLabel}
           studioName={studioDisplayName}
+          totalScopeLabel={isTodaySelected ? undefined : `Total through ${format(targetDate, "MMM d, yyyy")}`}
         />
       </div>
 
