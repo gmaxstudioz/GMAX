@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { TrendingUpIcon, TrendingDownIcon, MinusIcon, WalletIcon, CalendarIcon, UsersIcon, CheckCircleIcon } from "lucide-react"
+import { TrendingUpIcon, TrendingDownIcon, MinusIcon, WalletIcon, CalendarIcon, UsersIcon, CheckCircleIcon, CameraIcon } from "lucide-react"
 
 export interface DashboardMetrics {
   totalRevenue: number;
@@ -20,6 +20,9 @@ export interface DashboardMetrics {
   clientsGrowth: number;
   completionRate: number;
   completionRateGrowth: number;
+  todayPictures?: number;
+  totalPictures?: number;
+  picturesGrowth?: number;
 }
 
 export function SectionCards({
@@ -70,7 +73,7 @@ export function SectionCards({
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4 dark:*:data-[slot=card]:bg-card">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs lg:px-6 dark:*:data-[slot=card]:bg-card">
       {/* Daily Revenue */}
       <Card className="@container/card">
         <CardHeader>
@@ -163,6 +166,29 @@ export function SectionCards({
           )}
           <div className="text-muted-foreground">
             Percent of completed bookings for {isToday ? "today" : "this day"}
+          </div>
+        </CardFooter>
+      </Card>
+
+      {/* Pictures Snapped */}
+      <Card className="@container/card">
+        <CardHeader>
+          <CardDescription className="flex items-center gap-2">
+            <CameraIcon className="size-4 text-muted-foreground"/> {isToday ? "Pictures Today" : "Daily Pictures"}
+          </CardDescription>
+          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl text-primary">
+            {(metrics.todayPictures ?? 0).toLocaleString()}
+          </CardTitle>
+          <CardAction>
+            {renderGrowthBadge(metrics.picturesGrowth ?? 0)}
+          </CardAction>
+        </CardHeader>
+        <CardFooter className="flex-col items-start gap-1.5 text-sm">
+          <div className="line-clamp-1 flex items-center gap-1.5 font-medium text-foreground">
+            <span>Total till date: <strong>{(metrics.totalPictures ?? 0).toLocaleString()}</strong></span>
+          </div>
+          <div className="text-muted-foreground">
+            Cumulative pictures snapped till date
           </div>
         </CardFooter>
       </Card>

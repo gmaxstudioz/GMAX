@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { booking, userNotification, user, client, member, pastMember, service, serviceVariant, studio, account, organizationRole, invitation, studioSession, course, courseModule, enrollment, bookingIntent, payment, photo, notification, serviceDeliverable, buyer, productAccess, product, revisionRequest, academyCourse, academyBatch, academyModule, academyStudent, productCategory, session, buyerAccessToken, bookingAddons } from "./schema";
+import { booking, userNotification, user, client, member, pastMember, service, serviceVariant, studio, account, organizationRole, invitation, studioSession, course, courseModule, enrollment, bookingIntent, payment, photo, notification, serviceDeliverable, buyer, productAccess, product, revisionRequest, academyCourse, academyBatch, academyModule, academyStudent, productCategory, session, buyerAccessToken, bookingAddons, dailyPictureSnapshot } from "./schema";
 
 export const userNotificationRelations = relations(userNotification, ({one}) => ({
 	booking: one(booking, {
@@ -333,5 +333,12 @@ export const bookingAddonsRelations = relations(bookingAddons, ({one}) => ({
 	service: one(service, {
 		fields: [bookingAddons.b],
 		references: [service.id]
+	}),
+}));
+
+export const dailyPictureSnapshotRelations = relations(dailyPictureSnapshot, ({one}) => ({
+	studio: one(studio, {
+		fields: [dailyPictureSnapshot.studioId],
+		references: [studio.id]
 	}),
 }));

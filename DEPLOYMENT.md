@@ -43,5 +43,13 @@ export DIRECT_URL="your-production-direct-url"
 npx prisma migrate deploy
 ```
 
+The daily picture snapshot table and its booking sync trigger are managed by the
+Drizzle migration in `api/drizzle`. Apply it from the API project with its
+`DATABASE_URL` configured:
+```bash
+cd api
+npx drizzle-kit migrate
+```
+
 ## CORS Considerations
 The API uses `@orpc/server/plugins` `CORSPlugin()`. By default, this plugin is configured to allow all origins. If you wish to restrict it in production, modify `api/app/api/[[...rest]]/route.ts` to only allow your Admin and Public domains.

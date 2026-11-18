@@ -43,6 +43,8 @@ import { FinanceTabs } from "./_components/FinanceTabs";
 import { ChartAreaInteractive, type ChartDataPoint } from "@/components/web/chart-area-interactive";
 import { FinanceDateRangePicker, type DateRangePreset } from "./_components/FinanceDateRangePicker";
 import { OverviewStudioSelector } from "@/components/web/overview-studio-selector";
+import { PictureSnapshotTable } from "@/components/web/PictureSnapshotTable";
+import { getPictureSnapshots } from "@/lib/actions/picture-snapshots";
 
 export const metadata: Metadata = {
     title: "Finances",
@@ -297,7 +299,7 @@ export default async function FinancesPage({ searchParams }: PageProps) {
     }
 
     // === FETCH FINANCIAL DATA ===
-    const [bookings, cashouts, academyStudents] = await Promise.all([
+    const [bookings, cashouts, academyStudents, pictureSnapshots] = await Promise.all([
         db.query.booking.findMany({
             where: inArray(schema.booking.studioId, studioIds),
             with: {
@@ -335,6 +337,7 @@ export default async function FinancesPage({ searchParams }: PageProps) {
                   columns: { amountPaid: true, updatedAt: true },
               })
             : Promise.resolve([]),
+        getPictureSnapshots(studioIds, { limit: 30 }),
     ]);
 
     // Format expenses
@@ -683,6 +686,14 @@ export default async function FinancesPage({ searchParams }: PageProps) {
                             title={`Revenue Trend · ${rangeLabel}`}
                             description={`Daily revenue breakdown for ${rangeLabel}`}
                             totalAmount={rangeRevenue}
+                        />
+
+                        <PictureSnapshotTable
+                            snapshots={pictureSnapshots}
+                            title={`Pictures Snapped · ${studioDisplayName}`}
+                            description={`Daily pictures snapped and cumulative total across ${studioDisplayName}.`}
+                            allTimeTotal={pictureSnapshots[0]?.cumulativePictures ?? 0}
+                            maxRows={30}
                         />
 
                         {/* Revenue by source */}

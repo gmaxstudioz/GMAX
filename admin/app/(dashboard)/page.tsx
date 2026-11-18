@@ -11,6 +11,8 @@ import { eq, inArray, and, not, desc, gte, lte } from "drizzle-orm"
 import { redirect } from "next/navigation";
 import { format, parseISO, startOfDay, endOfDay, subDays, isValid, isToday } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { PictureSnapshotTable } from "@/components/web/PictureSnapshotTable";
+import { getPictureSnapshots } from "@/lib/actions/picture-snapshots";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -191,8 +193,8 @@ export default async function Page({ searchParams }: PageProps) {
   const prevDayStartDate = startOfDay(prevDate);
   const targetDayEndDate = endOfDay(targetDate);
 
-  // Fetch bookings constrained to target and previous day, parallelized with recent bookings
-  const [allRelevantBookings, rawRecentBookings] = await Promise.all([
+  // Fetch bookings constrained to target and previous day, parallelized with recent bookings and picture snapshots
+  const [allRelevantBookings, rawRecentBookings, pictureSnapshots] = await Promise.all([
     db.query.booking.findMany({
       where: and(
         inArray(schema.booking.studioId, studioIds),
@@ -206,6 +208,7 @@ export default async function Page({ searchParams }: PageProps) {
         totalAmount: true,
         bookingStatus: true,
         clientId: true,
+        extraPicturesCount: true,
       },
     }),
     db.query.booking.findMany({
@@ -214,6 +217,7 @@ export default async function Page({ searchParams }: PageProps) {
       limit: 10,
       with: { client: true, service: true }
     }),
+    getPictureSnapshots(studioIds, { limit: 15 }),
   ]);
 
   // Filter bookings for target day and previous day
@@ -256,6 +260,13 @@ export default async function Page({ searchParams }: PageProps) {
   const completionRatePrev = totalBookingsPrev === 0 ? 0 : (completedPrev / totalBookingsPrev) * 100;
   const completionRateGrowth = completionRateTarget - completionRatePrev;
 
+  // Pictures snapped calculation
+  const picturesTarget = targetDayBookings.reduce((sum, b) => sum + (b.extraPicturesCount || 0), 0);
+  const picturesPrev = prevDayBookings.reduce((sum, b) => sum + (b.extraPicturesCount || 0), 0);
+  const picturesGrowth = picturesPrev === 0
+    ? (picturesTarget > 0 ? 100 : 0)
+    : ((picturesTarget - picturesPrev) / picturesPrev) * 100;
+
   const metrics = {
     totalRevenue: totalRevenueTarget,
     revenueGrowth,
@@ -264,7 +275,10 @@ export default async function Page({ searchParams }: PageProps) {
     activeClients: activeClientsTarget,
     clientsGrowth,
     completionRate: completionRateTarget,
-    completionRateGrowth
+    completionRateGrowth,
+    todayPictures: picturesTarget,
+    totalPictures: pictureSnapshots[0]?.cumulativePictures ?? 0,
+    picturesGrowth,
   };
 
   const tableData = rawRecentBookings.map((b) => {
@@ -326,6 +340,16 @@ export default async function Page({ searchParams }: PageProps) {
       />
 
       <DataTable data={tableData} />
+
+      <div className="px-4 lg:px-6">
+        <PictureSnapshotTable
+          snapshots={pictureSnapshots}
+          title={`Pictures Snapped · ${studioDisplayName}`}
+          description={`Daily breakdown of pictures snapped and cumulative running total to date across ${studioDisplayName}.`}
+          allTimeTotal={pictureSnapshots[0]?.cumulativePictures ?? 0}
+          maxRows={15}
+        />
+      </div>
     </div>
   )
 }

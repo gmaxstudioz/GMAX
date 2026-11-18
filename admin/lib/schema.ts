@@ -860,3 +860,22 @@ export const bookingAddons = pgTable("_BookingAddons", {
 		}).onUpdate("cascade").onDelete("cascade"),
 	primaryKey({ columns: [table.a, table.b], name: "_BookingAddons_AB_pkey"}),
 ]);
+
+export const dailyPictureSnapshot = pgTable("daily_picture_snapshot", {
+	id: text().primaryKey().notNull(),
+	studioId: text().notNull(),
+	date: text().notNull(),
+	picturesOnDay: integer().default(0).notNull(),
+	cumulativePictures: integer().default(0).notNull(),
+	bookingCount: integer().default(0).notNull(),
+	updatedAt: timestamp({ precision: 3, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+}, (table) => [
+	uniqueIndex("daily_picture_snapshot_studioId_date_key").using("btree", table.studioId.asc().nullsLast().op("text_ops"), table.date.asc().nullsLast().op("text_ops")),
+	index("daily_picture_snapshot_studioId_idx").using("btree", table.studioId.asc().nullsLast().op("text_ops")),
+	index("daily_picture_snapshot_date_idx").using("btree", table.date.asc().nullsLast().op("text_ops")),
+	foreignKey({
+			columns: [table.studioId],
+			foreignColumns: [studio.id],
+			name: "daily_picture_snapshot_studioId_fkey"
+		}).onUpdate("cascade").onDelete("cascade"),
+]);
