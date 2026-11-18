@@ -11,6 +11,21 @@ type Studio = { id: string; name: string };
 type Service = { id: string; name: string; studioId: string; isActive: boolean };
 type Member = { studioId: string; userId: string; role: string; name: string; email: string };
 type Grant = { studioId: string; userId: string; expiresAt: string; name: string; email: string };
+const OCCASION_OPTIONS = [
+    { label: "Birthday", icon: "🎂" },
+    { label: "Wedding", icon: "💍" },
+    { label: "Engagement", icon: "💑" },
+    { label: "Maternity", icon: "🤰" },
+    { label: "Newborn", icon: "👶" },
+    { label: "Family", icon: "👨‍👩‍👧‍👦" },
+    { label: "Corporate / Business", icon: "💼" },
+    { label: "Graduation", icon: "🎓" },
+    { label: "Portrait", icon: "🖼️" },
+    { label: "Event", icon: "🎉" },
+    { label: "Product", icon: "📦" },
+    { label: "Other", icon: "✨" },
+] as const;
+
 type BookingEntry = {
     bookingDate: string;
     clientName: string;
@@ -20,15 +35,17 @@ type BookingEntry = {
     totalAmount: string;
     bookingStatus: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
     paymentStatus: "PENDING" | "CANCELLED" | "PAID" | "PARTIALLY_PAID";
+    purpose: string;
+    extraPicturesCount: number;
     notes: string;
 };
 
 const csvHeaders = ["bookingDate", "clientName", "clientPhone", "clientEmail", "serviceName", "totalAmount", "bookingStatus", "paymentStatus", "notes"];
 const clientEmailSchema = z.union([z.literal(""), z.string().trim().email().max(254)]);
 
-function emptyEntry(): BookingEntry {
+function emptyEntry(inheritDate?: string): BookingEntry {
     return {
-        bookingDate: "",
+        bookingDate: inheritDate ?? "",
         clientName: "",
         clientPhone: "",
         clientEmail: "",
@@ -36,6 +53,8 @@ function emptyEntry(): BookingEntry {
         totalAmount: "",
         bookingStatus: "COMPLETED",
         paymentStatus: "PENDING",
+        purpose: "",
+        extraPicturesCount: 0,
         notes: "",
     };
 }
@@ -170,9 +189,18 @@ export function BookingBackfillClient({
         );
 
     function updateManualEntry(index: number, patch: Partial<BookingEntry>) {
-        setManualEntries((current) => current.map((entry, entryIndex) =>
-            entryIndex === index ? { ...entry, ...patch } : entry,
-        ));
+        setManualEntries((current) => {
+            const updated = current.map((entry, entryIndex) =>
+                entryIndex === index ? { ...entry, ...patch } : entry,
+            );
+            // When the first entry's date changes, propagate to all other entries
+            if (index === 0 && "bookingDate" in patch && patch.bookingDate !== undefined) {
+                return updated.map((entry, entryIndex) =>
+                    entryIndex === 0 ? entry : { ...entry, bookingDate: patch.bookingDate as string },
+                );
+            }
+            return updated;
+        });
     }
 
     function prepareCsv() {
@@ -242,6 +270,8 @@ export function BookingBackfillClient({
                         totalAmount,
                         bookingStatus: bookingStatus as BookingEntry["bookingStatus"],
                         paymentStatus: paymentStatus as BookingEntry["paymentStatus"],
+                        purpose: "",
+                        extraPicturesCount: 0,
                         notes,
                     });
                 }
@@ -256,10 +286,18 @@ export function BookingBackfillClient({
     }
 
     function submitBookings() {
-        const serializedEntries = entriesToSubmit.map((entry) => ({
-            ...entry,
-            bookingDate: new Date(entry.bookingDate).toISOString(),
-        }));
+        const serializedEntries = entriesToSubmit.map((entry) => {
+            const finalNotes = [
+                entry.purpose ? `Purpose: ${entry.purpose}` : "",
+                entry.notes?.trim() ? entry.notes.trim() : "",
+            ].filter(Boolean).join("\n\n");
+            return {
+                ...entry,
+                bookingDate: new Date(entry.bookingDate).toISOString(),
+                notes: finalNotes || undefined,
+                extraPicturesCount: entry.extraPicturesCount,
+            };
+        });
         startTransition(async () => {
             const result = await createHistoricalBookings({ studioId, entries: serializedEntries });
             if (result.status === "error") {
@@ -341,8 +379,31 @@ export function BookingBackfillClient({
                         {manualEntries.map((entry, index) => (
                             <fieldset key={index} className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-3">
                                 <legend className="px-1 text-sm font-medium">Booking {index + 1}</legend>
-                                <label className="grid gap-1 text-sm">Booking date and time
-                                    <input type="datetime-local" value={entry.bookingDate} onChange={(event) => updateManualEntry(index, { bookingDate: event.target.value })} className="h-10 rounded-md border bg-background px-3" />
+                                <label className="grid gap-1 text-sm">
+                                    {index === 0 ? "Booking date and time" : (
+                                        <span className="flex items-center gap-1">
+                                            Booking date and time
+                                            <span className="text-[10px] text-muted-foreground font-normal">(shared with all)</span>
+                                        </span>
+                                    )}
+                                    <input
+                                        type="datetime-local"
+                                        value={entry.bookingDate}
+                                        onChange={(event) => updateManualEntry(index, { bookingDate: event.target.value })}
+                                        readOnly={index > 0}
+                                        className={`h-10 rounded-md border bg-background px-3${index > 0 ? " opacity-60 cursor-not-allowed" : ""}`}
+                                    />
+                                </label>
+                                <label className="grid gap-1 text-sm">Purpose (occasion)
+                                    <select value={entry.purpose} onChange={(event) => updateManualEntry(index, { purpose: event.target.value })} className="h-10 rounded-md border bg-background px-3">
+                                        <option value="">Select occasion (optional)</option>
+                                        {OCCASION_OPTIONS.map((o) => (
+                                            <option key={o.label} value={o.label}>{o.icon} {o.label}</option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <label className="grid gap-1 text-sm">No. of pictures
+                                    <input type="number" min="0" step="1" value={entry.extraPicturesCount} onChange={(event) => updateManualEntry(index, { extraPicturesCount: Math.max(0, parseInt(event.target.value, 10) || 0) })} className="h-10 rounded-md border bg-background px-3" />
                                 </label>
                                 <label className="grid gap-1 text-sm">Client name
                                     <input value={entry.clientName} maxLength={120} onChange={(event) => updateManualEntry(index, { clientName: event.target.value })} className="h-10 rounded-md border bg-background px-3" />
@@ -385,7 +446,7 @@ export function BookingBackfillClient({
                             </fieldset>
                         ))}
                         <div className="flex flex-wrap gap-2">
-                            <Button type="button" variant="outline" onClick={() => setManualEntries((current) => [...current, emptyEntry()])} disabled={manualEntries.length >= 100}>
+                            <Button type="button" variant="outline" onClick={() => setManualEntries((current) => [...current, emptyEntry(current[0]?.bookingDate)])} disabled={manualEntries.length >= 100}>
                                 <Plus className="mr-2 size-4" />Add another booking
                             </Button>
                             <Button type="button" onClick={submitBookings} disabled={!entriesReady || isPending}>
