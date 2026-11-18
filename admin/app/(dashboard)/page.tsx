@@ -11,7 +11,7 @@ import { eq, inArray, and, not, desc, gte, lte } from "drizzle-orm"
 import { redirect } from "next/navigation";
 import { format, parseISO, startOfDay, endOfDay, subDays, isValid, isToday } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { PictureSnapshotTable } from "@/components/web/PictureSnapshotTable";
+import { PictureSnapshotCard } from "@/components/web/PictureSnapshotTable";
 import { getPictureSnapshots } from "@/lib/actions/picture-snapshots";
 
 export const metadata: Metadata = {
@@ -217,7 +217,7 @@ export default async function Page({ searchParams }: PageProps) {
       limit: 10,
       with: { client: true, service: true }
     }),
-    getPictureSnapshots(studioIds, { limit: 15 }),
+    getPictureSnapshots(studioIds, { limit: 15, endDate: targetDateStr }),
   ]);
 
   // Filter bookings for target day and previous day
@@ -264,7 +264,7 @@ export default async function Page({ searchParams }: PageProps) {
   const picturesTarget = targetDayBookings.reduce((sum, b) => sum + (b.extraPicturesCount || 0), 0);
   const picturesPrev = prevDayBookings.reduce((sum, b) => sum + (b.extraPicturesCount || 0), 0);
   const picturesGrowth = picturesPrev === 0
-    ? (picturesTarget > 0 ? 100 : 0)
+    ? (picturesTarget > 0 ? null : 0)
     : ((picturesTarget - picturesPrev) / picturesPrev) * 100;
 
   const metrics = {
@@ -339,17 +339,24 @@ export default async function Page({ searchParams }: PageProps) {
         comparisonLabel={comparisonLabel} 
       />
 
-      <DataTable data={tableData} />
-
       <div className="px-4 lg:px-6">
-        <PictureSnapshotTable
+        <PictureSnapshotCard
           snapshots={pictureSnapshots}
           title={`Pictures Snapped · ${studioDisplayName}`}
-          description={`Daily breakdown of pictures snapped and cumulative running total to date across ${studioDisplayName}.`}
-          allTimeTotal={pictureSnapshots[0]?.cumulativePictures ?? 0}
-          maxRows={15}
+          description={`Picture deliverables and activity for ${isTodaySelected ? "today" : format(targetDate, "MMM d, yyyy")} across ${studioDisplayName}.`}
+          periodLabel={isTodaySelected ? "Today" : format(targetDate, "MMM d")}
+          periodPictures={picturesTarget}
+          allTimeTotal={metrics.totalPictures}
+          bookingCount={targetDayBookings.length}
+          averagePictures={targetDayBookings.length > 0 ? Math.round(picturesTarget / targetDayBookings.length) : 0}
+          growth={picturesGrowth}
+          growthDetail={picturesGrowth === null ? "No prior-day pictures" : `${picturesGrowth >= 0 ? "+" : ""}${picturesGrowth.toFixed(1)}% vs ${comparisonLabel}`}
+          comparisonLabel={comparisonLabel}
+          studioName={studioDisplayName}
         />
       </div>
+
+      <DataTable data={tableData} />
     </div>
   )
 }

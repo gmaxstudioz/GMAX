@@ -33,10 +33,13 @@ CREATE INDEX IF NOT EXISTS "daily_picture_snapshot_date_idx"
     ON "daily_picture_snapshot" ("date");
 --> statement-breakpoint
 
+LOCK TABLE "booking" IN SHARE ROW EXCLUSIVE MODE;
+--> statement-breakpoint
+
 WITH daily_counts AS (
     SELECT
         booking."studioId",
-        booking."bookingDate"::date::text AS "date",
+        TO_CHAR(booking."bookingDate"::date, 'YYYY-MM-DD') AS "date",
         SUM(GREATEST(COALESCE(booking."extraPicturesCount", 0), 0))::integer AS "picturesOnDay",
         COUNT(*)::integer AS "bookingCount"
     FROM "booking" AS booking
@@ -96,7 +99,7 @@ BEGIN
     PERFORM 1
     FROM "studio"
     WHERE "id" = target_studio_id
-    FOR UPDATE;
+    FOR NO KEY UPDATE;
 
     IF NOT FOUND THEN
         RETURN;
@@ -114,7 +117,7 @@ BEGIN
     IF booking_count = 0 THEN
         DELETE FROM "daily_picture_snapshot"
         WHERE "studioId" = target_studio_id
-          AND "date" = target_date::text;
+          AND "date" = TO_CHAR(target_date, 'YYYY-MM-DD');
     ELSE
         INSERT INTO "daily_picture_snapshot" (
             "id",
@@ -126,9 +129,9 @@ BEGIN
             "updatedAt"
         )
         VALUES (
-            target_studio_id || ':' || target_date::text,
+            target_studio_id || ':' || TO_CHAR(target_date, 'YYYY-MM-DD'),
             target_studio_id,
-            target_date::text,
+            TO_CHAR(target_date, 'YYYY-MM-DD'),
             pictures_count,
             0,
             booking_count,
@@ -144,7 +147,7 @@ BEGIN
     INTO previous_total
     FROM "daily_picture_snapshot"
     WHERE "studioId" = target_studio_id
-      AND "date" < target_date::text
+      AND "date" < TO_CHAR(target_date, 'YYYY-MM-DD')
     ORDER BY "date" DESC
     LIMIT 1;
 
@@ -157,7 +160,7 @@ BEGIN
             ) AS "cumulativePictures"
         FROM "daily_picture_snapshot" AS snapshot
         WHERE snapshot."studioId" = target_studio_id
-          AND snapshot."date" >= target_date::text
+          AND snapshot."date" >= TO_CHAR(target_date, 'YYYY-MM-DD')
     )
     UPDATE "daily_picture_snapshot" AS snapshot
     SET
@@ -182,10 +185,22 @@ BEGIN
         RETURN OLD;
     END IF;
 
-    PERFORM refresh_daily_picture_snapshot(OLD."studioId", OLD."bookingDate"::date);
-    IF OLD."studioId" IS DISTINCT FROM NEW."studioId"
-       OR OLD."bookingDate"::date IS DISTINCT FROM NEW."bookingDate"::date THEN
+    -- For moves between studios, acquire locks in a consistent order to prevent deadlocks
+    IF OLD."studioId" IS DISTINCT FROM NEW."studioId" THEN
+        IF OLD."studioId" < NEW."studioId" THEN
+            PERFORM 1 FROM "studio" WHERE "id" = OLD."studioId" FOR NO KEY UPDATE;
+            PERFORM 1 FROM "studio" WHERE "id" = NEW."studioId" FOR NO KEY UPDATE;
+        ELSE
+            PERFORM 1 FROM "studio" WHERE "id" = NEW."studioId" FOR NO KEY UPDATE;
+            PERFORM 1 FROM "studio" WHERE "id" = OLD."studioId" FOR NO KEY UPDATE;
+        END IF;
+        PERFORM refresh_daily_picture_snapshot(OLD."studioId", OLD."bookingDate"::date);
         PERFORM refresh_daily_picture_snapshot(NEW."studioId", NEW."bookingDate"::date);
+    ELSE
+        PERFORM refresh_daily_picture_snapshot(OLD."studioId", OLD."bookingDate"::date);
+        IF OLD."bookingDate"::date IS DISTINCT FROM NEW."bookingDate"::date THEN
+            PERFORM refresh_daily_picture_snapshot(NEW."studioId", NEW."bookingDate"::date);
+        END IF;
     END IF;
     RETURN NEW;
 END;

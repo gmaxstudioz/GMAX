@@ -597,7 +597,14 @@ function Staffs({
     const [ memberToRemove, setMemberToRemove ] = useState<{ id: string; userId: string; name: string } | null>(null);
     const [ alsoDeleteAccount, setAlsoDeleteAccount ] = useState(false);
 
-    const canDeleteAccounts = ["owner", "admin", "developer"].includes(userRole || "");
+    const canManageMembers = ["owner", "admin", "manager", "developer"].includes(userRole || "");
+    const canDeleteAccounts = ["owner", "admin"].includes(userRole || "");
+
+    const canRemoveMember = (m: StaffMemberItem) =>
+        canManageMembers && (m.role !== "owner" || ["owner", "admin"].includes(userRole || "")) && m.userId !== currentUserId;
+
+    const canDeleteMember = (m: { userId?: string }) =>
+        canDeleteAccounts && Boolean(m.userId) && m.userId !== currentUserId;
 
     const form = useForm<InviteMemberInput>({
         resolver: zodResolver(InviteMemberSchema),
@@ -622,19 +629,21 @@ function Staffs({
     }
 
     function handleConfirmRemove() {
-        if (!memberToRemove) return;
+        if (!memberToRemove || isPending) return;
+        const target = memberToRemove;
+        const deleteAccount = alsoDeleteAccount;
         startTransition(async () => {
             let result;
-            if (alsoDeleteAccount && memberToRemove.userId) {
-                result = await deleteUserAccount(memberToRemove.userId);
+            if (deleteAccount && target.userId) {
+                result = await deleteUserAccount(target.userId);
             } else {
-                result = await removeUserMembership(memberToRemove.id, studioData.id);
+                result = await removeUserMembership(target.id, studioData.id);
             }
 
             if (result.status === "success") {
                 toast.success(result.message);
+                setMemberToRemove((current) => current?.id === target.id ? null : current);
                 setRemoveDialogOpen(false);
-                setMemberToRemove(null);
                 setAlsoDeleteAccount(false);
                 router.refresh();
             } else {
@@ -650,9 +659,10 @@ function Staffs({
     const pastStaff: PastStaffItem[] = (studioData.pastMembers || []) as PastStaffItem[];
 
     const totalStaff = staffTab === "ACTIVE" ? activeStaff.length : pastStaff.length;
-    const totalPages = Math.ceil(totalStaff / ITEMS_PER_PAGE);
-    const paginatedActiveStaff = activeStaff.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
-    const paginatedPastStaff = pastStaff.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+    const totalPages = Math.max(1, Math.ceil(totalStaff / ITEMS_PER_PAGE));
+    const effectivePage = Math.min(Math.max(1, page), totalPages);
+    const paginatedActiveStaff = activeStaff.slice((effectivePage - 1) * ITEMS_PER_PAGE, effectivePage * ITEMS_PER_PAGE);
+    const paginatedPastStaff = pastStaff.slice((effectivePage - 1) * ITEMS_PER_PAGE, effectivePage * ITEMS_PER_PAGE);
 
     return (
          <Card>
@@ -823,21 +833,23 @@ function Staffs({
                                                                             Edit & View Tasks
                                                                         </Link>
                                                                     </DropdownMenuItem>
-                                                                    <DropdownMenuItem
-                                                                        onClick={() => {
-                                                                            setMemberToRemove({
-                                                                                id: member.id,
-                                                                                userId: member.userId,
-                                                                                name: member.user?.name || "Staff Member",
-                                                                            });
-                                                                            setAlsoDeleteAccount(false);
-                                                                            setRemoveDialogOpen(true);
-                                                                        }}
-                                                                        className="text-destructive focus:text-destructive cursor-pointer"
-                                                                    >
-                                                                        Remove from Studio
-                                                                    </DropdownMenuItem>
-                                                                    {canDeleteAccounts && member.userId !== currentUserId && (
+                                                                    {canRemoveMember(member) && (
+                                                                        <DropdownMenuItem
+                                                                            onClick={() => {
+                                                                                setMemberToRemove({
+                                                                                    id: member.id,
+                                                                                    userId: member.userId,
+                                                                                    name: member.user?.name || "Staff Member",
+                                                                                });
+                                                                                setAlsoDeleteAccount(false);
+                                                                                setRemoveDialogOpen(true);
+                                                                            }}
+                                                                            className="text-destructive focus:text-destructive cursor-pointer"
+                                                                        >
+                                                                            Remove from Studio
+                                                                        </DropdownMenuItem>
+                                                                    )}
+                                                                    {canDeleteMember(member) && (
                                                                         <DropdownMenuItem
                                                                             onClick={() => {
                                                                                 setMemberToRemove({
@@ -869,21 +881,23 @@ function Staffs({
                                                         View Details
                                                     </Link>
                                                 </ContextMenuItem>
-                                                <ContextMenuItem
-                                                    onClick={() => {
-                                                        setMemberToRemove({
-                                                            id: member.id,
-                                                            userId: member.userId,
-                                                            name: member.user?.name || "Staff Member",
-                                                        });
-                                                        setAlsoDeleteAccount(false);
-                                                        setRemoveDialogOpen(true);
-                                                    }}
-                                                    className="text-destructive focus:text-destructive cursor-pointer"
-                                                >
-                                                    Remove from Studio
-                                                </ContextMenuItem>
-                                                {canDeleteAccounts && member.userId !== currentUserId && (
+                                                {canRemoveMember(member) && (
+                                                    <ContextMenuItem
+                                                        onClick={() => {
+                                                            setMemberToRemove({
+                                                                id: member.id,
+                                                                userId: member.userId,
+                                                                name: member.user?.name || "Staff Member",
+                                                            });
+                                                            setAlsoDeleteAccount(false);
+                                                            setRemoveDialogOpen(true);
+                                                        }}
+                                                        className="text-destructive focus:text-destructive cursor-pointer"
+                                                    >
+                                                        Remove from Studio
+                                                    </ContextMenuItem>
+                                                )}
+                                                {canDeleteMember(member) && (
                                                     <ContextMenuItem
                                                         onClick={() => {
                                                             setMemberToRemove({
@@ -984,7 +998,7 @@ function Staffs({
                                 <HistoryIcon className="size-8 text-muted-foreground/50 mb-2" />
                                 <p className="text-sm font-medium">No previous staff records</p>
                                 <p className="text-xs text-muted-foreground mt-1">
-                                    When staff members are removed or leave this studio, their employment history is preserved here.
+                                    When staff members are removed through the studio archive flow, their employment history is preserved here.
                                 </p>
                             </div>
                         )
@@ -994,17 +1008,17 @@ function Staffs({
                         <Pagination className="mt-4">
                             <PaginationContent>
                                 <PaginationItem>
-                                    <PaginationPrevious onClick={() => setPage(p => Math.max(1, p - 1))} className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} />
+                                    <PaginationPrevious onClick={() => setPage(p => Math.max(1, p - 1))} className={effectivePage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} />
                                 </PaginationItem>
                                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
                                     <PaginationItem key={p}>
-                                        <PaginationLink isActive={p === page} onClick={() => setPage(p)} className="cursor-pointer">
+                                        <PaginationLink isActive={p === effectivePage} onClick={() => setPage(p)} className="cursor-pointer">
                                             {p}
                                         </PaginationLink>
                                     </PaginationItem>
                                 ))}
                                 <PaginationItem>
-                                    <PaginationNext onClick={() => setPage(p => Math.min(totalPages, p + 1))} className={page === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"} />
+                                    <PaginationNext onClick={() => setPage(p => Math.min(totalPages, p + 1))} className={effectivePage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"} />
                                 </PaginationItem>
                             </PaginationContent>
                         </Pagination>
@@ -1014,8 +1028,10 @@ function Staffs({
 
             {/* Remove Staff Member Confirmation Dialog */}
             <Dialog open={removeDialogOpen} onOpenChange={(open) => {
+                if (isPending) return;
                 setRemoveDialogOpen(open);
                 if (!open) {
+                    setMemberToRemove(null);
                     setAlsoDeleteAccount(false);
                 }
             }}>
@@ -1047,7 +1063,7 @@ function Staffs({
                         </DialogDescription>
                     </DialogHeader>
 
-                    {canDeleteAccounts && memberToRemove && memberToRemove.userId !== currentUserId && (
+                    {memberToRemove && canDeleteMember(memberToRemove as any) && (
                         <div className="flex items-start space-x-2.5 rounded-lg border border-destructive/20 bg-destructive/5 p-3 my-2">
                             <Checkbox
                                 id="also-delete-account-staff"

@@ -73,11 +73,25 @@ export default async function StudioDetails({ params }: StudioDetailsProps) {
     }
     const userRole = myMembership.role;
 
-    // Serialize Prisma Decimal/Date objects to plain values for Client Components
-    const serialized = JSON.parse(JSON.stringify(studioData, (_key, value) =>
-        value !== null && typeof value === "object" && typeof value.toNumber === "function"
-            ? value.toNumber()
-            : value
+    // Determine whether the caller is allowed to see former staff (management roles only)
+    const managementRoles = ["owner", "admin", "manager", "developer"];
+    const canViewPastMembers = managementRoles.includes(userRole);
+
+    // Strip pastMembers entirely for non-management callers, and redact phoneNumber for non-platform-admin callers
+    const isPlatformAdmin = userRole === "admin";
+    const filteredPastMembers = canViewPastMembers
+        ? (studioData.pastMembers as any[]).map((pm: any) =>
+              isPlatformAdmin ? pm : { ...pm, phoneNumber: null }
+          )
+        : [];
+
+    // Build the serialized payload with role-filtered pastMembers
+    const serialized = JSON.parse(JSON.stringify(
+        { ...studioData, pastMembers: filteredPastMembers },
+        (_key, value) =>
+            value !== null && typeof value === "object" && typeof value.toNumber === "function"
+                ? value.toNumber()
+                : value
     ));
 
     const canViewStats = ["owner", "admin", "manager", "developer"].includes(userRole);

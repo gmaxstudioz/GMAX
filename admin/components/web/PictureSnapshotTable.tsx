@@ -1,4 +1,4 @@
-import { Camera, Calendar, Layers, Image as ImageIcon } from "lucide-react";
+import { Camera, Calendar, Layers, Image as ImageIcon, TrendingUp, TrendingDown, Minus, Sparkles } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -6,45 +6,103 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { format, parseISO, isValid } from "date-fns";
 import type { PictureSnapshotItem } from "@/lib/actions/picture-snapshots";
 
-interface PictureSnapshotTableProps {
-  snapshots: PictureSnapshotItem[];
+export interface PictureSnapshotCardProps {
+  snapshots?: PictureSnapshotItem[];
   title?: string;
   description?: string;
-  maxRows?: number;
+  periodLabel?: string;
+  periodPictures?: number;
   allTimeTotal?: number;
+  bookingCount?: number;
+  averagePictures?: number;
+  growth?: number | null;
+  growthDetail?: string;
+  comparisonLabel?: string;
+  studioName?: string;
+  maxRows?: number;
+  unavailable?: boolean;
 }
 
-export function PictureSnapshotTable({
-  snapshots,
+export function PictureSnapshotCard({
+  snapshots = [],
   title = "Pictures Snapped",
-  description = "Daily breakdown of pictures snapped and cumulative running total to date.",
-  maxRows = 30,
+  description = "Summary of pictures snapped and deliverable metrics.",
+  periodLabel,
+  periodPictures,
   allTimeTotal,
-}: PictureSnapshotTableProps) {
-  const rows = snapshots.slice(0, maxRows);
+  bookingCount,
+  averagePictures,
+  growth,
+  growthDetail,
+  comparisonLabel,
+  studioName,
+  unavailable = false,
+}: PictureSnapshotCardProps) {
+  if (unavailable) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Camera className="size-4 text-primary" />
+            <span>{title}</span>
+          </CardTitle>
+          <CardDescription className="text-xs text-muted-foreground mt-1">
+            {description}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="h-28 flex flex-col items-center justify-center gap-1.5 text-sm text-muted-foreground">
+          <Camera className="size-6 text-muted-foreground/50" />
+          <span>Picture snapshots unavailable.</span>
+        </CardContent>
+      </Card>
+    );
+  }
 
-  const formatDisplayDate = (dateStr: string) => {
-    try {
-      const parsed = parseISO(dateStr);
-      if (isValid(parsed)) {
-        return format(parsed, "MMM d, yyyy");
-      }
-    } catch {
-      // Fallback
+  // Derive values if not explicitly provided
+  const derivedPeriodPictures = periodPictures ?? snapshots.reduce((sum, s) => sum + s.picturesOnDay, 0);
+  const derivedAllTimeTotal = allTimeTotal ?? snapshots[0]?.cumulativePictures ?? 0;
+  const derivedBookingCount = bookingCount ?? snapshots.reduce((sum, s) => sum + s.bookingCount, 0);
+  const derivedAverage =
+    averagePictures ??
+    (derivedBookingCount > 0 ? Math.round(derivedPeriodPictures / derivedBookingCount) : 0);
+
+  const renderGrowthBadge = () => {
+    if (growth === null) {
+      return (
+        <Badge variant="outline" className="text-muted-foreground text-xs font-normal">
+          {growthDetail ?? "No prior comparison"}
+        </Badge>
+      );
     }
-    return dateStr;
+    if (growth === undefined) {
+      if (growthDetail) {
+        return (
+          <Badge variant="outline" className="text-muted-foreground text-xs font-normal">
+            {growthDetail}
+          </Badge>
+        );
+      }
+      return null;
+    }
+    if (growth === 0) {
+      return (
+        <Badge variant="outline" className="text-muted-foreground text-xs">
+          <Minus className="size-3 mr-1" />
+          0.0%
+        </Badge>
+      );
+    }
+    const isPositive = growth > 0;
+    const Icon = isPositive ? TrendingUp : TrendingDown;
+    return (
+      <Badge variant={isPositive ? "outline" : "destructive"} className="text-xs">
+        <Icon className="size-3 mr-1" />
+        {isPositive ? "+" : ""}{growth.toFixed(1)}%
+      </Badge>
+    );
   };
 
   return (
@@ -59,84 +117,96 @@ export function PictureSnapshotTable({
             {description}
           </CardDescription>
         </div>
-        {allTimeTotal !== undefined && (
+        {derivedAllTimeTotal > 0 && (
           <Badge variant="outline" className="px-2.5 py-1 text-xs font-semibold gap-1.5 self-start sm:self-auto">
             <ImageIcon className="size-3 text-primary" />
-            <span>Total Pictures: <strong className="text-foreground">{allTimeTotal.toLocaleString()}</strong></span>
+            <span>Total Pictures: <strong className="text-foreground">{derivedAllTimeTotal.toLocaleString()}</strong></span>
           </Badge>
         )}
       </CardHeader>
-      <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-muted/40">
-              <TableRow>
-                <TableHead className="w-[180px] font-semibold">
-                  <span className="flex items-center gap-1.5">
-                    <Calendar className="size-3.5 text-muted-foreground" />
-                    Date
-                  </span>
-                </TableHead>
-                <TableHead className="text-right font-semibold">
-                  <span className="inline-flex items-center gap-1">
-                    <Camera className="size-3.5 text-muted-foreground" />
-                    Pictures Snapped
-                  </span>
-                </TableHead>
-                <TableHead className="text-right font-semibold">
-                  <span className="inline-flex items-center gap-1">
-                    <Layers className="size-3.5 text-muted-foreground" />
-                    Total Snapped Till Date
-                  </span>
-                </TableHead>
-                <TableHead className="text-right font-semibold text-muted-foreground">
-                  Bookings
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={4}
-                    className="h-28 text-center text-sm text-muted-foreground"
-                  >
-                    <div className="flex flex-col items-center justify-center gap-1.5 py-2">
-                      <Camera className="size-6 text-muted-foreground/50" />
-                      <span>No picture records found for this period.</span>
-                      <span className="text-xs text-muted-foreground/70">
-                        Pictures are recorded from bookings and bulk booking entries.
-                      </span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                rows.map((row) => (
-                  <TableRow key={row.id} className="transition-colors hover:bg-muted/50">
-                    <TableCell className="font-medium whitespace-nowrap text-xs sm:text-sm">
-                      {formatDisplayDate(row.date)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      <Badge
-                        variant={row.picturesOnDay > 0 ? "secondary" : "outline"}
-                        className="font-mono text-xs"
-                      >
-                        {row.picturesOnDay.toLocaleString()}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums font-semibold text-primary text-xs sm:text-sm font-mono">
-                      {row.cumulativePictures.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums text-xs text-muted-foreground">
-                      {row.bookingCount}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+      <CardContent className="pt-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Pictures Snapped in Period */}
+          <div className="rounded-lg border bg-card p-4 shadow-xs transition-colors">
+            <div className="flex items-center justify-between gap-2 pb-2">
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                <Camera className="size-3.5 text-primary" />
+                {periodLabel ? `Pictures · ${periodLabel}` : "Pictures Snapped"}
+              </span>
+              {renderGrowthBadge()}
+            </div>
+            <div className="text-2xl font-semibold tracking-tight text-primary tabular-nums">
+              {derivedPeriodPictures.toLocaleString()}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {growthDetail
+                ? growthDetail
+                : comparisonLabel
+                  ? `Compared to ${comparisonLabel}`
+                  : "Pictures recorded in period"}
+            </p>
+          </div>
+
+          {/* Card 2: Cumulative All-Time */}
+          <div className="rounded-lg border bg-card p-4 shadow-xs transition-colors">
+            <div className="flex items-center justify-between gap-2 pb-2">
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                <Layers className="size-3.5 text-primary" />
+                All-Time Total
+              </span>
+              <Badge variant="secondary" className="text-xs font-normal">
+                Lifetime
+              </Badge>
+            </div>
+            <div className="text-2xl font-semibold tracking-tight tabular-nums">
+              {derivedAllTimeTotal.toLocaleString()}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {studioName ? `All-time total for ${studioName}` : "Cumulative pictures recorded"}
+            </p>
+          </div>
+
+          {/* Card 3: Sessions with Pictures */}
+          <div className="rounded-lg border bg-card p-4 shadow-xs transition-colors">
+            <div className="flex items-center justify-between gap-2 pb-2">
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                <Calendar className="size-3.5 text-primary" />
+                Sessions / Bookings
+              </span>
+              <Badge variant="outline" className="text-xs font-normal text-muted-foreground">
+                Recorded
+              </Badge>
+            </div>
+            <div className="text-2xl font-semibold tracking-tight tabular-nums">
+              {derivedBookingCount.toLocaleString()}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {periodLabel ? `Bookings recorded in ${periodLabel.toLowerCase()}` : "Bookings recorded in period"}
+            </p>
+          </div>
+
+          {/* Card 4: Average Deliverables */}
+          <div className="rounded-lg border bg-card p-4 shadow-xs transition-colors">
+            <div className="flex items-center justify-between gap-2 pb-2">
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                <Sparkles className="size-3.5 text-primary" />
+                Pace / Average
+              </span>
+              <Badge variant="outline" className="text-xs font-normal text-muted-foreground">
+                Per Session
+              </Badge>
+            </div>
+            <div className="text-2xl font-semibold tracking-tight tabular-nums">
+              {derivedAverage.toLocaleString()}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Average pictures delivered per booking
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>
   );
 }
+
+export const PictureSnapshotTable = PictureSnapshotCard;

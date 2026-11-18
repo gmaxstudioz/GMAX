@@ -319,10 +319,7 @@ export function BookingBackfillClient({
 
     function submitBookings() {
         const serializedEntries = entriesToSubmit.map((entry) => {
-            const finalNotes = [
-                entry.purpose ? `Purpose: ${entry.purpose}` : "",
-                entry.notes?.trim() ? entry.notes.trim() : "",
-            ].filter(Boolean).join("\n\n");
+            const finalNotes = getFinalNotes(entry);
             return {
                 ...entry,
                 bookingDate: new Date(entry.bookingDate).toISOString(),
@@ -415,15 +412,16 @@ export function BookingBackfillClient({
                                     {index === 0 ? "Booking date and time" : (
                                         <span className="flex items-center gap-1">
                                             Booking date and time
-                                            <span className="text-[10px] text-muted-foreground font-normal">(shared with all)</span>
+                                            {!manualDateOverrides.has(index) && (
+                                                <span className="text-[10px] text-muted-foreground font-normal">(inherited)</span>
+                                            )}
                                         </span>
                                     )}
                                     <input
                                         type="datetime-local"
                                         value={entry.bookingDate}
                                         onChange={(event) => updateManualEntry(index, { bookingDate: event.target.value })}
-                                        readOnly={index > 0}
-                                        className={`h-10 rounded-md border bg-background px-3${index > 0 ? " opacity-60 cursor-not-allowed" : ""}`}
+                                        className="h-10 rounded-md border bg-background px-3"
                                     />
                                 </label>
                                 <label className="grid gap-1 text-sm">Purpose (occasion)
@@ -434,8 +432,31 @@ export function BookingBackfillClient({
                                         ))}
                                     </select>
                                 </label>
-                                <label className="grid gap-1 text-sm">No. of pictures
-                                    <input type="number" min="0" step="1" value={entry.extraPicturesCount} onChange={(event) => updateManualEntry(index, { extraPicturesCount: Math.max(0, parseInt(event.target.value, 10) || 0) })} className="h-10 rounded-md border bg-background px-3" />
+                                <label className="grid gap-1 text-sm">
+                                    <span className="flex items-center gap-1">
+                                        No. of pictures
+                                        <span className="text-[10px] text-muted-foreground font-normal">(0–9999)</span>
+                                    </span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="9999"
+                                        step="1"
+                                        value={entry.extraPicturesCount}
+                                        onChange={(event) => {
+                                            const raw = event.target.value.trim();
+                                            if (raw === "") {
+                                                updateManualEntry(index, { extraPicturesCount: 0 });
+                                                return;
+                                            }
+                                            const n = Number(raw);
+                                            if (Number.isInteger(n) && n >= 0) {
+                                                updateManualEntry(index, { extraPicturesCount: n });
+                                            }
+                                        }}
+                                        placeholder="0–9999"
+                                        className="h-10 rounded-md border bg-background px-3"
+                                    />
                                 </label>
                                 <label className="grid gap-1 text-sm">Client name
                                     <input value={entry.clientName} maxLength={120} onChange={(event) => updateManualEntry(index, { clientName: event.target.value })} className="h-10 rounded-md border bg-background px-3" />
@@ -466,7 +487,7 @@ export function BookingBackfillClient({
                                     </select>
                                 </label>
                                 <label className="grid gap-1 text-sm sm:col-span-2 lg:col-span-1">Notes (optional)
-                                    <input value={entry.notes} maxLength={2000} onChange={(event) => updateManualEntry(index, { notes: event.target.value })} className="h-10 rounded-md border bg-background px-3" />
+                                    <input value={entry.notes} maxLength={entry.purpose ? Math.max(0, 2000 - (`Purpose: ${entry.purpose}\n\n`.length)) : 2000} onChange={(event) => updateManualEntry(index, { notes: event.target.value })} className="h-10 rounded-md border bg-background px-3" />
                                 </label>
                                 {manualEntries.length > 1 && (
                                     <div className="sm:col-span-2 lg:col-span-3">
@@ -492,7 +513,7 @@ export function BookingBackfillClient({
                             CSV columns: <code>{csvHeaders.join(",")}</code>. Use the exact service name shown in the studio. Dates may be YYYY-MM-DD or YYYY-MM-DD HH:mm. Status columns are optional; booking status defaults to COMPLETED and payment status to PENDING.
                         </p>
                         <a
-                            href={`data:text/csv;charset=utf-8,${encodeURIComponent(`${csvHeaders.join(",")}\n2024-06-15 14:30,Jane Doe,+2348000000000,jane@example.com,Portrait Session,50000,COMPLETED,PAID,Historical booking`)}`}
+                            href={`data:text/csv;charset=utf-8,${encodeURIComponent(`${csvHeaders.join(",")}\n2024-06-15 14:30,Jane Doe,+2348000000000,jane@example.com,Portrait Session,50000,COMPLETED,PAID,Portrait,0,Historical booking`)}`}
                             download="booking-backfill-template.csv"
                             className="inline-flex items-center gap-2 text-sm text-primary underline"
                         >

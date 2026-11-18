@@ -22,7 +22,7 @@ export interface DashboardMetrics {
   completionRateGrowth: number;
   todayPictures?: number;
   totalPictures?: number;
-  picturesGrowth?: number;
+  picturesGrowth?: number | null;
 }
 
 export function SectionCards({
@@ -73,7 +73,7 @@ export function SectionCards({
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs lg:px-6 dark:*:data-[slot=card]:bg-card">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 px-4 *:data-[slot=card]:bg-linear-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs lg:px-6 dark:*:data-[slot=card]:bg-card">
       {/* Daily Revenue */}
       <Card className="@container/card">
         <CardHeader>
@@ -120,31 +120,6 @@ export function SectionCards({
         </CardFooter>
       </Card>
 
-      {/* Daily Clients */}
-      <Card className="@container/card">
-        <CardHeader>
-          <CardDescription className="flex items-center gap-2">
-            <UsersIcon className="size-4 text-muted-foreground"/> {isToday ? "Clients Today" : "Daily Clients"}
-          </CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {metrics.activeClients.toLocaleString()}
-          </CardTitle>
-          <CardAction>
-            {renderGrowthBadge(metrics.clientsGrowth)}
-          </CardAction>
-        </CardHeader>
-        <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          {renderGrowthFooter(
-            metrics.clientsGrowth,
-            `Up from ${comparisonLabel} by`,
-            `Down from ${comparisonLabel} by`
-          )}
-          <div className="text-muted-foreground">
-            Unique clients booked for {isToday ? "today" : "this day"}
-          </div>
-        </CardFooter>
-      </Card>
-
       {/* Completion Rate */}
       <Card className="@container/card">
         <CardHeader>
@@ -180,7 +155,11 @@ export function SectionCards({
             {(metrics.todayPictures ?? 0).toLocaleString()}
           </CardTitle>
           <CardAction>
-            {renderGrowthBadge(metrics.picturesGrowth ?? 0)}
+            {metrics.picturesGrowth === null ? (
+              <Badge variant="outline" className="text-muted-foreground">No prior-day pictures</Badge>
+            ) : (
+              renderGrowthBadge(metrics.picturesGrowth ?? 0)
+            )}
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">

@@ -44,7 +44,7 @@ import { FinanceTabs } from "./_components/FinanceTabs";
 import { ChartAreaInteractive, type ChartDataPoint } from "@/components/web/chart-area-interactive";
 import { FinanceDateRangePicker, type DateRangePreset } from "./_components/FinanceDateRangePicker";
 import { OverviewStudioSelector } from "@/components/web/overview-studio-selector";
-import { PictureSnapshotTable } from "@/components/web/PictureSnapshotTable";
+import { PictureSnapshotCard } from "@/components/web/PictureSnapshotTable";
 import { getPictureSnapshots } from "@/lib/actions/picture-snapshots";
 
 export const metadata: Metadata = {
@@ -300,7 +300,7 @@ export default async function FinancesPage({ searchParams }: PageProps) {
     }
 
     // === FETCH FINANCIAL DATA ===
-    const [bookings, cashouts, academyStudents, pictureSnapshots] = await Promise.all([
+    const [bookings, cashouts, academyStudents, pictureSnapshotsResult] = await Promise.all([
         db.query.booking.findMany({
             where: inArray(schema.booking.studioId, studioIds),
             with: {
@@ -338,7 +338,14 @@ export default async function FinancesPage({ searchParams }: PageProps) {
                   columns: { amountPaid: true, updatedAt: true },
               })
             : Promise.resolve([]),
-        getPictureSnapshots(studioIds, { limit: 30 }),
+        getPictureSnapshots(studioIds, {
+            startDate: rangePreset === "all" ? undefined : format(startDate, "yyyy-MM-dd"),
+            endDate: rangePreset === "all" ? undefined : format(endDate, "yyyy-MM-dd"),
+            limit: rangePreset === "all" ? 365 : 60,
+        }).then(
+            (data) => ({ ok: true as const, data }),
+            () => ({ ok: false as const, data: [] as Awaited<ReturnType<typeof getPictureSnapshots>> }),
+        ),
     ]);
 
     // Format expenses
@@ -404,6 +411,36 @@ export default async function FinancesPage({ searchParams }: PageProps) {
             growthDetail = `0% vs ${comparisonLabel}`;
         }
     }
+
+    // Pictures range calculations
+    const rangeBookings = isAllTime
+        ? validBookings
+        : validBookings.filter((b) => isInRange(b.bookingDate, startDate, endDate));
+    const rangePictures = rangeBookings.reduce((sum, b) => sum + (b.extraPicturesCount || 0), 0);
+    const totalPicturesAllTime = validBookings.reduce((sum, b) => sum + (b.extraPicturesCount || 0), 0);
+
+    let picturesGrowth: number | null = null;
+    let picturesGrowthDetail = isAllTime ? "all time total" : `${rangeLabel.toLowerCase()} total`;
+    if (!isAllTime && comparisonStartDate && comparisonEndDate) {
+        const prevBookings = validBookings.filter((b) => isInRange(b.bookingDate, comparisonStartDate!, comparisonEndDate!));
+        const prevPictures = prevBookings.reduce((sum, b) => sum + (b.extraPicturesCount || 0), 0);
+
+        if (prevPictures > 0) {
+            picturesGrowth = ((rangePictures - prevPictures) / prevPictures) * 100;
+            const sign = picturesGrowth >= 0 ? "+" : "";
+            picturesGrowthDetail = `${sign}${picturesGrowth.toFixed(1)}% vs ${comparisonLabel}`;
+        } else if (rangePictures > 0) {
+            picturesGrowth = null;
+            picturesGrowthDetail = `No prior-period pictures`;
+        } else {
+            picturesGrowth = 0;
+            picturesGrowthDetail = `0% vs ${comparisonLabel}`;
+        }
+    }
+
+    const averagePicturesPerSession = rangeBookings.length > 0
+        ? Math.round(rangePictures / rangeBookings.length)
+        : 0;
 
     // Payment transactions
     const paymentTransactions = bookings
@@ -592,7 +629,7 @@ export default async function FinancesPage({ searchParams }: PageProps) {
                         {/* Selected Period Metrics & All-time reference */}
                         <section
                             aria-label="Income and expenses"
-                            className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6"
+                            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7"
                         >
                             <MetricCard
                                 title={`Revenue · ${rangeLabel}`}
@@ -623,7 +660,7 @@ export default async function FinancesPage({ searchParams }: PageProps) {
                                 icon={<ArrowDownRight className="size-4" />}
                                 negative
                             />
-                            <Card className="border-primary/20 bg-primary/[0.04]">
+                            <Card className="border-primary/20 bg-primary/4">
                                 <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium text-muted-foreground">
                                         Net profit · {rangeLabel}
@@ -641,6 +678,13 @@ export default async function FinancesPage({ searchParams }: PageProps) {
                                     </p>
                                 </CardContent>
                             </Card>
+                            <MetricCard
+                                title={`Pictures · ${rangeLabel}`}
+                                value={rangePictures}
+                                detail={picturesGrowthDetail}
+                                icon={<Camera className="size-4" />}
+                                isCurrency={false}
+                            />
                             <MetricCard
                                 title="Total revenue · all time"
                                 value={totalRevenueAllTime}
@@ -673,6 +717,29 @@ export default async function FinancesPage({ searchParams }: PageProps) {
                             </Card>
                         </section>
 
+                        {pictureSnapshotsResult.ok ? (
+                            <PictureSnapshotCard
+                                snapshots={pictureSnapshotsResult.data}
+                                title={`Pictures Snapped · ${studioDisplayName}`}
+                                description={`Picture deliverables and activity for ${rangeLabel} across ${studioDisplayName}.`}
+                                periodLabel={rangeLabel}
+                                periodPictures={rangePictures}
+                                allTimeTotal={totalPicturesAllTime}
+                                bookingCount={rangeBookings.length}
+                                averagePictures={averagePicturesPerSession}
+                                growth={picturesGrowth}
+                                growthDetail={picturesGrowthDetail}
+                                comparisonLabel={comparisonLabel ?? undefined}
+                                studioName={studioDisplayName}
+                            />
+                        ) : (
+                            <PictureSnapshotCard
+                                title={`Pictures Snapped · ${studioDisplayName}`}
+                                description={`Picture deliverables for ${rangeLabel} across ${studioDisplayName}.`}
+                                unavailable
+                            />
+                        )}
+                        
                         {/* Revenue Trend Chart */}
                         <ChartAreaInteractive
                             data={chartData}
@@ -681,13 +748,6 @@ export default async function FinancesPage({ searchParams }: PageProps) {
                             totalAmount={rangeRevenue}
                         />
 
-                        <PictureSnapshotTable
-                            snapshots={pictureSnapshots}
-                            title={`Pictures Snapped · ${studioDisplayName}`}
-                            description={`Daily pictures snapped and cumulative total across ${studioDisplayName}.`}
-                            allTimeTotal={pictureSnapshots[0]?.cumulativePictures ?? 0}
-                            maxRows={30}
-                        />
 
                         {/* Revenue by source */}
                         <Card>
@@ -1089,12 +1149,14 @@ function MetricCard({
     detail,
     icon,
     negative = false,
+    isCurrency = true,
 }: {
     title: string;
     value: number;
     detail: string;
     icon: React.ReactNode;
     negative?: boolean;
+    isCurrency?: boolean;
 }) {
     return (
         <Card>
@@ -1104,7 +1166,7 @@ function MetricCard({
             </CardHeader>
             <CardContent>
                 <div className={`text-xl font-semibold tracking-tight ${negative ? "text-destructive" : ""}`}>
-                    {formatPrice(value)}
+                    {isCurrency ? formatPrice(value) : value.toLocaleString()}
                 </div>
                 <CardDescription className="mt-1 text-xs">{detail}</CardDescription>
             </CardContent>

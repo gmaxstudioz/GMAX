@@ -1,4 +1,4 @@
-"use server";
+import "server-only";
 
 import { and, desc, gte, inArray, lte, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -33,8 +33,8 @@ export async function getPictureSnapshots(
     db
       .select({
         date: schema.dailyPictureSnapshot.date,
-        picturesOnDay: sql<number>`COALESCE(SUM(${schema.dailyPictureSnapshot.picturesOnDay}), 0)::integer`.as("picturesOnDay"),
-        bookingCount: sql<number>`COALESCE(SUM(${schema.dailyPictureSnapshot.bookingCount}), 0)::integer`.as("bookingCount"),
+        picturesOnDay: sql<string>`COALESCE(SUM(${schema.dailyPictureSnapshot.picturesOnDay}::bigint), 0)::text`.as("picturesOnDay"),
+        bookingCount: sql<string>`COALESCE(SUM(${schema.dailyPictureSnapshot.bookingCount}::bigint), 0)::text`.as("bookingCount"),
       })
       .from(schema.dailyPictureSnapshot)
       .where(inArray(schema.dailyPictureSnapshot.studioId, studioIds))
@@ -46,7 +46,7 @@ export async function getPictureSnapshots(
         date: dailySnapshots.date,
         picturesOnDay: dailySnapshots.picturesOnDay,
         bookingCount: dailySnapshots.bookingCount,
-        cumulativePictures: sql<number>`SUM(${dailySnapshots.picturesOnDay}) OVER (ORDER BY ${dailySnapshots.date} ROWS UNBOUNDED PRECEDING)::integer`.as("cumulativePictures"),
+        cumulativePictures: sql<string>`SUM(${dailySnapshots.picturesOnDay}::bigint) OVER (ORDER BY ${dailySnapshots.date} ROWS UNBOUNDED PRECEDING)::text`.as("cumulativePictures"),
       })
       .from(dailySnapshots)
   );
@@ -70,5 +70,12 @@ export async function getPictureSnapshots(
     .orderBy(desc(runningSnapshots.date))
     .limit(limit);
 
-  return rows;
+  return rows.map((row) => ({
+    id: row.id,
+    studioId: row.studioId,
+    date: row.date,
+    picturesOnDay: Number(row.picturesOnDay || 0),
+    cumulativePictures: Number(row.cumulativePictures || 0),
+    bookingCount: Number(row.bookingCount || 0),
+  }));
 }

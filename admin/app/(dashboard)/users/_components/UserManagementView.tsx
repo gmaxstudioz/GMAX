@@ -115,6 +115,17 @@ export function UserManagementView({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserForManagement | null>(null);
 
+  const canDeleteTarget = (targetUser: UserForManagement) => {
+    if (!canDeleteAccounts || targetUser.id === currentUserId) return false;
+    if (targetUser.role === "admin" && !isPlatformAdmin) return false;
+    if (!isPlatformAdmin) {
+      const ownedStudioIds = managedStudios.filter((s) => s.role === "owner").map((s) => s.id);
+      const hasForeignStudio = targetUser.members.some((m) => !ownedStudioIds.includes(m.studioId));
+      if (hasForeignStudio) return false;
+    }
+    return true;
+  };
+
   // Quick stats
   const totalUsersCount = initialUsers.length;
   const waitingUsersCount = useMemo(
@@ -258,23 +269,25 @@ export function UserManagementView({
 
   // Remove member from studio (and optionally delete account)
   const handleConfirmRemove = () => {
-    if (!memberToRemove) return;
+    if (!memberToRemove || isPending) return;
+    const target = memberToRemove;
+    const deleteAccount = alsoDeleteAccount;
 
     startTransition(async () => {
       let result;
-      if (alsoDeleteAccount && memberToRemove.userId) {
-        result = await deleteUserAccount(memberToRemove.userId);
+      if (deleteAccount && target.userId) {
+        result = await deleteUserAccount(target.userId);
       } else {
         result = await removeUserMembership(
-          memberToRemove.memberId,
-          memberToRemove.studioId
+          target.memberId,
+          target.studioId
         );
       }
 
       if (result.status === "success") {
         toast.success(result.message);
+        setMemberToRemove((current) => current?.memberId === target.memberId ? null : current);
         setRemoveDialogOpen(false);
-        setMemberToRemove(null);
         setAlsoDeleteAccount(false);
         router.refresh();
       } else {
@@ -285,15 +298,16 @@ export function UserManagementView({
 
   // Delete user account
   const handleConfirmDelete = () => {
-    if (!userToDelete) return;
+    if (!userToDelete || isPending) return;
+    const target = userToDelete;
 
     startTransition(async () => {
-      const result = await deleteUserAccount(userToDelete.id);
+      const result = await deleteUserAccount(target.id);
 
       if (result.status === "success") {
         toast.success(result.message);
+        setUserToDelete((current) => current?.id === target.id ? null : current);
         setDeleteDialogOpen(false);
-        setUserToDelete(null);
         router.refresh();
       } else {
         toast.error(result.message || "Failed to delete account");
@@ -758,7 +772,7 @@ export function UserManagementView({
                                     </>
                                   )}
 
-                                  {canDeleteAccounts && user.id !== currentUserId && (
+                                  {canDeleteTarget(user) && (
                                     <>
                                       <DropdownMenuSeparator />
                                       <DropdownMenuItem
@@ -1042,8 +1056,12 @@ export function UserManagementView({
       <Dialog
         open={removeDialogOpen}
         onOpenChange={(open) => {
+          if (isPending) return;
           setRemoveDialogOpen(open);
-          if (!open) setAlsoDeleteAccount(false);
+          if (!open) {
+            setMemberToRemove(null);
+            setAlsoDeleteAccount(false);
+          }
         }}
       >
         <DialogContent className="w-[95vw] sm:max-w-md max-h-[90dvh] overflow-y-auto">
@@ -1074,27 +1092,30 @@ export function UserManagementView({
             </DialogDescription>
           </DialogHeader>
 
-          {canDeleteAccounts && memberToRemove && memberToRemove.userId !== currentUserId && (
-            <div className="flex items-start space-x-2.5 rounded-lg border border-destructive/20 bg-destructive/5 p-3 my-2">
-              <Checkbox
-                id="also-delete-account-user"
-                checked={alsoDeleteAccount}
-                onCheckedChange={(checked) => setAlsoDeleteAccount(Boolean(checked))}
-                className="mt-0.5"
-              />
-              <div className="grid gap-1">
-                <label
-                  htmlFor="also-delete-account-user"
-                  className="text-xs font-semibold leading-none cursor-pointer text-foreground"
-                >
-                  Also permanently delete their user account
-                </label>
-                <p className="text-[11px] text-muted-foreground">
-                  Remove from all studios, terminate login sessions, and revoke account access.
-                </p>
+          {(() => {
+            const targetUserForRemove = initialUsers.find((u) => u.id === memberToRemove?.userId);
+            return targetUserForRemove && canDeleteTarget(targetUserForRemove) ? (
+              <div className="flex items-start space-x-2.5 rounded-lg border border-destructive/20 bg-destructive/5 p-3 my-2">
+                <Checkbox
+                  id="also-delete-account-user"
+                  checked={alsoDeleteAccount}
+                  onCheckedChange={(checked) => setAlsoDeleteAccount(Boolean(checked))}
+                  className="mt-0.5"
+                />
+                <div className="grid gap-1">
+                  <label
+                    htmlFor="also-delete-account-user"
+                    className="text-xs font-semibold leading-none cursor-pointer text-foreground"
+                  >
+                    Also permanently delete their user account
+                  </label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Remove from all studios, terminate login sessions, and revoke account access.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            ) : null;
+          })()}
 
           <DialogFooter className="gap-2 sm:gap-0 mt-4">
             <Button
@@ -1103,6 +1124,7 @@ export function UserManagementView({
               size="sm"
               onClick={() => {
                 setRemoveDialogOpen(false);
+                setMemberToRemove(null);
                 setAlsoDeleteAccount(false);
               }}
               disabled={isPending}
@@ -1136,7 +1158,16 @@ export function UserManagementView({
       </Dialog>
 
       {/* Delete User Account Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (isPending) return;
+          setDeleteDialogOpen(open);
+          if (!open) {
+            setUserToDelete(null);
+          }
+        }}
+      >
         <DialogContent className="w-[95vw] sm:max-w-md max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive text-lg">
