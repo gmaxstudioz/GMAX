@@ -150,11 +150,11 @@ export default async function StudioDailyBookingsPage({ params, searchParams }: 
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="w-[100px]">Time</TableHead>
+                                            <TableHead className="w-25">Time</TableHead>
                                             <TableHead>Client</TableHead>
                                             <TableHead>Service</TableHead>
                                             <TableHead>Status</TableHead>
-                                            <TableHead className="w-[200px]">Assign To</TableHead>
+                                            <TableHead className="w-50">Assign To</TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>

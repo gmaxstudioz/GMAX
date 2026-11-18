@@ -6,7 +6,7 @@ import { getUsersForManagement } from "@/lib/actions/user";
 import { UserManagementView } from "./_components/UserManagementView";
 
 export const metadata: Metadata = {
-    title: "User Management | GMAX Studioz",
+    title: "User Management",
     description: "Manage registered users, review access requests, and assign team members to studios.",
 };
 
@@ -31,7 +31,10 @@ export default async function UsersPage() {
                 initialUsers={result.data.users}
                 managedStudios={result.data.managedStudios}
                 initialPendingInvitations={result.data.pendingInvitations}
+                initialPastStaff={result.data.pastStaff}
                 isPlatformAdmin={result.data.isPlatformAdmin}
+                canDeleteAccounts={result.data.canDeleteAccounts}
+                currentUserId={result.data.currentUserId}
             />
         </div>
     );

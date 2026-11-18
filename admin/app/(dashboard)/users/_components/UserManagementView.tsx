@@ -20,12 +20,15 @@ import {
   CalendarIcon,
   CheckCircle2Icon,
   SendIcon,
+  UserXIcon,
+  HistoryIcon,
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -58,8 +61,8 @@ import {
 } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { UserForManagement, ManagedStudio, PendingInvitation } from "@/lib/actions/user";
-import { assignUserToStudio, removeUserMembership } from "@/lib/actions/user";
+import type { UserForManagement, ManagedStudio, PendingInvitation, PastMemberRecord } from "@/lib/actions/user";
+import { assignUserToStudio, removeUserMembership, deleteUserAccount } from "@/lib/actions/user";
 import { inviteMember, cancelInvitation } from "@/lib/actions/invitation";
 import type { MemberRole } from "@/lib/schemas/studio";
 
@@ -67,21 +70,27 @@ interface UserManagementViewProps {
   initialUsers: UserForManagement[];
   managedStudios: ManagedStudio[];
   initialPendingInvitations: PendingInvitation[];
+  initialPastStaff?: PastMemberRecord[];
   isPlatformAdmin?: boolean;
+  canDeleteAccounts?: boolean;
+  currentUserId?: string;
 }
 
 export function UserManagementView({
   initialUsers,
   managedStudios,
   initialPendingInvitations,
+  initialPastStaff = [],
   isPlatformAdmin = false,
+  canDeleteAccounts = false,
+  currentUserId,
 }: UserManagementViewProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"ALL" | "WAITING" | "MEMBERS" | "INVITATIONS">("ALL");
+  const [activeTab, setActiveTab] = useState<"ALL" | "WAITING" | "MEMBERS" | "INVITATIONS" | "PAST_STAFF">("ALL");
   const [selectedStudioFilter, setSelectedStudioFilter] = useState<string>("ALL");
 
   // Assign Dialog State
@@ -95,10 +104,27 @@ export function UserManagementView({
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<{
     memberId: string;
+    userId: string;
     studioId: string;
     userName: string;
     studioName: string;
   } | null>(null);
+  const [alsoDeleteAccount, setAlsoDeleteAccount] = useState(false);
+
+  // Delete User Account Dialog State
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserForManagement | null>(null);
+
+  const canDeleteTarget = (targetUser: UserForManagement) => {
+    if (!canDeleteAccounts || targetUser.id === currentUserId) return false;
+    if (targetUser.role === "admin" && !isPlatformAdmin) return false;
+    if (!isPlatformAdmin) {
+      const ownedStudioIds = managedStudios.filter((s) => s.role === "owner").map((s) => s.id);
+      const hasForeignStudio = targetUser.members.some((m) => !ownedStudioIds.includes(m.studioId));
+      if (hasForeignStudio) return false;
+    }
+    return true;
+  };
 
   // Quick stats
   const totalUsersCount = initialUsers.length;
@@ -111,6 +137,7 @@ export function UserManagementView({
     [initialUsers]
   );
   const pendingInvitesCount = initialPendingInvitations.length;
+  const pastStaffCount = initialPastStaff.length;
 
   // Filtered users
   const filteredUsers = useMemo(() => {
@@ -159,6 +186,27 @@ export function UserManagementView({
       return true;
     });
   }, [initialPendingInvitations, searchQuery, selectedStudioFilter]);
+
+  // Filtered past staff
+  const filteredPastStaff = useMemo(() => {
+    return initialPastStaff.filter((staff) => {
+      const query = searchQuery.trim().toLowerCase();
+      if (query) {
+        const nameMatch = staff.name.toLowerCase().includes(query);
+        const emailMatch = staff.email.toLowerCase().includes(query);
+        const phoneMatch = staff.phoneNumber?.toLowerCase().includes(query);
+        const roleMatch = staff.role.toLowerCase().includes(query);
+        const studioMatch = staff.studio?.name.toLowerCase().includes(query);
+        if (!nameMatch && !emailMatch && !phoneMatch && !roleMatch && !studioMatch) return false;
+      }
+
+      if (selectedStudioFilter !== "ALL") {
+        if (staff.studioId !== selectedStudioFilter) return false;
+      }
+
+      return true;
+    });
+  }, [initialPastStaff, searchQuery, selectedStudioFilter]);
 
   // Open assign dialog
   const handleOpenAssign = (user: UserForManagement, mode: "DIRECT" | "INVITE" = "DIRECT") => {
@@ -219,22 +267,50 @@ export function UserManagementView({
     });
   };
 
-  // Remove member from studio
+  // Remove member from studio (and optionally delete account)
   const handleConfirmRemove = () => {
-    if (!memberToRemove) return;
+    if (!memberToRemove || isPending) return;
+    const target = memberToRemove;
+    const deleteAccount = alsoDeleteAccount;
 
     startTransition(async () => {
-      const result = await removeUserMembership(
-        memberToRemove.memberId,
-        memberToRemove.studioId
-      );
+      let result;
+      if (deleteAccount && target.userId) {
+        result = await deleteUserAccount(target.userId);
+      } else {
+        result = await removeUserMembership(
+          target.memberId,
+          target.studioId
+        );
+      }
 
       if (result.status === "success") {
         toast.success(result.message);
+        setMemberToRemove((current) => current?.memberId === target.memberId ? null : current);
         setRemoveDialogOpen(false);
+        setAlsoDeleteAccount(false);
         router.refresh();
       } else {
         toast.error(result.message);
+      }
+    });
+  };
+
+  // Delete user account
+  const handleConfirmDelete = () => {
+    if (!userToDelete || isPending) return;
+    const target = userToDelete;
+
+    startTransition(async () => {
+      const result = await deleteUserAccount(target.id);
+
+      if (result.status === "success") {
+        toast.success(result.message);
+        setUserToDelete((current) => current?.id === target.id ? null : current);
+        setDeleteDialogOpen(false);
+        router.refresh();
+      } else {
+        toast.error(result.message || "Failed to delete account");
       }
     });
   };
@@ -265,7 +341,7 @@ export function UserManagementView({
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         <Card className="hover:border-primary/50 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -336,6 +412,26 @@ export function UserManagementView({
             <p className="text-xs text-muted-foreground mt-1">Awaiting acceptance by user</p>
           </CardContent>
         </Card>
+
+        <Card
+          className={`hover:border-purple-500/50 transition-colors cursor-pointer ${
+            activeTab === "PAST_STAFF" ? "border-purple-500 bg-purple-500/5" : ""
+          }`}
+          onClick={() => setActiveTab("PAST_STAFF")}
+        >
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+              Past Staff
+            </CardTitle>
+            <HistoryIcon className="h-4 w-4 text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+              {pastStaffCount}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Historical team records</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Main Table Card */}
@@ -348,7 +444,7 @@ export function UserManagementView({
               onValueChange={(v) => setActiveTab(v as typeof activeTab)}
               className="w-full md:w-auto"
             >
-              <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full md:w-auto h-auto p-1">
+              <TabsList className="grid grid-cols-2 sm:grid-cols-5 w-full md:w-auto h-auto p-1">
                 <TabsTrigger value="ALL">All ({totalUsersCount})</TabsTrigger>
                 <TabsTrigger value="WAITING" className="gap-1.5">
                   Waiting
@@ -360,6 +456,7 @@ export function UserManagementView({
                 </TabsTrigger>
                 <TabsTrigger value="MEMBERS">Members ({memberUsersCount})</TabsTrigger>
                 <TabsTrigger value="INVITATIONS">Invites ({pendingInvitesCount})</TabsTrigger>
+                <TabsTrigger value="PAST_STAFF">Past Staff ({pastStaffCount})</TabsTrigger>
               </TabsList>
             </Tabs>
 
@@ -398,7 +495,122 @@ export function UserManagementView({
         </CardHeader>
 
         <CardContent className="p-0">
-          {activeTab !== "INVITATIONS" ? (
+          {activeTab === "PAST_STAFF" ? (
+            /* Past Staff Historical Records Table */
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30">
+                    <TableHead className="w-[280px]">Former Staff Member</TableHead>
+                    <TableHead>Studio & Role</TableHead>
+                    <TableHead>Period Worked</TableHead>
+                    <TableHead>Work Handled</TableHead>
+                    <TableHead>Departure Record</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPastStaff.length > 0 ? (
+                    filteredPastStaff.map((staff) => (
+                      <TableRow key={staff.id} className="hover:bg-muted/40 transition-colors">
+                        {/* Member info */}
+                        <TableCell className="py-3">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9 border opacity-80">
+                              <AvatarImage src={staff.image || undefined} alt={staff.name} />
+                              <AvatarFallback className="text-xs font-semibold bg-muted text-muted-foreground">
+                                {staff.name.slice(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-medium text-sm truncate">{staff.name}</span>
+                              <span className="text-xs text-muted-foreground truncate">
+                                {staff.email}
+                              </span>
+                              {staff.phoneNumber && (
+                                <span className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                                  <PhoneIcon className="size-2.5 opacity-70" />
+                                  {staff.phoneNumber}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+
+                        {/* Studio & Role */}
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5 text-xs font-medium">
+                              <Building2Icon className="size-3.5 text-primary" />
+                              <span>{staff.studio?.name || "Company Wide"}</span>
+                            </div>
+                            <Badge variant="outline" className="w-fit capitalize text-[10px] py-0 px-1.5">
+                              {staff.role}
+                            </Badge>
+                          </div>
+                        </TableCell>
+
+                        {/* Period Worked */}
+                        <TableCell className="text-xs text-muted-foreground">
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium text-foreground">Joined:</span>
+                              <span>{staff.joinedAt ? format(new Date(staff.joinedAt), "MMM d, yyyy") : "N/A"}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium text-foreground">Left:</span>
+                              <span>{format(new Date(staff.leftAt), "MMM d, yyyy")}</span>
+                            </div>
+                          </div>
+                        </TableCell>
+
+                        {/* Work Handled */}
+                        <TableCell>
+                          <Badge variant="secondary" className="text-xs font-normal">
+                            {staff.totalBookings} {staff.totalBookings === 1 ? "booking" : "bookings"}
+                          </Badge>
+                        </TableCell>
+
+                        {/* Departure Record */}
+                        <TableCell className="text-xs">
+                          <div className="flex flex-col gap-1">
+                            <Badge
+                              variant="outline"
+                              className={`w-fit text-[10px] py-0 px-1.5 ${
+                                staff.reason === "ACCOUNT_DELETED"
+                                  ? "border-destructive/40 text-destructive bg-destructive/5"
+                                  : "border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/5"
+                              }`}
+                            >
+                              {staff.reason === "ACCOUNT_DELETED" ? "Account Deleted" : "Removed from Studio"}
+                            </Badge>
+                            {staff.removedByName && (
+                              <span className="text-[11px] text-muted-foreground">
+                                By {staff.removedByName}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-44 text-center">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <HistoryIcon className="size-8 text-muted-foreground/50" />
+                          <p className="text-sm font-medium">No past staff records</p>
+                          <p className="text-xs text-muted-foreground">
+                            {searchQuery
+                              ? "Try adjusting your search criteria"
+                              : "Historical records of past team members will be archived here."}
+                          </p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          ) : activeTab !== "INVITATIONS" ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -543,10 +755,12 @@ export function UserManagementView({
                                           onClick={() => {
                                             setMemberToRemove({
                                               memberId: m.id,
+                                              userId: user.id,
                                               studioId: m.studioId,
                                               userName: user.name,
                                               studioName: m.studio.name,
                                             });
+                                            setAlsoDeleteAccount(false);
                                             setRemoveDialogOpen(true);
                                           }}
                                           className="cursor-pointer text-xs text-destructive focus:text-destructive"
@@ -555,6 +769,26 @@ export function UserManagementView({
                                           <span>Remove from {m.studio.name}</span>
                                         </DropdownMenuItem>
                                       ))}
+                                    </>
+                                  )}
+
+                                  {canDeleteTarget(user) && (
+                                    <>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          setUserToDelete(user);
+                                          setDeleteDialogOpen(true);
+                                        }}
+                                        className="cursor-pointer text-xs text-destructive focus:text-destructive"
+                                      >
+                                        <UserXIcon className="size-3.5 mr-2" />
+                                        <span>
+                                          {user.members.length > 0
+                                            ? "Delete Account & Remove"
+                                            : "Delete Account"}
+                                        </span>
+                                      </DropdownMenuItem>
                                     </>
                                   )}
                                 </DropdownMenuContent>
@@ -819,27 +1053,80 @@ export function UserManagementView({
       </Dialog>
 
       {/* Remove Member Confirmation Dialog */}
-      <Dialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+      <Dialog
+        open={removeDialogOpen}
+        onOpenChange={(open) => {
+          if (isPending) return;
+          setRemoveDialogOpen(open);
+          if (!open) {
+            setMemberToRemove(null);
+            setAlsoDeleteAccount(false);
+          }
+        }}
+      >
         <DialogContent className="w-[95vw] sm:max-w-md max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive text-lg">
-              <Trash2Icon className="size-5" />
-              Remove Staff Member
+              {alsoDeleteAccount ? <UserXIcon className="size-5" /> : <Trash2Icon className="size-5" />}
+              {alsoDeleteAccount ? "Remove Member & Delete Account" : "Remove Staff Member"}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Are you sure you want to remove{" "}
-              <span className="font-semibold text-foreground">{memberToRemove?.userName}</span> from{" "}
-              <span className="font-semibold text-foreground">{memberToRemove?.studioName}</span>?
-              They will no longer be able to access this studio.
+              {alsoDeleteAccount ? (
+                <>
+                  Are you sure you want to remove{" "}
+                  <span className="font-semibold text-foreground">{memberToRemove?.userName}</span> from{" "}
+                  <span className="font-semibold text-foreground">{memberToRemove?.studioName}</span> and{" "}
+                  <span className="font-semibold text-destructive">permanently delete their user account</span>?
+                  <br />
+                  <br />
+                  All active login sessions and credentials will be terminated across the platform. A permanent record of their employment and work history will be preserved in Past Staff.
+                </>
+              ) : (
+                <>
+                  Are you sure you want to remove{" "}
+                  <span className="font-semibold text-foreground">{memberToRemove?.userName}</span> from{" "}
+                  <span className="font-semibold text-foreground">{memberToRemove?.studioName}</span>?
+                  They will no longer be able to access this studio.
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
+
+          {(() => {
+            const targetUserForRemove = initialUsers.find((u) => u.id === memberToRemove?.userId);
+            return targetUserForRemove && canDeleteTarget(targetUserForRemove) ? (
+              <div className="flex items-start space-x-2.5 rounded-lg border border-destructive/20 bg-destructive/5 p-3 my-2">
+                <Checkbox
+                  id="also-delete-account-user"
+                  checked={alsoDeleteAccount}
+                  onCheckedChange={(checked) => setAlsoDeleteAccount(Boolean(checked))}
+                  className="mt-0.5"
+                />
+                <div className="grid gap-1">
+                  <label
+                    htmlFor="also-delete-account-user"
+                    className="text-xs font-semibold leading-none cursor-pointer text-foreground"
+                  >
+                    Also permanently delete their user account
+                  </label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Remove from all studios, terminate login sessions, and revoke account access.
+                  </p>
+                </div>
+              </div>
+            ) : null;
+          })()}
 
           <DialogFooter className="gap-2 sm:gap-0 mt-4">
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setRemoveDialogOpen(false)}
+              onClick={() => {
+                setRemoveDialogOpen(false);
+                setMemberToRemove(null);
+                setAlsoDeleteAccount(false);
+              }}
               disabled={isPending}
             >
               Cancel
@@ -855,10 +1142,99 @@ export function UserManagementView({
               {isPending ? (
                 <>
                   <Loader2Icon className="size-3.5 animate-spin" />
-                  <span>Removing...</span>
+                  <span>Processing...</span>
+                </>
+              ) : alsoDeleteAccount ? (
+                <>
+                  <UserXIcon className="size-3.5" />
+                  <span>Remove & Delete Account</span>
                 </>
               ) : (
                 <span>Confirm Removal</span>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Account Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (isPending) return;
+          setDeleteDialogOpen(open);
+          if (!open) {
+            setUserToDelete(null);
+          }
+        }}
+      >
+        <DialogContent className="w-[95vw] sm:max-w-md max-h-[90dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive text-lg">
+              <UserXIcon className="size-5" />
+              Delete User Account
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Are you sure you want to permanently delete the account of{" "}
+              <span className="font-semibold text-foreground">{userToDelete?.name}</span> ({userToDelete?.email})?
+              <br />
+              <br />
+              This will revoke all active login sessions and studio access. A permanent record of this staff member and their past work will be preserved in the Past Staff archive.
+            </DialogDescription>
+          </DialogHeader>
+
+          {userToDelete?.members && userToDelete.members.length > 0 && (
+            <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 my-2 text-xs">
+              <p className="font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
+                <Building2Icon className="size-3.5 text-destructive" />
+                Will be removed from {userToDelete.members.length} {userToDelete.members.length === 1 ? "studio" : "studios"}:
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {userToDelete.members.map((m) => (
+                  <Badge key={m.id} variant="outline" className="text-xs bg-background/80">
+                    <span className="font-medium">{m.studio.name}</span>
+                    <span className="text-muted-foreground ml-1 capitalize">({m.role})</span>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setUserToDelete(null);
+              }}
+              disabled={isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={handleConfirmDelete}
+              disabled={isPending}
+              className="gap-1.5"
+            >
+              {isPending ? (
+                <>
+                  <Loader2Icon className="size-3.5 animate-spin" />
+                  <span>Deleting...</span>
+                </>
+              ) : (
+                <>
+                  <UserXIcon className="size-3.5" />
+                  <span>
+                    {userToDelete?.members && userToDelete.members.length > 0
+                      ? "Delete Account & Remove from Studios"
+                      : "Confirm Delete Account"}
+                  </span>
+                </>
               )}
             </Button>
           </DialogFooter>

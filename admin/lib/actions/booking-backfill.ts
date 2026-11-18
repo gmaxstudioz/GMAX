@@ -19,6 +19,7 @@ const bookingEntrySchema = z.object({
     bookingStatus: z.enum(["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"]),
     paymentStatus: z.enum(["PENDING", "CANCELLED", "PAID", "PARTIALLY_PAID"]),
     notes: z.string().max(2000).optional(),
+    extraPicturesCount: z.number().int().min(0).max(9999).optional().default(0),
 });
 
 const batchSchema = z.object({
@@ -235,7 +236,7 @@ export async function createHistoricalBookings(input: unknown) {
                     id: uuidv4(),
                     bookingDate: bookingDate.toISOString(),
                     sessionCount: 1,
-                    extraPicturesCount: 0,
+                    extraPicturesCount: entry.extraPicturesCount ?? 0,
                     notes: entry.notes?.trim() || null,
                     totalAmount: amount.toFixed(2),
                     paymentPlan: "FULL",

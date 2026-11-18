@@ -11,6 +11,21 @@ type Studio = { id: string; name: string };
 type Service = { id: string; name: string; studioId: string; isActive: boolean };
 type Member = { studioId: string; userId: string; role: string; name: string; email: string };
 type Grant = { studioId: string; userId: string; expiresAt: string; name: string; email: string };
+const OCCASION_OPTIONS = [
+    { label: "Birthday", icon: "🎂" },
+    { label: "Wedding", icon: "💍" },
+    { label: "Engagement", icon: "💑" },
+    { label: "Maternity", icon: "🤰" },
+    { label: "Newborn", icon: "👶" },
+    { label: "Family", icon: "👨‍👩‍👧‍👦" },
+    { label: "Corporate / Business", icon: "💼" },
+    { label: "Graduation", icon: "🎓" },
+    { label: "Portrait", icon: "🖼️" },
+    { label: "Event", icon: "🎉" },
+    { label: "Product", icon: "📦" },
+    { label: "Other", icon: "✨" },
+] as const;
+
 type BookingEntry = {
     bookingDate: string;
     clientName: string;
@@ -20,15 +35,24 @@ type BookingEntry = {
     totalAmount: string;
     bookingStatus: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
     paymentStatus: "PENDING" | "CANCELLED" | "PAID" | "PARTIALLY_PAID";
+    purpose: string;
+    extraPicturesCount: number;
     notes: string;
 };
 
-const csvHeaders = ["bookingDate", "clientName", "clientPhone", "clientEmail", "serviceName", "totalAmount", "bookingStatus", "paymentStatus", "notes"];
+const csvHeaders = ["bookingDate", "clientName", "clientPhone", "clientEmail", "serviceName", "totalAmount", "bookingStatus", "paymentStatus", "purpose", "extraPicturesCount", "notes"];
 const clientEmailSchema = z.union([z.literal(""), z.string().trim().email().max(254)]);
 
-function emptyEntry(): BookingEntry {
+function getFinalNotes(entry: BookingEntry) {
+    return [
+        entry.purpose ? `Purpose: ${entry.purpose}` : "",
+        entry.notes?.trim() ? entry.notes.trim() : "",
+    ].filter(Boolean).join("\n\n");
+}
+
+function emptyEntry(inheritDate?: string): BookingEntry {
     return {
-        bookingDate: "",
+        bookingDate: inheritDate ?? "",
         clientName: "",
         clientPhone: "",
         clientEmail: "",
@@ -36,6 +60,8 @@ function emptyEntry(): BookingEntry {
         totalAmount: "",
         bookingStatus: "COMPLETED",
         paymentStatus: "PENDING",
+        purpose: "",
+        extraPicturesCount: 0,
         notes: "",
     };
 }
@@ -137,6 +163,7 @@ export function BookingBackfillClient({
 }) {
     const [studioId, setStudioId] = useState(studios[0]?.id ?? "");
     const [manualEntries, setManualEntries] = useState<BookingEntry[]>([emptyEntry()]);
+    const [manualDateOverrides, setManualDateOverrides] = useState<Set<number>>(new Set());
     const [csvText, setCsvText] = useState("");
     const [csvEntries, setCsvEntries] = useState<BookingEntry[]>([]);
     const [csvErrors, setCsvErrors] = useState<string[]>([]);
@@ -166,12 +193,34 @@ export function BookingBackfillClient({
             entry.bookingDate && entry.clientName.trim().length >= 2 &&
             entry.clientPhone.trim().length >= 3 && entry.serviceId &&
             /^\d{1,10}(?:\.\d{1,2})?$/.test(entry.totalAmount) &&
+            Number.isInteger(entry.extraPicturesCount) && entry.extraPicturesCount >= 0 && entry.extraPicturesCount <= 9999 &&
+            getFinalNotes(entry).length <= 2000 &&
             new Date(entry.bookingDate).getTime() < currentTimeMs,
         );
 
     function updateManualEntry(index: number, patch: Partial<BookingEntry>) {
-        setManualEntries((current) => current.map((entry, entryIndex) =>
-            entryIndex === index ? { ...entry, ...patch } : entry,
+        if (index === 0 && patch.bookingDate !== undefined) {
+            setManualEntries((current) => current.map((entry, entryIndex) =>
+                entryIndex === 0 || manualDateOverrides.has(entryIndex)
+                    ? entryIndex === index ? { ...entry, ...patch } : entry
+                    : { ...entry, bookingDate: patch.bookingDate! },
+            ));
+        } else {
+            setManualEntries((current) => current.map((entry, entryIndex) =>
+                entryIndex === index ? { ...entry, ...patch } : entry,
+            ));
+            if (index > 0 && patch.bookingDate !== undefined) {
+                setManualDateOverrides((current) => new Set(current).add(index));
+            }
+        }
+    }
+
+    function removeManualEntry(index: number) {
+        setManualEntries((current) => current.filter((_, entryIndex) => entryIndex !== index));
+        setManualDateOverrides((current) => new Set(
+            [...current]
+                .filter((entryIndex) => entryIndex !== index)
+                .map((entryIndex) => entryIndex > index ? entryIndex - 1 : entryIndex),
         ));
     }
 
@@ -206,15 +255,25 @@ export function BookingBackfillClient({
                 const clientPhone = value("clientPhone").trim();
                 const clientEmail = value("clientEmail").trim();
                 const notes = value("notes");
+                const purpose = value("purpose").trim();
+                const rawExtraPicturesCount = value("extraPicturesCount");
+                const extraPicturesCount = rawExtraPicturesCount === "" ? 0 : Number(rawExtraPicturesCount);
                 const hasValidClientName = clientName.length >= 2 && clientName.length <= 120;
                 const hasValidClientPhone = clientPhone.length >= 3 && clientPhone.length <= 40;
                 const hasValidClientEmail = clientEmailSchema.safeParse(clientEmail).success;
-                const hasValidNotes = notes.length <= 2000;
+                const hasValidExtraPicturesCount = Number.isInteger(extraPicturesCount) &&
+                    extraPicturesCount >= 0 && extraPicturesCount <= 9999;
+                const finalNotes = [
+                    purpose ? `Purpose: ${purpose}` : "",
+                    notes.trim(),
+                ].filter(Boolean).join("\n\n");
+                const hasValidNotes = finalNotes.length <= 2000;
                 if (!bookingDate) issues.push(`Line ${lineNumber}: bookingDate must be a valid past date/time.`);
                 if (!hasValidClientName) issues.push(`Line ${lineNumber}: clientName must be 2 to 120 characters after trimming.`);
                 if (!hasValidClientPhone) issues.push(`Line ${lineNumber}: clientPhone must be 3 to 40 characters after trimming.`);
                 if (!hasValidClientEmail) issues.push(`Line ${lineNumber}: clientEmail must be a valid email address of 254 characters or fewer.`);
-                if (!hasValidNotes) issues.push(`Line ${lineNumber}: notes must be 2000 characters or fewer.`);
+                if (!hasValidNotes) issues.push(`Line ${lineNumber}: notes and purpose together must be 2000 characters or fewer.`);
+                if (!hasValidExtraPicturesCount) issues.push(`Line ${lineNumber}: extraPicturesCount must be a whole number from 0 to 9999.`);
                 if (!service) issues.push(`Line ${lineNumber}: serviceName must match one studio service exactly.`);
                 if (!/^\d{1,10}(?:\.\d{1,2})?$/.test(totalAmount) || Number(totalAmount) <= 0) {
                     issues.push(`Line ${lineNumber}: totalAmount must be greater than zero with up to 2 decimals.`);
@@ -230,6 +289,7 @@ export function BookingBackfillClient({
                 }
                 if (bookingDate && service && hasValidClientName && hasValidClientPhone &&
                     hasValidClientEmail && hasValidNotes &&
+                    hasValidExtraPicturesCount &&
                     /^\d{1,10}(?:\.\d{1,2})?$/.test(totalAmount) && Number(totalAmount) > 0 &&
                     ["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"].includes(bookingStatus) &&
                     ["PENDING", "CANCELLED", "PAID", "PARTIALLY_PAID"].includes(paymentStatus)) {
@@ -242,6 +302,8 @@ export function BookingBackfillClient({
                         totalAmount,
                         bookingStatus: bookingStatus as BookingEntry["bookingStatus"],
                         paymentStatus: paymentStatus as BookingEntry["paymentStatus"],
+                        purpose,
+                        extraPicturesCount,
                         notes,
                     });
                 }
@@ -256,10 +318,15 @@ export function BookingBackfillClient({
     }
 
     function submitBookings() {
-        const serializedEntries = entriesToSubmit.map((entry) => ({
-            ...entry,
-            bookingDate: new Date(entry.bookingDate).toISOString(),
-        }));
+        const serializedEntries = entriesToSubmit.map((entry) => {
+            const finalNotes = getFinalNotes(entry);
+            return {
+                ...entry,
+                bookingDate: new Date(entry.bookingDate).toISOString(),
+                notes: finalNotes || undefined,
+                extraPicturesCount: entry.extraPicturesCount,
+            };
+        });
         startTransition(async () => {
             const result = await createHistoricalBookings({ studioId, entries: serializedEntries });
             if (result.status === "error") {
@@ -267,8 +334,10 @@ export function BookingBackfillClient({
                 return;
             }
             toast.success(result.message);
-            if (mode === "manual") setManualEntries([emptyEntry()]);
-            else {
+            if (mode === "manual") {
+                setManualEntries([emptyEntry()]);
+                setManualDateOverrides(new Set());
+            } else {
                 setCsvText("");
                 setCsvEntries([]);
                 setCsvErrors([]);
@@ -320,6 +389,7 @@ export function BookingBackfillClient({
                             setCsvEntries([]);
                             setCsvErrors([]);
                             setManualEntries([emptyEntry()]);
+                            setManualDateOverrides(new Set());
                         }}
                         className="h-10 rounded-md border bg-background px-3 text-sm"
                     >
@@ -341,8 +411,55 @@ export function BookingBackfillClient({
                         {manualEntries.map((entry, index) => (
                             <fieldset key={index} className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-3">
                                 <legend className="px-1 text-sm font-medium">Booking {index + 1}</legend>
-                                <label className="grid gap-1 text-sm">Booking date and time
-                                    <input type="datetime-local" value={entry.bookingDate} onChange={(event) => updateManualEntry(index, { bookingDate: event.target.value })} className="h-10 rounded-md border bg-background px-3" />
+                                <label className="grid gap-1 text-sm">
+                                    {index === 0 ? "Booking date and time" : (
+                                        <span className="flex items-center gap-1">
+                                            Booking date and time
+                                            {!manualDateOverrides.has(index) && (
+                                                <span className="text-[10px] text-muted-foreground font-normal">(inherited)</span>
+                                            )}
+                                        </span>
+                                    )}
+                                    <input
+                                        type="datetime-local"
+                                        value={entry.bookingDate}
+                                        onChange={(event) => updateManualEntry(index, { bookingDate: event.target.value })}
+                                        className="h-10 rounded-md border bg-background px-3"
+                                    />
+                                </label>
+                                <label className="grid gap-1 text-sm">Purpose (occasion)
+                                    <select value={entry.purpose} onChange={(event) => updateManualEntry(index, { purpose: event.target.value })} className="h-10 rounded-md border bg-background px-3">
+                                        <option value="">Select occasion (optional)</option>
+                                        {OCCASION_OPTIONS.map((o) => (
+                                            <option key={o.label} value={o.label}>{o.icon} {o.label}</option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <label className="grid gap-1 text-sm">
+                                    <span className="flex items-center gap-1">
+                                        No. of pictures
+                                        <span className="text-[10px] text-muted-foreground font-normal">(0–9999)</span>
+                                    </span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="9999"
+                                        step="1"
+                                        value={entry.extraPicturesCount}
+                                        onChange={(event) => {
+                                            const raw = event.target.value.trim();
+                                            if (raw === "") {
+                                                updateManualEntry(index, { extraPicturesCount: 0 });
+                                                return;
+                                            }
+                                            const n = Number(raw);
+                                            if (Number.isInteger(n) && n >= 0) {
+                                                updateManualEntry(index, { extraPicturesCount: n });
+                                            }
+                                        }}
+                                        placeholder="0–9999"
+                                        className="h-10 rounded-md border bg-background px-3"
+                                    />
                                 </label>
                                 <label className="grid gap-1 text-sm">Client name
                                     <input value={entry.clientName} maxLength={120} onChange={(event) => updateManualEntry(index, { clientName: event.target.value })} className="h-10 rounded-md border bg-background px-3" />
@@ -373,11 +490,11 @@ export function BookingBackfillClient({
                                     </select>
                                 </label>
                                 <label className="grid gap-1 text-sm sm:col-span-2 lg:col-span-1">Notes (optional)
-                                    <input value={entry.notes} maxLength={2000} onChange={(event) => updateManualEntry(index, { notes: event.target.value })} className="h-10 rounded-md border bg-background px-3" />
+                                    <input value={entry.notes} maxLength={entry.purpose ? Math.max(0, 2000 - (`Purpose: ${entry.purpose}\n\n`.length)) : 2000} onChange={(event) => updateManualEntry(index, { notes: event.target.value })} className="h-10 rounded-md border bg-background px-3" />
                                 </label>
                                 {manualEntries.length > 1 && (
                                     <div className="sm:col-span-2 lg:col-span-3">
-                                        <Button type="button" variant="ghost" size="sm" onClick={() => setManualEntries((current) => current.filter((_, row) => row !== index))}>
+                                        <Button type="button" variant="ghost" size="sm" onClick={() => removeManualEntry(index)}>
                                             <Trash2 className="mr-2 size-4" />Remove row
                                         </Button>
                                     </div>
@@ -385,7 +502,7 @@ export function BookingBackfillClient({
                             </fieldset>
                         ))}
                         <div className="flex flex-wrap gap-2">
-                            <Button type="button" variant="outline" onClick={() => setManualEntries((current) => [...current, emptyEntry()])} disabled={manualEntries.length >= 100}>
+                            <Button type="button" variant="outline" onClick={() => setManualEntries((current) => [...current, emptyEntry(current[0]?.bookingDate)])} disabled={manualEntries.length >= 100}>
                                 <Plus className="mr-2 size-4" />Add another booking
                             </Button>
                             <Button type="button" onClick={submitBookings} disabled={!entriesReady || isPending}>
@@ -399,7 +516,7 @@ export function BookingBackfillClient({
                             CSV columns: <code>{csvHeaders.join(",")}</code>. Use the exact service name shown in the studio. Dates may be YYYY-MM-DD or YYYY-MM-DD HH:mm. Status columns are optional; booking status defaults to COMPLETED and payment status to PENDING.
                         </p>
                         <a
-                            href={`data:text/csv;charset=utf-8,${encodeURIComponent(`${csvHeaders.join(",")}\n2024-06-15 14:30,Jane Doe,+2348000000000,jane@example.com,Portrait Session,50000,COMPLETED,PAID,Historical booking`)}`}
+                            href={`data:text/csv;charset=utf-8,${encodeURIComponent(`${csvHeaders.join(",")}\n2024-06-15 14:30,Jane Doe,+2348000000000,jane@example.com,Portrait Session,50000,COMPLETED,PAID,Portrait,0,Historical booking`)}`}
                             download="booking-backfill-template.csv"
                             className="inline-flex items-center gap-2 text-sm text-primary underline"
                         >

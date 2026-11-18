@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { booking, userNotification, user, client, member, service, serviceVariant, studio, account, organizationRole, invitation, studioSession, course, courseModule, enrollment, bookingIntent, payment, photo, notification, serviceDeliverable, buyer, productAccess, product, revisionRequest, academyCourse, academyBatch, academyModule, academyStudent, productCategory, session, buyerAccessToken, bookingAddons } from "./schema";
+import { booking, userNotification, user, client, member, pastMember, service, serviceVariant, studio, account, organizationRole, invitation, studioSession, course, courseModule, enrollment, bookingIntent, payment, photo, notification, serviceDeliverable, buyer, productAccess, product, revisionRequest, academyCourse, academyBatch, academyModule, academyStudent, productCategory, session, buyerAccessToken, bookingAddons, dailyPictureSnapshot } from "./schema";
 
 export const userNotificationRelations = relations(userNotification, ({one}) => ({
 	booking: one(booking, {
@@ -109,6 +109,7 @@ export const studioRelations = relations(studio, ({many}) => ({
 	bookings: many(booking),
 	organizationRoles: many(organizationRole),
 	members: many(member),
+	pastMembers: many(pastMember),
 	invitations: many(invitation),
 	services: many(service),
 	courses: many(course),
@@ -116,6 +117,13 @@ export const studioRelations = relations(studio, ({many}) => ({
 	clients: many(client),
 	bookingIntents: many(bookingIntent),
 	studioSessions: many(studioSession),
+}));
+
+export const pastMemberRelations = relations(pastMember, ({one}) => ({
+	studio: one(studio, {
+		fields: [pastMember.studioId],
+		references: [studio.id]
+	}),
 }));
 
 export const accountRelations = relations(account, ({one}) => ({
@@ -325,5 +333,12 @@ export const bookingAddonsRelations = relations(bookingAddons, ({one}) => ({
 	service: one(service, {
 		fields: [bookingAddons.b],
 		references: [service.id]
+	}),
+}));
+
+export const dailyPictureSnapshotRelations = relations(dailyPictureSnapshot, ({one}) => ({
+	studio: one(studio, {
+		fields: [dailyPictureSnapshot.studioId],
+		references: [studio.id]
 	}),
 }));

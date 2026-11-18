@@ -39,6 +39,9 @@ export default async function StudioDetails({ params }: StudioDetailsProps) {
             members: {
                 with: { user: true }
             },
+            pastMembers: {
+                orderBy: (pastMembers, { desc }) => [desc(pastMembers.leftAt)],
+            },
             invitations: true,
             services: {
                 with: { studioSession: true, serviceVariants: { with: { serviceDeliverables: true } } },
@@ -64,17 +67,36 @@ export default async function StudioDetails({ params }: StudioDetailsProps) {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) redirect("/auth/login");
 
+    const callerUser = await db.query.user.findFirst({
+        where: eq(schema.user.id, session.user.id),
+        columns: { role: true },
+    });
+    const isPlatformAdmin = callerUser?.role === "admin";
+
     const myMembership = studioData.members.find((m: any) => m.userId === session.user.id);
     if (!myMembership) {
         redirect("/");
     }
     const userRole = myMembership.role;
 
-    // Serialize Prisma Decimal/Date objects to plain values for Client Components
-    const serialized = JSON.parse(JSON.stringify(studioData, (_key, value) =>
-        value !== null && typeof value === "object" && typeof value.toNumber === "function"
-            ? value.toNumber()
-            : value
+    // Determine whether the caller is allowed to see former staff (management roles only)
+    const managementRoles = ["owner", "admin", "manager", "developer"];
+    const canViewPastMembers = managementRoles.includes(userRole);
+
+    // Strip pastMembers entirely for non-management callers, and redact phoneNumber for non-platform-admin callers
+    const filteredPastMembers = canViewPastMembers
+        ? (studioData.pastMembers as any[]).map((pm: any) =>
+              isPlatformAdmin ? pm : { ...pm, phoneNumber: null }
+          )
+        : [];
+
+    // Build the serialized payload with role-filtered pastMembers
+    const serialized = JSON.parse(JSON.stringify(
+        { ...studioData, pastMembers: filteredPastMembers },
+        (_key, value) =>
+            value !== null && typeof value === "object" && typeof value.toNumber === "function"
+                ? value.toNumber()
+                : value
     ));
 
     const canViewStats = ["owner", "admin", "manager", "developer"].includes(userRole);
@@ -88,7 +110,7 @@ export default async function StudioDetails({ params }: StudioDetailsProps) {
                 </div>
             </div>
             {canViewStats && <StudioStatsCards data={serialized} />}
-            <StudioData studioData={serialized} userRole={userRole} />
+            <StudioData studioData={serialized} userRole={userRole} currentUserId={session.user.id} />
         </div>
     )
 }

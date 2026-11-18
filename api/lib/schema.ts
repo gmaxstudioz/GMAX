@@ -211,6 +211,32 @@ export const member = pgTable("member", {
 		}).onUpdate("cascade").onDelete("cascade"),
 ]);
 
+export const pastMember = pgTable("past_member", {
+	id: text().primaryKey().notNull(),
+	userId: text(),
+	studioId: text(),
+	name: text().notNull(),
+	email: text().notNull(),
+	phoneNumber: text(),
+	image: text(),
+	role: text().notNull(),
+	joinedAt: timestamp({ precision: 3, mode: 'string' }).notNull(),
+	leftAt: timestamp({ precision: 3, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+	removedById: text(),
+	removedByName: text(),
+	reason: text().default('REMOVED_FROM_STUDIO').notNull(),
+	totalBookings: integer().default(0).notNull(),
+	createdAt: timestamp({ precision: 3, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+}, (table) => [
+	index("past_member_studioId_idx").using("btree", table.studioId.asc().nullsLast().op("text_ops")),
+	index("past_member_userId_idx").using("btree", table.userId.asc().nullsLast().op("text_ops")),
+	foreignKey({
+		columns: [table.studioId],
+		foreignColumns: [studio.id],
+		name: "past_member_studioId_fkey"
+	}).onUpdate("cascade").onDelete("set null"),
+]);
+
 export const bookingBackfillAccess = pgTable("booking_backfill_access", {
 	id: text().primaryKey().notNull(),
 	studioId: text().notNull(),
@@ -833,4 +859,23 @@ export const bookingAddons = pgTable("_BookingAddons", {
 			name: "_BookingAddons_B_fkey"
 		}).onUpdate("cascade").onDelete("cascade"),
 	primaryKey({ columns: [table.a, table.b], name: "_BookingAddons_AB_pkey"}),
+]);
+
+export const dailyPictureSnapshot = pgTable("daily_picture_snapshot", {
+	id: text().primaryKey().notNull(),
+	studioId: text().notNull(),
+	date: text().notNull(),
+	picturesOnDay: integer().default(0).notNull(),
+	cumulativePictures: integer().default(0).notNull(),
+	bookingCount: integer().default(0).notNull(),
+	updatedAt: timestamp({ precision: 3, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+}, (table) => [
+	uniqueIndex("daily_picture_snapshot_studioId_date_key").using("btree", table.studioId.asc().nullsLast().op("text_ops"), table.date.asc().nullsLast().op("text_ops")),
+	index("daily_picture_snapshot_studioId_idx").using("btree", table.studioId.asc().nullsLast().op("text_ops")),
+	index("daily_picture_snapshot_date_idx").using("btree", table.date.asc().nullsLast().op("text_ops")),
+	foreignKey({
+			columns: [table.studioId],
+			foreignColumns: [studio.id],
+			name: "daily_picture_snapshot_studioId_fkey"
+		}).onUpdate("cascade").onDelete("cascade"),
 ]);

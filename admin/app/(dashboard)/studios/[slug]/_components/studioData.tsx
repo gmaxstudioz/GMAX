@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuLabel, ContextMenuTrigger } from "@/components/ui/context-menu";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Field, FieldGroup } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -18,12 +18,12 @@ import { InviteMemberInput, InviteMemberSchema } from "@/lib/schemas/studio";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Filter, Loading, MoreVerticalIcon, Refresh01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { BadgeCheck, MailIcon, Phone, PlusIcon, UsersIcon, CalendarCheckIcon, LayersIcon, ArrowRightIcon, SearchIcon, ChevronDown, MessageCircle, ExternalLink, Trash } from "lucide-react";
+import { BadgeCheck, MailIcon, Phone, PlusIcon, UsersIcon, CalendarCheckIcon, LayersIcon, ArrowRightIcon, SearchIcon, ChevronDown, MessageCircle, ExternalLink, Trash, HistoryIcon, Loader2Icon, Trash2Icon, UserXIcon } from "lucide-react";
 import { format, startOfDay, endOfDay } from "date-fns";
 import Link from "next/link";
 import { useTransition, useState, useMemo, useEffect, Suspense } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { CalenderGrid } from "./calender/Calender";
 import { DateTimeSlotPicker } from "./DateTimeSlotPicker";
@@ -36,6 +36,7 @@ import { CreateBookingSchema, CreateBookingInput, Booking } from "@/lib/schemas/
 import { createBooking } from "@/lib/actions/booking";
 import { moveBooking } from "@/lib/actions/calendar";
 import { inviteMember } from "@/lib/actions/invitation";
+import { removeUserMembership, deleteUserAccount } from "@/lib/actions/user";
 import { FieldLabel } from "@/components/ui/field";
 import { EditClientDialog } from "../client/[clientId]/_components/edit-client-dialog";
 import UpdateStudio from "./UpdateStudio";
@@ -548,8 +549,63 @@ function Clients({ studioData, userRole }: { studioData: StudioWithRelations, us
     )
 }
 
-function Staffs({studioData}: {studioData: StudioWithRelations}) {
+interface StaffMemberItem {
+    id: string;
+    role: string;
+    userId: string;
+    user?: {
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+        phoneNumber?: string | null;
+    } | null;
+}
+
+interface StaffBookingItem {
+    id: string;
+    memberId?: string | null;
+    bookingStatus: string;
+}
+
+interface PastStaffItem {
+    id: string;
+    name: string;
+    email: string;
+    phoneNumber?: string | null;
+    image?: string | null;
+    role: string;
+    joinedAt: string | Date;
+    leftAt: string | Date;
+    reason: string;
+    totalBookings: number;
+    removedByName?: string | null;
+}
+
+function Staffs({
+    studioData,
+    userRole,
+    currentUserId,
+}: {
+    studioData: StudioWithRelations;
+    userRole?: string;
+    currentUserId?: string;
+}) {
+    const router = useRouter();
     const [ isPending, startTransition ] = useTransition();
+    const [ staffTab, setStaffTab ] = useState<"ACTIVE" | "PAST">("ACTIVE");
+    const [ removeDialogOpen, setRemoveDialogOpen ] = useState(false);
+    const [ memberToRemove, setMemberToRemove ] = useState<{ id: string; userId: string; name: string } | null>(null);
+    const [ alsoDeleteAccount, setAlsoDeleteAccount ] = useState(false);
+
+    const canManageMembers = ["owner", "admin", "manager", "developer"].includes(userRole || "");
+    const canDeleteAccounts = ["owner", "admin"].includes(userRole || "");
+
+    const canRemoveMember = (m: StaffMemberItem) =>
+        canManageMembers && (m.role !== "owner" || ["owner", "admin"].includes(userRole || "")) && m.userId !== currentUserId;
+
+    const canDeleteMember = (m: { userId?: string }) =>
+        canDeleteAccounts && Boolean(m.userId) && m.userId !== currentUserId;
+
     const form = useForm<InviteMemberInput>({
         resolver: zodResolver(InviteMemberSchema),
         defaultValues: {
@@ -558,6 +614,7 @@ function Staffs({studioData}: {studioData: StudioWithRelations}) {
             studio: studioData.id!
         },
     });
+
     async function handleAddStaff(values: InviteMemberInput) {
         startTransition(async () => {
             const result = await inviteMember(values, studioData.id);
@@ -566,195 +623,509 @@ function Staffs({studioData}: {studioData: StudioWithRelations}) {
             } else {
                 toast.success("Staff invited successfully");
                 form.reset();
+                router.refresh();
             }
         });
     }
-    function handleDelete(memberId: string) {
-        startTransition(async () => {
-            const { error } = await authClient.organization.removeMember({
-                memberIdOrEmail:memberId,
-                organizationId: studioData.id!,
-            });
 
-            if (error) {
-                toast.error(error.message || "Failed to remove staff");
+    function handleConfirmRemove() {
+        if (!memberToRemove || isPending) return;
+        const target = memberToRemove;
+        const deleteAccount = alsoDeleteAccount;
+        startTransition(async () => {
+            let result;
+            if (deleteAccount && target.userId) {
+                result = await deleteUserAccount(target.userId);
             } else {
-                toast.success("Staff removed successfully");
+                result = await removeUserMembership(target.id, studioData.id);
+            }
+
+            if (result.status === "success") {
+                toast.success(result.message);
+                setMemberToRemove((current) => current?.id === target.id ? null : current);
+                setRemoveDialogOpen(false);
+                setAlsoDeleteAccount(false);
+                router.refresh();
+            } else {
+                toast.error(result.message || "Failed to remove staff member");
             }
         });
     }
+
     const [page, setPage] = useState(1);
     const ITEMS_PER_PAGE = 6;
-    const totalStaff = studioData.members.length;
-    const totalPages = Math.ceil(totalStaff / ITEMS_PER_PAGE);
-    const paginatedStaff = studioData.members.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
+    const activeStaff: StaffMemberItem[] = (studioData.members || []) as StaffMemberItem[];
+    const pastStaff: PastStaffItem[] = (studioData.pastMembers || []) as PastStaffItem[];
+
+    const totalStaff = staffTab === "ACTIVE" ? activeStaff.length : pastStaff.length;
+    const totalPages = Math.max(1, Math.ceil(totalStaff / ITEMS_PER_PAGE));
+    const effectivePage = Math.min(Math.max(1, page), totalPages);
+    const paginatedActiveStaff = activeStaff.slice((effectivePage - 1) * ITEMS_PER_PAGE, effectivePage * ITEMS_PER_PAGE);
+    const paginatedPastStaff = pastStaff.slice((effectivePage - 1) * ITEMS_PER_PAGE, effectivePage * ITEMS_PER_PAGE);
 
     return (
          <Card>
-            <CardHeader className="flex justify-between w-full">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
                 <div className="flex flex-col gap-1">
-                    <CardTitle className="font-bold text-xl">Staff Member</CardTitle>
-                    <CardDescription>Manage the Staff Members assigned to this studio</CardDescription>
+                    <CardTitle className="font-bold text-xl">Staff Members</CardTitle>
+                    <CardDescription>
+                        {staffTab === "ACTIVE"
+                            ? "Manage active staff members assigned to this studio"
+                            : "Historical records of past team members who worked with this studio"}
+                    </CardDescription>
                 </div>
-                <Dialog>
-                    <DialogTrigger asChild>
-                        <Button variant="outline">
-                            <PlusIcon className="mr-2 size-4" />
-                            Add Staff
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle className="text-2xl font-bold">Add Staff</DialogTitle>
-                            <DialogDescription>
-                                Add a new staff member to your studio.
-                            </DialogDescription>
-                            <form className="flex flex-col gap-1 mt-4" onSubmit={form.handleSubmit(handleAddStaff)}>
-                                <FieldGroup className="flex flex-col gap-2">
-                                    <Controller
-                                        name="email"
-                                        control={form.control}
-                                        render={({field}) => (
-                                            <Field>
-                                                <Label>Email</Label>
-                                                <Input {...field} />
-                                            </Field>
-                                        )}
-                                    />
-                                    <Controller
-                                        name="phone"
-                                        control={form.control}
-                                        render={({field}) => (
-                                            <Field>
-                                                <Label>Phone (Optional for SMS)</Label>
-                                                <Input {...field} placeholder="+234..." />
-                                            </Field>
-                                        )}
-                                    />
-                                    <Controller
-                                        name="role"
-                                        control={form.control}
-                                        render={({field}) => (
-                                            <Field>
-                                                <Label>Role</Label>
-                                                <Select
-                                                    value={field.value}
-                                                    onValueChange={field.onChange}
-                                                >
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select a role" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="manager">Manager</SelectItem>
-                                                        <SelectItem value="photographer">Photographer</SelectItem>
-                                                        <SelectItem value="videographer">Videographer</SelectItem>
-                                                        <SelectItem value="receptionist">Receptionist</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </Field>
-                                        )}
-                                    />
-                                </FieldGroup>
-                                <Button type="submit" className="mt-4" disabled={isPending}>{isPending ? <HugeiconsIcon icon={Loading} className="animate-spin" /> : "Add Staff"}</Button>
-                            </form>
-                        </DialogHeader>
-                    </DialogContent>
-                </Dialog>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Tabs
+                        value={staffTab}
+                        onValueChange={(v) => {
+                            setStaffTab(v as "ACTIVE" | "PAST");
+                            setPage(1);
+                        }}
+                    >
+                        <TabsList className="h-9">
+                            <TabsTrigger value="ACTIVE" className="text-xs h-8">
+                                Active ({activeStaff.length})
+                            </TabsTrigger>
+                            <TabsTrigger value="PAST" className="text-xs h-8">
+                                Previous Staff ({pastStaff.length})
+                            </TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+
+                    {staffTab === "ACTIVE" && (
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" size="sm" className="h-9 gap-1.5">
+                                    <PlusIcon className="size-4" />
+                                    Add Staff
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle className="text-2xl font-bold">Add Staff</DialogTitle>
+                                    <DialogDescription>
+                                        Add a new staff member to your studio.
+                                    </DialogDescription>
+                                    <form className="flex flex-col gap-1 mt-4" onSubmit={form.handleSubmit(handleAddStaff)}>
+                                        <FieldGroup className="flex flex-col gap-2">
+                                            <Controller
+                                                name="email"
+                                                control={form.control}
+                                                render={({field}) => (
+                                                    <Field>
+                                                        <Label>Email</Label>
+                                                        <Input {...field} />
+                                                    </Field>
+                                                )}
+                                            />
+                                            <Controller
+                                                name="phone"
+                                                control={form.control}
+                                                render={({field}) => (
+                                                    <Field>
+                                                        <Label>Phone (Optional for SMS)</Label>
+                                                        <Input {...field} placeholder="+234..." />
+                                                    </Field>
+                                                )}
+                                            />
+                                            <Controller
+                                                name="role"
+                                                control={form.control}
+                                                render={({field}) => (
+                                                    <Field>
+                                                        <Label>Role</Label>
+                                                        <Select
+                                                            value={field.value}
+                                                            onValueChange={field.onChange}
+                                                        >
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Select a role" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="manager">Manager</SelectItem>
+                                                                <SelectItem value="photographer">Photographer</SelectItem>
+                                                                <SelectItem value="videographer">Videographer</SelectItem>
+                                                                <SelectItem value="receptionist">Receptionist</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </Field>
+                                                )}
+                                            />
+                                        </FieldGroup>
+                                        <Button type="submit" className="mt-4" disabled={isPending}>{isPending ? <HugeiconsIcon icon={Loading} className="animate-spin" /> : "Add Staff"}</Button>
+                                    </form>
+                                </DialogHeader>
+                            </DialogContent>
+                        </Dialog>
+                    )}
+                </div>
             </CardHeader>
             <CardContent>
                 <div className="flex flex-col gap-4">
-                    <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
-                        {paginatedStaff.map((member: any) => (
-                            <ContextMenu key={member.id}>
-                                <ContextMenuTrigger>
-                                    <Card className="@container/card">
+                    {staffTab === "ACTIVE" ? (
+                        paginatedActiveStaff.length > 0 ? (
+                            <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
+                                {paginatedActiveStaff.map((member: StaffMemberItem) => {
+                                    const studioBookings = (studioData.bookings || []) as StaffBookingItem[];
+                                    const memberBookings = studioBookings.filter((b) => b.memberId === member.id);
+                                    const totalBookings = memberBookings.length;
+                                    const completedBookings = memberBookings.filter((b) => b.bookingStatus === "COMPLETED").length;
+                                    const cancelledBookings = memberBookings.filter((b) => b.bookingStatus === "CANCELLED").length;
+
+                                    return (
+                                        <ContextMenu key={member.id}>
+                                            <ContextMenuTrigger>
+                                                <Card className="@container/card">
+                                                    <CardHeader>
+                                                        <div className="w-full flex justify-between items-start gap-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <Avatar>
+                                                                    <AvatarImage src={member.user?.image || "/images/placeholder.jpg"} />
+                                                                    <AvatarFallback>{member.user?.name ? member.user.name.charAt(0) : "S"}</AvatarFallback>
+                                                                </Avatar>
+                                                                <div className="flex flex-col min-w-0">
+                                                                    <CardTitle className="text-base truncate">{member.user?.name || "Unknown"}</CardTitle>
+                                                                    <CardDescription className="text-xs truncate">{member.user?.email || "No email"}</CardDescription>
+                                                                    {member.user?.phoneNumber && (
+                                                                        <span className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                                            <Phone className="size-2.5 opacity-70" />
+                                                                            {member.user.phoneNumber}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <Badge>
+                                                                <BadgeCheck data-icon="inline-start" />
+                                                                {member.role}
+                                                            </Badge>
+                                                        </div>
+                                                    </CardHeader>
+                                                    <CardContent>
+                                                        <div className="flex flex-col gap-2 mb-2">
+                                                            <p className="text-foreground/80 font-semibold text-xs">Bookings</p>
+                                                            <div className="flex items-center justify-between gap-1 w-full">
+                                                                <div className="rounded w-full bg-accent p-2">
+                                                                    <p className="text-xs">Total</p>
+                                                                    <p className="font-bold text-primary">{totalBookings}</p>
+                                                                </div>
+                                                                <div className="rounded w-full bg-accent p-2">
+                                                                    <p className="text-xs">Completed</p>
+                                                                    <p className="font-bold text-primary">{completedBookings}</p>
+                                                                </div>
+                                                                <div className="rounded w-full bg-accent p-2">
+                                                                    <p className="text-xs">Cancelled</p>
+                                                                    <p className="font-bold text-primary">{cancelledBookings}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-1 mt-4">
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="secondary" size="icon">
+                                                                        <HugeiconsIcon icon={MoreVerticalIcon} />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent>
+                                                                    <DropdownMenuLabel className="text-xs">Actions</DropdownMenuLabel>
+                                                                    <DropdownMenuItem asChild>
+                                                                        <Link href={`/studios/${studioData.slug}/staff/${member.id}`}>
+                                                                            Edit & View Tasks
+                                                                        </Link>
+                                                                    </DropdownMenuItem>
+                                                                    {canRemoveMember(member) && (
+                                                                        <DropdownMenuItem
+                                                                            onClick={() => {
+                                                                                setMemberToRemove({
+                                                                                    id: member.id,
+                                                                                    userId: member.userId,
+                                                                                    name: member.user?.name || "Staff Member",
+                                                                                });
+                                                                                setAlsoDeleteAccount(false);
+                                                                                setRemoveDialogOpen(true);
+                                                                            }}
+                                                                            className="text-destructive focus:text-destructive cursor-pointer"
+                                                                        >
+                                                                            Remove from Studio
+                                                                        </DropdownMenuItem>
+                                                                    )}
+                                                                    {canDeleteMember(member) && (
+                                                                        <DropdownMenuItem
+                                                                            onClick={() => {
+                                                                                setMemberToRemove({
+                                                                                    id: member.id,
+                                                                                    userId: member.userId,
+                                                                                    name: member.user?.name || "Staff Member",
+                                                                                });
+                                                                                setAlsoDeleteAccount(true);
+                                                                                setRemoveDialogOpen(true);
+                                                                            }}
+                                                                            className="text-destructive focus:text-destructive cursor-pointer"
+                                                                        >
+                                                                            Delete Account & Remove
+                                                                        </DropdownMenuItem>
+                                                                    )}
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                            <Link className={buttonVariants({variant: "default", className: "flex-1 cursor-pointer"})} href={`/studios/${studioData.slug}/staff/${member.id}`}>
+                                                                View Details
+                                                            </Link>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            </ContextMenuTrigger>
+                                            <ContextMenuContent>
+                                                <ContextMenuLabel className="text-xs">Actions</ContextMenuLabel>
+                                                <ContextMenuItem asChild>
+                                                    <Link href={`/studios/${studioData.slug}/staff/${member.id}`}>
+                                                        View Details
+                                                    </Link>
+                                                </ContextMenuItem>
+                                                {canRemoveMember(member) && (
+                                                    <ContextMenuItem
+                                                        onClick={() => {
+                                                            setMemberToRemove({
+                                                                id: member.id,
+                                                                userId: member.userId,
+                                                                name: member.user?.name || "Staff Member",
+                                                            });
+                                                            setAlsoDeleteAccount(false);
+                                                            setRemoveDialogOpen(true);
+                                                        }}
+                                                        className="text-destructive focus:text-destructive cursor-pointer"
+                                                    >
+                                                        Remove from Studio
+                                                    </ContextMenuItem>
+                                                )}
+                                                {canDeleteMember(member) && (
+                                                    <ContextMenuItem
+                                                        onClick={() => {
+                                                            setMemberToRemove({
+                                                                id: member.id,
+                                                                userId: member.userId,
+                                                                name: member.user?.name || "Staff Member",
+                                                            });
+                                                            setAlsoDeleteAccount(true);
+                                                            setRemoveDialogOpen(true);
+                                                        }}
+                                                        className="text-destructive focus:text-destructive cursor-pointer"
+                                                    >
+                                                        Delete Account & Remove
+                                                    </ContextMenuItem>
+                                                )}
+                                            </ContextMenuContent>
+                                        </ContextMenu>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center p-8 text-center border rounded-lg border-dashed">
+                                <UsersIcon className="size-8 text-muted-foreground/50 mb-2" />
+                                <p className="text-sm font-medium">No active staff members</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Click &quot;Add Staff&quot; above to invite or assign team members to this studio.
+                                </p>
+                            </div>
+                        )
+                    ) : (
+                        paginatedPastStaff.length > 0 ? (
+                            <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
+                                {paginatedPastStaff.map((staff: PastStaffItem) => (
+                                    <Card key={staff.id} className="@container/card border-muted/80 bg-muted/10">
                                         <CardHeader>
-                                            <div className="w-full flex justify-between">
-                                                <div className="flex items-center gap-1">
-                                                    <Avatar>
-                                                        <AvatarImage src={member.user.image || "/images/placeholder.jpg"} />
-                                                        <AvatarFallback>{member.user.name.charAt(0)}</AvatarFallback>
+                                            <div className="w-full flex justify-between items-start gap-2">
+                                                <div className="flex items-center gap-2">
+                                                    <Avatar className="opacity-80">
+                                                        <AvatarImage src={staff.image || "/images/placeholder.jpg"} />
+                                                        <AvatarFallback>{staff.name ? staff.name.charAt(0) : "S"}</AvatarFallback>
                                                     </Avatar>
-                                                    <div className="flex flex-col">
-                                                        <CardTitle>{member.user.name}</CardTitle>
-                                                        <CardDescription className="text-xs">{member.user.email}</CardDescription>
+                                                    <div className="flex flex-col min-w-0">
+                                                        <CardTitle className="text-base truncate">{staff.name}</CardTitle>
+                                                        <CardDescription className="text-xs truncate">{staff.email}</CardDescription>
+                                                        {staff.phoneNumber && (
+                                                            <span className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                                <Phone className="size-2.5 opacity-70" />
+                                                                {staff.phoneNumber}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
-                                                <Badge>
-                                                    <BadgeCheck data-icon="inline-start" />
-                                                    {member.role}
-                                                </Badge>
+                                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                                    <Badge variant="outline" className="capitalize text-xs">
+                                                        {staff.role}
+                                                    </Badge>
+                                                    <Badge
+                                                        variant="outline"
+                                                        className={`text-[10px] py-0 px-1.5 ${
+                                                            staff.reason === "ACCOUNT_DELETED"
+                                                                ? "border-destructive/40 text-destructive bg-destructive/5"
+                                                                : "border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/5"
+                                                        }`}
+                                                    >
+                                                        {staff.reason === "ACCOUNT_DELETED" ? "Account Deleted" : "Removed"}
+                                                    </Badge>
+                                                </div>
                                             </div>
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="flex flex-col gap-2 mb-2">
-                                                <p className="text-foreground/80 font-semibold">Bookings</p>
-                                                <div className="flex items-center justify-between gap-1 w-full">
-                                                    <div className="rounded w-full bg-accent p-2">
-                                                        <p className="text-xs">Total</p>
-                                                        <p className="font-bold text-primary">0</p>
+                                            <div className="flex flex-col gap-2.5 text-xs text-muted-foreground">
+                                                <div className="grid grid-cols-2 gap-2 bg-accent/40 rounded p-2">
+                                                    <div>
+                                                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Period Worked</span>
+                                                        <span className="text-xs text-foreground font-medium">
+                                                            {staff.joinedAt ? format(new Date(staff.joinedAt), "MMM yyyy") : "N/A"} - {format(new Date(staff.leftAt), "MMM yyyy")}
+                                                        </span>
                                                     </div>
-                                                    <div className="rounded w-full bg-accent p-2">
-                                                        <p className="text-xs">Completed</p>
-                                                        <p className="font-bold text-primary">0</p>
-                                                    </div>
-                                                    <div className="rounded w-full bg-accent p-2">
-                                                        <p className="text-xs">Cancelled</p>
-                                                        <p className="font-bold text-primary">0</p>
+                                                    <div>
+                                                        <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Bookings Handled</span>
+                                                        <span className="text-xs text-foreground font-semibold">
+                                                            {staff.totalBookings}
+                                                        </span>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <div className="flex items-center gap-1 mt-4">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="secondary" size="icon">
-                                                            <HugeiconsIcon icon={MoreVerticalIcon} />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent>
-                                                        <DropdownMenuLabel className="text-xs">Actions</DropdownMenuLabel>
-                                                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() =>handleDelete(member.id)}>Delete</DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                                <Link className={buttonVariants({variant: "default", className: "flex-1 cursor-pointer"})} href={`/studios/${studioData.slug}/staff/${member.id}`}>
-                                                    View Details
-                                                </Link>
+                                                {staff.removedByName && (
+                                                    <div className="text-[11px] text-muted-foreground">
+                                                        Removed by: <span className="text-foreground font-medium">{staff.removedByName}</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </CardContent>
                                     </Card>
-                                </ContextMenuTrigger>
-                                    <ContextMenuContent>
-                                        <ContextMenuLabel className="text-xs">Actions</ContextMenuLabel>
-                                        <ContextMenuItem>Edit</ContextMenuItem>
-                                        <ContextMenuItem>Delete</ContextMenuItem>
-                                </ContextMenuContent>
-                            </ContextMenu>
-                        ))}
-                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center p-8 text-center border rounded-lg border-dashed">
+                                <HistoryIcon className="size-8 text-muted-foreground/50 mb-2" />
+                                <p className="text-sm font-medium">No previous staff records</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    When staff members are removed through the studio archive flow, their employment history is preserved here.
+                                </p>
+                            </div>
+                        )
+                    )}
+
                     {totalPages > 1 && (
                         <Pagination className="mt-4">
                             <PaginationContent>
                                 <PaginationItem>
-                                    <PaginationPrevious onClick={() => setPage(p => Math.max(1, p - 1))} className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} />
+                                    <PaginationPrevious onClick={() => setPage(p => Math.max(1, p - 1))} className={effectivePage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} />
                                 </PaginationItem>
                                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
                                     <PaginationItem key={p}>
-                                        <PaginationLink isActive={p === page} onClick={() => setPage(p)} className="cursor-pointer">
+                                        <PaginationLink isActive={p === effectivePage} onClick={() => setPage(p)} className="cursor-pointer">
                                             {p}
                                         </PaginationLink>
                                     </PaginationItem>
                                 ))}
                                 <PaginationItem>
-                                    <PaginationNext onClick={() => setPage(p => Math.min(totalPages, p + 1))} className={page === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"} />
+                                    <PaginationNext onClick={() => setPage(p => Math.min(totalPages, p + 1))} className={effectivePage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"} />
                                 </PaginationItem>
                             </PaginationContent>
                         </Pagination>
                     )}
                 </div>
             </CardContent>
+
+            {/* Remove Staff Member Confirmation Dialog */}
+            <Dialog open={removeDialogOpen} onOpenChange={(open) => {
+                if (isPending) return;
+                setRemoveDialogOpen(open);
+                if (!open) {
+                    setMemberToRemove(null);
+                    setAlsoDeleteAccount(false);
+                }
+            }}>
+                <DialogContent className="w-[95vw] sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-destructive text-lg">
+                            {alsoDeleteAccount ? <UserXIcon className="size-5" /> : <Trash2Icon className="size-5" />}
+                            {alsoDeleteAccount ? "Remove Member & Delete Account" : "Remove Staff Member"}
+                        </DialogTitle>
+                        <DialogDescription className="text-xs">
+                            {alsoDeleteAccount ? (
+                                <>
+                                    Are you sure you want to remove{" "}
+                                    <span className="font-semibold text-foreground">{memberToRemove?.name}</span> from{" "}
+                                    <span className="font-semibold text-foreground">{studioData.name}</span> and{" "}
+                                    <span className="font-semibold text-destructive">permanently delete their user account</span>?
+                                    <br /><br />
+                                    All active login sessions and credentials will be terminated across the platform. A permanent record of their employment and work history will be preserved in the Previous Staff archive.
+                                </>
+                            ) : (
+                                <>
+                                    Are you sure you want to remove{" "}
+                                    <span className="font-semibold text-foreground">{memberToRemove?.name}</span> from{" "}
+                                    <span className="font-semibold text-foreground">{studioData.name}</span>?
+                                    <br /><br />
+                                    A permanent record of their employment and work history will be preserved in the Previous Staff archive.
+                                </>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {memberToRemove && canDeleteMember(memberToRemove as any) && (
+                        <div className="flex items-start space-x-2.5 rounded-lg border border-destructive/20 bg-destructive/5 p-3 my-2">
+                            <Checkbox
+                                id="also-delete-account-staff"
+                                checked={alsoDeleteAccount}
+                                onCheckedChange={(checked) => setAlsoDeleteAccount(Boolean(checked))}
+                                className="mt-0.5"
+                            />
+                            <div className="grid gap-1">
+                                <label
+                                    htmlFor="also-delete-account-staff"
+                                    className="text-xs font-semibold leading-none cursor-pointer text-foreground"
+                                >
+                                    Also permanently delete their user account
+                                </label>
+                                <p className="text-[11px] text-muted-foreground">
+                                    Terminates login access across the platform. Their past bookings and work record will be safely preserved.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter className="gap-2 sm:gap-0 mt-4">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                                setRemoveDialogOpen(false);
+                                setMemberToRemove(null);
+                                setAlsoDeleteAccount(false);
+                            }}
+                            disabled={isPending}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={handleConfirmRemove}
+                            disabled={isPending}
+                            className="gap-1.5"
+                        >
+                            {isPending ? (
+                                <>
+                                    <Loader2Icon className="size-3.5 animate-spin" />
+                                    <span>Processing...</span>
+                                </>
+                            ) : alsoDeleteAccount ? (
+                                <>
+                                    <UserXIcon className="size-3.5" />
+                                    <span>Remove & Delete Account</span>
+                                </>
+                            ) : (
+                                <span>Confirm Removal</span>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </Card>
-    )
+    );
 }
 function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, userRole: string }) {
     const canAdd = ["owner", "developer", "manager", "admin", "receptionist"].includes(userRole);
@@ -794,10 +1165,10 @@ function Bookings({ studioData, userRole }: { studioData: StudioWithRelations, u
 }
 
 
-export default function StudioDataWrapper({ studioData, userRole }: { studioData: StudioWithRelations, userRole?: string }) {
+export default function StudioDataWrapper({ studioData, userRole, currentUserId }: { studioData: StudioWithRelations, userRole?: string, currentUserId?: string }) {
     return (
         <Suspense fallback={<div className="h-40 w-full animate-pulse bg-muted rounded-md" />}>
-            <StudioData studioData={studioData} userRole={userRole || "photographer"} />
+            <StudioData studioData={studioData} userRole={userRole || "photographer"} currentUserId={currentUserId} />
         </Suspense>
     )
 }
@@ -964,7 +1335,15 @@ function BookingIntents({ data }: { data: StudioWithRelations }) {
     );
 }
 
-function StudioData({ studioData, userRole }: { studioData: StudioWithRelations, userRole: string }) {
+function StudioData({
+    studioData,
+    userRole,
+    currentUserId,
+}: {
+    studioData: StudioWithRelations;
+    userRole: string;
+    currentUserId?: string;
+}) {
     const searchParams = useSearchParams();
     const tabParam = searchParams.get("tab");
     const adminRoles = ["owner", "developer", "manager"];
@@ -1053,7 +1432,7 @@ function StudioData({ studioData, userRole }: { studioData: StudioWithRelations,
                     </TabsContent>
                     {canViewSettings && (
                         <TabsContent value="staffs">
-                            <Staffs studioData={studioData} />
+                            <Staffs studioData={studioData} userRole={userRole} currentUserId={currentUserId} />
                         </TabsContent>
                     )}
                     {canViewSettings && (
