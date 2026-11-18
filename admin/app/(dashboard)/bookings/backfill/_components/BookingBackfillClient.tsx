@@ -40,8 +40,15 @@ type BookingEntry = {
     notes: string;
 };
 
-const csvHeaders = ["bookingDate", "clientName", "clientPhone", "clientEmail", "serviceName", "totalAmount", "bookingStatus", "paymentStatus", "notes"];
+const csvHeaders = ["bookingDate", "clientName", "clientPhone", "clientEmail", "serviceName", "totalAmount", "bookingStatus", "paymentStatus", "purpose", "extraPicturesCount", "notes"];
 const clientEmailSchema = z.union([z.literal(""), z.string().trim().email().max(254)]);
+
+function getFinalNotes(entry: BookingEntry) {
+    return [
+        entry.purpose ? `Purpose: ${entry.purpose}` : "",
+        entry.notes?.trim() ? entry.notes.trim() : "",
+    ].filter(Boolean).join("\n\n");
+}
 
 function emptyEntry(inheritDate?: string): BookingEntry {
     return {
@@ -156,6 +163,7 @@ export function BookingBackfillClient({
 }) {
     const [studioId, setStudioId] = useState(studios[0]?.id ?? "");
     const [manualEntries, setManualEntries] = useState<BookingEntry[]>([emptyEntry()]);
+    const [manualDateOverrides, setManualDateOverrides] = useState<Set<number>>(new Set());
     const [csvText, setCsvText] = useState("");
     const [csvEntries, setCsvEntries] = useState<BookingEntry[]>([]);
     const [csvErrors, setCsvErrors] = useState<string[]>([]);
@@ -185,22 +193,35 @@ export function BookingBackfillClient({
             entry.bookingDate && entry.clientName.trim().length >= 2 &&
             entry.clientPhone.trim().length >= 3 && entry.serviceId &&
             /^\d{1,10}(?:\.\d{1,2})?$/.test(entry.totalAmount) &&
+            Number.isInteger(entry.extraPicturesCount) && entry.extraPicturesCount >= 0 && entry.extraPicturesCount <= 9999 &&
+            getFinalNotes(entry).length <= 2000 &&
             new Date(entry.bookingDate).getTime() < currentTimeMs,
         );
 
     function updateManualEntry(index: number, patch: Partial<BookingEntry>) {
-        setManualEntries((current) => {
-            const updated = current.map((entry, entryIndex) =>
+        if (index === 0 && patch.bookingDate !== undefined) {
+            setManualEntries((current) => current.map((entry, entryIndex) =>
+                entryIndex === 0 || manualDateOverrides.has(entryIndex)
+                    ? entryIndex === index ? { ...entry, ...patch } : entry
+                    : { ...entry, bookingDate: patch.bookingDate! },
+            ));
+        } else {
+            setManualEntries((current) => current.map((entry, entryIndex) =>
                 entryIndex === index ? { ...entry, ...patch } : entry,
-            );
-            // When the first entry's date changes, propagate to all other entries
-            if (index === 0 && "bookingDate" in patch && patch.bookingDate !== undefined) {
-                return updated.map((entry, entryIndex) =>
-                    entryIndex === 0 ? entry : { ...entry, bookingDate: patch.bookingDate as string },
-                );
+            ));
+            if (index > 0 && patch.bookingDate !== undefined) {
+                setManualDateOverrides((current) => new Set(current).add(index));
             }
-            return updated;
-        });
+        }
+    }
+
+    function removeManualEntry(index: number) {
+        setManualEntries((current) => current.filter((_, entryIndex) => entryIndex !== index));
+        setManualDateOverrides((current) => new Set(
+            [...current]
+                .filter((entryIndex) => entryIndex !== index)
+                .map((entryIndex) => entryIndex > index ? entryIndex - 1 : entryIndex),
+        ));
     }
 
     function prepareCsv() {
@@ -234,15 +255,25 @@ export function BookingBackfillClient({
                 const clientPhone = value("clientPhone").trim();
                 const clientEmail = value("clientEmail").trim();
                 const notes = value("notes");
+                const purpose = value("purpose").trim();
+                const rawExtraPicturesCount = value("extraPicturesCount");
+                const extraPicturesCount = rawExtraPicturesCount === "" ? 0 : Number(rawExtraPicturesCount);
                 const hasValidClientName = clientName.length >= 2 && clientName.length <= 120;
                 const hasValidClientPhone = clientPhone.length >= 3 && clientPhone.length <= 40;
                 const hasValidClientEmail = clientEmailSchema.safeParse(clientEmail).success;
-                const hasValidNotes = notes.length <= 2000;
+                const hasValidExtraPicturesCount = Number.isInteger(extraPicturesCount) &&
+                    extraPicturesCount >= 0 && extraPicturesCount <= 9999;
+                const finalNotes = [
+                    purpose ? `Purpose: ${purpose}` : "",
+                    notes.trim(),
+                ].filter(Boolean).join("\n\n");
+                const hasValidNotes = finalNotes.length <= 2000;
                 if (!bookingDate) issues.push(`Line ${lineNumber}: bookingDate must be a valid past date/time.`);
                 if (!hasValidClientName) issues.push(`Line ${lineNumber}: clientName must be 2 to 120 characters after trimming.`);
                 if (!hasValidClientPhone) issues.push(`Line ${lineNumber}: clientPhone must be 3 to 40 characters after trimming.`);
                 if (!hasValidClientEmail) issues.push(`Line ${lineNumber}: clientEmail must be a valid email address of 254 characters or fewer.`);
-                if (!hasValidNotes) issues.push(`Line ${lineNumber}: notes must be 2000 characters or fewer.`);
+                if (!hasValidNotes) issues.push(`Line ${lineNumber}: notes and purpose together must be 2000 characters or fewer.`);
+                if (!hasValidExtraPicturesCount) issues.push(`Line ${lineNumber}: extraPicturesCount must be a whole number from 0 to 9999.`);
                 if (!service) issues.push(`Line ${lineNumber}: serviceName must match one studio service exactly.`);
                 if (!/^\d{1,10}(?:\.\d{1,2})?$/.test(totalAmount) || Number(totalAmount) <= 0) {
                     issues.push(`Line ${lineNumber}: totalAmount must be greater than zero with up to 2 decimals.`);
@@ -258,6 +289,7 @@ export function BookingBackfillClient({
                 }
                 if (bookingDate && service && hasValidClientName && hasValidClientPhone &&
                     hasValidClientEmail && hasValidNotes &&
+                    hasValidExtraPicturesCount &&
                     /^\d{1,10}(?:\.\d{1,2})?$/.test(totalAmount) && Number(totalAmount) > 0 &&
                     ["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"].includes(bookingStatus) &&
                     ["PENDING", "CANCELLED", "PAID", "PARTIALLY_PAID"].includes(paymentStatus)) {
@@ -270,8 +302,8 @@ export function BookingBackfillClient({
                         totalAmount,
                         bookingStatus: bookingStatus as BookingEntry["bookingStatus"],
                         paymentStatus: paymentStatus as BookingEntry["paymentStatus"],
-                        purpose: "",
-                        extraPicturesCount: 0,
+                        purpose,
+                        extraPicturesCount,
                         notes,
                     });
                 }

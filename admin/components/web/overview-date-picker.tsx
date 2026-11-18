@@ -48,11 +48,7 @@ export function OverviewDatePicker({
     const formatted = format(newDate, "yyyy-MM-dd");
 
     startTransition(() => {
-      if (formatted === serverTodayStr) {
-        router.push(buildUrl(null));
-      } else {
-        router.push(buildUrl(formatted));
-      }
+      router.push(buildUrl(formatted));
     });
   };
 

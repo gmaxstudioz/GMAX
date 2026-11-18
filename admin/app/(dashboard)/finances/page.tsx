@@ -16,6 +16,7 @@ import {
 import {
     differenceInCalendarDays,
     eachDayOfInterval,
+    eachMonthOfInterval,
     endOfDay,
     endOfMonth,
     endOfYear,
@@ -443,8 +444,10 @@ export default async function FinancesPage({ searchParams }: PageProps) {
     const rangePartiallyPaidCount = rangePayments.filter((p) => p.status === "PARTIALLY_PAID").length;
     const rangeCancelledCount = rangePayments.filter((p) => p.status === "CANCELLED").length;
 
-    // === BUILD DAILY CHART DATA FOR RANGE ===
+    // === BUILD CHART DATA FOR RANGE ===
     const chartDataMap = new Map<string, number>();
+    let chartStart: Date;
+    let chartEnd: Date;
 
     if (isAllTime) {
         let earliestDate = now;
@@ -465,39 +468,29 @@ export default async function FinancesPage({ searchParams }: PageProps) {
                 latestDate = item.date;
             }
         });
-        const chartStart = startOfDay(earliestDate);
-        const chartEnd = endOfDay(latestDate);
-        const intervalDays = eachDayOfInterval({ start: chartStart, end: chartEnd });
-        intervalDays.forEach((d) => {
-            chartDataMap.set(format(d, "yyyy-MM-dd"), 0);
-        });
+        chartStart = startOfDay(earliestDate);
+        chartEnd = endOfDay(latestDate);
     } else {
-        const diffDays = differenceInCalendarDays(endDate, startDate);
-        if (diffDays <= 365) {
-            const intervalDays = eachDayOfInterval({ start: startDate, end: endDate });
-            intervalDays.forEach((d) => {
-                chartDataMap.set(format(d, "yyyy-MM-dd"), 0);
-            });
-        } else {
-            const intervalDays = eachDayOfInterval({ start: subDays(endDate, 365), end: endDate });
-            intervalDays.forEach((d) => {
-                chartDataMap.set(format(d, "yyyy-MM-dd"), 0);
-            });
-        }
+        chartStart = startDate;
+        chartEnd = endDate;
     }
 
-    rangeIncome.forEach((item) => {
-        const key = format(item.date, "yyyy-MM-dd");
-        if (chartDataMap.has(key)) {
-            chartDataMap.set(key, chartDataMap.get(key)! + item.amount);
-        }
+    const useMonthlyBuckets = differenceInCalendarDays(chartEnd, chartStart) > 365;
+    const chartIntervals = useMonthlyBuckets
+        ? eachMonthOfInterval({ start: chartStart, end: chartEnd })
+        : eachDayOfInterval({ start: chartStart, end: chartEnd });
+    const getChartBucket = (date: Date) => format(
+        useMonthlyBuckets ? startOfMonth(date) : date,
+        "yyyy-MM-dd",
+    );
+
+    chartIntervals.forEach((date) => {
+        chartDataMap.set(getChartBucket(date), 0);
     });
 
-    rangeAcademyIncome.forEach((item) => {
-        const key = format(item.date, "yyyy-MM-dd");
-        if (chartDataMap.has(key)) {
-            chartDataMap.set(key, chartDataMap.get(key)! + item.amount);
-        }
+    [...rangeIncome, ...rangeAcademyIncome].forEach((item) => {
+        const key = getChartBucket(item.date);
+        chartDataMap.set(key, (chartDataMap.get(key) ?? 0) + item.amount);
     });
 
     const chartData: ChartDataPoint[] = Array.from(chartDataMap.entries())
@@ -574,7 +567,7 @@ export default async function FinancesPage({ searchParams }: PageProps) {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                        {allAccessibleStudios.length > 1 && (
+                        {(allAccessibleStudios.length > 1 || isGlobalAdmin) && (
                             <OverviewStudioSelector
                                 studios={allAccessibleStudios}
                                 selectedStudioSlug={selectedStudio?.slug ?? null}
@@ -684,7 +677,7 @@ export default async function FinancesPage({ searchParams }: PageProps) {
                         <ChartAreaInteractive
                             data={chartData}
                             title={`Revenue Trend · ${rangeLabel}`}
-                            description={`Daily revenue breakdown for ${rangeLabel}`}
+                            description={`${useMonthlyBuckets ? "Monthly" : "Daily"} revenue breakdown for ${rangeLabel}`}
                             totalAmount={rangeRevenue}
                         />
 

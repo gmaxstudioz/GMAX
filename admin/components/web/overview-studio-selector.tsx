@@ -33,16 +33,17 @@ export function OverviewStudioSelector({
   const searchParams = useSearchParams();
   const [isPending, startTransition] = React.useTransition();
 
-  if (studios.length <= 1) {
-    if (studios.length === 1) {
-      return (
-        <Badge variant="outline" className="px-2.5 py-1 text-xs font-medium gap-1.5 bg-muted/30">
-          <WarehouseIcon className="size-3 text-muted-foreground" />
-          <span>{studios[0].name}</span>
-        </Badge>
-      );
-    }
+  if (studios.length === 0) {
     return null;
+  }
+
+  if (studios.length === 1 && !showAllOption) {
+    return (
+      <Badge variant="outline" className="px-2.5 py-1 text-xs font-medium gap-1.5 bg-muted/30">
+        <WarehouseIcon className="size-3 text-muted-foreground" />
+        <span>{studios[0].name}</span>
+      </Badge>
+    );
   }
 
   const currentValue = selectedStudioSlug ?? (showAllOption ? "all" : studios[0].slug);

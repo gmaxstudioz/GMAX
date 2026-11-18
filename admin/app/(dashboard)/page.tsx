@@ -109,12 +109,12 @@ export default async function Page({ searchParams }: PageProps) {
       orderBy: (s, { asc }) => [asc(s.name)]
     });
   } else if (isOwner || isDeveloper) {
-    const ownerStudioIds = members
-      .filter((m) => ["owner", "developer"].includes(m.role))
+    const ownerDeveloperManagerStudioIds = members
+      .filter((m) => ["owner", "developer", "manager"].includes(m.role))
       .map((m) => m.studioId);
-    if (ownerStudioIds.length > 0) {
+    if (ownerDeveloperManagerStudioIds.length > 0) {
       accessibleStudios = await db.query.studio.findMany({
-        where: inArray(schema.studio.id, ownerStudioIds),
+        where: inArray(schema.studio.id, ownerDeveloperManagerStudioIds),
         columns: { id: true, name: true, slug: true },
         orderBy: (s, { asc }) => [asc(s.name)]
       });
