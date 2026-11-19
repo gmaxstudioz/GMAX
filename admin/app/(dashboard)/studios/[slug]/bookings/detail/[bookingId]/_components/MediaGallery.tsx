@@ -1,16 +1,21 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useCallback, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { approvePhoto, rejectPhoto, deletePhoto } from "@/lib/actions/booking";
+import {
+    approvePhoto,
+    rejectPhoto,
+    deletePhoto,
+    getBookingPhotoPresignedUrl,
+    getBookingPhotosPresignedUrls,
+} from "@/lib/actions/booking";
 import { tryCatch } from "@/hooks/try-catch";
 import { toast } from "sonner";
 import { CheckIcon, XIcon, ImageIcon, VideoIcon, DownloadIcon, EyeIcon, Loader2, ShieldAlertIcon, UploadCloudIcon } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Info, Delete02Icon } from "@hugeicons/core-free-icons";
@@ -49,6 +54,48 @@ export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: Medi
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
     const [photoToReplace, setPhotoToReplace] = useState<string | null>(null);
+    const [freshUrls, setFreshUrls] = useState<Record<string, string>>({});
+    const lastRefreshedAtRef = useRef<number>(0);
+
+    const refreshAllUrls = useCallback(async () => {
+        const { data: res, error } = await tryCatch(getBookingPhotosPresignedUrls(bookingId));
+        if (!error && res?.status === "success" && res.urls) {
+            setFreshUrls(res.urls);
+            lastRefreshedAtRef.current = Date.now();
+        }
+    }, [bookingId]);
+
+    useEffect(() => {
+        lastRefreshedAtRef.current = Date.now();
+        const REFRESH_INTERVAL_MS = 45 * 60 * 1000;
+        const interval = setInterval(() => {
+            void refreshAllUrls();
+        }, REFRESH_INTERVAL_MS);
+
+        const handleFocus = () => {
+            if (Date.now() - lastRefreshedAtRef.current >= REFRESH_INTERVAL_MS) {
+                void refreshAllUrls();
+            }
+        };
+        window.addEventListener("focus", handleFocus);
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener("focus", handleFocus);
+        };
+    }, [refreshAllUrls, photos]);
+
+    const getMediaUrl = (key: string) =>
+        key.startsWith("http://") || key.startsWith("https://") ? key : `${r2PublicUrl}/${key}`;
+
+    const resolveFreshPhotoUrl = async (photo: PhotoItem): Promise<string> => {
+        const { data: res, error } = await tryCatch(getBookingPhotoPresignedUrl(photo.id));
+        if (!error && res?.status === "success" && res.url) {
+            setFreshUrls((prev) => ({ ...prev, [photo.id]: res.url }));
+            return res.url;
+        }
+        return freshUrls[photo.id] || getMediaUrl(photo.r2Key);
+    };
 
     const handleApprove = (photoId: string) => {
         startTransition(async () => {
@@ -102,8 +149,6 @@ export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: Medi
         });
     };
 
-    const getMediaUrl = (key: string) =>
-        key.startsWith("http://") || key.startsWith("https://") ? key : `${r2PublicUrl}/${key}`;
     const isVideo = (mime: string) => mime.startsWith("video/");
 
     const formatSize = (bytes: number) => {
@@ -135,7 +180,7 @@ export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: Medi
                                 </div>
                             ) : (
                                 <Image
-                                    src={getMediaUrl(photo.r2Key)}
+                                    src={freshUrls[photo.id] || getMediaUrl(photo.r2Key)}
                                     alt={photo.fileName}
                                     className="object-cover w-full h-full"
                                     width={500}
@@ -169,15 +214,31 @@ export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: Medi
                                     variant="secondary"
                                     size="icon"
                                     className="h-8 w-8"
-                                    onClick={() => setPreviewUrl(getMediaUrl(photo.r2Key))}
+                                    onClick={async () => {
+                                        const url = await resolveFreshPhotoUrl(photo);
+                                        setPreviewUrl(url);
+                                    }}
                                 >
                                     <EyeIcon className="h-4 w-4" />
                                 </Button>
-                                <Link href={getMediaUrl(photo.r2Key)} download={photo.fileName} target="_blank" rel="noopener noreferrer">
-                                    <Button variant="secondary" size="icon" className="h-8 w-8">
-                                        <DownloadIcon className="h-4 w-4" />
-                                    </Button>
-                                </Link>
+                                <Button
+                                    variant="secondary"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={async () => {
+                                        const url = await resolveFreshPhotoUrl(photo);
+                                        const link = document.createElement("a");
+                                        link.href = url;
+                                        link.download = photo.fileName;
+                                        link.target = "_blank";
+                                        link.rel = "noopener noreferrer";
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        link.remove();
+                                    }}
+                                >
+                                    <DownloadIcon className="h-4 w-4" />
+                                </Button>
                                 {isManager && (
                                     <Button
                                         variant="destructive"

@@ -120,19 +120,26 @@ export default async function StudioDetails({ params }: StudioDetailsProps) {
         };
     });
 
-    const filteredBookings = (studioData.bookings as any[]).map((b: any) => {
+    const projectBooking = (b: any) => {
         if (canViewPastMembers) return b;
         return {
             ...b,
             accessCode: null,
             ...(canViewFinancials ? {} : { totalAmount: "0", pendingTotalAmount: null }),
         };
-    });
+    };
+
+    const filteredBookings = (studioData.bookings as any[]).map(projectBooking);
+    const filteredClients = (studioData.clients as any[]).map((c: any) => ({
+        ...c,
+        bookings: Array.isArray(c.bookings) ? c.bookings.map(projectBooking) : c.bookings,
+    }));
 
     // Build the serialized payload with role-filtered sensitive relations and fields
     const serialized = JSON.parse(JSON.stringify(
         {
             ...studioData,
+            clients: filteredClients,
             members: filteredMembers,
             pastMembers: filteredPastMembers,
             invitations: filteredInvitations,

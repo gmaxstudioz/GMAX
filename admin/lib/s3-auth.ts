@@ -3,7 +3,7 @@ import "server-only";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export const MAX_SINGLE_UPLOAD_BYTES = 100 * 1024 * 1024; // 100 MB
@@ -33,7 +33,10 @@ export function isBlockedContentType(contentType: string): boolean {
 
 export function sanitizeFileName(rawName: string): string {
     const base = rawName.split(/[\\/]/).pop() ?? "file";
-    const cleaned = base.replace(/[^A-Za-z0-9._-]/g, "_").replace(/^\.+/, "");
+    const cleaned = base
+        .replace(/[^A-Za-z0-9._-]/g, "_")
+        .replace(/\.{2,}/g, ".")
+        .replace(/^\.+/, "");
     return (cleaned || "file").slice(0, 120);
 }
 
@@ -41,9 +44,160 @@ type S3AuthResult =
     | { ok: true; userId: string }
     | { ok: false; response: NextResponse };
 
+async function authorizeTrustedLegacyKeyDelete(
+    reqHeaders: Headers,
+    key: string,
+): Promise<S3AuthResult> {
+    if (!key || key.includes("..") || key.includes("\\") || /[\x00-\x1f\x7f]/.test(key)) {
+        return {
+            ok: false,
+            response: NextResponse.json({ error: "Invalid object key" }, { status: 400 }),
+        };
+    }
+
+    const session = await auth.api.getSession({ headers: reqHeaders });
+    if (!session?.user) {
+        return {
+            ok: false,
+            response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+        };
+    }
+
+    const dbUser = await db.query.user.findFirst({
+        where: eq(schema.user.id, session.user.id),
+        columns: { id: true, role: true },
+    });
+    if (!dbUser || dbUser.role === "deleted") {
+        return {
+            ok: false,
+            response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+        };
+    }
+
+    const isPlatformAdmin = dbUser.role === "admin";
+    const r2PublicUrl = (process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "").replace(/\/+$/, "");
+    const candidateKeys = r2PublicUrl ? [key, `${r2PublicUrl}/${key}`] : [key];
+
+    const matchedPhoto = await db.query.photo.findFirst({
+        where: or(
+            inArray(schema.photo.r2Key, candidateKeys),
+            inArray(schema.photo.thumbnailKey, candidateKeys),
+        ),
+        with: {
+            booking: { columns: { studioId: true } },
+        },
+    });
+    if (matchedPhoto) {
+        if (isPlatformAdmin) return { ok: true, userId: dbUser.id };
+        if (!matchedPhoto.booking) {
+            return {
+                ok: false,
+                response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+            };
+        }
+        const memberRow = await db.query.member.findFirst({
+            where: and(
+                eq(schema.member.userId, dbUser.id),
+                eq(schema.member.studioId, matchedPhoto.booking.studioId),
+            ),
+            columns: { role: true },
+        });
+        if (!memberRow || !["owner", "admin", "manager", "developer", "receptionist"].includes(memberRow.role)) {
+            return {
+                ok: false,
+                response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+            };
+        }
+        return { ok: true, userId: dbUser.id };
+    }
+
+    const matchedUser = await db.query.user.findFirst({
+        where: inArray(schema.user.image, candidateKeys),
+        columns: { id: true },
+    });
+    if (matchedUser) {
+        if (isPlatformAdmin || matchedUser.id === dbUser.id) {
+            return { ok: true, userId: dbUser.id };
+        }
+        return {
+            ok: false,
+            response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+        };
+    }
+
+    const matchedStudio = await db.query.studio.findFirst({
+        where: inArray(schema.studio.logo, candidateKeys),
+        columns: { id: true },
+    });
+    if (matchedStudio) {
+        if (isPlatformAdmin) return { ok: true, userId: dbUser.id };
+        const studioStaff = await db.query.member.findFirst({
+            where: and(
+                eq(schema.member.userId, dbUser.id),
+                eq(schema.member.studioId, matchedStudio.id),
+                inArray(schema.member.role, ["owner", "developer", "manager"]),
+            ),
+            columns: { id: true },
+        });
+        if (!studioStaff) {
+            return {
+                ok: false,
+                response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+            };
+        }
+        return { ok: true, userId: dbUser.id };
+    }
+
+    const [matchedProduct, matchedPortfolio, matchedCourse] = await Promise.all([
+        db.query.product.findFirst({
+            where: or(
+                inArray(schema.product.r2Key, candidateKeys),
+                inArray(schema.product.thumbnailKey, candidateKeys),
+            ),
+            columns: { id: true },
+        }),
+        db.query.portfolioItem.findFirst({
+            where: or(
+                inArray(schema.portfolioItem.r2Key, candidateKeys),
+                inArray(schema.portfolioItem.thumbnailKey, candidateKeys),
+            ),
+            columns: { id: true },
+        }),
+        db.query.academyCourse.findFirst({
+            where: inArray(schema.academyCourse.thumbnail, candidateKeys),
+            columns: { id: true },
+        }),
+    ]);
+
+    if (matchedProduct || matchedPortfolio || matchedCourse) {
+        if (isPlatformAdmin) return { ok: true, userId: dbUser.id };
+        const ownerOrDev = await db.query.member.findFirst({
+            where: and(
+                eq(schema.member.userId, dbUser.id),
+                inArray(schema.member.role, ["owner", "developer"]),
+            ),
+            columns: { id: true },
+        });
+        if (!ownerOrDev) {
+            return {
+                ok: false,
+                response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+            };
+        }
+        return { ok: true, userId: dbUser.id };
+    }
+
+    return {
+        ok: false,
+        response: NextResponse.json({ error: "Invalid object key" }, { status: 400 }),
+    };
+}
+
 export async function requireS3DirectoryAccess(
     reqHeaders: Headers,
     directory: string,
+    mode: "upload" | "delete" = "upload",
+    key?: string,
 ): Promise<S3AuthResult> {
     if (!ALLOWED_S3_DIRECTORY_REGEX.test(directory) || directory.includes("..")) {
         return {
@@ -76,6 +230,26 @@ export async function requireS3DirectoryAccess(
     }
 
     if (directory === "studio/member/profile") {
+        if (mode === "delete") {
+            if (!key) {
+                return {
+                    ok: false,
+                    response: NextResponse.json({ error: "Invalid object key" }, { status: 400 }),
+                };
+            }
+            const r2PublicUrl = (process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "").replace(/\/+$/, "");
+            const candidateKeys = r2PublicUrl ? [key, `${r2PublicUrl}/${key}`] : [key];
+            const ownerUser = await db.query.user.findFirst({
+                where: inArray(schema.user.image, candidateKeys),
+                columns: { id: true },
+            });
+            if (!ownerUser || ownerUser.id !== dbUser.id) {
+                return {
+                    ok: false,
+                    response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+                };
+            }
+        }
         return { ok: true, userId: dbUser.id };
     }
 
@@ -152,7 +326,17 @@ export async function requireS3KeyAccess(
     key: string,
     mode: "upload" | "delete" = "upload",
 ): Promise<S3AuthResult> {
-    if (!ALLOWED_S3_KEY_REGEX.test(key) || key.includes("..")) {
+    if (key.includes("..")) {
+        return {
+            ok: false,
+            response: NextResponse.json({ error: "Invalid object key" }, { status: 400 }),
+        };
+    }
+
+    if (!ALLOWED_S3_KEY_REGEX.test(key)) {
+        if (mode === "delete") {
+            return authorizeTrustedLegacyKeyDelete(reqHeaders, key);
+        }
         return {
             ok: false,
             response: NextResponse.json({ error: "Invalid object key" }, { status: 400 }),
@@ -161,7 +345,7 @@ export async function requireS3KeyAccess(
 
     const lastSlash = key.lastIndexOf("/");
     const directory = key.slice(0, lastSlash);
-    const baseResult = await requireS3DirectoryAccess(reqHeaders, directory);
+    const baseResult = await requireS3DirectoryAccess(reqHeaders, directory, mode, key);
     if (!baseResult.ok) return baseResult;
 
     // For deletes of booking photos, additionally enforce photo deletion roles (owner/admin/manager/receptionist/developer)

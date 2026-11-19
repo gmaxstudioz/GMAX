@@ -35,8 +35,8 @@ export default async function ServicesPage() {
 
     const studioIds = members.map((m: any) => m.studioId);
 
-    const studios = studioIds.length > 0 ? await db.query.studio.findMany({
-        where: inArray(schema.studio.id, studioIds),
+    const studios = isPlatformAdmin || studioIds.length > 0 ? await db.query.studio.findMany({
+        ...(isPlatformAdmin ? {} : { where: inArray(schema.studio.id, studioIds) }),
         columns: {
             id: true,
             slug: true,

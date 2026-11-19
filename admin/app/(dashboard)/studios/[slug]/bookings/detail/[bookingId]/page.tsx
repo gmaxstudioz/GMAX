@@ -121,18 +121,25 @@ export default async function BookingDetailPage({ params }: Props) {
     if (!studio) return notFound();
 
     // Get current user's role in this studio
-    const currentMember = session?.user
-        ? await db.query.member.findFirst({
-            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, studio.id)),
-        })
-        : null;
-        
-    if (!currentMember) return notFound();
+    const [callerUser, currentMember] = session?.user
+        ? await Promise.all([
+            db.query.user.findFirst({
+                where: eq(schema.user.id, session.user.id),
+                columns: { role: true },
+            }),
+            db.query.member.findFirst({
+                where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, studio.id)),
+            }),
+        ])
+        : [null, null];
 
-    const isManager = ["owner", "manager", "developer"].includes(currentMember.role);
-    const canUpdateBooking = ["owner", "manager", "developer", "admin"].includes(currentMember.role);
-    const canViewFinancials = ["owner", "admin", "manager", "receptionist", "developer"].includes(currentMember.role);
-    const canDeliver = ["owner", "admin", "manager", "developer"].includes(currentMember.role);
+    const isPlatformAdmin = callerUser?.role === "admin";
+    if (!isPlatformAdmin && !currentMember) return notFound();
+
+    const isManager = isPlatformAdmin || Boolean(currentMember && ["owner", "manager", "developer"].includes(currentMember.role));
+    const canUpdateBooking = isPlatformAdmin || Boolean(currentMember && ["owner", "manager", "developer", "admin"].includes(currentMember.role));
+    const canViewFinancials = isPlatformAdmin || Boolean(currentMember && ["owner", "admin", "manager", "receptionist", "developer"].includes(currentMember.role));
+    const canDeliver = isPlatformAdmin || Boolean(currentMember && ["owner", "admin", "manager", "developer"].includes(currentMember.role));
 
     const booking = await db.query.booking.findFirst({
         where: and(eq(schema.booking.id, bookingId), eq(schema.booking.studioId, studio.id)),
@@ -303,7 +310,7 @@ export default async function BookingDetailPage({ params }: Props) {
                             canEditPrice={isManager}
                         />
                     )}
-                    {serializedBooking.memberId === currentMember.id && serializedBooking.bookingStatus !== "COMPLETED" && (
+                    {currentMember && serializedBooking.memberId === currentMember.id && serializedBooking.bookingStatus !== "COMPLETED" && (
                         <MarkTaskCompletedButton bookingId={serializedBooking.id} />
                     )}
                     {isManager && <DeleteBookingButton bookingId={serializedBooking.id} slug={studio.slug} />}
@@ -468,7 +475,7 @@ export default async function BookingDetailPage({ params }: Props) {
                             addonsCount={0}
                             priceApprovalStatus={serializedBooking.priceApprovalStatus}
                             pendingTotalAmount={serializedBooking.pendingTotalAmount ? Number(serializedBooking.pendingTotalAmount) : null}
-                            userRole={currentMember?.role}
+                            userRole={currentMember?.role ?? (isPlatformAdmin ? "admin" : undefined)}
                         />
                     )}
 

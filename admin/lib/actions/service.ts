@@ -22,12 +22,15 @@ export async function createService(data: ServicePayload) {
 
         let studioId: string | null = parsed.data.studioId || null;
 
-        if (!studioId && parsed.data.studioSessionId) {
+        if (parsed.data.studioSessionId) {
             const studioSession = await db.query.studioSession.findFirst({
                 where: eq(schema.studioSession.id, parsed.data.studioSessionId),
                 columns: { studioId: true }
             });
             if (!studioSession) return { status: "error", message: "Studio session not found" };
+            if (studioId && studioSession.studioId !== studioId) {
+                return { status: "error", message: "Studio session does not belong to the selected studio" };
+            }
             studioId = studioSession.studioId;
         }
 
@@ -109,6 +112,19 @@ export async function updateService(id: string, data: ServicePayload) {
         const hasManagePermission = await checkStudioManagePermission(userSession.user.id, existing.studioId);
         if (!hasManagePermission) return { status: "error", message: "Unauthorized access to studio" };
 
+        if (parsed.data.studioSessionId && parsed.data.studioSessionId !== existing.studioSessionId) {
+            const studioSession = await db.query.studioSession.findFirst({
+                where: and(
+                    eq(schema.studioSession.id, parsed.data.studioSessionId),
+                    eq(schema.studioSession.studioId, existing.studioId),
+                ),
+                columns: { id: true },
+            });
+            if (!studioSession) {
+                return { status: "error", message: "Studio session not found for this studio" };
+            }
+        }
+
         const existingVariants = await db.query.serviceVariant.findMany({
             where: eq(schema.serviceVariant.serviceId, id),
         });
@@ -141,7 +157,7 @@ export async function updateService(id: string, data: ServicePayload) {
                 description: parsed.data.description,
                 features: parsed.data.features ?? [],
                 category: parsed.data.category as any,
-                studioSessionId: parsed.data.studioSessionId ?? "",
+                studioSessionId: parsed.data.studioSessionId || existing.studioSessionId,
             }).where(eq(schema.service.id, id));
 
             for (const variant of parsed.data.variants) {

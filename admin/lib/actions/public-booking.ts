@@ -96,15 +96,52 @@ export async function createPublicBooking(data: {
     selectedVariantId?: string;
     addonIds?: string[];
     sessionCount: number;
-    bookingDate: string; // "YYYY-MM-DD"
+    bookingDate: string; // "YYYY-MM-DD" or "YYYY-MM-DDTHH:mm(:ss)"
+    bookingTime?: string; // "HH:mm" or "HH:mm:ss"
     notes?: string;
 }) {
     try {
         if (!Number.isInteger(data.sessionCount) || data.sessionCount < 1 || data.sessionCount > 50) {
             return { status: "error", message: "Invalid session count (must be between 1 and 50)" };
         }
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(data.bookingDate)) {
+        const dateTimeMatch = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(data.bookingDate);
+        if (!dateTimeMatch) {
             return { status: "error", message: "Invalid booking date format" };
+        }
+        let hours = dateTimeMatch[4] !== undefined ? Number(dateTimeMatch[4]) : 0;
+        let minutes = dateTimeMatch[5] !== undefined ? Number(dateTimeMatch[5]) : 0;
+        let seconds = dateTimeMatch[6] !== undefined ? Number(dateTimeMatch[6]) : 0;
+
+        if (data.bookingTime !== undefined) {
+            const timeMatch = /^(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(data.bookingTime);
+            if (!timeMatch) {
+                return { status: "error", message: "Invalid booking time format" };
+            }
+            hours = Number(timeMatch[1]);
+            minutes = Number(timeMatch[2]);
+            seconds = timeMatch[3] !== undefined ? Number(timeMatch[3]) : 0;
+        }
+
+        const y = Number(dateTimeMatch[1]);
+        const m = Number(dateTimeMatch[2]);
+        const d = Number(dateTimeMatch[3]);
+        if (
+            m < 1 || m > 12 ||
+            d < 1 || d > 31 ||
+            hours < 0 || hours > 23 ||
+            minutes < 0 || minutes > 59 ||
+            seconds < 0 || seconds > 59
+        ) {
+            return { status: "error", message: "Invalid booking date or time" };
+        }
+        const bookingDateUTC = new Date(Date.UTC(y, m - 1, d, hours, minutes, seconds));
+        if (
+            Number.isNaN(bookingDateUTC.getTime()) ||
+            bookingDateUTC.getUTCFullYear() !== y ||
+            bookingDateUTC.getUTCMonth() !== m - 1 ||
+            bookingDateUTC.getUTCDate() !== d
+        ) {
+            return { status: "error", message: "Invalid booking date" };
         }
 
         const studio = await db.query.studio.findFirst({
@@ -184,10 +221,6 @@ export async function createPublicBooking(data: {
         const defaultMember =
             studio.members.find((m: any) => m.role === "owner") || studio.members[0];
         if (!defaultMember) return { status: "error", message: "No available staff member" };
-
-        // Construct date in UTC so server timezone doesn't shift it
-        const [y, m, d] = data.bookingDate.split("-").map(Number);
-        const bookingDateUTC = new Date(Date.UTC(y, m - 1, d));
 
         const service = await db.query.service.findFirst({
             where: and(

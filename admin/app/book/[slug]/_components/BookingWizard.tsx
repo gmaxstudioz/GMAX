@@ -184,6 +184,7 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                 addonIds: data.selectedAddonIds.length > 0 ? data.selectedAddonIds : undefined,
                 sessionCount: data.sessionCount,
                 bookingDate: dateTime,
+                bookingTime: data.bookingTime,
                 notes: data.notes?.trim() || undefined,
             }));
 

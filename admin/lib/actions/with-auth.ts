@@ -87,6 +87,8 @@ export async function requireStudioMember(studioId: string): Promise<
 // Verifies the caller is a member of the studio that owns the booking.
 // Returns session + member + booking or an error.
 
+export const STUDIO_MANAGEMENT_ROLES = ["owner", "admin", "manager", "developer"] as const;
+
 export async function requireBookingAccess(bookingId: string): Promise<
     {
         status: "ok";
@@ -102,12 +104,22 @@ export async function requireBookingAccess(bookingId: string): Promise<
     const booking = await db.query.booking.findFirst({ where: eq(schema.booking.id, bookingId) });
     if (!booking) return { status: "error", message: "Unauthorized access to this booking" };
 
-    const member = await db.query.member.findFirst({
-        where: and(
-            eq(schema.member.userId, sessionResult.session.user.id),
-            eq(schema.member.studioId, booking.studioId)
-        ),
-    });
+    const [dbUser, member] = await Promise.all([
+        db.query.user.findFirst({
+            where: eq(schema.user.id, sessionResult.session.user.id),
+            columns: { role: true },
+        }),
+        db.query.member.findFirst({
+            where: and(
+                eq(schema.member.userId, sessionResult.session.user.id),
+                eq(schema.member.studioId, booking.studioId)
+            ),
+        }),
+    ]);
+
+    if (dbUser?.role === "admin") {
+        return { status: "ok", session: sessionResult.session, member: null, booking };
+    }
 
     if (!member) return { status: "error", message: "Unauthorized access to this booking" };
 
@@ -116,7 +128,7 @@ export async function requireBookingAccess(bookingId: string): Promise<
 
 export async function requireStudioRole(
     studioId: string,
-    allowedRoles: readonly string[]
+    allowedRoles: readonly string[] = STUDIO_MANAGEMENT_ROLES
 ): Promise<
     | {
           status: "ok";

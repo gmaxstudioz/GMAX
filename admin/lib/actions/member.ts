@@ -6,7 +6,7 @@ import { ApiResponse } from "../type";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/schema";
 import { eq, and } from "drizzle-orm";
-import type { MemberRole } from "../schemas/studio";
+import { MemberRoleEnum, type MemberRole } from "../schemas/studio";
 
 // ── List Members ────────────────────────────────────────────────────
 
@@ -182,7 +182,12 @@ export async function updateStaffInfo(
             return { status: "error", message: "Unauthorized" };
         }
 
-        const [callerUser, callerMember, targetMember] = await Promise.all([
+        const parsedRole = MemberRoleEnum.safeParse(data.role);
+        if (!parsedRole.success) {
+            return { status: "error", message: "Invalid member role" };
+        }
+
+        const [callerUser, callerMember, targetMember, targetUser] = await Promise.all([
             db.query.user.findFirst({
                 where: eq(schema.user.id, session.user.id),
                 columns: { role: true },
@@ -202,10 +207,17 @@ export async function updateStaffInfo(
                 ),
                 columns: { id: true, role: true },
             }),
+            db.query.user.findFirst({
+                where: eq(schema.user.id, userId),
+                columns: { id: true, phoneNumber: true },
+            }),
         ]);
 
         if (!targetMember) {
             return { status: "error", message: "Staff member not found in this studio" };
+        }
+        if (!targetUser) {
+            return { status: "error", message: "User not found" };
         }
 
         const isPlatformAdmin = callerUser?.role === "admin";
@@ -213,9 +225,31 @@ export async function updateStaffInfo(
             if (!callerMember || !["owner", "developer", "manager"].includes(callerMember.role)) {
                 return { status: "error", message: "Unauthorized: insufficient permissions" };
             }
-            if ((targetMember.role === "owner" || data.role === "owner") && callerMember.role !== "owner") {
-                return { status: "error", message: "Unauthorized: only a studio owner can manage owner roles" };
+            const ownerOnlyRoles = ["owner", "developer"];
+            if (
+                (ownerOnlyRoles.includes(targetMember.role) || ownerOnlyRoles.includes(data.role)) &&
+                callerMember.role !== "owner"
+            ) {
+                return { status: "error", message: "Unauthorized: only a studio owner can manage owner or developer roles" };
             }
+        }
+
+        // better-auth's phoneNumber() plugin is configured without requireVerification,
+        // so /sign-in/phone-number authenticates directly by stored user.phoneNumber + password.
+        // Prevent studio managers from changing another user's sign-in phoneNumber, and reset
+        // phoneNumberVerified whenever an authorized change updates the stored phoneNumber.
+        const requestedPhone = data.phoneNumber !== undefined
+            ? (data.phoneNumber.trim() || null)
+            : (targetUser.phoneNumber?.trim() || null);
+        const currentPhone = targetUser.phoneNumber?.trim() || null;
+        const isPhoneChanged = requestedPhone !== currentPhone;
+        const isSelf = session.user.id === userId;
+
+        if (isPhoneChanged && !isPlatformAdmin && !isSelf) {
+            return {
+                status: "error",
+                message: "Unauthorized: only the user or a platform admin can change a phone number",
+            };
         }
 
         const roleResult = await updateMemberRole(memberId, data.role, studioId);
@@ -229,7 +263,12 @@ export async function updateStaffInfo(
         await db.update(schema.user)
             .set({
                 name: data.name,
-                phoneNumber: data.phoneNumber || null,
+                ...(isPhoneChanged
+                    ? {
+                        phoneNumber: requestedPhone,
+                        phoneNumberVerified: false,
+                    }
+                    : {}),
             })
             .where(eq(schema.user.id, userId));
 

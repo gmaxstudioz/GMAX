@@ -223,7 +223,30 @@ export async function sendBalanceDueReminder(bookingId: string) {
     }
 
 
-    const paymentLink = `${publicDomain}/pay/${booking.id}`;
+    let pendingReference = payments.find(
+        (p: any) =>
+            p.status === "PENDING" &&
+            typeof p.paystackReference === "string" &&
+            p.paystackReference.length > 0 &&
+            Math.abs(Number(p.amount) - balanceDue) < 0.01
+    )?.paystackReference;
+
+    if (!pendingReference) {
+        pendingReference = `gmax-${crypto.randomBytes(12).toString("hex")}`;
+        const receiptNumber = `RCP-${Date.now()}-${uuidv4().slice(0, 8).toUpperCase()}`;
+        await db.insert(schema.payment).values({
+            id: uuidv4(),
+            amount: balanceDue.toFixed(2),
+            method: "TRANSFER",
+            status: "PENDING",
+            paystackReference: pendingReference,
+            receiptNumber,
+            bookingId: booking.id,
+            recordedById: session.user.id,
+        });
+    }
+
+    const paymentLink = `${publicDomain}/pay/${pendingReference}`;
 
     const { sendPaymentLinkSMS, sendPaymentLinkWhatsApp } = await import("@/lib/termii");
 

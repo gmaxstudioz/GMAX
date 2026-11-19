@@ -86,7 +86,7 @@ async function mapProductToOutput(data: {
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 
-// Endpoint to create a new product catalog item
+// Endpoint to create a new product catalog item (shared catalog: platform admins or studio owners/developers via requireGlobalOwnerOrAdmin)
 export const createProduct = os.product.create
     .use(authMiddleware)
     .handler(async ({ input, context, errors }) => {
@@ -333,28 +333,50 @@ export const requestAccessLink = os.product.requestAccessLink
         });
         if (!hasPurchase) return { sent: true };
 
-        // Enforce 60-second cooldown per buyer to prevent SMS/email pumping
-        const cooldownSince = new Date(Date.now() - 60_000).toISOString();
-        const recentToken = await db.query.buyerAccessToken.findFirst({
-            where: (t, { eq, and, gt }) =>
-                and(eq(t.buyerId, buyerData.id), gt(t.createdAt, cooldownSince)),
-            columns: { id: true },
-        });
-        if (recentToken) return { sent: true };
-
         // Structure a random security link token and calculate an expiry window set to 15 minutes
         const token = generateToken();
         const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-
-        // Store access credentials string reference directly inside database records
         const tokenRecordId = uuidv4();
-        const [tokenRecord] = await db.insert(buyerAccessToken).values({
-            id: tokenRecordId,
-            buyerId: buyerData.id, 
-            token, 
-            expiresAt, 
-            used: false
-        }).returning();
+
+        // Enforce 60-second cooldown atomically per buyer using the database clock
+        const tokenRecord = await db.transaction(async (tx) => {
+            // Serialize concurrent token requests for the same buyer
+            await tx
+                .select({ id: buyer.id })
+                .from(buyer)
+                .where(eq(buyer.id, buyerData.id))
+                .for("update");
+
+            const [recentToken] = await tx
+                .select({ id: buyerAccessToken.id })
+                .from(buyerAccessToken)
+                .where(
+                    and(
+                        eq(buyerAccessToken.buyerId, buyerData.id),
+                        gt(buyerAccessToken.createdAt, sql`CURRENT_TIMESTAMP - INTERVAL '60 seconds'`),
+                    ),
+                )
+                .limit(1);
+
+            if (recentToken) {
+                return null;
+            }
+
+            const [inserted] = await tx
+                .insert(buyerAccessToken)
+                .values({
+                    id: tokenRecordId,
+                    buyerId: buyerData.id,
+                    token,
+                    expiresAt,
+                    used: false,
+                })
+                .returning();
+
+            return inserted ?? null;
+        });
+
+        if (!tokenRecord) return { sent: true };
 
         const accessLink = `${PORTAL_URL}/shop/access/${token}`;
         let deliveryMethod: "EMAIL" | "SMS" | null = null;

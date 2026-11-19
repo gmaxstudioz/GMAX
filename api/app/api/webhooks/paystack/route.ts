@@ -267,6 +267,13 @@ export async function POST(req: Request) {
             return Response.json({ received: true });
         }
 
+        const persistedMeta = (foundPayment.paystackResponse ?? {}) as {
+            productId?: string;
+            buyerId?: string;
+            pendingProduct?: unknown;
+            pendingBuyer?: unknown;
+        };
+
         const paidAmount = Number(payload.data.amount ?? 0);
         const paidCurrency = String(payload.data.currency ?? "").toUpperCase();
         const expectedAmount = Math.round(Number(foundPayment.expectedAmount ?? foundPayment.amount) * 100);
@@ -275,20 +282,26 @@ export async function POST(req: Request) {
             console.error(
                 `[Webhook] Shop payment mismatch for ${reference}. expected ${expectedAmount} NGN, got ${paidAmount} ${paidCurrency}`
             );
+            const payloadObj =
+                typeof payload.data === "object" && payload.data !== null
+                    ? (payload.data as Record<string, unknown>)
+                    : {};
             await db.update(payment)
                 .set({
                     status: "PENDING",
-                    paystackResponse: payload.data,
+                    paystackResponse: {
+                        ...payloadObj,
+                        ...(persistedMeta.pendingProduct !== undefined ? { pendingProduct: persistedMeta.pendingProduct } : {}),
+                        ...(persistedMeta.pendingBuyer !== undefined ? { pendingBuyer: persistedMeta.pendingBuyer } : {}),
+                        ...(persistedMeta.productId !== undefined ? { productId: persistedMeta.productId } : {}),
+                        ...(persistedMeta.buyerId !== undefined ? { buyerId: persistedMeta.buyerId } : {}),
+                    },
                     paymentDate: new Date().toISOString(),
                 })
                 .where(eq(payment.id, foundPayment.id));
             return Response.json({ received: true });
         }
 
-        const persistedMeta = (foundPayment.paystackResponse ?? {}) as {
-            productId?: string;
-            buyerId?: string;
-        };
         const product_id = persistedMeta.productId;
         const buyer_id = persistedMeta.buyerId;
 

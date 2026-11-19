@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import * as schema from "@/lib/schema";
 import { eq, desc } from "drizzle-orm";
 import { ApiResponse } from "../type";
-import { requireSession, requireStudioMember } from "./with-auth";
+import { requireSession, requireStudioMember, requireStudioRole, STUDIO_MANAGEMENT_ROLES } from "./with-auth";
 import { v4 as uuidv4 } from "uuid";
 
 // ── Create Client ────────────────────────────────────────────────────────────
@@ -52,12 +52,9 @@ export async function DeleteClient(clientId: string): Promise<ApiResponse> {
         const client = await db.query.client.findFirst({ where: eq(schema.client.id, clientId) });
         if (!client) return { status: "error", message: "Client not found" };
 
-        // Verify the caller belongs to the studio that owns this client
-        const auth = await requireStudioMember(client.studioId);
-        if (auth.status === "error") return auth;
-
-        const allowedRoles = ["owner", "admin", "manager", "developer"];
-        if (!allowedRoles.includes(auth.member.role)) {
+        // Verify the caller is a platform admin or holds a management role in the studio that owns this client
+        const auth = await requireStudioRole(client.studioId, STUDIO_MANAGEMENT_ROLES);
+        if (auth.status === "error") {
             return { status: "error", message: "Unauthorized: You do not have permission to delete clients" };
         }
 
@@ -84,11 +81,8 @@ export async function UpdateClient(values: Client, clientId: string): Promise<Ap
         const existing = await db.query.client.findFirst({ where: eq(schema.client.id, clientId) });
         if (!existing) return { status: "error", message: "Client not found" };
 
-        const auth = await requireStudioMember(existing.studioId);
-        if (auth.status === "error") return auth;
-
-        const allowedRoles = ["owner", "admin", "manager", "developer"];
-        if (!allowedRoles.includes(auth.member.role)) {
+        const auth = await requireStudioRole(existing.studioId, STUDIO_MANAGEMENT_ROLES);
+        if (auth.status === "error") {
             return { status: "error", message: "Unauthorized: You do not have permission to update clients" };
         }
 

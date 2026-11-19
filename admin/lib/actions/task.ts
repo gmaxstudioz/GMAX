@@ -33,13 +33,20 @@ export async function getMemberTasks(
     const targetMember = await db.query.member.findFirst({ where: eq(schema.member.id, memberId) });
     if (!targetMember) throw new Error("Member not found");
 
-    const callerMember = await db.query.member.findFirst({
-        where: and(
-            eq(schema.member.userId, sessionResult.session.user.id),
-            eq(schema.member.studioId, targetMember.studioId)
-        )
-    });
-    if (!callerMember) throw new Error("Unauthorized");
+    const [callerUser, callerMember] = await Promise.all([
+        db.query.user.findFirst({
+            where: eq(schema.user.id, sessionResult.session.user.id),
+            columns: { role: true },
+        }),
+        db.query.member.findFirst({
+            where: and(
+                eq(schema.member.userId, sessionResult.session.user.id),
+                eq(schema.member.studioId, targetMember.studioId)
+            )
+        }),
+    ]);
+    const isPlatformAdmin = callerUser?.role === "admin";
+    if (!isPlatformAdmin && !callerMember) throw new Error("Unauthorized");
 
     const validatedPage = Math.max(0, Math.floor(Number(page) || 0));
     const skipAmount = validatedPage * ITEMS_PER_PAGE;

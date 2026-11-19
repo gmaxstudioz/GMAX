@@ -366,27 +366,49 @@ export const updateBooking = os.booking.update.use(authMiddleware).handler(
             MANAGEMENT_ROLES,
         );
 
-        if (Object.keys(updateData).length > 0) {
-            const { bookingDate, ...restData } = updateData;
-            await db.update(booking).set({ ...restData, updatedAt: new Date().toISOString(), ...(bookingDate ? { bookingDate: bookingDate.toISOString() } : {}) }).where(eq(booking.id, bookingId));
+        if (updateData.memberId !== undefined) {
+            const targetMember = await db.query.member.findFirst({
+                where: (model, { eq, and }) =>
+                    and(eq(model.id, updateData.memberId!), eq(model.studioId, existing.studioId)),
+                columns: { id: true },
+            });
+            if (!targetMember) {
+                throw errors.BAD_REQUEST({ message: "Target staff member does not belong to this studio." });
+            }
         }
 
-        if (addonIds !== undefined) {
-            if (addonIds.length > 0) {
-                const validAddons = await db.query.service.findMany({
-                    where: (model, { inArray, eq, and }) =>
-                        and(inArray(model.id, addonIds), eq(model.studioId, existing.studioId)),
-                    columns: { id: true },
-                });
-                if (validAddons.length !== new Set(addonIds).size) {
-                    throw errors.BAD_REQUEST({ message: "One or more add-ons do not belong to this studio." });
-                }
-            }
-            await db.delete(bookingAddons).where(eq(bookingAddons.a, bookingId));
-            if (addonIds.length > 0) {
-                await db.insert(bookingAddons).values(addonIds.map(id => ({ a: bookingId, b: id })));
+        if (addonIds !== undefined && addonIds.length > 0) {
+            const validAddons = await db.query.service.findMany({
+                where: (model, { inArray, eq, and }) =>
+                    and(inArray(model.id, addonIds), eq(model.studioId, existing.studioId)),
+                columns: { id: true },
+            });
+            if (validAddons.length !== new Set(addonIds).size) {
+                throw errors.BAD_REQUEST({ message: "One or more add-ons do not belong to this studio." });
             }
         }
+
+        await db.transaction(async (tx) => {
+            if (Object.keys(updateData).length > 0) {
+                const { bookingDate, ...restData } = updateData;
+                await tx
+                    .update(booking)
+                    .set({
+                        ...restData,
+                        updatedAt: new Date().toISOString(),
+                        ...(bookingDate ? { bookingDate: bookingDate.toISOString() } : {}),
+                    })
+                    .where(eq(booking.id, bookingId));
+            }
+
+            if (addonIds !== undefined) {
+                await tx.delete(bookingAddons).where(eq(bookingAddons.a, bookingId));
+                if (addonIds.length > 0) {
+                    const uniqueAddonIds = [...new Set(addonIds)];
+                    await tx.insert(bookingAddons).values(uniqueAddonIds.map((id) => ({ a: bookingId, b: id })));
+                }
+            }
+        });
 
         const data = await db.query.booking.findFirst({
             where: (model, { eq }) => eq(model.id, bookingId),
@@ -568,7 +590,8 @@ export const updateBookingStatus = os.booking.updateStatus.use(authMiddleware).h
             bookingId,
         );
 
-        if (!isAdmin && ["photographer", "videographer"].includes(callerMember!.role)) {
+        const isAssignedStaffRole = !isAdmin && ["photographer", "videographer"].includes(callerMember!.role);
+        if (isAssignedStaffRole) {
             if (existing.memberId !== callerMember!.id) {
                 throw errors.FORBIDDEN({ message: "Photographers/videographers can only update assigned bookings." });
             }
@@ -583,7 +606,19 @@ export const updateBookingStatus = os.booking.updateStatus.use(authMiddleware).h
         if (deliveryStatus) updateData.deliveryStatus = deliveryStatus;
 
         const { bookingDate, ...restData } = updateData;
-        await db.update(booking).set({ ...restData, updatedAt: new Date().toISOString(), ...(bookingDate ? { bookingDate: bookingDate.toISOString() } : {}) }).where(eq(booking.id, bookingId));
+        const updateWhere = isAssignedStaffRole
+            ? and(eq(booking.id, bookingId), eq(booking.memberId, callerMember!.id))
+            : eq(booking.id, bookingId);
+        const updatedRows = await db
+            .update(booking)
+            .set({ ...restData, updatedAt: new Date().toISOString(), ...(bookingDate ? { bookingDate: bookingDate.toISOString() } : {}) })
+            .where(updateWhere)
+            .returning({ id: booking.id });
+        if (updatedRows.length === 0) {
+            throw isAssignedStaffRole
+                ? errors.FORBIDDEN({ message: "Photographers/videographers can only update assigned bookings." })
+                : errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: bookingId } });
+        }
         
         const data = await db.query.booking.findFirst({
             where: (model, { eq }) => eq(model.id, bookingId),

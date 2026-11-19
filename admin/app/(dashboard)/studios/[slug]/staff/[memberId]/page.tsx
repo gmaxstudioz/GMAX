@@ -84,9 +84,9 @@ export default async function MemberPage({ params }: MemberPageProps) {
                     />
                 )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="flex flex-col gap-4">
-                    <Card className="@container/card min-h-[200px] h-fit">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="flex flex-col gap-4 md:col-span-2">
+                    <Card className="@container/card min-h-45 h-fit">
                         <CardHeader>
                             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
                                 <Image src={memberData?.user.image || "/images/placeholder.jpg"} alt="Profile" width={120} height={120} className="rounded-lg object-cover" />
@@ -126,7 +126,7 @@ export default async function MemberPage({ params }: MemberPageProps) {
                     </Card>
                 </div>
                 <div className="md:col-span-3 flex flex-col gap-4 w-full">
-                    <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
+                    <div className="grid grid-cols-3 gap-4">
                         <Card>
                             <CardContent>
                                 <CardTitle>Asign Tasks</CardTitle>

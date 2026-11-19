@@ -45,7 +45,7 @@ function SignupFormContent({
     try {
       const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost";
       const parsed = new URL(raw, origin);
-      if (parsed.origin !== origin) return "/";
+      if (parsed.origin !== origin || !parsed.pathname.startsWith("/") || parsed.pathname.startsWith("//")) return "/";
       return parsed.pathname + parsed.search + parsed.hash;
     } catch {
       return "/";
@@ -197,10 +197,6 @@ function SignupFormContent({
           </form>
         </CardContent>
       </Card>
-      <FieldDescription className="px-6 text-center">
-        By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
-        and <a href="#">Privacy Policy</a>.
-      </FieldDescription>
     </div>
   )
 }

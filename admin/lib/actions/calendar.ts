@@ -6,7 +6,7 @@ import * as schema from "@/lib/schema";
 import { and, eq, gte, lte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { CalendarBookingSchema } from "../schemas/calendar";
-import { requireStudioMember, requireBookingAccess } from "./with-auth";
+import { requireStudioMember, requireBookingAccess, STUDIO_MANAGEMENT_ROLES } from "./with-auth";
 
 // ── Get Bookings Per Month ───────────────────────────────────────────────────
 
@@ -52,8 +52,8 @@ export async function moveBooking(bookingId: string, newDateKey: string) {
     const auth = await requireBookingAccess(bookingId);
     if (auth.status === "error") throw new Error(auth.message);
 
-    if (auth.member.role === "receptionist") {
-        throw new Error("Unauthorized: Receptionists cannot reschedule bookings");
+    if (auth.member && !STUDIO_MANAGEMENT_ROLES.includes(auth.member.role)) {
+        throw new Error("Unauthorized: You do not have permission to reschedule bookings");
     }
 
     const [y, m, d] = newDateKey.split("-").map(Number);

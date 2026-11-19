@@ -66,6 +66,12 @@ export async function requireBookingStudioRole(
     return { booking: existing, ...authz };
 }
 
+/**
+ * Authorizes management of the shared store/product catalog.
+ * Shared catalog access is granted to platform administrators (`user.role === "admin"`)
+ * as well as studio owners and developers (`member.role` in `["owner", "developer"]`),
+ * matching the admin dashboard store policy.
+ */
 export async function requireGlobalOwnerOrAdmin(userId: string) {
     const dbUser = await db.query.user.findFirst({
         where: eq(schema.user.id, userId),
@@ -89,7 +95,7 @@ export async function requireGlobalOwnerOrAdmin(userId: string) {
 
     if (!ownerOrDev) {
         throw new ORPCError("FORBIDDEN", {
-            message: "Requires platform admin, owner, or developer privileges.",
+            message: "Requires platform admin or studio owner/developer privileges.",
         });
     }
 
