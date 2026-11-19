@@ -32,6 +32,8 @@ interface PaymentCheckoutProps {
 
 export function PaymentCheckout({ reference, email, amount, publicKey, purchaseType = "booking" }: PaymentCheckoutProps) {
     const router = useRouter();
+    const isEmailMasked = !email || email.includes("*");
+    const [payerEmail, setPayerEmail] = useState(isEmailMasked ? "" : email);
     const [status, setStatus] = useState<"idle" | "processing" | "success" | "failed">("idle");
     const [scriptLoaded, setScriptLoaded] = useState(false);
     const [countdown, setCountdown] = useState(5);
@@ -75,8 +77,9 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
             return;
         }
 
-        if (!email) {
-            toast.error("Email address is required for payment.");
+        const activeEmail = payerEmail.trim();
+        if (!activeEmail || !activeEmail.includes("@")) {
+            toast.error("Please enter a valid email address for your payment receipt.");
             return;
         }
 
@@ -89,7 +92,7 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
             const popup = new window.PaystackPop();
             popup.newTransaction({
                 key: publicKey,
-                email,
+                email: activeEmail,
                 amount: Math.round(amount * 100),
                 ref: actualRef,
                 currency: "NGN",
@@ -206,7 +209,23 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
     }
 
     return (
-        <div className="flex flex-col items-center gap-6 w-full">
+        <div className="flex flex-col items-center gap-4 w-full">
+            {isEmailMasked && (
+                <div className="w-full max-w-sm space-y-1.5">
+                    <label htmlFor="payer-email" className="text-xs font-medium text-muted-foreground">
+                        Confirm email for payment receipt ({email || "required"})
+                    </label>
+                    <input
+                        id="payer-email"
+                        type="email"
+                        value={payerEmail}
+                        onChange={(e) => setPayerEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        className="w-full h-10 rounded-md border bg-background px-3 text-sm"
+                        required
+                    />
+                </div>
+            )}
             <Button
                 size="lg"
                 className="w-full max-w-sm text-lg py-6 gap-2 font-semibold shadow-lg transition-all hover:shadow-xl"

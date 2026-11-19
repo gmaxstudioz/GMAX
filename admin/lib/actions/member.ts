@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import { ApiResponse } from "../type";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { MemberRole } from "../schemas/studio";
 
 // ── List Members ────────────────────────────────────────────────────
@@ -127,10 +127,38 @@ export async function addMember(
 
 export async function FetchMemberDetails(memberId: string) {
     try {
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (!session?.user) {
+            return { status: "error", data: null, message: "Unauthorized" };
+        }
+
         const data = await db.query.member.findFirst({
             where: eq(schema.member.id, memberId),
             with: { user: true, studio: true, bookings: true },
         });
+        if (!data) {
+            return { status: "error", data: null, message: "Member not found" };
+        }
+
+        const dbUser = await db.query.user.findFirst({
+            where: eq(schema.user.id, session.user.id),
+            columns: { role: true },
+        });
+        const isPlatformAdmin = dbUser?.role === "admin";
+        const isSelf = data.userId === session.user.id;
+
+        if (!isPlatformAdmin && !isSelf) {
+            const callerMember = await db.query.member.findFirst({
+                where: and(
+                    eq(schema.member.userId, session.user.id),
+                    eq(schema.member.studioId, data.studioId),
+                ),
+                columns: { role: true },
+            });
+            if (!callerMember || !["owner", "developer", "manager"].includes(callerMember.role)) {
+                return { status: "error", data: null, message: "Unauthorized" };
+            }
+        }
 
         return { status: "success", data };
     } catch (error) {
@@ -148,22 +176,62 @@ export async function updateStaffInfo(
     data: { role: MemberRole; phoneNumber?: string; name: string },
 ): Promise<ApiResponse> {
     try {
-        const [roleResult] = await Promise.all([
-            updateMemberRole(memberId, data.role, studioId),
-            db.update(schema.user)
-                .set({
-                    name: data.name,
-                    phoneNumber: data.phoneNumber || null,
-                })
-                .where(eq(schema.user.id, userId)),
+        const reqHeaders = await headers();
+        const session = await auth.api.getSession({ headers: reqHeaders });
+        if (!session?.user) {
+            return { status: "error", message: "Unauthorized" };
+        }
+
+        const [callerUser, callerMember, targetMember] = await Promise.all([
+            db.query.user.findFirst({
+                where: eq(schema.user.id, session.user.id),
+                columns: { role: true },
+            }),
+            db.query.member.findFirst({
+                where: and(
+                    eq(schema.member.userId, session.user.id),
+                    eq(schema.member.studioId, studioId),
+                ),
+                columns: { role: true },
+            }),
+            db.query.member.findFirst({
+                where: and(
+                    eq(schema.member.id, memberId),
+                    eq(schema.member.studioId, studioId),
+                    eq(schema.member.userId, userId),
+                ),
+                columns: { id: true, role: true },
+            }),
         ]);
 
+        if (!targetMember) {
+            return { status: "error", message: "Staff member not found in this studio" };
+        }
+
+        const isPlatformAdmin = callerUser?.role === "admin";
+        if (!isPlatformAdmin) {
+            if (!callerMember || !["owner", "developer", "manager"].includes(callerMember.role)) {
+                return { status: "error", message: "Unauthorized: insufficient permissions" };
+            }
+            if ((targetMember.role === "owner" || data.role === "owner") && callerMember.role !== "owner") {
+                return { status: "error", message: "Unauthorized: only a studio owner can manage owner roles" };
+            }
+        }
+
+        const roleResult = await updateMemberRole(memberId, data.role, studioId);
         if (roleResult.status === "error") {
             return {
                 status: "error",
-                message: `Profile updated but role change failed: \${roleResult.message}`,
+                message: roleResult.message || "Failed to update member role",
             };
         }
+
+        await db.update(schema.user)
+            .set({
+                name: data.name,
+                phoneNumber: data.phoneNumber || null,
+            })
+            .where(eq(schema.user.id, userId));
 
         return { status: "success", message: "Staff member updated successfully" };
     } catch (error) {

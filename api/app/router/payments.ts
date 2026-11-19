@@ -1,7 +1,7 @@
 // router/payments.ts
 import { db } from "@/lib/db";
 import { payment, productAccess, buyerAccessToken, booking, buyer, bookingIntent, service } from "@/lib/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, ne } from "drizzle-orm";
 import { implement } from "@orpc/server";
 import { contract } from "@/app/contract";
 import { BaseContext, optionalAuthMiddleware } from "./middleware";
@@ -20,6 +20,21 @@ function generateToken(): string {
 function formatCurrency(amount: number | string): string {
     const num = typeof amount === "string" ? parseFloat(amount) : amount;
     return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(num);
+}
+
+function maskEmail(email: string | null | undefined): string {
+    if (!email) return "";
+    const parts = email.split("@");
+    if (parts.length !== 2) return "***";
+    const [local, domain] = parts;
+    return `${local.slice(0, 1)}***@${domain}`;
+}
+
+function maskName(name: string | null | undefined): string {
+    if (!name) return "Customer";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0];
+    return `${parts[0]} ${parts[1][0]}.`;
 }
 
 export const verifyPurchase = os.payment.verifyPurchase
@@ -54,9 +69,22 @@ export const verifyPurchase = os.payment.verifyPurchase
 
         try {
             // Verify with Paystack
-            const response = await paystackFetch<{ data?: { status?: string } }>(`/transaction/verify/${input.reference}`);
+            const response = await paystackFetch<{
+                data?: { status?: string; amount?: number; currency?: string };
+            }>(`/transaction/verify/${encodeURIComponent(input.reference)}`);
             
             if (response.data?.status === "success") {
+                const paidAmount = Number(response.data.amount ?? 0);
+                const expectedAmount = Math.round(Number(paymentRecord.amount) * 100);
+                const paidCurrency = String(response.data.currency ?? "").toUpperCase();
+
+                if (paidAmount !== expectedAmount || paidCurrency !== "NGN") {
+                    console.error(
+                        `[verifyPurchase] Amount/currency mismatch for ${input.reference}: expected ${expectedAmount} NGN, got ${paidAmount} ${paidCurrency}`
+                    );
+                    return { verified: false };
+                }
+
                 const paystackRes = paymentRecord.paystackResponse as { pendingProduct?: { title: string }, pendingBuyer?: { name: string, email: string }, productId?: string, buyerId?: string } | null;
                 const isProductPurchase = Boolean(paystackRes?.pendingProduct && paystackRes?.pendingBuyer);
                 const productId = paystackRes?.productId;
@@ -66,7 +94,7 @@ export const verifyPurchase = os.payment.verifyPurchase
                     await db.transaction(async (tx) => {
                         const updateRes = await tx.update(payment)
                             .set({ status: "PAID" })
-                            .where(and(eq(payment.id, paymentRecord.id), eq(payment.status, "PENDING")))
+                            .where(and(eq(payment.id, paymentRecord.id), ne(payment.status, "PAID")))
                             .returning();
                         
                         if (updateRes.length === 0) {
@@ -285,8 +313,8 @@ export const getPublicPaymentDetails = os.payment.getPublicPaymentDetails
                     sessionCount: intent.sessionCount,
                     bookingDate: intent.bookingDate,
                     client: {
-                        name: intent.clientName,
-                        email: intent.clientEmail || "",
+                        name: maskName(intent.clientName),
+                        email: maskEmail(intent.clientEmail),
                     },
                     service: serviceRecord ? {
                         name: serviceRecord.name,
@@ -307,34 +335,40 @@ export const getPublicPaymentDetails = os.payment.getPublicPaymentDetails
         const bookingData = paymentRecord.booking ? {
             sessionCount: paymentRecord.booking.sessionCount,
             bookingDate: paymentRecord.booking.bookingDate,
-            client: paymentRecord.booking.client ? {
-                name: paymentRecord.booking.client.name,
-                email: paymentRecord.booking.client.email,
-            } : null,
-            service: paymentRecord.booking.service ? {
+            client: isAlreadyPaid ? null : (paymentRecord.booking.client ? {
+                name: maskName(paymentRecord.booking.client.name),
+                email: maskEmail(paymentRecord.booking.client.email),
+            } : null),
+            service: isAlreadyPaid ? null : (paymentRecord.booking.service ? {
                 name: paymentRecord.booking.service.name,
                 duration: paymentRecord.booking.service.studioSession?.duration || 45,
-            } : null,
+            } : null),
             studio: paymentRecord.booking.studio ? {
                 name: paymentRecord.booking.studio.name,
                 logo: paymentRecord.booking.studio.logo,
             } : null,
-            addons: paymentRecord.booking.bookingAddons?.map((a: any) => ({
+            addons: isAlreadyPaid ? [] : (paymentRecord.booking.bookingAddons?.map((a: any) => ({
                 id: a.service?.id,
                 name: a.service?.name,
-            })) || [],
+            })) || []),
         } : null;
 
         const paystackRes = paymentRecord.paystackResponse as { pendingProduct?: { title: string }, pendingBuyer?: { name: string, email: string } } | null;
         
         const firstProductAccess = paymentRecord.productAccesses?.[0];
-        const productAccessData = firstProductAccess ? {
+        const productAccessData = isAlreadyPaid ? (firstProductAccess ? {
             product: { title: firstProductAccess.product.title },
-            buyer: { name: firstProductAccess.buyer.name, email: firstProductAccess.buyer.email },
+            buyer: { name: "Customer", email: "" },
         } : paystackRes?.pendingProduct ? {
             product: { title: paystackRes.pendingProduct.title },
-            buyer: { name: paystackRes.pendingBuyer?.name || "Customer", email: paystackRes.pendingBuyer?.email || "" },
-        } : null;
+            buyer: { name: "Customer", email: "" },
+        } : null) : (firstProductAccess ? {
+            product: { title: firstProductAccess.product.title },
+            buyer: { name: maskName(firstProductAccess.buyer.name), email: maskEmail(firstProductAccess.buyer.email) },
+        } : paystackRes?.pendingProduct ? {
+            product: { title: paystackRes.pendingProduct.title },
+            buyer: { name: maskName(paystackRes.pendingBuyer?.name), email: maskEmail(paystackRes.pendingBuyer?.email) },
+        } : null);
 
         return {
             amount: paymentRecord.amount.toString(),

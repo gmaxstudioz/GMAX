@@ -1,4 +1,4 @@
-"use server";
+import "server-only";
 
 import { auth } from "../auth";
 import { headers } from "next/headers";
@@ -100,7 +100,7 @@ export async function requireBookingAccess(bookingId: string): Promise<
     if (sessionResult.status === "error") return sessionResult;
 
     const booking = await db.query.booking.findFirst({ where: eq(schema.booking.id, bookingId) });
-    if (!booking) return { status: "error", message: "Booking not found" };
+    if (!booking) return { status: "error", message: "Unauthorized access to this booking" };
 
     const member = await db.query.member.findFirst({
         where: and(
@@ -112,4 +112,41 @@ export async function requireBookingAccess(bookingId: string): Promise<
     if (!member) return { status: "error", message: "Unauthorized access to this booking" };
 
     return { status: "ok", session: sessionResult.session, member, booking };
+}
+
+export async function requireStudioRole(
+    studioId: string,
+    allowedRoles: readonly string[]
+): Promise<
+    | {
+          status: "ok";
+          session: NonNullable<Awaited<ReturnType<typeof getAuthSession>>>;
+          member: any;
+          isAdmin: boolean;
+      }
+    | { status: "error"; message: string }
+> {
+    const sessionResult = await requireSession();
+    if (sessionResult.status === "error") return sessionResult;
+
+    const dbUser = await db.query.user.findFirst({
+        where: eq(schema.user.id, sessionResult.session.user.id),
+        columns: { role: true },
+    });
+    if (dbUser?.role === "admin") {
+        return { status: "ok", session: sessionResult.session, member: null, isAdmin: true };
+    }
+
+    const member = await db.query.member.findFirst({
+        where: and(
+            eq(schema.member.userId, sessionResult.session.user.id),
+            eq(schema.member.studioId, studioId)
+        ),
+    });
+
+    if (!member || !allowedRoles.includes(member.role)) {
+        return { status: "error", message: "Unauthorized" };
+    }
+
+    return { status: "ok", session: sessionResult.session, member, isAdmin: false };
 }

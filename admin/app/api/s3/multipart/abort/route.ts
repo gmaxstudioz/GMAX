@@ -1,6 +1,7 @@
 import { AbortMultipartUploadCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from "next/server";
 import { S3 } from "@/lib/S3Client";
+import { requireS3KeyAccess } from "@/lib/s3-auth";
 import z from "zod";
 
 const schema = z.object({
@@ -21,6 +22,8 @@ export async function POST(req: Request) {
         }
 
         const { key, uploadId } = validation.data;
+        const authResult = await requireS3KeyAccess(req.headers, key, "upload");
+        if (!authResult.ok) return authResult.response;
 
         if (!process.env.R2_BUCKET_NAME) {
             return NextResponse.json(

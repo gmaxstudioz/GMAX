@@ -52,6 +52,10 @@ export async function moveBooking(bookingId: string, newDateKey: string) {
     const auth = await requireBookingAccess(bookingId);
     if (auth.status === "error") throw new Error(auth.message);
 
+    if (auth.member.role === "receptionist") {
+        throw new Error("Unauthorized: Receptionists cannot reschedule bookings");
+    }
+
     const [y, m, d] = newDateKey.split("-").map(Number);
 
     const newDate = new Date(Date.UTC(y, m - 1, d));

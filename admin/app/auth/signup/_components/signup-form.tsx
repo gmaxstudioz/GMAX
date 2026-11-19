@@ -39,20 +39,17 @@ function SignupFormContent({
   const searchParams = useSearchParams();
 
   function getSafeRedirectUrl(raw: string | null): string {
-    if (!raw) return "/";
-    // Reject protocol-relative URLs and external schemes
-    if (raw.startsWith("//") || /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(raw)) {
-      try {
-        const parsed = new URL(raw, window.location.origin);
-        if (parsed.origin !== window.location.origin) return "/";
-        return parsed.pathname + parsed.search + parsed.hash;
-      } catch {
-        return "/";
-      }
+    if (!raw || raw.includes("\\") || !raw.startsWith("/") || raw.startsWith("//")) {
+      return "/";
     }
-    // Allow relative paths starting with /
-    if (raw.startsWith("/")) return raw;
-    return "/";
+    try {
+      const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost";
+      const parsed = new URL(raw, origin);
+      if (parsed.origin !== origin) return "/";
+      return parsed.pathname + parsed.search + parsed.hash;
+    } catch {
+      return "/";
+    }
   }
 
   const redirectUrl = getSafeRedirectUrl(searchParams.get("redirect"));

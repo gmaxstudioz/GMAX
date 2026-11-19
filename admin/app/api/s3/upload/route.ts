@@ -7,15 +7,21 @@ import z from "zod";
 import { v4 as uuidv4 } from 'uuid';
 import { S3 } from "@/lib/S3Client";
 import { posthogLog, posthogLogProvider } from "@/instrumentation";
+import {
+    MAX_SINGLE_UPLOAD_BYTES,
+    isBlockedContentType,
+    requireS3DirectoryAccess,
+    sanitizeFileName,
+} from "@/lib/s3-auth";
 
 export const runtime = "nodejs";
 
 export const fileUploadSchema = z.object({
     fileName: z.string().min(1, "File name is required"),
     fileType: z.string().min(1, "File type is required"),
-    fileSize: z.number().min(1, "File size is required"),
+    fileSize: z.number().int().min(1, "File size is required").max(MAX_SINGLE_UPLOAD_BYTES, "File exceeds maximum upload limit"),
     isImage: z.boolean(),
-    directory: z.string().optional(), // e.g. "studio/bookings/{bookingId}/"
+    directory: z.string().optional(), // e.g. "studio/bookings/{bookingId}/photos"
 })
 
 function flushPosthogLogs() {
@@ -52,8 +58,16 @@ export async function POST(req: Request) {
 
         const { fileName, fileType, fileSize, directory } = validation.data;
 
+        if (isBlockedContentType(fileType)) {
+            return NextResponse.json({ error: "Disallowed content type" }, { status: 400 });
+        }
+
         const dir = directory || "studio/logo";
-        const fileKey = `${dir}/${uuidv4()}-${fileName}`;
+        const authResult = await requireS3DirectoryAccess(req.headers, dir);
+        if (!authResult.ok) return authResult.response;
+
+        const safeFileName = sanitizeFileName(fileName);
+        const fileKey = `${dir}/${uuidv4()}-${safeFileName}`;
 
         const command = new PutObjectCommand({
             Bucket: process.env.R2_BUCKET_NAME,

@@ -27,17 +27,43 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Camera, Download, Upload } from "@hugeicons/core-free-icons";
+import { getAdminPresignedUrl } from "@/lib/r2-presign";
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-    const { bookingId } = await params;
+    const { slug, bookingId } = await params;
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) {
+        return { title: "Booking Details", description: "View booking details" };
+    }
+
+    const studio = await db.query.studio.findFirst({
+        where: eq(schema.studio.slug, slug),
+        columns: { id: true },
+    });
+    if (!studio) {
+        return { title: "Booking Details", description: "View booking details" };
+    }
+
+    const [callerUser, callerMember] = await Promise.all([
+        db.query.user.findFirst({ where: eq(schema.user.id, session.user.id), columns: { role: true } }),
+        db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, studio.id)),
+            columns: { id: true },
+        }),
+    ]);
+    if (callerUser?.role !== "admin" && !callerMember) {
+        return { title: "Booking Details", description: "View booking details" };
+    }
+
     const booking = await db.query.booking.findFirst({
-        where: eq(schema.booking.id, bookingId),
-        with: { client: true, service: true },
+        where: and(eq(schema.booking.id, bookingId), eq(schema.booking.studioId, studio.id)),
+        with: { service: true },
     });
 
     return {
-        title: booking ? `Booking – ${booking.client?.name}` : "Booking Details",
+        title: booking ? `Booking – ${booking.service?.name ?? "Session"}` : "Booking Details",
         description: booking
-            ? `Booking details for ${booking.client?.name} – ${booking.service?.name}`
+            ? `Booking details for ${booking.service?.name ?? "Session"}`
             : "View booking details",
     };
 }
@@ -157,17 +183,19 @@ export default async function BookingDetailPage({ params }: Props) {
 
     const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
 
-    // Serialize photos for client components
-    const serializedPhotos = booking.photos.map((p: any) => ({
-        id: p.id,
-        r2Key: p.r2Key,
-        fileName: p.fileName,
-        fileSize: p.fileSize,
-        mimeType: p.mimeType,
-        approvalStatus: p.approvalStatus,
-        rejectionReason: p.rejectionReason,
-        uploadedAt: p.uploadedAt,
-    }));
+    // Generate short-lived presigned GET URLs for private booking photos on the server
+    const serializedPhotos = await Promise.all(
+        booking.photos.map(async (p: any) => ({
+            id: p.id,
+            r2Key: await getAdminPresignedUrl(p.r2Key, 3600),
+            fileName: p.fileName,
+            fileSize: p.fileSize,
+            mimeType: p.mimeType,
+            approvalStatus: p.approvalStatus,
+            rejectionReason: p.rejectionReason,
+            uploadedAt: p.uploadedAt,
+        }))
+    );
 
     // Serialize payments for client component
     const serializedPayments = booking.payments.map((p: any) => ({

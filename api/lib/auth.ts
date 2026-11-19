@@ -1,6 +1,8 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { organization, phoneNumber } from "better-auth/plugins";
+import { customSession, organization, phoneNumber } from "better-auth/plugins";
+import { APIError } from "better-auth/api";
+import { and, eq } from "drizzle-orm";
 import { PostHog } from "posthog-node";
 import { db } from "./db";
 import * as schema from "./schema";
@@ -48,12 +50,49 @@ export const auth = betterAuth({
         provider: "pg",
         schema,
     }),
+    databaseHooks: {
+        session: {
+            create: {
+                before: async (session) => {
+                    const existingUser = await db.query.user.findFirst({
+                        where: eq(schema.user.id, session.userId),
+                        columns: { role: true },
+                    });
+                    if (!existingUser || existingUser.role === "deleted") {
+                        return false;
+                    }
+                },
+            },
+        },
+    },
     emailAndPassword: {
         enabled: true,
     },
     plugins: [
+        customSession(async ({ user, session }) => {
+            const dbUser = await db.query.user.findFirst({
+                where: eq(schema.user.id, user.id),
+                columns: { role: true },
+            });
+            if (!dbUser || dbUser.role === "deleted") {
+                throw new APIError("UNAUTHORIZED");
+            }
+            return { user, session };
+        }),
         phoneNumber(),
         organization({
+            allowUserToCreateOrganization: async (user) => {
+                const dbUser = await db.query.user.findFirst({
+                    where: eq(schema.user.id, user.id),
+                    columns: { role: true },
+                });
+                if (!dbUser || dbUser.role === "deleted") return false;
+                if (dbUser.role === "admin") return true;
+                const ownerMembership = await db.query.member.findFirst({
+                    where: and(eq(schema.member.userId, user.id), eq(schema.member.role, "owner")),
+                });
+                return Boolean(ownerMembership);
+            },
             // ── Custom roles ────────────────────────────────────────────
             ac: studioAc,
             roles: {

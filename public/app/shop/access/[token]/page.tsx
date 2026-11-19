@@ -26,6 +26,9 @@ export default function TokenAccessPage() {
         const res = await verifyAccessToken(token);
         setData(res);
         setSessionToken(res.sessionToken);
+        if (typeof window !== "undefined") {
+          window.history.replaceState(null, "", "/shop/access");
+        }
       } catch (err: unknown) {
         // Distinguish between server errors and actual invalid tokens
         const message = err instanceof Error ? err.message : String(err);

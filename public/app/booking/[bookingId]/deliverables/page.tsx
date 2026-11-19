@@ -33,10 +33,11 @@ export default function DeliverablesPage() {
     const [eventDate, setEventDate] = useState("");
     const [isSubmittingDates, setIsSubmittingDates] = useState(false);
 
-    // If code is in URL, verify automatically
+    // If code is in URL, verify automatically and strip secret from address bar
     useEffect(() => {
         if (initialCode) {
             verifyCode(initialCode);
+            router.replace(`/booking/${bookingId}/deliverables`, { scroll: false });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialCode]);
@@ -53,11 +54,6 @@ export default function DeliverablesPage() {
         try {
             const res = await getClientPhotos({ bookingId, accessCode: codeToVerify });
             setData(res);
-            
-            // Update URL if it was submitted manually
-            if (!initialCode) {
-                router.replace(`/booking/${bookingId}/deliverables?code=${codeToVerify}`);
-            }
 
             if (res.birthDate === null && res.weddingDate === null) {
                 setTimeout(() => setIsDatesModalOpen(true), 1500);
@@ -146,7 +142,7 @@ export default function DeliverablesPage() {
                         </div>
                         <CardTitle className="text-2xl font-bold">Access Your Photos</CardTitle>
                         <CardDescription>
-                            Enter the 6-character access code sent to your phone or email.
+                            Enter the access code sent to your phone or email.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -156,10 +152,10 @@ export default function DeliverablesPage() {
                         >
                             <Input
                                 type="text"
-                                placeholder="e.g. A1B2C3"
+                                placeholder="Access code"
                                 value={accessCode}
                                 onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
-                                maxLength={6}
+                                maxLength={16}
                                 className="text-center tracking-widest text-lg font-mono uppercase h-12"
                                 required
                             />

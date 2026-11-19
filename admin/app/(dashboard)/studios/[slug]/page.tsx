@@ -4,7 +4,7 @@ import { BackButton } from "@/components/web/back-button";
 import StudioData from "./_components/studioData";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -15,16 +15,34 @@ interface StudioDetailsProps {
 
 export async function generateMetadata({ params }: StudioDetailsProps): Promise<Metadata> {
     const { slug } = await params;
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) {
+        return { title: "Studio Details", description: "View studio details" };
+    }
+
     const studio = await db.query.studio.findFirst({
         where: eq(schema.studio.slug, slug),
-        columns: { name: true, metadata: true },
+        columns: { id: true, name: true },
     });
+    if (!studio) {
+        return { title: "Studio Details", description: "View studio details" };
+    }
 
-    const studioName = studio?.name ?? "Studio Details";
+    const [callerUser, callerMember] = await Promise.all([
+        db.query.user.findFirst({ where: eq(schema.user.id, session.user.id), columns: { role: true } }),
+        db.query.member.findFirst({
+            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, studio.id)),
+            columns: { id: true },
+        }),
+    ]);
+
+    if (callerUser?.role !== "admin" && !callerMember) {
+        return { title: "Studio Details", description: "View studio details" };
+    }
 
     return {
-        title: studioName,
-        description: `View details, bookings, members, and analytics for ${studioName}.`,
+        title: studio.name,
+        description: `View details, bookings, members, and analytics for ${studio.name}.`,
     };
 }
 
@@ -90,9 +108,37 @@ export default async function StudioDetails({ params }: StudioDetailsProps) {
           )
         : [];
 
-    // Build the serialized payload with role-filtered pastMembers
+    const filteredInvitations = canViewPastMembers ? studioData.invitations : [];
+    const filteredBookingIntents = canViewPastMembers ? studioData.bookingIntents : [];
+    const canViewFinancials = ["owner", "admin", "manager", "developer", "receptionist"].includes(userRole);
+
+    const filteredMembers = (studioData.members as any[]).map((m: any) => {
+        if (canViewPastMembers || m.userId === session.user.id) return m;
+        return {
+            ...m,
+            user: m.user ? { ...m.user, phoneNumber: null, email: "" } : m.user,
+        };
+    });
+
+    const filteredBookings = (studioData.bookings as any[]).map((b: any) => {
+        if (canViewPastMembers) return b;
+        return {
+            ...b,
+            accessCode: null,
+            ...(canViewFinancials ? {} : { totalAmount: "0", pendingTotalAmount: null }),
+        };
+    });
+
+    // Build the serialized payload with role-filtered sensitive relations and fields
     const serialized = JSON.parse(JSON.stringify(
-        { ...studioData, pastMembers: filteredPastMembers },
+        {
+            ...studioData,
+            members: filteredMembers,
+            pastMembers: filteredPastMembers,
+            invitations: filteredInvitations,
+            bookingIntents: filteredBookingIntents,
+            bookings: filteredBookings,
+        },
         (_key, value) =>
             value !== null && typeof value === "object" && typeof value.toNumber === "function"
                 ? value.toNumber()

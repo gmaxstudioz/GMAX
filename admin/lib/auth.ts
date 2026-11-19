@@ -2,7 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { customSession, organization, phoneNumber } from "better-auth/plugins";
 import { APIError } from "better-auth/api";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "./db";
 import * as schema from "./schema";
 import { sendInvitationEmail, sendPasswordResetEmail } from "./termii";
@@ -63,6 +63,18 @@ export const auth = betterAuth({
         }),
         phoneNumber(),
         organization({
+            allowUserToCreateOrganization: async (user) => {
+                const dbUser = await db.query.user.findFirst({
+                    where: eq(schema.user.id, user.id),
+                    columns: { role: true },
+                });
+                if (!dbUser || dbUser.role === "deleted") return false;
+                if (dbUser.role === "admin") return true;
+                const ownerMembership = await db.query.member.findFirst({
+                    where: and(eq(schema.member.userId, user.id), eq(schema.member.role, "owner")),
+                });
+                return Boolean(ownerMembership);
+            },
             // ── Custom roles ────────────────────────────────────────────
             ac: studioAc,
             roles: {

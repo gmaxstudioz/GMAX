@@ -1,8 +1,9 @@
 import { db } from "@/lib/db";
 import { academyCourse, academyStudent } from "@/lib/schema";
-import { eq, and, desc, asc } from "drizzle-orm";
+import { eq, and, desc, asc, ne } from "drizzle-orm";
 import { optionalAuthMiddleware, BaseContext } from "./middleware";
 import { v4 as uuidv4 } from "uuid";
+import crypto from "crypto";
 import { implement } from "@orpc/server";
 import { contract } from "@/app/contract";
 import { paystackFetch } from "@/lib/paystack";
@@ -89,7 +90,7 @@ export const registerForCourse = os.academy.register
         if (input.paymentPlan === "QUARTER") amountToPay = amountToPay * 0.25;
         if (input.paymentPlan === "HALF") amountToPay = amountToPay * 0.50;
 
-        const reference = `gmax-academy-${uuidv4().slice(0, 8)}`;
+        const reference = `gmax-academy-${crypto.randomBytes(12).toString("hex")}`;
         
         const [registration] = await db.insert(academyStudent).values({
             id: uuidv4(),
@@ -131,12 +132,30 @@ export const verifyPayment = os.academy.verifyPayment
         }
 
         try {
-            const response = await paystackFetch<{ data?: { status?: string } }>(`/transaction/verify/${input.reference}`);
+            const response = await paystackFetch<{
+                data?: { status?: string; amount?: number; currency?: string };
+            }>(`/transaction/verify/${encodeURIComponent(input.reference)}`);
             
             if (response.data?.status === "success") {
-                await db.update(academyStudent)
+                const paidAmount = Number(response.data.amount ?? 0);
+                const expectedAmount = Math.round(Number(registration.amountPaid) * 100);
+                const paidCurrency = String(response.data.currency ?? "").toUpperCase();
+
+                if (paidAmount !== expectedAmount || paidCurrency !== "NGN") {
+                    console.error(
+                        `[Academy Verify] Amount/currency mismatch for ${input.reference}: expected ${expectedAmount} NGN, got ${paidAmount} ${paidCurrency}`
+                    );
+                    return { verified: false };
+                }
+
+                const [updated] = await db.update(academyStudent)
                     .set({ paymentStatus: "SUCCESS", updatedAt: new Date().toISOString() })
-                    .where(eq(academyStudent.id, registration.id));
+                    .where(and(eq(academyStudent.id, registration.id), ne(academyStudent.paymentStatus, "SUCCESS")))
+                    .returning();
+
+                if (!updated) {
+                    return { verified: true };
+                }
 
                 const startDateStr = registration.academyBatch?.startDate 
                     ? new Date(registration.academyBatch.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })

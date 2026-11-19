@@ -132,7 +132,7 @@ export async function sendInvitationEmail(params: {
     if (!TERMII_INVITE_TEMPLATE_ID) {
         console.warn(
             "[Termii] TERMI_INVITE_TEMPLATE_ID not set — skipping invitation email.",
-            { to: params.email, link: params.inviteLink },
+            { to: params.email, role: params.role },
         );
         return;
     }
@@ -160,7 +160,7 @@ export async function sendPasswordResetEmail(params: {
     if (!TERMII_RESET_TEMPLATE_ID) {
         console.warn(
             "[Termii] TERMI_RESET_TEMPLATE_ID not set — skipping password reset email.",
-            { to: params.email, link: params.resetLink },
+            { to: params.email },
         );
         return;
     }
@@ -239,7 +239,7 @@ export async function sendPurchaseAccessEmail(params: {
     if (!TERMII_PURCHASE_TEMPLATE_ID) {
         console.warn(
             "[Termii] TERMII_PURCHASE_TEMPLATE_ID not set — skipping purchase email.",
-            { to: params.email, link: params.accessLink },
+            { to: params.email, productTitle: params.productTitle },
         );
         return;
     }

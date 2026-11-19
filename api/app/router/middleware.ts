@@ -1,9 +1,13 @@
 import { contract } from "@/app/contract";
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
 import { implement } from "@orpc/server";
+import { eq } from "drizzle-orm";
 
 export interface User {
     id: string;
+    role?: string;
 }
 
 export interface BaseContext {
@@ -18,9 +22,7 @@ export interface OptionalAuthContext extends BaseContext {
     user: User | null;
 }
 
-
-
-const os = implement(contract)
+const os = implement(contract);
 
 export const authMiddleware = os.$context<BaseContext>().middleware(
     async ({ context, next, errors }) => {
@@ -32,11 +34,20 @@ export const authMiddleware = os.$context<BaseContext>().middleware(
             throw errors.UNAUTHORIZED();
         }
 
-        return next({ 
-            context: { 
-                ...context, 
-                user: { id: session.user.id } 
-            } 
+        const dbUser = await db.query.user.findFirst({
+            where: eq(schema.user.id, session.user.id),
+            columns: { role: true },
+        });
+
+        if (!dbUser || dbUser.role === "deleted") {
+            throw errors.UNAUTHORIZED();
+        }
+
+        return next({
+            context: {
+                ...context,
+                user: { id: session.user.id, role: dbUser.role },
+            },
         });
     }
 );
@@ -47,11 +58,22 @@ export const optionalAuthMiddleware = os.$context<BaseContext>().middleware(
             headers: context.headers,
         });
 
-        return next({ 
-            context: { 
-                ...context, 
-                user: session?.user ? { id: session.user.id } : null 
-            } 
+        let user: User | null = null;
+        if (session?.user) {
+            const dbUser = await db.query.user.findFirst({
+                where: eq(schema.user.id, session.user.id),
+                columns: { role: true },
+            });
+            if (dbUser && dbUser.role !== "deleted") {
+                user = { id: session.user.id, role: dbUser.role };
+            }
+        }
+
+        return next({
+            context: {
+                ...context,
+                user,
+            },
         });
     }
 );

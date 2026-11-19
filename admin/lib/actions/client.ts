@@ -56,6 +56,11 @@ export async function DeleteClient(clientId: string): Promise<ApiResponse> {
         const auth = await requireStudioMember(client.studioId);
         if (auth.status === "error") return auth;
 
+        const allowedRoles = ["owner", "admin", "manager", "developer"];
+        if (!allowedRoles.includes(auth.member.role)) {
+            return { status: "error", message: "Unauthorized: You do not have permission to delete clients" };
+        }
+
         await db.delete(schema.client).where(eq(schema.client.id, clientId));
 
         return { status: "success", message: "Client deleted successfully" };

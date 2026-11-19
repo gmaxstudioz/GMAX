@@ -60,7 +60,7 @@ export async function deliverBooking(bookingId: string) {
 
         while (!updated && attempts < maxAttempts) {
             if (isNewAccessCode) {
-                accessCode = crypto.randomBytes(3).toString("hex").toUpperCase(); // 6 chars, e.g., "A1B2C3"
+                accessCode = crypto.randomBytes(6).toString("hex").toUpperCase(); // 12 hex chars (48 bits)
             }
 
             try {
@@ -97,7 +97,7 @@ export async function deliverBooking(bookingId: string) {
         }
     }
 
-    const downloadLink = `\${publicDomain}/booking/\${bookingId}/deliverables?code=\${accessCode}`;
+    const downloadLink = `${publicDomain}/booking/${bookingId}/deliverables?code=${accessCode}`;
 
     const promises = [];
 
@@ -165,7 +165,7 @@ export async function deliverBooking(bookingId: string) {
         }
     }
 
-    revalidatePath(`/studios/\${booking.studio?.slug}/bookings/detail/\${bookingId}`);
+    revalidatePath(`/studios/${booking.studio?.slug}/bookings/detail/${bookingId}`);
     return { success: true, accessCode };
 }
 
@@ -223,7 +223,7 @@ export async function sendBalanceDueReminder(bookingId: string) {
     }
 
 
-    const paymentLink = `\${publicDomain}/pay/\${booking.id}`;
+    const paymentLink = `${publicDomain}/pay/${booking.id}`;
 
     const { sendPaymentLinkSMS, sendPaymentLinkWhatsApp } = await import("@/lib/termii");
 
@@ -253,6 +253,6 @@ export async function sendBalanceDueReminder(bookingId: string) {
 
     await Promise.allSettled(promises);
 
-    revalidatePath(`/studios/\${booking.studio?.slug}/bookings/detail/\${bookingId}`);
+    revalidatePath(`/studios/${booking.studio?.slug}/bookings/detail/${bookingId}`);
     return { success: true };
 }

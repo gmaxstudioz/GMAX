@@ -131,7 +131,7 @@ export async function sendInvitationEmail(params: {
     if (!TERMII_INVITE_TEMPLATE_ID) {
         console.warn(
             "[Termii] TERMI_INVITE_TEMPLATE_ID not set — skipping invitation email.",
-            { to: params.email, link: params.inviteLink },
+            { to: params.email, role: params.role },
         );
         return;
     }

@@ -8,6 +8,7 @@ import { auth } from "../auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
+import crypto from "crypto";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || "";
 const PAYSTACK_BASE = "https://api.paystack.co";
@@ -55,8 +56,13 @@ export async function initializePayment(bookingId: string) {
         if (!booking) return { status: "error", message: "Booking not found" };
 
         // Verify the caller is a member of this booking's studio
-        const member = await db.query.member.findFirst({ where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId)) });
-        if (!member) return { status: "error", message: "Unauthorized access to this booking" };
+        const [dbUser, member] = await Promise.all([
+            db.query.user.findFirst({ where: eq(schema.user.id, session.user.id), columns: { role: true } }),
+            db.query.member.findFirst({ where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId)) }),
+        ]);
+        if (dbUser?.role !== "admin" && !member) {
+            return { status: "error", message: "Unauthorized access to this booking" };
+        }
 
         // Calculate balance due
         const servicePrice = Number(booking.service?.serviceVariants?.find((v: any) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.serviceVariants?.[0]?.basePrice ?? 0);
@@ -79,7 +85,7 @@ export async function initializePayment(bookingId: string) {
             return { status: "error", message: "No balance due — booking is fully paid" };
         }
 
-        const reference = `gmax-${uuidv4().slice(0, 8)}`;
+        const reference = `gmax-${crypto.randomBytes(12).toString("hex")}`;
         const receiptNumber = generateReceiptNumber();
 
         // Create a pending Payment record
@@ -164,18 +170,8 @@ export async function initializePayment(bookingId: string) {
 
 export async function verifyPayment(reference: string) {
     try {
-        const paystackRes = await paystackFetch<{
-            status: boolean;
-            data: {
-                status: string;
-                amount: number; // kobo
-                reference: string;
-                metadata: { booking_id?: string; payment_id?: string };
-            };
-        }>(`/transaction/verify/${reference}`);
-
-        if (!paystackRes.status || paystackRes.data.status !== "success") {
-            return { status: "error", message: "Payment not confirmed by Paystack" };
+        if (!/^[A-Za-z0-9_-]{1,100}$/.test(reference)) {
+            return { status: "error", message: "Invalid payment reference" };
         }
 
         const payment = await db.query.payment.findFirst({ where: eq(schema.payment.paystackReference, reference), with: {
@@ -189,6 +185,25 @@ export async function verifyPayment(reference: string) {
         if (payment.status === "PAID") {
             // Idempotency guard — already processed, return success
             return { status: "success", message: "Payment already verified" };
+        }
+
+        const paystackRes = await paystackFetch<{
+            status: boolean;
+            data: {
+                status: string;
+                amount: number; // kobo
+                currency?: string;
+                reference: string;
+                metadata: { booking_id?: string; payment_id?: string };
+            };
+        }>(`/transaction/verify/${encodeURIComponent(reference)}`);
+
+        if (!paystackRes.status || paystackRes.data.status !== "success") {
+            return { status: "error", message: "Payment not confirmed by Paystack" };
+        }
+
+        if (String(paystackRes.data.currency ?? "").toUpperCase() !== "NGN") {
+            return { status: "error", message: "Unsupported payment currency" };
         }
 
         // Verify the confirmed amount matches what was initialized.
@@ -273,8 +288,14 @@ export async function markAsPaidManually(bookingId: string) {
 
         if (!booking) return { status: "error", message: "Booking not found" };
 
-        const member = await db.query.member.findFirst({ where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId)) });
-        if (!member) return { status: "error", message: "Unauthorized access to this booking" };
+        const [dbUser, member] = await Promise.all([
+            db.query.user.findFirst({ where: eq(schema.user.id, session.user.id), columns: { role: true } }),
+            db.query.member.findFirst({ where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId)) }),
+        ]);
+        const isPlatformAdmin = dbUser?.role === "admin";
+        if (!isPlatformAdmin && (!member || !["owner", "admin", "manager", "developer", "receptionist"].includes(member.role))) {
+            return { status: "error", message: "Unauthorized: insufficient permissions to record manual payment" };
+        }
 
         const servicePrice = Number(booking.service?.serviceVariants?.find((v: any) => v.id === booking.serviceVariantId)?.basePrice ?? booking.service?.serviceVariants?.[0]?.basePrice ?? 0);
         const sessionTotal = servicePrice * booking.sessionCount;

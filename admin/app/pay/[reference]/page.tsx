@@ -23,8 +23,19 @@ interface Props {
     params: Promise<{ reference: string }>;
 }
 
+function maskClientName(name: string | null | undefined): string {
+    if (!name) return "Customer";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0];
+    return `${parts[0]} ${parts[1][0]}.`;
+}
+
 export default async function PaymentPage({ params }: Props) {
     const { reference } = await params;
+
+    if (!/^[A-Za-z0-9_-]{1,100}$/.test(reference)) {
+        return notFound();
+    }
 
     const payment = await db.query.payment.findFirst({
         where: (p, { eq }) => eq(p.paystackReference, reference),
@@ -88,60 +99,66 @@ export default async function PaymentPage({ params }: Props) {
                 <Card className="shadow-xl border-0 bg-card/80 backdrop-blur-sm">
                     <CardContent className="space-y-6 pt-6">
                         {/* Booking Summary */}
-                        <div className="space-y-3">
-                            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Booking Summary</h2>
+                        {!isAlreadyPaid && (
+                            <div className="space-y-3">
+                                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Booking Summary</h2>
 
-                            <div className="flex items-center gap-3">
-                                <div className="rounded-lg bg-primary/10 p-2">
-                                    <PackageIcon className="h-4 w-4 text-primary" />
+                                <div className="flex items-center gap-3">
+                                    <div className="rounded-lg bg-primary/10 p-2">
+                                        <PackageIcon className="h-4 w-4 text-primary" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium">{booking.service?.name}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {booking.sessionCount} session{booking.sessionCount > 1 ? "s" : ""} · {totalDuration} minutes
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium">{booking.service?.name}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {booking.sessionCount} session{booking.sessionCount > 1 ? "s" : ""} · {totalDuration} minutes
+
+                                <div className="flex items-center gap-3">
+                                    <div className="rounded-lg bg-primary/10 p-2">
+                                        <CalendarIcon className="h-4 w-4 text-primary" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium">{format(new Date(booking.bookingDate), "EEEE, MMMM do, yyyy")}</p>
+                                        <p className="text-xs text-muted-foreground">{format(new Date(booking.bookingDate), "h:mm a")}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    <div className="rounded-lg bg-primary/10 p-2">
+                                        <UserIcon className="h-4 w-4 text-primary" />
+                                    </div>
+                                    <p className="text-sm font-medium">{maskClientName(booking.client?.name)}</p>
+                                </div>
+
+                                {addons.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 mt-1">
+                                        {addons.map((a: any) => (
+                                            <Badge key={a.id} variant="outline" className="text-xs">
+                                                + {a.name}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {!isAlreadyPaid && (
+                            <>
+                                <Separator />
+
+                                {/* Amount */}
+                                <div className="text-center space-y-1">
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Amount Due</p>
+                                    <p className="text-4xl font-bold tracking-tight">
+                                        {formatCurrency(Number(payment.amount))}
                                     </p>
                                 </div>
-                            </div>
 
-                            <div className="flex items-center gap-3">
-                                <div className="rounded-lg bg-primary/10 p-2">
-                                    <CalendarIcon className="h-4 w-4 text-primary" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium">{format(new Date(booking.bookingDate), "EEEE, MMMM do, yyyy")}</p>
-                                    <p className="text-xs text-muted-foreground">{format(new Date(booking.bookingDate), "h:mm a")}</p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                                <div className="rounded-lg bg-primary/10 p-2">
-                                    <UserIcon className="h-4 w-4 text-primary" />
-                                </div>
-                                <p className="text-sm font-medium">{booking.client?.name}</p>
-                            </div>
-
-                            {addons.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 mt-1">
-                                    {addons.map((a: any) => (
-                                        <Badge key={a.id} variant="outline" className="text-xs">
-                                            + {a.name}
-                                        </Badge>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        <Separator />
-
-                        {/* Amount */}
-                        <div className="text-center space-y-1">
-                            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Amount Due</p>
-                            <p className="text-4xl font-bold tracking-tight">
-                                {formatCurrency(Number(payment.amount))}
-                            </p>
-                        </div>
-
-                        <Separator />
+                                <Separator />
+                            </>
+                        )}
 
                         {/* Payment Action */}
                         {isAlreadyPaid ? (

@@ -102,7 +102,8 @@ export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: Medi
         });
     };
 
-    const getMediaUrl = (key: string) => `${r2PublicUrl}/${key}`;
+    const getMediaUrl = (key: string) =>
+        key.startsWith("http://") || key.startsWith("https://") ? key : `${r2PublicUrl}/${key}`;
     const isVideo = (mime: string) => mime.startsWith("video/");
 
     const formatSize = (bytes: number) => {
@@ -317,7 +318,7 @@ export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: Medi
                             <DialogTitle>Preview</DialogTitle>
                             <DialogDescription>Media preview</DialogDescription>
                         </DialogHeader>
-                        {previewUrl.match(/\.(mp4|mov|webm|avi)/i) ? (
+                        {previewUrl.split("?")[0].match(/\.(mp4|mov|webm|avi)/i) ? (
                             <video src={previewUrl} controls className="w-full max-h-[80vh] rounded-lg" />
                         ) : (
                             <div className="relative w-full h-[80vh]">

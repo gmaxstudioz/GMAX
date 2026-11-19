@@ -8,6 +8,8 @@ import { headers } from "next/headers";
 import { CreateBookingInput, PaymentPlan } from "../schemas/booking";
 import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3 } from "@/lib/S3Client";
 
 import { startOfDay, endOfDay } from "date-fns";
 
@@ -442,10 +444,16 @@ export async function approvePhoto(photoId: string) {
         });
         if (!photo) return { status: "error", message: "Photo not found" };
 
-        const member = await db.query.member.findFirst({
-            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, photo.booking?.studioId!))
-        });
-        if (!member) return { status: "error", message: "Unauthorized" };
+        const [dbUser, member] = await Promise.all([
+            db.query.user.findFirst({ where: eq(schema.user.id, session.user.id), columns: { role: true } }),
+            db.query.member.findFirst({
+                where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, photo.booking?.studioId!))
+            }),
+        ]);
+        const isPlatformAdmin = dbUser?.role === "admin";
+        if (!isPlatformAdmin && (!member || !["owner", "admin", "manager", "developer"].includes(member.role))) {
+            return { status: "error", message: "Unauthorized: insufficient permissions to approve photos" };
+        }
 
         await db.update(schema.photo)
             .set({
@@ -486,10 +494,16 @@ export async function rejectPhoto(photoId: string, reason?: string) {
         });
         if (!photo) return { status: "error", message: "Photo not found" };
 
-        const member = await db.query.member.findFirst({
-            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, photo.booking?.studioId!))
-        });
-        if (!member) return { status: "error", message: "Unauthorized" };
+        const [dbUser, member] = await Promise.all([
+            db.query.user.findFirst({ where: eq(schema.user.id, session.user.id), columns: { role: true } }),
+            db.query.member.findFirst({
+                where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, photo.booking?.studioId!))
+            }),
+        ]);
+        const isPlatformAdmin = dbUser?.role === "admin";
+        if (!isPlatformAdmin && (!member || !["owner", "admin", "manager", "developer"].includes(member.role))) {
+            return { status: "error", message: "Unauthorized: insufficient permissions to approve photos" };
+        }
 
         await db.update(schema.photo)
             .set({
@@ -545,12 +559,12 @@ export async function deletePhoto(photoId: string) {
         }
 
         try {
-            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-            await fetch(`${baseUrl}/api/s3/delete`, {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ key: photo.r2Key }),
-            });
+            if (process.env.R2_BUCKET_NAME && photo.r2Key) {
+                await S3.send(new DeleteObjectCommand({
+                    Bucket: process.env.R2_BUCKET_NAME,
+                    Key: photo.r2Key,
+                }));
+            }
         } catch (r2Error) {
             console.error("[R2] Failed to delete file from storage:", r2Error);
         }
@@ -584,15 +598,15 @@ export async function deleteBooking(bookingId: string) {
             return { status: "error", message: "You don't have permission to delete bookings" };
         }
 
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-        if (booking.photos) {
+        if (booking.photos && process.env.R2_BUCKET_NAME) {
             for (const photo of booking.photos) {
                 try {
-                    await fetch(`${baseUrl}/api/s3/delete`, {
-                        method: "DELETE",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ key: photo.r2Key }),
-                    });
+                    if (photo.r2Key) {
+                        await S3.send(new DeleteObjectCommand({
+                            Bucket: process.env.R2_BUCKET_NAME,
+                            Key: photo.r2Key,
+                        }));
+                    }
                 } catch (r2Error) {
                     console.error(`[R2] Failed to delete photo ${photo.r2Key}:`, r2Error);
                 }
