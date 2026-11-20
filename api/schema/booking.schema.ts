@@ -54,7 +54,9 @@ export const CreateBookingSchema = BookingSchema.omit({
   memberId: z.string().optional(),
 });
  
-export const UpdateBookingSchema = CreateBookingSchema.partial();
+export const UpdateBookingSchema = CreateBookingSchema.partial().extend({
+  serviceVariantId: z.string().nullable().optional(),
+});
  
 /** Used for status-only transitions (e.g., confirm, cancel, deliver) */
 export const BookingStatusUpdateSchema = z.object({

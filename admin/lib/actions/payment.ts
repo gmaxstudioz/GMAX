@@ -74,73 +74,20 @@ export async function initializePayment(bookingId: string) {
             return sum + Number(variant?.basePrice ?? 0);
         }, 0);
         const fallbackGrandTotal = booking.totalAmount != null ? Number(booking.totalAmount) : (sessionTotal + addonsTotal);
+        const grandTotalKobo = Math.round(fallbackGrandTotal * 100);
+        const paidKobo = booking.payments
+            .filter((p) => p.status === "PAID")
+            .reduce((sum: number, p) => sum + Math.round(Number(p.amount) * 100), 0);
+        const balanceDueKobo = Math.max(0, grandTotalKobo - paidKobo);
+
+        if (balanceDueKobo <= 0) {
+            return { status: "error", message: "No balance due — booking is fully paid" };
+        }
+
+        const balanceDue = balanceDueKobo / 100;
+        const paymentId = uuidv4();
         const reference = `gmax-${crypto.randomBytes(12).toString("hex")}`;
         const receiptNumber = generateReceiptNumber();
-
-        const txResult = await db.transaction(async (tx: any) => {
-            const [lockedBooking] = await tx
-                .select({ id: schema.booking.id, totalAmount: schema.booking.totalAmount })
-                .from(schema.booking)
-                .where(eq(schema.booking.id, booking.id))
-                .for("update");
-
-            if (!lockedBooking) return null;
-
-            const currentPayments = await tx.query.payment.findMany({
-                where: eq(schema.payment.bookingId, booking.id),
-            });
-
-            const grandTotalKobo = Math.round(
-                Number(lockedBooking.totalAmount ?? fallbackGrandTotal) * 100
-            );
-            const paidKobo = currentPayments
-                .filter((p: any) => p.status === "PAID")
-                .reduce((sum: number, p: any) => sum + Math.round(Number(p.amount) * 100), 0);
-
-            const dueKobo = Math.max(0, grandTotalKobo - paidKobo);
-            if (dueKobo <= 0) {
-                return { error: "No balance due — booking is fully paid" as const };
-            }
-
-            await tx
-                .update(schema.payment)
-                .set({ status: "CANCELLED" })
-                .where(
-                    and(
-                        eq(schema.payment.bookingId, booking.id),
-                        eq(schema.payment.status, "PENDING")
-                    )
-                );
-
-            const dueNaira = dueKobo / 100;
-            const amountStr = dueNaira.toFixed(2);
-            const inserted = await tx
-                .insert(schema.payment)
-                .values({
-                    id: uuidv4(),
-                    amount: amountStr,
-                    expectedAmount: amountStr,
-                    method: "TRANSFER",
-                    status: "PENDING",
-                    paystackReference: reference,
-                    receiptNumber,
-                    bookingId: booking.id,
-                    recordedById: session.user.id,
-                })
-                .returning()
-                .then((res: any[]) => res[0]);
-
-            return { payment: inserted, balanceDueKobo: dueKobo, balanceDue: dueNaira };
-        });
-
-        if (!txResult) {
-            return { status: "error", message: "Booking not found" };
-        }
-        if ("error" in txResult) {
-            return { status: "error", message: txResult.error };
-        }
-
-        const { payment, balanceDueKobo, balanceDue } = txResult;
 
         // Paystack requires a real email — fall back only as a last resort and
         // flag clearly in logs so the team knows a receipt won't be delivered.
@@ -166,7 +113,7 @@ export async function initializePayment(bookingId: string) {
                 callback_url: `${process.env.NEXT_PUBLIC_AUTH_URL ?? "http://localhost:3000"}/pay/${reference}?status=success`,
                 metadata: {
                     booking_id: booking.id,
-                    payment_id: payment.id,
+                    payment_id: paymentId,
                     studio_name: booking.studio?.name,
                     client_name: booking.client?.name,
                     custom_fields: [
@@ -176,6 +123,73 @@ export async function initializePayment(bookingId: string) {
                 },
             }),
         });
+
+        if (!paystackRes.status || !paystackRes.data?.authorization_url) {
+            return { status: "error", message: "Failed to generate payment link" };
+        }
+
+        const txResult = await db.transaction(async (tx) => {
+            const [lockedBooking] = await tx
+                .select({ id: schema.booking.id, totalAmount: schema.booking.totalAmount })
+                .from(schema.booking)
+                .where(eq(schema.booking.id, booking.id))
+                .for("update");
+
+            if (!lockedBooking) return null;
+
+            const currentPayments = await tx.query.payment.findMany({
+                where: eq(schema.payment.bookingId, booking.id),
+            });
+
+            const currentGrandTotalKobo = Math.round(
+                Number(lockedBooking.totalAmount ?? fallbackGrandTotal) * 100
+            );
+            const currentPaidKobo = currentPayments
+                .filter((p) => p.status === "PAID")
+                .reduce((sum: number, p) => sum + Math.round(Number(p.amount) * 100), 0);
+
+            const currentDueKobo = Math.max(0, currentGrandTotalKobo - currentPaidKobo);
+            if (currentDueKobo <= 0) {
+                return { error: "No balance due — booking is fully paid" as const };
+            }
+            if (currentDueKobo !== balanceDueKobo) {
+                return { error: "Booking balance changed while initializing payment. Please try again." as const };
+            }
+
+            await tx
+                .update(schema.payment)
+                .set({ status: "CANCELLED" })
+                .where(
+                    and(
+                        eq(schema.payment.bookingId, booking.id),
+                        eq(schema.payment.status, "PENDING")
+                    )
+                );
+
+            const amountStr = balanceDue.toFixed(2);
+            await tx
+                .insert(schema.payment)
+                .values({
+                    id: paymentId,
+                    amount: amountStr,
+                    expectedAmount: amountStr,
+                    method: "TRANSFER",
+                    status: "PENDING",
+                    paystackReference: reference,
+                    receiptNumber,
+                    bookingId: booking.id,
+                    recordedById: session.user.id,
+                });
+
+            return { ok: true as const };
+        });
+
+        if (!txResult) {
+            return { status: "error", message: "Booking not found" };
+        }
+        if ("error" in txResult) {
+            return { status: "error", message: txResult.error };
+        }
 
         revalidatePath("/studios", "layout");
 

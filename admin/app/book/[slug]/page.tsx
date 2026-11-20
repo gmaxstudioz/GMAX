@@ -118,6 +118,19 @@ export default async function StudioBookPage({ params }: Props) {
                             discountPercentage: s.discountPercentage || 0,
                             basePrice: Number(s.serviceVariants[0].basePrice),
                             studioSession: s.studioSession ? { duration: s.studioSession.duration } : null,
+                            serviceVariants: s.serviceVariants.map((v: {
+                                id: string;
+                                title: string | null;
+                                locationType: string;
+                                basePrice: string | number;
+                                sessionDurationMins: number;
+                            }) => ({
+                                id: v.id,
+                                title: v.title ?? null,
+                                locationType: v.locationType,
+                                basePrice: Number(v.basePrice),
+                                sessionDurationMins: v.sessionDurationMins,
+                            })),
                         })),
                 }))}
                 addons={addons

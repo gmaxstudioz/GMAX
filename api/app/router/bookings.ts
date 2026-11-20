@@ -417,10 +417,39 @@ export const updateBooking = os.booking.update.use(authMiddleware).handler(
         }
 
         await db.transaction(async (tx) => {
-            await tx.select({ id: booking.id }).from(booking).where(eq(booking.id, bookingId)).for("update");
+            const [lockedBooking] = await tx
+                .select({ id: booking.id, serviceId: booking.serviceId })
+                .from(booking)
+                .where(eq(booking.id, bookingId))
+                .for("update");
 
-            if (Object.keys(updateData).length > 0) {
-                const { bookingDate, ...restData } = updateData;
+            if (!lockedBooking) {
+                throw errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: bookingId } });
+            }
+
+            const effectiveServiceId = updateData.serviceId ?? lockedBooking.serviceId;
+            const serviceChanged =
+                updateData.serviceId !== undefined && updateData.serviceId !== lockedBooking.serviceId;
+            const txUpdateData: typeof updateData = { ...updateData };
+
+            if (txUpdateData.serviceVariantId !== undefined && txUpdateData.serviceVariantId !== null) {
+                const targetVariant = await tx.query.serviceVariant.findFirst({
+                    where: (model, { eq, and }) =>
+                        and(
+                            eq(model.id, txUpdateData.serviceVariantId!),
+                            eq(model.serviceId, effectiveServiceId)
+                        ),
+                    columns: { id: true },
+                });
+                if (!targetVariant) {
+                    throw errors.BAD_REQUEST({ message: "Service variant does not belong to the selected service." });
+                }
+            } else if (serviceChanged && txUpdateData.serviceVariantId === undefined) {
+                txUpdateData.serviceVariantId = null;
+            }
+
+            if (Object.keys(txUpdateData).length > 0) {
+                const { bookingDate, ...restData } = txUpdateData;
                 await tx
                     .update(booking)
                     .set({
@@ -1016,7 +1045,7 @@ export const verifyBooking = os.booking.verifyBooking
                 console.error(`[Verify] Paystack verification failed for payment ${input.reference}:`, err);
             }
 
-            return { ...baseResult, status: "PENDING" as const };
+            return { ...baseResult, status: "PENDING" as const, amountPaid: 0 };
         }
 
         // If intent is still PENDING, verify with Paystack and process if paid

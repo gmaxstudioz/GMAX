@@ -34,7 +34,7 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
     const router = useRouter();
     const isEmailMasked = !email || email.includes("*");
     const [payerEmail, setPayerEmail] = useState(isEmailMasked ? "" : email);
-    const [status, setStatus] = useState<"idle" | "processing" | "success" | "failed">("idle");
+    const [status, setStatus] = useState<"idle" | "processing" | "pending" | "success" | "failed">("idle");
     const [scriptLoaded, setScriptLoaded] = useState(false);
     const [countdown, setCountdown] = useState(5);
 
@@ -65,6 +65,33 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
         return () => clearTimeout(timer);
     }, [status, countdown, purchaseType, router]);
 
+    const verifyReference = async (refToVerify: string) => {
+        setStatus("processing");
+
+        if (purchaseType === "booking" && refToVerify.startsWith("gmax-pub-")) {
+            const { data: result, error } = await tryCatch(verifyBookingPayment(refToVerify));
+            if (error || !result || result.status === "FAILED" || result.status === "EXPIRED") {
+                setStatus("failed");
+                toast.error("Payment verification failed. Please contact support.");
+            } else if (result.status === "COMPLETED") {
+                setStatus("success");
+                toast.success("Payment successful!");
+            } else {
+                setStatus("pending");
+                toast.info("Payment is still being confirmed. Please check status again in a moment.");
+            }
+        } else {
+            const { data: result, error } = await tryCatch(verifyPurchase(refToVerify));
+            if (error || !result?.verified) {
+                setStatus("failed");
+                toast.error("Payment verification failed. Please contact support.");
+            } else {
+                setStatus("success");
+                toast.success("Payment successful!");
+            }
+        }
+    };
+
     const handlePay = () => {
         if (!scriptLoaded || !window.PaystackPop) {
             toast.error("Payment system is loading. Please wait...");
@@ -94,27 +121,7 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
                 ref: actualRef,
                 currency: "NGN",
                 onSuccess: async () => {
-                    setStatus("processing");
-                    
-                    if (purchaseType === "booking" && actualRef.startsWith("gmax-pub-")) {
-                        const { data: result, error } = await tryCatch(verifyBookingPayment(actualRef));
-                        if (error || result?.status === "FAILED" || result?.status === "EXPIRED") {
-                            setStatus("failed");
-                            toast.error("Payment verification failed. Please contact support.");
-                        } else {
-                            setStatus("success");
-                            toast.success("Payment successful!");
-                        }
-                    } else {
-                        const { data: result, error } = await tryCatch(verifyPurchase(actualRef));
-                        if (error || !result?.verified) {
-                            setStatus("failed");
-                            toast.error("Payment verification failed. Please contact support.");
-                        } else {
-                            setStatus("success");
-                            toast.success("Payment successful!");
-                        }
-                    }
+                    await verifyReference(actualRef);
                 },
                 onCancel: () => {
                     posthog.capture("payment_cancelled", {
@@ -182,6 +189,25 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
             <div className="flex flex-col items-center gap-4 py-12">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
                 <p className="text-sm text-muted-foreground">Verifying your payment...</p>
+            </div>
+        );
+    }
+
+    if (status === "pending") {
+        return (
+            <div className="flex flex-col items-center gap-4 py-8">
+                <div className="h-16 w-16 rounded-full bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 text-amber-600" />
+                </div>
+                <div className="text-center space-y-2">
+                    <h3 className="text-xl font-bold text-amber-600">Payment Confirmation Pending</h3>
+                    <p className="text-muted-foreground text-sm max-w-sm">
+                        Your payment is still being confirmed. Check status again without initiating another charge. Reference: <strong>{reference}</strong>
+                    </p>
+                </div>
+                <Button onClick={() => void verifyReference(reference)} variant="outline" className="mt-2">
+                    Check Payment Status
+                </Button>
             </div>
         );
     }

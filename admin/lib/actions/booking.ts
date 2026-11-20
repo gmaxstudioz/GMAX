@@ -761,19 +761,24 @@ export async function updateBookingFull(
             updateData.bookingDate = targetDate.toISOString();
         }
 
-        await db.update(schema.booking)
-            .set(updateData)
-            .where(eq(schema.booking.id, bookingId));
-
         if (shouldCancelPendingPayments) {
-            await db.update(schema.payment)
-                .set({ status: "CANCELLED" })
-                .where(
-                    and(
-                        eq(schema.payment.bookingId, bookingId),
-                        eq(schema.payment.status, "PENDING")
-                    )
-                );
+            await db.transaction(async (tx) => {
+                await tx.update(schema.booking)
+                    .set(updateData)
+                    .where(eq(schema.booking.id, bookingId));
+                await tx.update(schema.payment)
+                    .set({ status: "CANCELLED" })
+                    .where(
+                        and(
+                            eq(schema.payment.bookingId, bookingId),
+                            eq(schema.payment.status, "PENDING")
+                        )
+                    );
+            });
+        } else {
+            await db.update(schema.booking)
+                .set(updateData)
+                .where(eq(schema.booking.id, bookingId));
         }
 
         // Handle addon updates

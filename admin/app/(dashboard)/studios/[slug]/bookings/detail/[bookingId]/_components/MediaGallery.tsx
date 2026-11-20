@@ -45,6 +45,10 @@ const statusBadgeVariant: Record<string, "default" | "secondary" | "destructive"
     REJECTED: "destructive",
 };
 
+const REFRESH_INTERVAL_MS = 45 * 60 * 1000;
+// Presigned URLs are issued for 1 hour; renew at 45 min, stop serving at 55 min.
+const URL_EXPIRY_MS = 55 * 60 * 1000;
+
 export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: MediaGalleryProps) {
     const [isPending, startTransition] = useTransition();
     const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
@@ -54,10 +58,10 @@ export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: Medi
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
     const [photoToReplace, setPhotoToReplace] = useState<string | null>(null);
-    const REFRESH_INTERVAL_MS = 45 * 60 * 1000;
     const [freshUrls, setFreshUrls] = useState<
         Record<string, { url: string; sourceKey: string; issuedAt: number }>
     >({});
+    const [nowMs, setNowMs] = useState<number>(0);
     const lastRefreshedAtRef = useRef<number>(0);
     const photosRef = useRef(photos);
 
@@ -65,31 +69,46 @@ export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: Medi
         photosRef.current = photos;
     }, [photos]);
 
+    const renewalInFlightRef = useRef(false);
+
     const refreshAllUrls = useCallback(async () => {
-        const { data: res, error } = await tryCatch(getBookingPhotosPresignedUrls(bookingId));
-        if (!error && res?.status === "success" && res.urls) {
-            const issuedAt = Date.now();
-            const keyById = new Map(photosRef.current.map((p) => [p.id, p.r2Key]));
-            const nextUrls: Record<string, { url: string; sourceKey: string; issuedAt: number }> = {};
-            for (const [id, url] of Object.entries(res.urls)) {
-                const sourceKey = keyById.get(id);
-                if (sourceKey) {
-                    nextUrls[id] = { url, sourceKey, issuedAt };
+        if (renewalInFlightRef.current) return;
+        renewalInFlightRef.current = true;
+        try {
+            const { data: res, error } = await tryCatch(getBookingPhotosPresignedUrls(bookingId));
+            if (!error && res?.status === "success" && res.urls) {
+                const issuedAt = Date.now();
+                const keyById = new Map(photosRef.current.map((p) => [p.id, p.r2Key]));
+                const nextUrls: Record<string, { url: string; sourceKey: string; issuedAt: number }> = {};
+                for (const [id, url] of Object.entries(res.urls)) {
+                    const sourceKey = keyById.get(id);
+                    if (sourceKey) {
+                        nextUrls[id] = { url, sourceKey, issuedAt };
+                    }
                 }
+                setNowMs(issuedAt);
+                setFreshUrls(nextUrls);
+                lastRefreshedAtRef.current = issuedAt;
             }
-            setFreshUrls(nextUrls);
-            lastRefreshedAtRef.current = issuedAt;
+        } finally {
+            renewalInFlightRef.current = false;
         }
     }, [bookingId]);
 
     useEffect(() => {
         lastRefreshedAtRef.current = Date.now();
         const interval = setInterval(() => {
+            setNowMs(Date.now());
             void refreshAllUrls();
         }, REFRESH_INTERVAL_MS);
+        const expiryTick = setInterval(() => {
+            setNowMs(Date.now());
+        }, 60 * 1000);
 
         const handleFocus = () => {
-            if (Date.now() - lastRefreshedAtRef.current >= REFRESH_INTERVAL_MS) {
+            const now = Date.now();
+            setNowMs(now);
+            if (now - lastRefreshedAtRef.current >= REFRESH_INTERVAL_MS) {
                 void refreshAllUrls();
             }
         };
@@ -97,37 +116,64 @@ export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: Medi
 
         return () => {
             clearInterval(interval);
+            clearInterval(expiryTick);
             window.removeEventListener("focus", handleFocus);
         };
     }, [refreshAllUrls]);
 
-    const getMediaUrl = (key: string) =>
-        key.startsWith("http://") || key.startsWith("https://") ? key : `${r2PublicUrl}/${key}`;
-
-    const getActivePhotoUrl = (photo: PhotoItem): string => {
-        const cached = freshUrls[photo.id];
-        if (
-            cached &&
-            cached.sourceKey === photo.r2Key &&
-            Date.now() - cached.issuedAt < REFRESH_INTERVAL_MS
-        ) {
-            return cached.url;
+    useEffect(() => {
+        if (renewalInFlightRef.current) return;
+        const now = Date.now();
+        const hasDueCachedUrl = photosRef.current.some((photo) => {
+            const cached = freshUrls[photo.id];
+            return (
+                cached &&
+                cached.sourceKey === photo.r2Key &&
+                now - cached.issuedAt >= REFRESH_INTERVAL_MS
+            );
+        });
+        if (hasDueCachedUrl) {
+            void refreshAllUrls();
         }
-        return getMediaUrl(photo.r2Key);
-    };
+    });
 
-    const resolveFreshPhotoUrl = async (photo: PhotoItem): Promise<string> => {
-        const { data: res, error } = await tryCatch(getBookingPhotoPresignedUrl(photo.id));
-        if (!error && res?.status === "success" && res.url) {
-            const issuedAt = Date.now();
-            setFreshUrls((prev) => ({
-                ...prev,
-                [photo.id]: { url: res.url, sourceKey: photo.r2Key, issuedAt },
-            }));
-            return res.url;
-        }
-        return getActivePhotoUrl(photo);
-    };
+    const getMediaUrl = useCallback(
+        (key: string) =>
+            key.startsWith("http://") || key.startsWith("https://") ? key : `${r2PublicUrl}/${key}`,
+        [r2PublicUrl],
+    );
+
+    const getActivePhotoUrl = useCallback(
+        (photo: PhotoItem): string => {
+            const cached = freshUrls[photo.id];
+            if (
+                cached &&
+                cached.sourceKey === photo.r2Key &&
+                (nowMs === 0 || nowMs - cached.issuedAt < URL_EXPIRY_MS)
+            ) {
+                return cached.url;
+            }
+            return getMediaUrl(photo.r2Key);
+        },
+        [freshUrls, nowMs, getMediaUrl],
+    );
+
+    const resolveFreshPhotoUrl = useCallback(
+        async (photo: PhotoItem): Promise<string> => {
+            const { data: res, error } = await tryCatch(getBookingPhotoPresignedUrl(photo.id));
+            if (!error && res?.status === "success" && res.url) {
+                const issuedAt = Date.now();
+                setNowMs(issuedAt);
+                setFreshUrls((prev) => ({
+                    ...prev,
+                    [photo.id]: { url: res.url, sourceKey: photo.r2Key, issuedAt },
+                }));
+                return res.url;
+            }
+            return getActivePhotoUrl(photo);
+        },
+        [getActivePhotoUrl],
+    );
 
     const handleApprove = (photoId: string) => {
         startTransition(async () => {

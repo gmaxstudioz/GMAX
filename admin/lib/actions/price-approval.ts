@@ -25,11 +25,12 @@ export async function approvePriceChange(bookingId: string) {
             return { status: "error", message: "No price change pending approval" };
         }
 
-        const priceChangeApplied = await db.transaction(async (tx) => {
+        const appliedProposal = await db.transaction(async (tx) => {
             const [lockedBooking] = await tx
                 .select({
                     priceApprovalStatus: schema.booking.priceApprovalStatus,
                     pendingTotalAmount: schema.booking.pendingTotalAmount,
+                    priceChangedBy: schema.booking.priceChangedBy,
                 })
                 .from(schema.booking)
                 .where(eq(schema.booking.id, bookingId))
@@ -40,7 +41,7 @@ export async function approvePriceChange(bookingId: string) {
                 lockedBooking.priceApprovalStatus !== "PENDING_APPROVAL" ||
                 !lockedBooking.pendingTotalAmount
             ) {
-                return false;
+                return null;
             }
 
             await tx
@@ -64,21 +65,24 @@ export async function approvePriceChange(bookingId: string) {
                     )
                 );
 
-            return true;
+            return {
+                pendingTotalAmount: lockedBooking.pendingTotalAmount,
+                priceChangedBy: lockedBooking.priceChangedBy,
+            };
         });
 
-        if (!priceChangeApplied) {
+        if (!appliedProposal) {
             return { status: "error", message: "No price change pending approval" };
         }
 
         // Notify the manager who requested it
-        if (booking.priceChangedBy) {
-            const manager = await db.query.member.findFirst({ where: eq(schema.member.id, booking.priceChangedBy), with: { user: true } });
+        if (appliedProposal.priceChangedBy) {
+            const manager = await db.query.member.findFirst({ where: eq(schema.member.id, appliedProposal.priceChangedBy), with: { user: true } });
             if (manager) {
                 await db.insert(schema.userNotification).values({ id: uuidv4(), 
                         userId: manager.userId,
                         title: "Price Change Approved",
-                        message: `Your requested price change to ₦${booking.pendingTotalAmount} for a booking has been approved.`,
+                        message: `Your requested price change to ₦${appliedProposal.pendingTotalAmount} for a booking has been approved.`,
                         type: "SYSTEM",
                         bookingId: booking.id
                      });
