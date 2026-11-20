@@ -2,7 +2,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { notFound, redirect } from "next/navigation";
 import { getMemberTasks } from "@/lib/actions/task";
 import { CallIcon, House01Icon, Mail01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -18,6 +21,11 @@ interface MemberPageProps {
 export default async function MemberPage({ params }: MemberPageProps) {
     const { memberId, slug } = await params;
 
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) {
+        redirect("/auth/login");
+    }
+
     const memberData = await db.query.member.findFirst({
         where: eq(schema.member.id, memberId),
         with: {
@@ -26,6 +34,32 @@ export default async function MemberPage({ params }: MemberPageProps) {
             bookings: true,
         }
     });
+
+    if (!memberData || memberData.studio?.slug !== slug) {
+        notFound();
+    }
+
+    const [callerUser, callerMember] = await Promise.all([
+        db.query.user.findFirst({
+            where: eq(schema.user.id, session.user.id),
+            columns: { role: true },
+        }),
+        db.query.member.findFirst({
+            where: and(
+                eq(schema.member.userId, session.user.id),
+                eq(schema.member.studioId, memberData.studioId)
+            ),
+            columns: { role: true },
+        }),
+    ]);
+
+    const isPlatformAdmin = callerUser?.role === "admin";
+    const isManager = isPlatformAdmin || (callerMember ? ["owner", "developer", "manager"].includes(callerMember.role) : false);
+    const isSelf = memberData.userId === session.user.id;
+
+    if (!isManager && !isSelf) {
+        redirect(`/studios/${slug}`);
+    }
 
     const initialTasks = await getMemberTasks(memberId, 0, "", "All");
 
@@ -36,7 +70,7 @@ export default async function MemberPage({ params }: MemberPageProps) {
                     <BackButton />
                     <h1 className="text-xl sm:text-2xl font-bold">Staff Profile</h1>
                 </div>
-                {memberData?.user && memberData?.studio && (
+                {isManager && memberData?.user && memberData?.studio && (
                     <EditStaffDialog 
                         memberId={memberData.id} 
                         userId={memberData.user.id} 
@@ -50,9 +84,9 @@ export default async function MemberPage({ params }: MemberPageProps) {
                     />
                 )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="flex flex-col gap-4">
-                    <Card className="@container/card min-h-[200px] h-fit">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="flex flex-col gap-4 md:col-span-2">
+                    <Card className="@container/card min-h-45 h-fit">
                         <CardHeader>
                             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
                                 <Image src={memberData?.user.image || "/images/placeholder.jpg"} alt="Profile" width={120} height={120} className="rounded-lg object-cover" />
@@ -92,7 +126,7 @@ export default async function MemberPage({ params }: MemberPageProps) {
                     </Card>
                 </div>
                 <div className="md:col-span-3 flex flex-col gap-4 w-full">
-                    <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
+                    <div className="grid grid-cols-3 gap-4">
                         <Card>
                             <CardContent>
                                 <CardTitle>Asign Tasks</CardTitle>

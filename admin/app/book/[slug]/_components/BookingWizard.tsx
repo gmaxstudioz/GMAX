@@ -31,6 +31,14 @@ const posthogEnabled = Boolean(
     process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && process.env.NEXT_PUBLIC_POSTHOG_HOST,
 );
 
+interface ServiceVariantItem {
+    id: string;
+    title: string | null;
+    locationType: string;
+    basePrice: number;
+    sessionDurationMins: number;
+}
+
 interface Category {
     id: string;
     name: string;
@@ -40,6 +48,7 @@ interface Category {
         isAddon: boolean;
         basePrice: number;
         studioSession: { duration: number } | null;
+        serviceVariants: ServiceVariantItem[];
     }[];
 }
 
@@ -77,6 +86,7 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
             useExisting: false,
             existingClientId: "",
             selectedServiceId: "",
+            selectedVariantId: "",
             selectedAddonIds: [],
             sessionCount: 1,
             bookingDate: "",
@@ -95,6 +105,7 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
     const clientEmail       = useWatch({ control, name: "clientEmail" }) ?? "";
     const useExisting       = useWatch({ control, name: "useExisting" }) ?? false;
     const selectedServiceId = useWatch({ control, name: "selectedServiceId" }) ?? "";
+    const selectedVariantId = useWatch({ control, name: "selectedVariantId" }) ?? "";
     const selectedAddonIds  = useWatch({ control, name: "selectedAddonIds" }) ?? [];
     const sessionCount      = useWatch({ control, name: "sessionCount" }) ?? 1;
     const bookingDate       = useWatch({ control, name: "bookingDate" }) ?? "";
@@ -116,9 +127,13 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
 
     const allServices = useMemo(() => categories.flatMap(c => c.services), [categories]);
     const selectedService = useMemo(() => allServices.find(s => s.id === selectedServiceId), [allServices, selectedServiceId]);
+    const selectedVariant = useMemo(
+        () => selectedService?.serviceVariants.find(v => v.id === selectedVariantId) ?? selectedService?.serviceVariants[0],
+        [selectedService, selectedVariantId],
+    );
     const selectedAddons = useMemo(() => addons.filter(a => selectedAddonIds.includes(a.id)), [addons, selectedAddonIds]);
 
-    const servicePrice = selectedService?.basePrice ?? 0;
+    const servicePrice = selectedVariant?.basePrice ?? selectedService?.basePrice ?? 0;
     const sessionTotal = servicePrice * sessionCount;
     const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.basePrice, 0);
     const grandTotal = sessionTotal + addonsTotal;
@@ -160,7 +175,7 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
             if (!emailValid) return;
             isValid = true;
         } else if (step === 2) {
-            const serviceValid = await trigger(["selectedServiceId", "sessionCount"]);
+            const serviceValid = await trigger(["selectedServiceId", "selectedVariantId", "sessionCount"]);
             if (!serviceValid) return;
             isValid = true;
         } else if (step === 3) {
@@ -181,9 +196,11 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                 clientEmail: data.clientEmail?.trim() || undefined,
                 existingClientId: data.useExisting && existingClient?.client ? existingClient.client.id : undefined,
                 serviceId: data.selectedServiceId,
+                selectedVariantId: data.selectedVariantId || undefined,
                 addonIds: data.selectedAddonIds.length > 0 ? data.selectedAddonIds : undefined,
                 sessionCount: data.sessionCount,
                 bookingDate: dateTime,
+                bookingTime: data.bookingTime,
                 notes: data.notes?.trim() || undefined,
             }));
 
@@ -421,7 +438,11 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                                                 <button
                                                     key={service.id}
                                                     type="button"
-                                                    onClick={() => { setValue("selectedServiceId", service.id); form.clearErrors("selectedServiceId"); }}
+                                                    onClick={() => {
+                                                        setValue("selectedServiceId", service.id);
+                                                        setValue("selectedVariantId", service.serviceVariants[0]?.id ?? "");
+                                                        form.clearErrors(["selectedServiceId", "selectedVariantId"]);
+                                                    }}
                                                     className={`text-left p-4 rounded-xl border-2 transition-all ${
                                                         isSelected
                                                             ? "border-primary bg-primary/5 shadow-sm"
@@ -454,6 +475,43 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                             ))}
                             {errors.selectedServiceId && (
                                 <p className="text-xs text-red-500 text-center">{errors.selectedServiceId.message}</p>
+                            )}
+
+                            {selectedService && selectedService.serviceVariants.length > 1 && (
+                                <div className="space-y-3">
+                                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Service Option</h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {selectedService.serviceVariants.map(variant => {
+                                            const isVariantSelected = (selectedVariantId || selectedService.serviceVariants[0]?.id) === variant.id;
+                                            return (
+                                                <button
+                                                    key={variant.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setValue("selectedVariantId", variant.id);
+                                                        form.clearErrors("selectedVariantId");
+                                                    }}
+                                                    className={`text-left p-3 rounded-xl border-2 transition-all ${
+                                                        isVariantSelected
+                                                            ? "border-primary bg-primary/5 shadow-sm"
+                                                            : "border-border hover:border-primary/30 hover:bg-muted/30"
+                                                    }`}
+                                                >
+                                                    <div className="flex justify-between items-center gap-2">
+                                                        <div>
+                                                            <p className="font-medium text-sm">{variant.title || variant.locationType}</p>
+                                                            <span className="text-[10px] text-muted-foreground">{variant.sessionDurationMins}min</span>
+                                                        </div>
+                                                        <p className="font-bold text-sm">₦{variant.basePrice.toLocaleString()}</p>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                            {errors.selectedVariantId && (
+                                <p className="text-xs text-red-500 text-center">{errors.selectedVariantId.message}</p>
                             )}
 
                             {addons.length > 0 && (
@@ -494,10 +552,14 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                                             value={value ?? 1}
                                             onChange={(e) => onChange(Number(e.target.value))}
                                             min={1}
+                                            max={50}
                                             className="max-w-[120px]"
                                         />
                                     )}
                                 />
+                                {errors.sessionCount && (
+                                    <p className="text-xs text-red-500">{errors.sessionCount.message}</p>
+                                )}
                             </div>
                         </div>
 
@@ -588,6 +650,12 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                                     <span className="text-muted-foreground">Service</span>
                                     <span className="font-medium">{selectedService?.name}</span>
                                 </div>
+                                {selectedVariant && selectedService && selectedService.serviceVariants.length > 1 && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">Option</span>
+                                        <span>{selectedVariant.title || selectedVariant.locationType}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between text-sm">
                                     <span className="text-muted-foreground">Sessions</span>
                                     <span>{sessionCount}</span>

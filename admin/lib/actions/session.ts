@@ -31,8 +31,14 @@ export async function createStudioSession(data: { name: string; duration: number
     const member = await db.query.member.findFirst({ 
       where: and(eq(schema.member.userId, userSession.user.id), eq(schema.member.studioId, studioId)) 
     });
-    
-    if (!member) return { status: "error", message: "Unauthorized access to studio" };
+    const dbUser = await db.query.user.findFirst({
+      where: eq(schema.user.id, userSession.user.id),
+      columns: { role: true },
+    });
+    const isAdmin = dbUser?.role === "admin";
+    if (!isAdmin && (!member || !["owner", "admin", "manager", "developer"].includes(member.role))) {
+      return { status: "error", message: "Unauthorized: insufficient permissions" };
+    }
 
     const id = uuidv4();
 
@@ -67,8 +73,14 @@ export async function deleteStudioSession(sessionId: string) {
     const member = await db.query.member.findFirst({ 
       where: and(eq(schema.member.userId, userSession.user.id), eq(schema.member.studioId, existing.studioId)) 
     });
-    
-    if (!member) return { status: "error", message: "Unauthorized access to studio" };
+    const dbUser = await db.query.user.findFirst({
+      where: eq(schema.user.id, userSession.user.id),
+      columns: { role: true },
+    });
+    const isAdmin = dbUser?.role === "admin";
+    if (!isAdmin && (!member || !["owner", "admin", "manager", "developer"].includes(member.role))) {
+      return { status: "error", message: "Unauthorized: insufficient permissions" };
+    }
 
     await db.delete(schema.studioSession).where(eq(schema.studioSession.id, sessionId));
 

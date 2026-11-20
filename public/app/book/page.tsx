@@ -166,16 +166,19 @@ export default function BookingPage() {
     return slotDate.getTime() < Date.now();
   };
 
+  const MAX_SESSIONS = 50;
   let maxAvailableSessions = 1;
   if (selectedTime && selectedDate && timeSlots.length > 0) {
     const startIndex = timeSlots.indexOf(selectedTime);
-    let continuousAvailable = 0;
-    for (let i = startIndex; i < timeSlots.length; i++) {
-      const time = timeSlots[i];
-      if (isSlotBooked(time, selectedDate)) break;
-      continuousAvailable++;
+    if (startIndex >= 0) {
+      let continuousAvailable = 0;
+      for (let i = startIndex; i < timeSlots.length; i++) {
+        const time = timeSlots[i];
+        if (isSlotBooked(time, selectedDate)) break;
+        continuousAvailable++;
+      }
+      maxAvailableSessions = continuousAvailable > 0 ? Math.min(MAX_SESSIONS, continuousAvailable) : 1;
     }
-    maxAvailableSessions = continuousAvailable > 0 ? continuousAvailable : 1;
   }
 
   // Auto-select Date & Time

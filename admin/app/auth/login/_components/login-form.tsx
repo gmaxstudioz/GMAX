@@ -37,20 +37,17 @@ function LoginFormContent({
   const searchParams = useSearchParams();
 
   function getSafeRedirectUrl(raw: string | null): string {
-    if (!raw) return "/";
-    // Reject protocol-relative URLs and external schemes
-    if (raw.startsWith("//") || /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(raw)) {
-      try {
-        const parsed = new URL(raw, window.location.origin);
-        if (parsed.origin !== window.location.origin) return "/";
-        return parsed.pathname + parsed.search + parsed.hash;
-      } catch {
-        return "/";
-      }
+    if (!raw || raw.includes("\\") || !raw.startsWith("/") || raw.startsWith("//")) {
+      return "/";
     }
-    // Allow relative paths starting with /
-    if (raw.startsWith("/")) return raw;
-    return "/";
+    try {
+      const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost";
+      const parsed = new URL(raw, origin);
+      if (parsed.origin !== origin || !parsed.pathname.startsWith("/") || parsed.pathname.startsWith("//")) return "/";
+      return parsed.pathname + parsed.search + parsed.hash;
+    } catch {
+      return "/";
+    }
   }
 
   const redirectUrl = getSafeRedirectUrl(searchParams.get("redirect"));
@@ -87,9 +84,6 @@ function LoginFormContent({
       <Card>
         <CardHeader className="text-center">
           <CardTitle className="text-xl">Welcome back</CardTitle>
-          <CardDescription>
-            Login with your Apple or Google account
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -146,17 +140,22 @@ function LoginFormContent({
                   {isPending ? "Logging in..." : "Login"}
                 </Button>
                 <FieldDescription className="text-center">
-                  Don&apos;t have an account? <a href="/auth/signup">Sign up</a>
+                  Don&apos;t have an account?{" "}
+                  <Link
+                    href={
+                      redirectUrl !== "/"
+                        ? `/auth/signup?redirect=${encodeURIComponent(redirectUrl)}`
+                        : "/auth/signup"
+                    }
+                  >
+                    Sign up
+                  </Link>
                 </FieldDescription>
               </Field>
             </FieldGroup>
           </form>
         </CardContent>
       </Card>
-      <FieldDescription className="px-6 text-center">
-        By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
-        and <a href="#">Privacy Policy</a>.
-      </FieldDescription>
     </div>
   )
 }

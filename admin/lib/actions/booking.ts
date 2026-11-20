@@ -8,6 +8,10 @@ import { headers } from "next/headers";
 import { CreateBookingInput, PaymentPlan } from "../schemas/booking";
 import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3 } from "@/lib/S3Client";
+import { requireS3KeyAccess } from "@/lib/s3-auth";
+import { getAdminPresignedUrl } from "@/lib/r2-presign";
 
 import { startOfDay, endOfDay } from "date-fns";
 
@@ -366,7 +370,8 @@ export async function uploadBookingPhoto(data: {
     mimeType: string;
 }) {
     try {
-        const session = await auth.api.getSession({ headers: await headers() });
+        const reqHeaders = await headers();
+        const session = await auth.api.getSession({ headers: reqHeaders });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
         const booking = await db.query.booking.findFirst({ where: eq(schema.booking.id, data.bookingId) });
@@ -376,6 +381,19 @@ export async function uploadBookingPhoto(data: {
             where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
         });
         if (!member) return { status: "error", message: "Unauthorized" };
+
+        const expectedPrefix = `studio/bookings/${booking.id}/photos/`;
+        if (
+            !data.r2Key ||
+            !data.r2Key.startsWith(expectedPrefix) ||
+            data.r2Key.slice(expectedPrefix.length).includes("/")
+        ) {
+            return { status: "error", message: "Invalid photo key for this booking" };
+        }
+        const keyAuth = await requireS3KeyAccess(reqHeaders, data.r2Key, "upload");
+        if (!keyAuth.ok) {
+            return { status: "error", message: "Unauthorized photo key" };
+        }
 
         // Admin, manager, owner uploads auto-approve
         const autoApproveRoles = ["admin", "manager", "owner"];
@@ -431,6 +449,9 @@ export async function uploadBookingPhoto(data: {
     }
 }
 
+// Photo & Booking Destructive/Review Permission Matrix:
+// - approvePhoto / rejectPhoto: platform admin (`user.role === "admin"`) or studio management roles (`owner`, `admin`, `manager`, `developer`).
+// - deletePhoto / deleteBooking: platform admin (`user.role === "admin"`), studio management roles (`owner`, `admin`, `manager`, `developer`), or `receptionist` (matching s3-auth.ts & BOOKING_CREATOR_ROLES).
 export async function approvePhoto(photoId: string) {
     try {
         const session = await auth.api.getSession({ headers: await headers() });
@@ -442,10 +463,16 @@ export async function approvePhoto(photoId: string) {
         });
         if (!photo) return { status: "error", message: "Photo not found" };
 
-        const member = await db.query.member.findFirst({
-            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, photo.booking?.studioId!))
-        });
-        if (!member) return { status: "error", message: "Unauthorized" };
+        const [dbUser, member] = await Promise.all([
+            db.query.user.findFirst({ where: eq(schema.user.id, session.user.id), columns: { role: true } }),
+            db.query.member.findFirst({
+                where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, photo.booking?.studioId!))
+            }),
+        ]);
+        const isPlatformAdmin = dbUser?.role === "admin";
+        if (!isPlatformAdmin && (!member || !["owner", "admin", "manager", "developer"].includes(member.role))) {
+            return { status: "error", message: "Unauthorized: insufficient permissions to approve photos" };
+        }
 
         await db.update(schema.photo)
             .set({
@@ -486,10 +513,16 @@ export async function rejectPhoto(photoId: string, reason?: string) {
         });
         if (!photo) return { status: "error", message: "Photo not found" };
 
-        const member = await db.query.member.findFirst({
-            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, photo.booking?.studioId!))
-        });
-        if (!member) return { status: "error", message: "Unauthorized" };
+        const [dbUser, member] = await Promise.all([
+            db.query.user.findFirst({ where: eq(schema.user.id, session.user.id), columns: { role: true } }),
+            db.query.member.findFirst({
+                where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, photo.booking?.studioId!))
+            }),
+        ]);
+        const isPlatformAdmin = dbUser?.role === "admin";
+        if (!isPlatformAdmin && (!member || !["owner", "admin", "manager", "developer"].includes(member.role))) {
+            return { status: "error", message: "Unauthorized: insufficient permissions to reject photos" };
+        }
 
         await db.update(schema.photo)
             .set({
@@ -528,31 +561,48 @@ export async function rejectPhoto(photoId: string, reason?: string) {
 
 export async function deletePhoto(photoId: string) {
     try {
-        const session = await auth.api.getSession({ headers: await headers() });
+        const reqHeaders = await headers();
+        const session = await auth.api.getSession({ headers: reqHeaders });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
         const photo = await db.query.photo.findFirst({
             where: eq(schema.photo.id, photoId),
             with: { booking: true },
         });
-        if (!photo) return { status: "error", message: "Photo not found" };
+        if (!photo || !photo.booking) return { status: "error", message: "Photo not found" };
 
-        const member = await db.query.member.findFirst({
-            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, photo.booking?.studioId!))
-        });
-        if (!member || !["admin", "manager", "owner", "receptionist"].includes(member.role)) {
+        const [dbUser, member] = await Promise.all([
+            db.query.user.findFirst({ where: eq(schema.user.id, session.user.id), columns: { role: true } }),
+            db.query.member.findFirst({
+                where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, photo.booking.studioId))
+            }),
+        ]);
+        const isPlatformAdmin = dbUser?.role === "admin";
+        if (!isPlatformAdmin && (!member || !["owner", "admin", "manager", "developer", "receptionist"].includes(member.role))) {
             return { status: "error", message: "Unauthorized to delete photo" };
         }
 
-        try {
-            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-            await fetch(`${baseUrl}/api/s3/delete`, {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ key: photo.r2Key }),
-            });
-        } catch (r2Error) {
-            console.error("[R2] Failed to delete file from storage:", r2Error);
+        if (photo.r2Key) {
+            const expectedPrefix = `studio/bookings/${photo.bookingId}/photos/`;
+            if (!photo.r2Key.startsWith(expectedPrefix)) {
+                return { status: "error", message: "Refusing to delete foreign photo key" };
+            }
+            const keyAuth = await requireS3KeyAccess(reqHeaders, photo.r2Key, "delete");
+            if (!keyAuth.ok) {
+                return { status: "error", message: "Unauthorized to delete photo key" };
+            }
+            if (!process.env.R2_BUCKET_NAME) {
+                return { status: "error", message: "Storage configuration missing; photo deletion cannot proceed" };
+            }
+            try {
+                await S3.send(new DeleteObjectCommand({
+                    Bucket: process.env.R2_BUCKET_NAME,
+                    Key: photo.r2Key,
+                }));
+            } catch (r2Error) {
+                console.error("[R2] Failed to delete file from storage:", r2Error);
+                return { status: "error", message: "Failed to delete photo from storage; please retry" };
+            }
         }
 
         // Delete from database
@@ -568,7 +618,8 @@ export async function deletePhoto(photoId: string) {
 
 export async function deleteBooking(bookingId: string) {
     try {
-        const session = await auth.api.getSession({ headers: await headers() });
+        const reqHeaders = await headers();
+        const session = await auth.api.getSession({ headers: reqHeaders });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
         const booking = await db.query.booking.findFirst({
@@ -577,25 +628,49 @@ export async function deleteBooking(bookingId: string) {
         });
         if (!booking) return { status: "error", message: "Booking not found" };
 
-        const member = await db.query.member.findFirst({
-            where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
-        });
-        if (!member || !["admin", "manager", "owner", "receptionist"].includes(member.role)) {
+        const [dbUser, member] = await Promise.all([
+            db.query.user.findFirst({ where: eq(schema.user.id, session.user.id), columns: { role: true } }),
+            db.query.member.findFirst({
+                where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId))
+            }),
+        ]);
+        const isPlatformAdmin = dbUser?.role === "admin";
+        if (!isPlatformAdmin && (!member || !["owner", "admin", "manager", "developer", "receptionist"].includes(member.role))) {
             return { status: "error", message: "You don't have permission to delete bookings" };
         }
 
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-        if (booking.photos) {
+        const expectedPrefix = `studio/bookings/${booking.id}/photos/`;
+        if (booking.photos && booking.photos.length > 0) {
+            let hasStorageKeys = false;
             for (const photo of booking.photos) {
-                try {
-                    await fetch(`${baseUrl}/api/s3/delete`, {
-                        method: "DELETE",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ key: photo.r2Key }),
-                    });
-                } catch (r2Error) {
-                    console.error(`[R2] Failed to delete photo ${photo.r2Key}:`, r2Error);
+                if (!photo.r2Key) continue;
+                hasStorageKeys = true;
+                if (!photo.r2Key.startsWith(expectedPrefix)) {
+                    return { status: "error", message: "Refusing to delete booking with foreign photo key" };
                 }
+                const keyAuth = await requireS3KeyAccess(reqHeaders, photo.r2Key, "delete");
+                if (!keyAuth.ok) {
+                    return { status: "error", message: "Unauthorized to delete booking photo key" };
+                }
+            }
+
+            if (hasStorageKeys && !process.env.R2_BUCKET_NAME) {
+                return { status: "error", message: "Storage configuration missing; cannot delete booking photos" };
+            }
+
+            for (const photo of booking.photos) {
+                if (photo.r2Key) {
+                    try {
+                        await S3.send(new DeleteObjectCommand({
+                            Bucket: process.env.R2_BUCKET_NAME,
+                            Key: photo.r2Key,
+                        }));
+                    } catch (r2Error) {
+                        console.error(`[R2] Failed to delete photo ${photo.r2Key}:`, r2Error);
+                        return { status: "error", message: "Failed to delete booking photos from storage; please retry" };
+                    }
+                }
+                await db.delete(schema.photo).where(eq(schema.photo.id, photo.id));
             }
         }
 
@@ -664,6 +739,7 @@ export async function updateBookingFull(
         if (data.deliveryStatus) updateData.deliveryStatus = data.deliveryStatus;
         
         let priceChangeNotificationNeeded = false;
+        let shouldCancelPendingPayments = false;
         if (data.totalAmount !== undefined && data.totalAmount !== Number(booking.totalAmount)) {
             if (member.role === "manager") {
                 updateData.pendingTotalAmount = data.totalAmount.toString();
@@ -674,6 +750,7 @@ export async function updateBookingFull(
                 updateData.totalAmount = data.totalAmount.toString();
                 updateData.priceApprovalStatus = "APPROVED";
                 updateData.pendingTotalAmount = null;
+                shouldCancelPendingPayments = true;
             }
         }
         
@@ -684,9 +761,25 @@ export async function updateBookingFull(
             updateData.bookingDate = targetDate.toISOString();
         }
 
-        await db.update(schema.booking)
-            .set(updateData)
-            .where(eq(schema.booking.id, bookingId));
+        if (shouldCancelPendingPayments) {
+            await db.transaction(async (tx) => {
+                await tx.update(schema.booking)
+                    .set(updateData)
+                    .where(eq(schema.booking.id, bookingId));
+                await tx.update(schema.payment)
+                    .set({ status: "CANCELLED" })
+                    .where(
+                        and(
+                            eq(schema.payment.bookingId, bookingId),
+                            eq(schema.payment.status, "PENDING")
+                        )
+                    );
+            });
+        } else {
+            await db.update(schema.booking)
+                .set(updateData)
+                .where(eq(schema.booking.id, bookingId));
+        }
 
         // Handle addon updates
         if (data.addonIds !== undefined) {
@@ -844,5 +937,80 @@ export async function getStudiosForBooking() {
     } catch (e) {
         console.error("Failed to get studios for booking:", e);
         return [];
+    }
+}
+
+export async function getBookingPhotoPresignedUrl(photoId: string) {
+    try {
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (!session?.user) {
+            return { status: "error" as const, message: "Unauthorized" };
+        }
+
+        const photo = await db.query.photo.findFirst({
+            where: eq(schema.photo.id, photoId),
+            with: { booking: { columns: { studioId: true } } },
+        });
+        if (!photo || !photo.booking) {
+            return { status: "error" as const, message: "Photo not found" };
+        }
+
+        const [dbUser, member] = await Promise.all([
+            db.query.user.findFirst({ where: eq(schema.user.id, session.user.id), columns: { role: true } }),
+            db.query.member.findFirst({
+                where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, photo.booking.studioId)),
+                columns: { id: true },
+            }),
+        ]);
+        if (dbUser?.role !== "admin" && !member) {
+            return { status: "error" as const, message: "Unauthorized" };
+        }
+
+        const url = await getAdminPresignedUrl(photo.r2Key, 3600);
+        return { status: "success" as const, url };
+    } catch (e) {
+        console.error("Failed to generate photo presigned URL:", e);
+        return { status: "error" as const, message: "Failed to generate photo URL" };
+    }
+}
+
+export async function getBookingPhotosPresignedUrls(bookingId: string) {
+    try {
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (!session?.user) {
+            return { status: "error" as const, message: "Unauthorized" };
+        }
+
+        const booking = await db.query.booking.findFirst({
+            where: eq(schema.booking.id, bookingId),
+            columns: { id: true, studioId: true },
+            with: {
+                photos: {
+                    columns: { id: true, r2Key: true },
+                },
+            },
+        });
+        if (!booking) {
+            return { status: "error" as const, message: "Booking not found" };
+        }
+
+        const [dbUser, member] = await Promise.all([
+            db.query.user.findFirst({ where: eq(schema.user.id, session.user.id), columns: { role: true } }),
+            db.query.member.findFirst({
+                where: and(eq(schema.member.userId, session.user.id), eq(schema.member.studioId, booking.studioId)),
+                columns: { id: true },
+            }),
+        ]);
+        if (dbUser?.role !== "admin" && !member) {
+            return { status: "error" as const, message: "Unauthorized" };
+        }
+
+        const entries = await Promise.all(
+            booking.photos.map(async (p) => [p.id, await getAdminPresignedUrl(p.r2Key, 3600)] as const),
+        );
+        return { status: "success" as const, urls: Object.fromEntries(entries) };
+    } catch (e) {
+        console.error("Failed to refresh booking photo URLs:", e);
+        return { status: "error" as const, message: "Failed to refresh photo URLs" };
     }
 }

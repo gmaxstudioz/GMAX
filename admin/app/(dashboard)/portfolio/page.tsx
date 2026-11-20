@@ -29,7 +29,7 @@ export default async function Page() {
     });
     const adminRoles = ["owner", "developer"];
     const hasAdminRole = members.some((m) => adminRoles.includes(m.role));
-    if (members.length > 0 && !hasAdminRole) {
+    if (!hasAdminRole) {
       redirect("/my-tasks");
     }
   }

@@ -32,7 +32,9 @@ interface PaymentCheckoutProps {
 
 export function PaymentCheckout({ reference, email, amount, publicKey, purchaseType = "booking" }: PaymentCheckoutProps) {
     const router = useRouter();
-    const [status, setStatus] = useState<"idle" | "processing" | "success" | "failed">("idle");
+    const isEmailMasked = !email || email.includes("*");
+    const [payerEmail, setPayerEmail] = useState(isEmailMasked ? "" : email);
+    const [status, setStatus] = useState<"idle" | "processing" | "pending" | "verification_error" | "success" | "failed">("idle");
     const [scriptLoaded, setScriptLoaded] = useState(false);
     const [countdown, setCountdown] = useState(5);
 
@@ -63,6 +65,50 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
         return () => clearTimeout(timer);
     }, [status, countdown, purchaseType, router]);
 
+    const verifyBookingStatus = async (refToVerify: string) => {
+        const { data: result, error } = await tryCatch(verifyBookingPayment(refToVerify));
+        if (error || !result) {
+            setStatus("verification_error");
+            toast.error("Unable to verify payment right now. Please re-check your payment status.");
+        } else if (result.status === "COMPLETED") {
+            setStatus("success");
+            toast.success("Payment successful!");
+        } else if (result.status === "FAILED" || result.status === "EXPIRED") {
+            setStatus("failed");
+            toast.error("Payment verification failed. Please contact support.");
+        } else {
+            setStatus("pending");
+            toast.info("Payment is still being confirmed. Please check status again in a moment.");
+        }
+    };
+
+    const verifyReference = async (refToVerify: string) => {
+        setStatus("processing");
+
+        if (purchaseType === "booking" && refToVerify.startsWith("gmax-pub-")) {
+            await verifyBookingStatus(refToVerify);
+        } else {
+            const { data: result, error } = await tryCatch(verifyPurchase(refToVerify));
+            if (error || !result) {
+                setStatus("verification_error");
+                toast.error("Unable to verify payment right now. Please re-check your payment status.");
+            } else if (result.verified || result.status === "PAID") {
+                setStatus("success");
+                toast.success("Payment successful!");
+            } else if (result.status === "PENDING") {
+                if (purchaseType === "booking") {
+                    await verifyBookingStatus(refToVerify);
+                } else {
+                    setStatus("pending");
+                    toast.info("Payment is still being confirmed. Please check status again in a moment.");
+                }
+            } else {
+                setStatus("failed");
+                toast.error("Payment verification failed. Please contact support.");
+            }
+        }
+    };
+
     const handlePay = () => {
         if (!scriptLoaded || !window.PaystackPop) {
             toast.error("Payment system is loading. Please wait...");
@@ -75,46 +121,24 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
             return;
         }
 
-        if (!email) {
-            toast.error("Email address is required for payment.");
+        const activeEmail = payerEmail.trim();
+        if (!activeEmail || !activeEmail.includes("@")) {
+            toast.error("Please enter a valid email address for your payment receipt.");
             return;
         }
 
-        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reference);
-        const actualRef = (purchaseType === "booking" && isUUID) 
-            ? `${reference}_bal_${Date.now()}` 
-            : reference;
+        const actualRef = reference;
 
         try {
             const popup = new window.PaystackPop();
             popup.newTransaction({
                 key: publicKey,
-                email,
+                email: activeEmail,
                 amount: Math.round(amount * 100),
                 ref: actualRef,
                 currency: "NGN",
                 onSuccess: async () => {
-                    setStatus("processing");
-                    
-                    if (purchaseType === "booking") {
-                        const { data: result, error } = await tryCatch(verifyBookingPayment(actualRef));
-                        if (error || result?.status === "FAILED") {
-                            setStatus("failed");
-                            toast.error("Payment verification failed. Please contact support.");
-                        } else {
-                            setStatus("success");
-                            toast.success("Payment successful!");
-                        }
-                    } else {
-                        const { data: result, error } = await tryCatch(verifyPurchase(actualRef));
-                        if (error || !result?.verified) {
-                            setStatus("failed");
-                            toast.error("Payment verification failed. Please contact support.");
-                        } else {
-                            setStatus("success");
-                            toast.success("Payment successful!");
-                        }
-                    }
+                    await verifyReference(actualRef);
                 },
                 onCancel: () => {
                     posthog.capture("payment_cancelled", {
@@ -186,6 +210,44 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
         );
     }
 
+    if (status === "pending") {
+        return (
+            <div className="flex flex-col items-center gap-4 py-8">
+                <div className="h-16 w-16 rounded-full bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 text-amber-600" />
+                </div>
+                <div className="text-center space-y-2">
+                    <h3 className="text-xl font-bold text-amber-600">Payment Confirmation Pending</h3>
+                    <p className="text-muted-foreground text-sm max-w-sm">
+                        Your payment is still being confirmed. Check status again without initiating another charge. Reference: <strong>{reference}</strong>
+                    </p>
+                </div>
+                <Button onClick={() => void verifyReference(reference)} variant="outline" className="mt-2">
+                    Check Payment Status
+                </Button>
+            </div>
+        );
+    }
+
+    if (status === "verification_error") {
+        return (
+            <div className="flex flex-col items-center gap-4 py-8">
+                <div className="h-16 w-16 rounded-full bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center">
+                    <XCircleIcon className="h-8 w-8 text-amber-600" />
+                </div>
+                <div className="text-center space-y-2">
+                    <h3 className="text-xl font-bold text-amber-600">Could Not Verify Payment</h3>
+                    <p className="text-muted-foreground text-sm max-w-sm">
+                        We hit a temporary error checking your payment status. Do not pay again — retry verification for reference: <strong>{reference}</strong>
+                    </p>
+                </div>
+                <Button onClick={() => void verifyReference(reference)} variant="outline" className="mt-2">
+                    Retry Verification
+                </Button>
+            </div>
+        );
+    }
+
     if (status === "failed") {
         return (
             <div className="flex flex-col items-center gap-4 py-8">
@@ -206,7 +268,23 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
     }
 
     return (
-        <div className="flex flex-col items-center gap-6 w-full">
+        <div className="flex flex-col items-center gap-4 w-full">
+            {isEmailMasked && (
+                <div className="w-full max-w-sm space-y-1.5">
+                    <label htmlFor="payer-email" className="text-xs font-medium text-muted-foreground">
+                        Confirm email for payment receipt ({email || "required"})
+                    </label>
+                    <input
+                        id="payer-email"
+                        type="email"
+                        value={payerEmail}
+                        onChange={(e) => setPayerEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        className="w-full h-10 rounded-md border bg-background px-3 text-sm"
+                        required
+                    />
+                </div>
+            )}
             <Button
                 size="lg"
                 className="w-full max-w-sm text-lg py-6 gap-2 font-semibold shadow-lg transition-all hover:shadow-xl"

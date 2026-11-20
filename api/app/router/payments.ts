@@ -1,7 +1,7 @@
 // router/payments.ts
 import { db } from "@/lib/db";
 import { payment, productAccess, buyerAccessToken, booking, buyer, bookingIntent, service } from "@/lib/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, ne } from "drizzle-orm";
 import { implement } from "@orpc/server";
 import { contract } from "@/app/contract";
 import { BaseContext, optionalAuthMiddleware } from "./middleware";
@@ -22,6 +22,21 @@ function formatCurrency(amount: number | string): string {
     return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(num);
 }
 
+function maskEmail(email: string | null | undefined): string {
+    if (!email) return "";
+    const parts = email.split("@");
+    if (parts.length !== 2) return "***";
+    const [local, domain] = parts;
+    return `${local.slice(0, 1)}***@${domain}`;
+}
+
+function maskName(name: string | null | undefined): string {
+    if (!name) return "Customer";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0];
+    return `${parts[0]} ${parts[1][0]}.`;
+}
+
 export const verifyPurchase = os.payment.verifyPurchase
     .use(optionalAuthMiddleware)
     .handler(async ({ input }) => {
@@ -39,7 +54,7 @@ export const verifyPurchase = os.payment.verifyPurchase
         });
 
         if (!paymentRecord) {
-            return { verified: false };
+            return { verified: false, status: "FAILED" as const };
         }
 
         const firstProductAccess = paymentRecord.productAccesses?.[0];
@@ -48,15 +63,33 @@ export const verifyPurchase = os.payment.verifyPurchase
         if (paymentRecord.status === "PAID") {
             return {
                 verified: true,
+                status: "PAID" as const,
                 buyerId: firstProductAccess?.buyerId,
             };
         }
 
+        if (paymentRecord.status !== "PENDING") {
+            return { verified: false, status: "FAILED" as const };
+        }
+
         try {
             // Verify with Paystack
-            const response = await paystackFetch<{ data?: { status?: string } }>(`/transaction/verify/${input.reference}`);
+            const response = await paystackFetch<{
+                data?: { status?: string; amount?: number; currency?: string };
+            }>(`/transaction/verify/${encodeURIComponent(input.reference)}`);
             
             if (response.data?.status === "success") {
+                const paidAmount = Number(response.data.amount ?? 0);
+                const expectedAmount = Math.round(Number(paymentRecord.amount) * 100);
+                const paidCurrency = String(response.data.currency ?? "").toUpperCase();
+
+                if (paidAmount !== expectedAmount || paidCurrency !== "NGN") {
+                    console.error(
+                        `[verifyPurchase] Amount/currency mismatch for ${input.reference}: expected ${expectedAmount} NGN, got ${paidAmount} ${paidCurrency}`
+                    );
+                    return { verified: false, status: "FAILED" as const };
+                }
+
                 const paystackRes = paymentRecord.paystackResponse as { pendingProduct?: { title: string }, pendingBuyer?: { name: string, email: string }, productId?: string, buyerId?: string } | null;
                 const isProductPurchase = Boolean(paystackRes?.pendingProduct && paystackRes?.pendingBuyer);
                 const productId = paystackRes?.productId;
@@ -64,13 +97,90 @@ export const verifyPurchase = os.payment.verifyPurchase
 
                 try {
                     await db.transaction(async (tx) => {
+                        if (paymentRecord.bookingId) {
+                            const [lockedBooking] = await tx
+                                .select({ id: booking.id, totalAmount: booking.totalAmount })
+                                .from(booking)
+                                .where(eq(booking.id, paymentRecord.bookingId))
+                                .for("update");
+
+                            if (!lockedBooking) {
+                                throw new Error("STALE_OR_INVALID");
+                            }
+
+                            const currentPayments = await tx.query.payment.findMany({
+                                where: eq(payment.bookingId, paymentRecord.bookingId),
+                            });
+                            const currentRecord = currentPayments.find((p) => p.id === paymentRecord.id);
+                            if (currentRecord?.status === "PAID") {
+                                throw new Error("P2025");
+                            }
+                            if (!currentRecord || currentRecord.status !== "PENDING") {
+                                throw new Error("STALE_OR_INVALID");
+                            }
+
+                            const paidBeforeKobo = currentPayments
+                                .filter((p) => p.status === "PAID")
+                                .reduce((sum, p) => sum + Math.round(Number(p.amount) * 100), 0);
+                            const grandTotalKobo = Math.round(Number(lockedBooking.totalAmount ?? 0) * 100);
+                            const remainingBeforeKobo = Math.max(0, grandTotalKobo - paidBeforeKobo);
+                            if (remainingBeforeKobo < expectedAmount) {
+                                throw new Error("STALE_OR_INVALID");
+                            }
+                        }
+
                         const updateRes = await tx.update(payment)
-                            .set({ status: "PAID" })
+                            .set({
+                                status: "PAID",
+                                ...(isProductPurchase ? {} : { paystackResponse: response.data as any }),
+                            })
                             .where(and(eq(payment.id, paymentRecord.id), eq(payment.status, "PENDING")))
                             .returning();
                         
                         if (updateRes.length === 0) {
-                            throw new Error("P2025");
+                            const latest = await tx.query.payment.findFirst({
+                                where: eq(payment.id, paymentRecord.id),
+                                columns: { status: true },
+                            });
+                            if (latest?.status === "PAID") {
+                                throw new Error("P2025");
+                            }
+                            throw new Error("STALE_OR_INVALID");
+                        }
+
+                        if (paymentRecord.bookingId) {
+                            const updatedPayments = await tx.query.payment.findMany({
+                                where: eq(payment.bookingId, paymentRecord.bookingId),
+                            });
+                            const [lockedBooking] = await tx
+                                .select({ totalAmount: booking.totalAmount })
+                                .from(booking)
+                                .where(eq(booking.id, paymentRecord.bookingId));
+                            const grandTotalKobo = Math.round(Number(lockedBooking?.totalAmount ?? 0) * 100);
+                            const totalPaidKobo = updatedPayments
+                                .filter((p) => p.status === "PAID")
+                                .reduce((sum, p) => sum + Math.round(Number(p.amount) * 100), 0);
+                            const newRemainingKobo = Math.max(0, grandTotalKobo - totalPaidKobo);
+                            const newPaymentStatus = totalPaidKobo >= grandTotalKobo ? "PAID" : "PARTIALLY_PAID";
+
+                            await tx.update(booking)
+                                .set({ paymentStatus: newPaymentStatus })
+                                .where(eq(booking.id, paymentRecord.bookingId));
+
+                            const stalePendingIds = updatedPayments
+                                .filter(
+                                    (p) =>
+                                        p.id !== paymentRecord.id &&
+                                        p.status === "PENDING" &&
+                                        (newRemainingKobo <= 0 || Math.round(Number(p.amount) * 100) !== newRemainingKobo)
+                                )
+                                .map((p) => p.id);
+
+                            if (stalePendingIds.length > 0) {
+                                await tx.update(payment)
+                                    .set({ status: "CANCELLED" })
+                                    .where(inArray(payment.id, stalePendingIds));
+                            }
                         }
 
                         if (isProductPurchase && productId && buyerId && !firstProductAccess) {
@@ -93,8 +203,12 @@ export const verifyPurchase = os.payment.verifyPurchase
                     if (error.message === "P2025") {
                         return {
                             verified: true,
+                            status: "PAID" as const,
                             buyerId: buyerId,
                         };
+                    }
+                    if (error.message === "STALE_OR_INVALID") {
+                        return { verified: false, status: "FAILED" as const };
                     }
                     throw error;
                 }
@@ -158,16 +272,12 @@ export const verifyPurchase = os.payment.verifyPurchase
                         console.error("[verifyPurchase] Notification error:", notifErr);
                     }
 
-                    return { verified: true, buyerId };
+                    return { verified: true, status: "PAID" as const, buyerId };
                 }
 
 
                 // ── Booking payment ──────────────────────────────────
                 if (paymentRecord.bookingId && paymentRecord.booking) {
-                    await db.update(booking)
-                        .set({ paymentStatus: "PAID" })
-                        .where(eq(booking.id, paymentRecord.bookingId));
-
                     // Send booking confirmation email
                     const clientEmail = paymentRecord.booking.client?.email;
                     if (clientEmail) {
@@ -209,16 +319,21 @@ export const verifyPurchase = os.payment.verifyPurchase
                         });
                     }
 
-                    return { verified: true };
+                    return { verified: true, status: "PAID" as const };
                 }
 
-                return { verified: true };
+                return { verified: true, status: "PAID" as const };
+            }
+
+            const gatewayStatus = String(response.data?.status ?? "").toLowerCase();
+            if (["failed", "abandoned", "reversed"].includes(gatewayStatus)) {
+                return { verified: false, status: "FAILED" as const };
             }
         } catch (e) {
             console.error("[verifyPurchase] Paystack verification failed:", e);
         }
 
-        return { verified: false };
+        return { verified: false, status: "PENDING" as const };
     });
 
 export const getPublicPaymentDetails = os.payment.getPublicPaymentDetails
@@ -230,12 +345,13 @@ export const getPublicPaymentDetails = os.payment.getPublicPaymentDetails
                 booking: {
                     with: {
                         client: true,
+                        payments: true,
                         service: {
-                            with: { studioSession: true },
+                            with: { studioSession: true, serviceVariants: true },
                         },
                         studio: true,
                         bookingAddons: {
-                            with: { service: true }
+                            with: { service: { with: { serviceVariants: true } } }
                         },
                     },
                 },
@@ -285,8 +401,8 @@ export const getPublicPaymentDetails = os.payment.getPublicPaymentDetails
                     sessionCount: intent.sessionCount,
                     bookingDate: intent.bookingDate,
                     client: {
-                        name: intent.clientName,
-                        email: intent.clientEmail || "",
+                        name: maskName(intent.clientName),
+                        email: maskEmail(intent.clientEmail),
                     },
                     service: serviceRecord ? {
                         name: serviceRecord.name,
@@ -302,43 +418,100 @@ export const getPublicPaymentDetails = os.payment.getPublicPaymentDetails
             };
         }
 
-        const isAlreadyPaid = paymentRecord.status === "PAID";
+        let isAlreadyPaid = paymentRecord.status === "PAID";
+        let effectiveStatus = paymentRecord.status;
+
+        if (paymentRecord.booking && paymentRecord.status !== "PAID") {
+            const b = paymentRecord.booking;
+            const servicePrice = Number(
+                b.service?.serviceVariants?.find((v: any) => v.id === b.serviceVariantId)?.basePrice ??
+                    b.service?.serviceVariants?.[0]?.basePrice ??
+                    0
+            );
+            const sessionTotal = servicePrice * b.sessionCount;
+            const addonsTotal = (b.bookingAddons || []).reduce((sum: number, a: any) => {
+                const addonService = a.service || a;
+                const variantId = addonService?.addonVariantId;
+                const variant = variantId
+                    ? addonService?.serviceVariants?.find((v: any) => v.id === variantId)
+                    : addonService?.serviceVariants?.[0];
+                return sum + Number(variant?.basePrice ?? 0);
+            }, 0);
+            const grandTotalKobo = Math.round(
+                (b.totalAmount != null ? Number(b.totalAmount) : sessionTotal + addonsTotal) * 100
+            );
+            const paidKobo = (b.payments || [])
+                .filter((p: any) => p.status === "PAID")
+                .reduce((sum: number, p: any) => sum + Math.round(Number(p.amount) * 100), 0);
+            const balanceDueKobo = Math.max(0, grandTotalKobo - paidKobo);
+            const paymentAmountKobo = Math.round(Number(paymentRecord.amount) * 100);
+
+            if (balanceDueKobo <= 0) {
+                if (paymentRecord.status === "PENDING") {
+                    await db
+                        .update(payment)
+                        .set({ status: "CANCELLED" })
+                        .where(and(eq(payment.id, paymentRecord.id), eq(payment.status, "PENDING")));
+                }
+                isAlreadyPaid = true;
+                effectiveStatus = "PAID";
+            } else if (
+                b.bookingStatus === "CANCELLED" ||
+                paymentRecord.status !== "PENDING" ||
+                paymentAmountKobo !== balanceDueKobo
+            ) {
+                if (paymentRecord.status === "PENDING") {
+                    await db
+                        .update(payment)
+                        .set({ status: "CANCELLED" })
+                        .where(and(eq(payment.id, paymentRecord.id), eq(payment.status, "PENDING")));
+                }
+                isAlreadyPaid = false;
+                effectiveStatus = "CANCELLED";
+            }
+        }
 
         const bookingData = paymentRecord.booking ? {
             sessionCount: paymentRecord.booking.sessionCount,
             bookingDate: paymentRecord.booking.bookingDate,
-            client: paymentRecord.booking.client ? {
-                name: paymentRecord.booking.client.name,
-                email: paymentRecord.booking.client.email,
-            } : null,
-            service: paymentRecord.booking.service ? {
+            client: isAlreadyPaid ? null : (paymentRecord.booking.client ? {
+                name: maskName(paymentRecord.booking.client.name),
+                email: maskEmail(paymentRecord.booking.client.email),
+            } : null),
+            service: isAlreadyPaid ? null : (paymentRecord.booking.service ? {
                 name: paymentRecord.booking.service.name,
                 duration: paymentRecord.booking.service.studioSession?.duration || 45,
-            } : null,
+            } : null),
             studio: paymentRecord.booking.studio ? {
                 name: paymentRecord.booking.studio.name,
                 logo: paymentRecord.booking.studio.logo,
             } : null,
-            addons: paymentRecord.booking.bookingAddons?.map((a: any) => ({
+            addons: isAlreadyPaid ? [] : (paymentRecord.booking.bookingAddons?.map((a: any) => ({
                 id: a.service?.id,
                 name: a.service?.name,
-            })) || [],
+            })) || []),
         } : null;
 
         const paystackRes = paymentRecord.paystackResponse as { pendingProduct?: { title: string }, pendingBuyer?: { name: string, email: string } } | null;
         
         const firstProductAccess = paymentRecord.productAccesses?.[0];
-        const productAccessData = firstProductAccess ? {
+        const productAccessData = isAlreadyPaid ? (firstProductAccess ? {
             product: { title: firstProductAccess.product.title },
-            buyer: { name: firstProductAccess.buyer.name, email: firstProductAccess.buyer.email },
+            buyer: { name: "Customer", email: "" },
         } : paystackRes?.pendingProduct ? {
             product: { title: paystackRes.pendingProduct.title },
-            buyer: { name: paystackRes.pendingBuyer?.name || "Customer", email: paystackRes.pendingBuyer?.email || "" },
-        } : null;
+            buyer: { name: "Customer", email: "" },
+        } : null) : (firstProductAccess ? {
+            product: { title: firstProductAccess.product.title },
+            buyer: { name: maskName(firstProductAccess.buyer.name), email: maskEmail(firstProductAccess.buyer.email) },
+        } : paystackRes?.pendingProduct ? {
+            product: { title: paystackRes.pendingProduct.title },
+            buyer: { name: maskName(paystackRes.pendingBuyer?.name), email: maskEmail(paystackRes.pendingBuyer?.email) },
+        } : null);
 
         return {
             amount: paymentRecord.amount.toString(),
-            status: paymentRecord.status,
+            status: effectiveStatus,
             isAlreadyPaid,
             booking: bookingData,
             productAccess: productAccessData,

@@ -29,6 +29,7 @@ interface EditStaffDialogProps {
 const ROLES = [
     { value: "owner", label: "Owner" },
     { value: "manager", label: "Manager" },
+    { value: "developer", label: "Developer" },
     { value: "photographer", label: "Photographer" },
     { value: "videographer", label: "Videographer" },
     { value: "receptionist", label: "Receptionist" },

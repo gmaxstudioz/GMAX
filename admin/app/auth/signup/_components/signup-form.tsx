@@ -39,20 +39,17 @@ function SignupFormContent({
   const searchParams = useSearchParams();
 
   function getSafeRedirectUrl(raw: string | null): string {
-    if (!raw) return "/";
-    // Reject protocol-relative URLs and external schemes
-    if (raw.startsWith("//") || /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(raw)) {
-      try {
-        const parsed = new URL(raw, window.location.origin);
-        if (parsed.origin !== window.location.origin) return "/";
-        return parsed.pathname + parsed.search + parsed.hash;
-      } catch {
-        return "/";
-      }
+    if (!raw || raw.includes("\\") || !raw.startsWith("/") || raw.startsWith("//")) {
+      return "/";
     }
-    // Allow relative paths starting with /
-    if (raw.startsWith("/")) return raw;
-    return "/";
+    try {
+      const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost";
+      const parsed = new URL(raw, origin);
+      if (parsed.origin !== origin || !parsed.pathname.startsWith("/") || parsed.pathname.startsWith("//")) return "/";
+      return parsed.pathname + parsed.search + parsed.hash;
+    } catch {
+      return "/";
+    }
   }
 
   const redirectUrl = getSafeRedirectUrl(searchParams.get("redirect"));
@@ -193,17 +190,22 @@ function SignupFormContent({
                     )}
                 </Button>
                 <FieldDescription className="text-center">
-                  Already have an account? <a href="/auth/login">Sign in</a>
+                  Already have an account?{" "}
+                  <a
+                    href={
+                      redirectUrl !== "/"
+                        ? `/auth/login?redirect=${encodeURIComponent(redirectUrl)}`
+                        : "/auth/login"
+                    }
+                  >
+                    Sign in
+                  </a>
                 </FieldDescription>
               </Field>
             </FieldGroup>
           </form>
         </CardContent>
       </Card>
-      <FieldDescription className="px-6 text-center">
-        By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
-        and <a href="#">Privacy Policy</a>.
-      </FieldDescription>
     </div>
   )
 }

@@ -1,16 +1,21 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useCallback, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { approvePhoto, rejectPhoto, deletePhoto } from "@/lib/actions/booking";
+import {
+    approvePhoto,
+    rejectPhoto,
+    deletePhoto,
+    getBookingPhotoPresignedUrl,
+    getBookingPhotosPresignedUrls,
+} from "@/lib/actions/booking";
 import { tryCatch } from "@/hooks/try-catch";
 import { toast } from "sonner";
 import { CheckIcon, XIcon, ImageIcon, VideoIcon, DownloadIcon, EyeIcon, Loader2, ShieldAlertIcon, UploadCloudIcon } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Info, Delete02Icon } from "@hugeicons/core-free-icons";
@@ -40,6 +45,35 @@ const statusBadgeVariant: Record<string, "default" | "secondary" | "destructive"
     REJECTED: "destructive",
 };
 
+const REFRESH_INTERVAL_MS = 45 * 60 * 1000;
+// Presigned URLs are issued for 1 hour; renew at 45 min, stop serving at 55 min.
+const URL_EXPIRY_MS = 55 * 60 * 1000;
+const EXPIRY_BUFFER_MS = 5 * 60 * 1000;
+
+function parsePresignedUrlExpiryMs(url: string): number | null {
+    if (!url.startsWith("http://") && !url.startsWith("https://")) return null;
+    try {
+        const parsed = new URL(url);
+        const amzDate = parsed.searchParams.get("X-Amz-Date");
+        const amzExpires = parsed.searchParams.get("X-Amz-Expires");
+        if (!amzDate || !amzExpires) return null;
+        const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/.exec(amzDate);
+        const expiresSeconds = Number(amzExpires);
+        if (!m || !Number.isFinite(expiresSeconds) || expiresSeconds <= 0) return null;
+        const issuedMs = Date.UTC(
+            Number(m[1]),
+            Number(m[2]) - 1,
+            Number(m[3]),
+            Number(m[4]),
+            Number(m[5]),
+            Number(m[6]),
+        );
+        return issuedMs + expiresSeconds * 1000;
+    } catch {
+        return null;
+    }
+}
+
 export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: MediaGalleryProps) {
     const [isPending, startTransition] = useTransition();
     const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
@@ -49,6 +83,201 @@ export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: Medi
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
     const [photoToReplace, setPhotoToReplace] = useState<string | null>(null);
+    const [freshUrls, setFreshUrls] = useState<
+        Record<string, { url: string; sourceKey: string; issuedAt: number }>
+    >({});
+    const [fallbackObservedAt, setFallbackObservedAt] = useState<Record<string, number>>({});
+    const fallbackObservedAtRef = useRef<Record<string, number>>({});
+    const [nowMs, setNowMs] = useState<number>(0);
+    const lastRefreshedAtRef = useRef<number>(0);
+    const photosRef = useRef(photos);
+    const previewRequestIdRef = useRef(0);
+
+    useEffect(() => {
+        photosRef.current = photos;
+    }, [photos]);
+
+    useEffect(() => {
+        fallbackObservedAtRef.current = fallbackObservedAt;
+    }, [fallbackObservedAt]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            const now = Date.now();
+            setNowMs(now);
+            setFallbackObservedAt((prev) => {
+                let changed = false;
+                const next = { ...prev };
+                for (const photo of photos) {
+                    if (next[photo.r2Key] === undefined) {
+                        next[photo.r2Key] = now;
+                        changed = true;
+                    }
+                }
+                return changed ? next : prev;
+            });
+        }, 0);
+        return () => clearTimeout(timer);
+    }, [photos]);
+
+    const renewalInFlightRef = useRef(false);
+
+    const getMediaUrl = useCallback(
+        (key: string) =>
+            key.startsWith("http://") || key.startsWith("https://") ? key : `${r2PublicUrl}/${key}`,
+        [r2PublicUrl],
+    );
+
+    const refreshAllUrls = useCallback(async () => {
+        if (renewalInFlightRef.current) return;
+        renewalInFlightRef.current = true;
+        try {
+            const { data: res, error } = await tryCatch(getBookingPhotosPresignedUrls(bookingId));
+            if (!error && res?.status === "success" && res.urls) {
+                const issuedAt = Date.now();
+                const keyById = new Map(photosRef.current.map((p) => [p.id, p.r2Key]));
+                const nextUrls: Record<string, { url: string; sourceKey: string; issuedAt: number }> = {};
+                for (const [id, url] of Object.entries(res.urls)) {
+                    const sourceKey = keyById.get(id);
+                    if (sourceKey) {
+                        nextUrls[id] = { url, sourceKey, issuedAt };
+                    }
+                }
+                setNowMs(issuedAt);
+                setFreshUrls(nextUrls);
+                lastRefreshedAtRef.current = issuedAt;
+            }
+        } finally {
+            renewalInFlightRef.current = false;
+        }
+    }, [bookingId]);
+
+    useEffect(() => {
+        lastRefreshedAtRef.current = Date.now();
+        const interval = setInterval(() => {
+            setNowMs(Date.now());
+            void refreshAllUrls();
+        }, REFRESH_INTERVAL_MS);
+        const expiryTick = setInterval(() => {
+            setNowMs(Date.now());
+        }, 60 * 1000);
+
+        const handleFocus = () => {
+            const now = Date.now();
+            setNowMs(now);
+            if (now - lastRefreshedAtRef.current >= REFRESH_INTERVAL_MS) {
+                void refreshAllUrls();
+            }
+        };
+        window.addEventListener("focus", handleFocus);
+
+        return () => {
+            clearInterval(interval);
+            clearInterval(expiryTick);
+            window.removeEventListener("focus", handleFocus);
+        };
+    }, [refreshAllUrls]);
+
+    useEffect(() => {
+        if (renewalInFlightRef.current) return;
+        const now = Date.now();
+        const renewalLeadMs = 60 * 60 * 1000 - REFRESH_INTERVAL_MS;
+        const hasDueUrl = photosRef.current.some((photo) => {
+            const cached = freshUrls[photo.id];
+            if (cached && cached.sourceKey === photo.r2Key) {
+                const parsedCachedExpiry = parsePresignedUrlExpiryMs(cached.url);
+                return (
+                    now - cached.issuedAt >= REFRESH_INTERVAL_MS ||
+                    (parsedCachedExpiry !== null && now >= parsedCachedExpiry - renewalLeadMs)
+                );
+            }
+            const fallbackUrl = getMediaUrl(photo.r2Key);
+            const parsedFallbackExpiry = parsePresignedUrlExpiryMs(fallbackUrl);
+            if (parsedFallbackExpiry !== null && now >= parsedFallbackExpiry - renewalLeadMs) {
+                return true;
+            }
+            if (photo.r2Key.startsWith("http://") || photo.r2Key.startsWith("https://")) {
+                const observedAt = fallbackObservedAtRef.current[photo.r2Key];
+                if (observedAt !== undefined && now - observedAt >= REFRESH_INTERVAL_MS) {
+                    return true;
+                }
+            }
+            return false;
+        });
+        if (hasDueUrl) {
+            void refreshAllUrls();
+        }
+    });
+
+    const getActivePhotoUrl = useCallback(
+        (photo: PhotoItem): string | null => {
+            const cached = freshUrls[photo.id];
+            if (cached && cached.sourceKey === photo.r2Key) {
+                const parsedCachedExpiry = parsePresignedUrlExpiryMs(cached.url);
+                const clientValid = nowMs === 0 || nowMs - cached.issuedAt < URL_EXPIRY_MS;
+                const sigV4Valid =
+                    parsedCachedExpiry === null ||
+                    nowMs === 0 ||
+                    nowMs < parsedCachedExpiry - EXPIRY_BUFFER_MS;
+                if (clientValid && sigV4Valid) {
+                    return cached.url;
+                }
+            }
+            const fallbackUrl = getMediaUrl(photo.r2Key);
+            const parsedFallbackExpiry = parsePresignedUrlExpiryMs(fallbackUrl);
+            if (
+                parsedFallbackExpiry !== null &&
+                nowMs > 0 &&
+                nowMs >= parsedFallbackExpiry - EXPIRY_BUFFER_MS
+            ) {
+                return null;
+            }
+            if (photo.r2Key.startsWith("http://") || photo.r2Key.startsWith("https://")) {
+                const observedAt = fallbackObservedAt[photo.r2Key];
+                if (observedAt !== undefined && nowMs > 0 && nowMs - observedAt >= URL_EXPIRY_MS) {
+                    return null;
+                }
+            }
+            return fallbackUrl;
+        },
+        [freshUrls, nowMs, fallbackObservedAt, getMediaUrl],
+    );
+
+    const resolveFreshPhotoUrl = useCallback(
+        async (photo: PhotoItem): Promise<string | null> => {
+            const { data: res, error } = await tryCatch(getBookingPhotoPresignedUrl(photo.id));
+            if (!error && res?.status === "success" && res.url) {
+                const issuedAt = Date.now();
+                setNowMs(issuedAt);
+                setFreshUrls((prev) => ({
+                    ...prev,
+                    [photo.id]: { url: res.url, sourceKey: photo.r2Key, issuedAt },
+                }));
+                return res.url;
+            }
+            return getActivePhotoUrl(photo);
+        },
+        [getActivePhotoUrl],
+    );
+
+    const handleOpenPreview = useCallback(
+        async (photo: PhotoItem) => {
+            const requestId = ++previewRequestIdRef.current;
+            const url = await resolveFreshPhotoUrl(photo);
+            if (previewRequestIdRef.current !== requestId) return;
+            if (!url) {
+                toast.error("Unable to load preview right now. Please refresh.");
+                return;
+            }
+            setPreviewUrl(url);
+        },
+        [resolveFreshPhotoUrl],
+    );
+
+    const handleClosePreview = useCallback(() => {
+        previewRequestIdRef.current += 1;
+        setPreviewUrl(null);
+    }, []);
 
     const handleApprove = (photoId: string) => {
         startTransition(async () => {
@@ -102,7 +331,6 @@ export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: Medi
         });
     };
 
-    const getMediaUrl = (key: string) => `${r2PublicUrl}/${key}`;
     const isVideo = (mime: string) => mime.startsWith("video/");
 
     const formatSize = (bytes: number) => {
@@ -123,7 +351,9 @@ export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: Medi
     return (
         <>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {photos.map(photo => (
+                {photos.map(photo => {
+                    const activeUrl = getActivePhotoUrl(photo);
+                    return (
                     <div key={photo.id} className="group relative rounded-xl border bg-card overflow-hidden">
                         {/* Thumbnail / Preview */}
                         <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
@@ -132,9 +362,9 @@ export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: Medi
                                     <VideoIcon className="h-8 w-8" />
                                     <span className="text-[10px]">Video</span>
                                 </div>
-                            ) : (
+                            ) : activeUrl ? (
                                 <Image
-                                    src={getMediaUrl(photo.r2Key)}
+                                    src={activeUrl}
                                     alt={photo.fileName}
                                     className="object-cover w-full h-full"
                                     width={500}
@@ -142,6 +372,19 @@ export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: Medi
                                     loading="lazy"
                                     unoptimized
                                 />
+                            ) : (
+                                <div className="flex flex-col items-center gap-2 text-muted-foreground p-2 text-center">
+                                    <span className="text-xs">Preview link expired</span>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 text-xs"
+                                        onClick={() => void refreshAllUrls()}
+                                    >
+                                        Refresh
+                                    </Button>
+                                </div>
                             )}
                             <div className="absolute top-2 right-2 flex items-center gap-2">
                                 <Badge
@@ -168,15 +411,32 @@ export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: Medi
                                     variant="secondary"
                                     size="icon"
                                     className="h-8 w-8"
-                                    onClick={() => setPreviewUrl(getMediaUrl(photo.r2Key))}
+                                    onClick={() => void handleOpenPreview(photo)}
                                 >
                                     <EyeIcon className="h-4 w-4" />
                                 </Button>
-                                <Link href={getMediaUrl(photo.r2Key)} download={photo.fileName} target="_blank" rel="noopener noreferrer">
-                                    <Button variant="secondary" size="icon" className="h-8 w-8">
-                                        <DownloadIcon className="h-4 w-4" />
-                                    </Button>
-                                </Link>
+                                <Button
+                                    variant="secondary"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={async () => {
+                                        const url = await resolveFreshPhotoUrl(photo);
+                                        if (!url) {
+                                            toast.error("Unable to download media right now. Please try again.");
+                                            return;
+                                        }
+                                        const link = document.createElement("a");
+                                        link.href = url;
+                                        link.download = photo.fileName;
+                                        link.target = "_blank";
+                                        link.rel = "noopener noreferrer";
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        link.remove();
+                                    }}
+                                >
+                                    <DownloadIcon className="h-4 w-4" />
+                                </Button>
                                 {isManager && (
                                     <Button
                                         variant="destructive"
@@ -248,7 +508,8 @@ export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: Medi
                             )}
                         </div>
                     </div>
-                ))}
+                    );
+                })}
             </div>
 
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -311,13 +572,13 @@ export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: Medi
 
             {/* Image preview modal */}
             {previewUrl && (
-                <Dialog open={!!previewUrl} onOpenChange={() => setPreviewUrl(null)}>
+                <Dialog open={!!previewUrl} onOpenChange={(open) => { if (!open) handleClosePreview(); }}>
                     <DialogContent className="sm:max-w-[90vw] md:max-w-[800px] p-2">
                         <DialogHeader className="sr-only">
                             <DialogTitle>Preview</DialogTitle>
                             <DialogDescription>Media preview</DialogDescription>
                         </DialogHeader>
-                        {previewUrl.match(/\.(mp4|mov|webm|avi)/i) ? (
+                        {previewUrl.split("?")[0].match(/\.(mp4|mov|webm|avi)/i) ? (
                             <video src={previewUrl} controls className="w-full max-h-[80vh] rounded-lg" />
                         ) : (
                             <div className="relative w-full h-[80vh]">

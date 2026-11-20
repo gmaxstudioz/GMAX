@@ -2,12 +2,13 @@ import { UploadPartCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextResponse } from "next/server";
 import { S3 } from "@/lib/S3Client";
+import { MAX_MULTIPART_PART_NUMBER, requireS3KeyAccess } from "@/lib/s3-auth";
 import z from "zod";
 
 const schema = z.object({
     key: z.string().min(1),
     uploadId: z.string().min(1),
-    partNumber: z.number().int().min(1),
+    partNumber: z.number().int().min(1).max(MAX_MULTIPART_PART_NUMBER),
 });
 
 export async function POST(req: Request) {
@@ -23,10 +24,12 @@ export async function POST(req: Request) {
         }
 
         const { key, uploadId, partNumber } = validation.data;
+        const authResult = await requireS3KeyAccess(req.headers, key, "upload");
+        if (!authResult.ok) return authResult.response;
 
         const command = new UploadPartCommand({
             Bucket: process.env.R2_BUCKET_NAME,
-            Key: key,
+            Key: authResult.key,
             UploadId: uploadId,
             PartNumber: partNumber,
         });

@@ -5,10 +5,34 @@ import { eq, and, or, inArray, asc, desc, isNull, sql } from "drizzle-orm";
 import { studio, service, booking, bookingIntent, client, payment, bookingAddons } from "@/lib/schema";
 import { implement } from "@orpc/server";
 import { optionalAuthMiddleware, authMiddleware, BaseContext } from "./middleware";
+import {
+    BOOKING_CREATOR_ROLES,
+    MANAGEMENT_ROLES,
+    RESCHEDULE_ROLES,
+    requireBookingStudioRole,
+    requireStudioRole,
+} from "@/lib/authz";
 import { calculateGrandTotal } from "@/lib/pricing";
 import { v4 as uuidv4 } from "uuid";
+import crypto from "crypto";
 import { paystackFetch } from "@/lib/paystack";
 import { getPostHogClient } from "@/lib/auth";
+
+const ALLOWED_BOOKING_SORT_COLUMNS = [
+    "createdAt",
+    "updatedAt",
+    "bookingDate",
+    "totalAmount",
+    "bookingStatus",
+    "paymentStatus",
+    "deliveryStatus",
+] as const;
+
+type AllowedBookingSortColumn = (typeof ALLOWED_BOOKING_SORT_COLUMNS)[number];
+
+function escapeLikePattern(value: string): string {
+    return value.replace(/[\\%_]/g, "\\$&");
+}
 
 const os = implement(contract).$context<BaseContext>();
 
@@ -167,9 +191,15 @@ const mapBookingSummaryToOutput = (data: any) => {
     };
 };
 
-export const createBookings = os.booking.create.use(optionalAuthMiddleware).handler(
+export const createBookings = os.booking.create.use(authMiddleware).handler(
     async ({ input, context, errors }) => {
         const { addonIds, createdBy, memberId, ...bookingData } = input;
+
+        const { isAdmin, member: callerMember } = await requireStudioRole(
+            context.user.id,
+            bookingData.studioId,
+            BOOKING_CREATOR_ROLES,
+        );
 
         const studio = await db.query.studio.findFirst({
             where: (model, { eq }) => eq(model.id, bookingData.studioId),
@@ -182,9 +212,19 @@ export const createBookings = os.booking.create.use(optionalAuthMiddleware).hand
             });
         }
 
-        // 1. Fetch Service & Add-ons to calculate the total amount securely
+        const clientRecord = await db.query.client.findFirst({
+            where: (model, { eq, and }) =>
+                and(eq(model.id, bookingData.clientId), eq(model.studioId, bookingData.studioId)),
+            columns: { id: true },
+        });
+        if (!clientRecord) {
+            throw errors.BAD_REQUEST({ message: "Client does not belong to this studio." });
+        }
+
+        // 1. Fetch Service & Add-ons scoped to studioId to calculate the total amount securely
         const service = await db.query.service.findFirst({
-            where: (model, { eq }) => eq(model.id, bookingData.serviceId),
+            where: (model, { eq, and }) =>
+                and(eq(model.id, bookingData.serviceId), eq(model.studioId, bookingData.studioId)),
             with: { serviceVariants: true }
         });
         
@@ -196,7 +236,8 @@ export const createBookings = os.booking.create.use(optionalAuthMiddleware).hand
         let addonMapById: Record<string, any> = {};
         if (addonIds && addonIds.length > 0) {
             fetchedAddons = await db.query.service.findMany({
-                where: (model, { inArray }) => inArray(model.id, addonIds),
+                where: (model, { inArray, eq, and }) =>
+                    and(inArray(model.id, addonIds), eq(model.studioId, bookingData.studioId)),
                 with: { serviceVariants: true }
             });
             // Create a map from addon ID to addon object for consistent lookup
@@ -213,6 +254,9 @@ export const createBookings = os.booking.create.use(optionalAuthMiddleware).hand
         // Map addon IDs to their pricing in the order they were selected, using the first variant of each addon
         const addonPricingObjs = (addonIds || []).map(addonId => {
             const addon = addonMapById[addonId];
+            if (!addon) {
+                throw errors.BAD_REQUEST({ message: "One or more add-ons do not belong to this studio." });
+            }
             const addonPriceRaw = addon?.serviceVariants?.[0]?.basePrice ? Number(addon.serviceVariants[0].basePrice) : 0;
             return {
                 price: addonPriceRaw - (addonPriceRaw * (addon?.discountPercentage || 0)) / 100,
@@ -224,34 +268,39 @@ export const createBookings = os.booking.create.use(optionalAuthMiddleware).hand
         const grandTotal = calculateGrandTotal(servicePricingObj, addonPricingObjs, bookingData.sessionCount);
 
         // -- Resolve Staff Member identity --
-        let resolvedCreatedBy: string;
+        let resolvedCreatedBy = context.user.id;
         let resolvedMemberId: string;
 
-        if (context.user) {
-            const member = studio.members.find(m => m.userId === context.user!.id);
-            if (!member) throw errors.FORBIDDEN();
-
-            resolvedCreatedBy = createdBy ?? context.user.id;
-            resolvedMemberId = memberId ?? member.id;
-        } else {
-            const defaultMember =
-                studio.members.find(m => m.role === "owner") ?? studio.members[0];
-
-            if (!defaultMember) {
-                throw errors.BAD_REQUEST({
-                    message: "This studio has no available staff to handle bookings.",
-                });
+        if (isAdmin) {
+            const requestedMember = memberId
+                ? studio.members.find((m) => m.id === memberId)
+                : studio.members.find((m) => m.role === "owner") ?? studio.members[0];
+            if (!requestedMember) {
+                throw errors.BAD_REQUEST({ message: "No studio staff member available to assign booking." });
             }
-
-            resolvedCreatedBy = defaultMember.userId;
-            resolvedMemberId = defaultMember.id;
+            resolvedCreatedBy = createdBy && studio.members.some((m) => m.userId === createdBy)
+                ? createdBy
+                : context.user.id;
+            resolvedMemberId = requestedMember.id;
+        } else {
+            const canAssignOthers = MANAGEMENT_ROLES.includes(callerMember!.role as any);
+            const requestedMember = canAssignOthers && memberId
+                ? studio.members.find((m) => m.id === memberId)
+                : callerMember!;
+            if (!requestedMember) {
+                throw errors.BAD_REQUEST({ message: "Assigned staff member does not belong to this studio." });
+            }
+            resolvedMemberId = requestedMember.id;
         }
 
-        // 4. Pass totalAmount to Prisma
+        // 4. Insert booking with server-enforced default statuses
         const bookingId = uuidv4();
         await db.insert(booking).values({
             id: bookingId,
             ...bookingData,
+            bookingStatus: "CONFIRMED",
+            paymentStatus: "PENDING",
+            deliveryStatus: "PENDING",
             bookingDate: bookingData.bookingDate.toISOString(),
             totalAmount: grandTotal.toString(),
             createdBy: resolvedCreatedBy,
@@ -280,15 +329,15 @@ export const createBookings = os.booking.create.use(optionalAuthMiddleware).hand
         await captureEvent("booking_created", {
             addon_count: addonIds?.length ?? 0,
             session_count: bookingData.sessionCount,
-            source: context.user ? "staff" : "public",
+            source: "staff",
         });
 
         return mapBookingToOutput(data);
     },
 );
 
-export const getBookingById = os.booking.getById.use(optionalAuthMiddleware).handler(
-    async ({ input, errors }) => {
+export const getBookingById = os.booking.getById.use(authMiddleware).handler(
+    async ({ input, context, errors }) => {
         const data = await db.query.booking.findFirst({
             where: (model, { eq }) => eq(model.id, input.bookingId),
             with: {
@@ -302,28 +351,123 @@ export const getBookingById = os.booking.getById.use(optionalAuthMiddleware).han
         });
 
         if (!data) throw errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: input.bookingId }});
+        await requireStudioRole(context.user.id, data.studioId);
         return mapBookingToOutput(data);
     },
 );
 
 export const updateBooking = os.booking.update.use(authMiddleware).handler(
-    async ({ input, errors }) => {
+    async ({ input, context, errors }) => {
         const { bookingId, addonIds, ...updateData } = input;
         
-        const existing = await db.query.booking.findFirst({ where: (model, { eq }) => eq(model.id, bookingId) });
-        if (!existing) throw errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: bookingId }});
+        const { booking: existing } = await requireBookingStudioRole(
+            context.user.id,
+            bookingId,
+            MANAGEMENT_ROLES,
+        );
 
-        if (Object.keys(updateData).length > 0) {
-            const { bookingDate, ...restData } = updateData;
-            await db.update(booking).set({ ...restData, updatedAt: new Date().toISOString(), ...(bookingDate ? { bookingDate: bookingDate.toISOString() } : {}) }).where(eq(booking.id, bookingId));
+        if (updateData.studioId !== undefined && updateData.studioId !== existing.studioId) {
+            throw errors.BAD_REQUEST({ message: "Cannot transfer a booking to another studio." });
         }
+        delete updateData.studioId;
+        delete updateData.createdBy;
 
-        if (addonIds !== undefined) {
-            await db.delete(bookingAddons).where(eq(bookingAddons.a, bookingId));
-            if (addonIds.length > 0) {
-                await db.insert(bookingAddons).values(addonIds.map(id => ({ a: bookingId, b: id })));
+        if (updateData.clientId !== undefined) {
+            const targetClient = await db.query.client.findFirst({
+                where: (model, { eq, and }) =>
+                    and(eq(model.id, updateData.clientId!), eq(model.studioId, existing.studioId)),
+                columns: { id: true },
+            });
+            if (!targetClient) {
+                throw errors.BAD_REQUEST({ message: "Client does not belong to this studio." });
             }
         }
+
+        if (updateData.serviceId !== undefined) {
+            const targetService = await db.query.service.findFirst({
+                where: (model, { eq, and }) =>
+                    and(eq(model.id, updateData.serviceId!), eq(model.studioId, existing.studioId)),
+                columns: { id: true },
+            });
+            if (!targetService) {
+                throw errors.BAD_REQUEST({ message: "Service does not belong to this studio." });
+            }
+        }
+
+        if (updateData.memberId !== undefined) {
+            const targetMember = await db.query.member.findFirst({
+                where: (model, { eq, and }) =>
+                    and(eq(model.id, updateData.memberId!), eq(model.studioId, existing.studioId)),
+                columns: { id: true },
+            });
+            if (!targetMember) {
+                throw errors.BAD_REQUEST({ message: "Target staff member does not belong to this studio." });
+            }
+        }
+
+        if (addonIds !== undefined && addonIds.length > 0) {
+            const validAddons = await db.query.service.findMany({
+                where: (model, { inArray, eq, and }) =>
+                    and(inArray(model.id, addonIds), eq(model.studioId, existing.studioId), eq(model.isAddon, true)),
+                columns: { id: true },
+            });
+            if (validAddons.length !== new Set(addonIds).size) {
+                throw errors.BAD_REQUEST({ message: "One or more add-ons do not belong to this studio." });
+            }
+        }
+
+        await db.transaction(async (tx) => {
+            const [lockedBooking] = await tx
+                .select({ id: booking.id, serviceId: booking.serviceId })
+                .from(booking)
+                .where(eq(booking.id, bookingId))
+                .for("update");
+
+            if (!lockedBooking) {
+                throw errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: bookingId } });
+            }
+
+            const effectiveServiceId = updateData.serviceId ?? lockedBooking.serviceId;
+            const serviceChanged =
+                updateData.serviceId !== undefined && updateData.serviceId !== lockedBooking.serviceId;
+            const txUpdateData: typeof updateData = { ...updateData };
+
+            if (txUpdateData.serviceVariantId !== undefined && txUpdateData.serviceVariantId !== null) {
+                const targetVariant = await tx.query.serviceVariant.findFirst({
+                    where: (model, { eq, and }) =>
+                        and(
+                            eq(model.id, txUpdateData.serviceVariantId!),
+                            eq(model.serviceId, effectiveServiceId)
+                        ),
+                    columns: { id: true },
+                });
+                if (!targetVariant) {
+                    throw errors.BAD_REQUEST({ message: "Service variant does not belong to the selected service." });
+                }
+            } else if (serviceChanged && txUpdateData.serviceVariantId === undefined) {
+                txUpdateData.serviceVariantId = null;
+            }
+
+            if (Object.keys(txUpdateData).length > 0) {
+                const { bookingDate, ...restData } = txUpdateData;
+                await tx
+                    .update(booking)
+                    .set({
+                        ...restData,
+                        updatedAt: new Date().toISOString(),
+                        ...(bookingDate ? { bookingDate: bookingDate.toISOString() } : {}),
+                    })
+                    .where(eq(booking.id, bookingId));
+            }
+
+            if (addonIds !== undefined) {
+                await tx.delete(bookingAddons).where(eq(bookingAddons.a, bookingId));
+                if (addonIds.length > 0) {
+                    const uniqueAddonIds = [...new Set(addonIds)];
+                    await tx.insert(bookingAddons).values(uniqueAddonIds.map((id) => ({ a: bookingId, b: id })));
+                }
+            }
+        });
 
         const data = await db.query.booking.findFirst({
             where: (model, { eq }) => eq(model.id, bookingId),
@@ -346,9 +490,12 @@ export const updateBooking = os.booking.update.use(authMiddleware).handler(
 );
 
 export const deleteBooking = os.booking.delete.use(authMiddleware).handler(
-    async ({ input, errors }) => {
-        const existing = await db.query.booking.findFirst({ where: (model, { eq }) => eq(model.id, input.bookingId) });
-        if (!existing) throw errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: input.bookingId }});
+    async ({ input, context }) => {
+        await requireBookingStudioRole(
+            context.user.id,
+            input.bookingId,
+            BOOKING_CREATOR_ROLES,
+        );
 
         await db.delete(booking).where(eq(booking.id, input.bookingId));
         await captureEvent("booking_deleted", {});
@@ -357,20 +504,23 @@ export const deleteBooking = os.booking.delete.use(authMiddleware).handler(
 );
 
 export const getAllBookings = os.booking.getAll.use(authMiddleware).handler(
-    async ({ input }) => {
+    async ({ input, context }) => {
         const { page, perPage, sortBy, sortOrder, studioId, search } = input;
+
+        await requireStudioRole(context.user.id, studioId);
         
         let baseWhere = eq(booking.studioId, studioId);
         
-        // Handling search correctly with Drizzle requires joins, but since we are replacing the ORM we can just use exists or similar.
-        // For simplicity, we fetch all matching client/service IDs first if there is a search
         if (search) {
+            const escapedSearch = escapeLikePattern(search);
             const clients = await db.query.client.findMany({
-                where: (model, { ilike }) => ilike(model.name, `%${search}%`),
+                where: (model, { ilike, and, eq }) =>
+                    and(eq(model.studioId, studioId), ilike(model.name, `%${escapedSearch}%`)),
                 columns: { id: true }
             });
             const services = await db.query.service.findMany({
-                where: (model, { ilike }) => ilike(model.name, `%${search}%`),
+                where: (model, { ilike, and, eq }) =>
+                    and(eq(model.studioId, studioId), ilike(model.name, `%${escapedSearch}%`)),
                 columns: { id: true }
             });
             
@@ -390,12 +540,19 @@ export const getAllBookings = os.booking.getAll.use(authMiddleware).handler(
 
         const countResult = await db.select({ count: sql`count(*)` }).from(booking).where(baseWhere);
         const total = Number(countResult[0].count);
+
+        const safeSortBy: AllowedBookingSortColumn = ALLOWED_BOOKING_SORT_COLUMNS.includes(
+            sortBy as AllowedBookingSortColumn,
+        )
+            ? (sortBy as AllowedBookingSortColumn)
+            : "createdAt";
         
         const data = await db.query.booking.findMany({
             where: baseWhere,
             offset: (page - 1) * perPage,
             limit: perPage,
-            orderBy: (model, { asc, desc }) => sortOrder === 'desc' ? desc((model as any)[sortBy || 'createdAt']) : asc((model as any)[sortBy || 'createdAt']),
+            orderBy: (model, { asc, desc }) =>
+                sortOrder === "desc" ? desc(model[safeSortBy]) : asc(model[safeSortBy]),
             with: {
                 client: true,
                 service: { with: { serviceVariants: true } },
@@ -422,10 +579,22 @@ export const getAllBookings = os.booking.getAll.use(authMiddleware).handler(
 );
 
 export const reassignBooking = os.booking.reassign.use(authMiddleware).handler(
-    async ({ input, errors }) => {
+    async ({ input, context, errors }) => {
         const { bookingId, memberId } = input;
-        const existing = await db.query.booking.findFirst({ where: (model, { eq }) => eq(model.id, bookingId) });
-        if (!existing) throw errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: bookingId }});
+        const { booking: existing } = await requireBookingStudioRole(
+            context.user.id,
+            bookingId,
+            MANAGEMENT_ROLES,
+        );
+
+        const targetMember = await db.query.member.findFirst({
+            where: (model, { eq, and }) =>
+                and(eq(model.id, memberId), eq(model.studioId, existing.studioId)),
+            columns: { id: true },
+        });
+        if (!targetMember) {
+            throw errors.BAD_REQUEST({ message: "Target staff member does not belong to this studio." });
+        }
 
         await db.update(booking).set({ memberId, updatedAt: new Date().toISOString() }).where(eq(booking.id, bookingId));
         
@@ -448,10 +617,9 @@ export const reassignBooking = os.booking.reassign.use(authMiddleware).handler(
 );
 
 export const rescheduleBooking = os.booking.reschedule.use(authMiddleware).handler(
-    async ({ input, errors }) => {
+    async ({ input, context }) => {
         const { bookingId, newDate } = input;
-        const existing = await db.query.booking.findFirst({ where: (model, { eq }) => eq(model.id, bookingId) });
-        if (!existing) throw errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: bookingId }});
+        await requireBookingStudioRole(context.user.id, bookingId, RESCHEDULE_ROLES);
 
         await db.update(booking).set({ bookingDate: newDate.toISOString(), updatedAt: new Date().toISOString() }).where(eq(booking.id, bookingId));
         
@@ -474,10 +642,25 @@ export const rescheduleBooking = os.booking.reschedule.use(authMiddleware).handl
 );
 
 export const updateBookingStatus = os.booking.updateStatus.use(authMiddleware).handler(
-    async ({ input, errors }) => {
+    async ({ input, context, errors }) => {
         const { bookingId, bookingStatus, paymentStatus, deliveryStatus } = input;
-        const existing = await db.query.booking.findFirst({ where: (model, { eq }) => eq(model.id, bookingId) });
-        if (!existing) throw errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: bookingId }});
+        const { booking: existing, isAdmin, member: callerMember } = await requireBookingStudioRole(
+            context.user.id,
+            bookingId,
+        );
+
+        const isAssignedStaffRole = !isAdmin && ["photographer", "videographer"].includes(callerMember!.role);
+        if (isAssignedStaffRole) {
+            if (existing.memberId !== callerMember!.id) {
+                throw errors.FORBIDDEN({ message: "Photographers/videographers can only update assigned bookings." });
+            }
+            if (paymentStatus || deliveryStatus) {
+                throw errors.FORBIDDEN({ message: "Insufficient permissions to change payment or delivery status." });
+            }
+        }
+        if (!isAdmin && callerMember?.role === "receptionist" && (paymentStatus || deliveryStatus)) {
+            throw errors.FORBIDDEN({ message: "Receptionists cannot change payment or delivery status." });
+        }
 
         const updateData: any = {};
         if (bookingStatus) updateData.bookingStatus = bookingStatus;
@@ -485,7 +668,19 @@ export const updateBookingStatus = os.booking.updateStatus.use(authMiddleware).h
         if (deliveryStatus) updateData.deliveryStatus = deliveryStatus;
 
         const { bookingDate, ...restData } = updateData;
-            await db.update(booking).set({ ...restData, updatedAt: new Date().toISOString(), ...(bookingDate ? { bookingDate: bookingDate.toISOString() } : {}) }).where(eq(booking.id, bookingId));
+        const updateWhere = isAssignedStaffRole
+            ? and(eq(booking.id, bookingId), eq(booking.memberId, callerMember!.id))
+            : eq(booking.id, bookingId);
+        const updatedRows = await db
+            .update(booking)
+            .set({ ...restData, updatedAt: new Date().toISOString(), ...(bookingDate ? { bookingDate: bookingDate.toISOString() } : {}) })
+            .where(updateWhere)
+            .returning({ id: booking.id });
+        if (updatedRows.length === 0) {
+            throw isAssignedStaffRole
+                ? errors.FORBIDDEN({ message: "Photographers/videographers can only update assigned bookings." })
+                : errors.NOT_FOUND({ data: { resourceType: "Booking", resourceId: bookingId } });
+        }
         
         const data = await db.query.booking.findFirst({
             where: (model, { eq }) => eq(model.id, bookingId),
@@ -586,7 +781,17 @@ export const createPublicBooking = os.booking.createPublic
         const planMultiplier = paymentPlan === "QUARTER" ? 0.25 : paymentPlan === "HALF" ? 0.5 : 1;
         const chargeAmount = Math.round(grandTotal * planMultiplier * 100) / 100; // round to 2 decimal places
 
-        const reference = `gmax-pub-${uuidv4().slice(0, 8)}`;
+        const reference = `gmax-pub-${crypto.randomBytes(12).toString("hex")}`;
+
+        let verifiedExistingClientId: string | null = null;
+        if (input.existingClientId) {
+            const candidateClient = await db.query.client.findFirst({
+                where: (model, { eq, and }) =>
+                    and(eq(model.id, input.existingClientId!), eq(model.studioId, input.studioId)),
+                columns: { id: true },
+            });
+            verifiedExistingClientId = candidateClient?.id ?? null;
+        }
 
         // Store intent — nothing else goes to DB yet
         await db.insert(bookingIntent).values({
@@ -595,7 +800,7 @@ export const createPublicBooking = os.booking.createPublic
                 clientName:      input.clientName,
                 clientEmail:     input.clientEmail ?? null,
                 clientPhone:     input.clientPhone ?? null,
-                existingClientId: input.existingClientId ?? null,
+                existingClientId: verifiedExistingClientId,
                 serviceId:       input.selectedServiceId,
                 serviceVariantId: input.selectedVariantId,
                 addonIds:        input.selectedAddonIds ?? [],
@@ -656,11 +861,18 @@ export const createPublicBooking = os.booking.createPublic
 export const checkClient = os.booking.checkClient
     .use(optionalAuthMiddleware)
     .handler(async ({ input }) => {
+        const trimmedName = input.name.trim();
+        const escapedName = escapeLikePattern(trimmedName);
+        if (trimmedName.replace(/[\\%_\s]/g, "").length < 2) {
+            return { exists: false as const };
+        }
+        const escapedEmail = input.email ? escapeLikePattern(input.email.trim()) : undefined;
+
         const existing = await db.query.client.findFirst({
             where: (model, { eq, and, ilike }) => and(
                 eq(model.studioId, input.studioId),
-                ilike(model.name, input.name),
-                input.email ? ilike(model.email, input.email) : undefined
+                ilike(model.name, escapedName),
+                escapedEmail ? ilike(model.email, escapedEmail) : undefined
             ),
             columns: { id: true, name: true, phone: true },
         });
@@ -675,7 +887,7 @@ export const checkClient = os.booking.checkClient
 
         return {
             exists: true as const,
-            client: { id: existing.id, name: existing.name, maskedPhone },
+            client: { id: escapedEmail ? existing.id : "", name: existing.name, maskedPhone },
         };
     });
 
@@ -687,17 +899,153 @@ export const verifyBooking = os.booking.verifyBooking
         });
 
         if (!intent) {
-            return {
-                status: "FAILED" as const,
-                clientName: "",
-                serviceName: "",
-                bookingDate: "",
-                totalAmount: 0,
-                amountPaid: 0,
-                paymentPlan: "FULL" as const,
+            const existingPayment = await db.query.payment.findFirst({
+                where: (model, { eq }) => eq(model.paystackReference, input.reference),
+                with: {
+                    booking: {
+                        with: {
+                            client: true,
+                            service: true,
+                        },
+                    },
+                },
+            });
+
+            if (!existingPayment || !existingPayment.booking) {
+                return {
+                    status: "FAILED" as const,
+                    clientName: "",
+                    serviceName: "",
+                    bookingDate: "",
+                    totalAmount: 0,
+                    amountPaid: 0,
+                    paymentPlan: "FULL" as const,
+                    reference: input.reference,
+                    bookingId: null,
+                };
+            }
+
+            const payBooking = existingPayment.booking;
+            const baseResult = {
+                clientName: payBooking.client?.name ?? "",
+                serviceName: payBooking.service?.name ?? "Session",
+                bookingDate: new Date(payBooking.bookingDate).toISOString(),
+                totalAmount: Number(payBooking.totalAmount ?? 0),
+                amountPaid: Number(existingPayment.amount),
+                paymentPlan: payBooking.paymentPlan,
                 reference: input.reference,
-                bookingId: null,
+                bookingId: payBooking.id,
             };
+
+            if (existingPayment.status === "PAID") {
+                return { ...baseResult, status: "COMPLETED" as const };
+            }
+
+            if (existingPayment.status !== "PENDING") {
+                return { ...baseResult, status: "EXPIRED" as const, amountPaid: 0 };
+            }
+
+            try {
+                const verification = await paystackFetch<{
+                    status: boolean;
+                    data?: { status?: string; amount?: number; currency?: string; reference?: string };
+                }>(`/transaction/verify/${encodeURIComponent(input.reference)}`);
+
+                if (verification.status && verification.data?.status === "success") {
+                    const paidAmount = Number(verification.data.amount ?? 0);
+                    const expectedAmount = Math.round(Number(existingPayment.amount) * 100);
+                    const paidCurrency = String(verification.data.currency ?? "").toUpperCase();
+
+                    if (
+                        Number.isInteger(paidAmount) &&
+                        paidAmount === expectedAmount &&
+                        paidCurrency === "NGN"
+                    ) {
+                        const txResult = await db.transaction(async (tx) => {
+                            const [lockedBooking] = await tx
+                                .select({ id: booking.id, totalAmount: booking.totalAmount })
+                                .from(booking)
+                                .where(eq(booking.id, payBooking.id))
+                                .for("update");
+
+                            if (!lockedBooking) {
+                                return "FAILED" as const;
+                            }
+
+                            const lockedPayment = await tx.query.payment.findFirst({
+                                where: eq(payment.id, existingPayment.id),
+                            });
+
+                            if (lockedPayment?.status === "PAID") {
+                                return "COMPLETED" as const;
+                            }
+                            if (!lockedPayment || lockedPayment.status !== "PENDING") {
+                                return "EXPIRED" as const;
+                            }
+
+                            const allPayments = await tx.query.payment.findMany({
+                                where: eq(payment.bookingId, payBooking.id),
+                            });
+                            const paidBeforeKobo = allPayments
+                                .filter((p) => p.status === "PAID")
+                                .reduce((sum, p) => sum + Math.round(Number(p.amount) * 100), 0);
+                            const grandTotalKobo = Math.round(Number(lockedBooking.totalAmount ?? 0) * 100);
+                            const remainingBeforeKobo = Math.max(0, grandTotalKobo - paidBeforeKobo);
+
+                            if (remainingBeforeKobo < expectedAmount) {
+                                return "FAILED" as const;
+                            }
+
+                            await tx
+                                .update(payment)
+                                .set({
+                                    status: "PAID",
+                                    paystackResponse: verification.data as any,
+                                    paymentDate: new Date().toISOString(),
+                                })
+                                .where(and(eq(payment.id, existingPayment.id), eq(payment.status, "PENDING")));
+
+                            const totalPaidAfterKobo = paidBeforeKobo + expectedAmount;
+                            const newRemainingKobo = Math.max(0, grandTotalKobo - totalPaidAfterKobo);
+                            const newPaymentStatus = totalPaidAfterKobo >= grandTotalKobo ? "PAID" : "PARTIALLY_PAID";
+
+                            await tx
+                                .update(booking)
+                                .set({ paymentStatus: newPaymentStatus })
+                                .where(eq(booking.id, payBooking.id));
+
+                            const stalePendingIds = allPayments
+                                .filter(
+                                    (p) =>
+                                        p.id !== existingPayment.id &&
+                                        p.status === "PENDING" &&
+                                        (newRemainingKobo <= 0 ||
+                                            Math.round(Number(p.amount) * 100) !== newRemainingKobo)
+                                )
+                                .map((p) => p.id);
+
+                            if (stalePendingIds.length > 0) {
+                                await tx
+                                    .update(payment)
+                                    .set({ status: "CANCELLED" })
+                                    .where(inArray(payment.id, stalePendingIds));
+                            }
+
+                            return "COMPLETED" as const;
+                        });
+
+                        return {
+                            ...baseResult,
+                            status: txResult,
+                            ...(txResult !== "COMPLETED" ? { amountPaid: 0 } : {}),
+                        };
+                    }
+                }
+            } catch (err) {
+                console.error(`[Verify] Paystack verification failed for payment ${input.reference}:`, err);
+            }
+
+            return { ...baseResult, status: "PENDING" as const, amountPaid: 0 };
         }
 
         // If intent is still PENDING, verify with Paystack and process if paid
@@ -745,8 +1093,16 @@ export const verifyBooking = os.booking.verifyBooking
                                         return; // Duplicate
                                     }
 
-                                    // 1. Resolve client
-                                    let clientId = intent!.existingClientId;
+                                    // 1. Resolve client (verify existingClientId belongs to intent.studioId)
+                                    let clientId: string | null = null;
+                                    if (intent!.existingClientId) {
+                                        const scopedClient = await tx.query.client.findFirst({
+                                            where: (model, { eq, and }) =>
+                                                and(eq(model.id, intent!.existingClientId!), eq(model.studioId, intent!.studioId)),
+                                            columns: { id: true },
+                                        });
+                                        clientId = scopedClient?.id ?? null;
+                                    }
                                     if (!clientId) {
                                         const phone = intent!.clientPhone?.trim() ?? "";
                                         let existing = null;

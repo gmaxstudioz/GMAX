@@ -1,4 +1,5 @@
 import { S3 } from "@/lib/S3Client";
+import { requireS3KeyAccess } from "@/lib/s3-auth";
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from "next/server";
 
@@ -6,7 +7,7 @@ export async function DELETE(req: Request) {
     try {
         const body = await req.json();
         
-        const key = body.key;
+        const key = typeof body?.key === "string" ? body.key : "";
 
         if (!key) {
             return NextResponse.json(
@@ -15,9 +16,12 @@ export async function DELETE(req: Request) {
             );
         }
 
+        const authResult = await requireS3KeyAccess(req.headers, key, "delete");
+        if (!authResult.ok) return authResult.response;
+
         const command = new DeleteObjectCommand({
             Bucket: process.env.R2_BUCKET_NAME,
-            Key: key,
+            Key: authResult.key,
         });
 
         await S3.send(command);

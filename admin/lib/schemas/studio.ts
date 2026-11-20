@@ -97,8 +97,8 @@ export const StudioMetadataSchema = z.object({
     
     // ── Invite Member ─────────────────────────────────────────────────────────────
     
-    export const MemberRoleEnum = z.enum(["owner", "manager", "photographer", "videographer", "receptionist"], {
-        error: "Invalid role. Must be admin, photographer, videographer, or receptionist.",
+    export const MemberRoleEnum = z.enum(["owner", "manager", "developer", "photographer", "videographer", "receptionist"], {
+        error: "Invalid role. Must be owner, manager, developer, photographer, videographer, or receptionist.",
     });
     
     

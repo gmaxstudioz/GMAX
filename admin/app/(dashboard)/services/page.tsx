@@ -15,21 +15,28 @@ export default async function ServicesPage() {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) redirect("/auth/login");
 
-    const members = await db.query.member.findMany({
-        where: eq(schema.member.userId, session.user.id),
-        columns: { role: true, studioId: true }
-    });
+    const [dbUser, members] = await Promise.all([
+        db.query.user.findFirst({
+            where: eq(schema.user.id, session.user.id),
+            columns: { role: true },
+        }),
+        db.query.member.findMany({
+            where: eq(schema.member.userId, session.user.id),
+            columns: { role: true, studioId: true },
+        }),
+    ]);
     
+    const isPlatformAdmin = dbUser?.role === "admin";
     const adminRoles = ["owner", "developer"];
     const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
-    if (members.length > 0 && !hasAdminRole) {
+    if (!isPlatformAdmin && !hasAdminRole) {
         redirect("/my-tasks");
     }
 
     const studioIds = members.map((m: any) => m.studioId);
 
-    const studios = studioIds.length > 0 ? await db.query.studio.findMany({
-        where: inArray(schema.studio.id, studioIds),
+    const studios = isPlatformAdmin || studioIds.length > 0 ? await db.query.studio.findMany({
+        ...(isPlatformAdmin ? {} : { where: inArray(schema.studio.id, studioIds) }),
         columns: {
             id: true,
             slug: true,

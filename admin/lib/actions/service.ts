@@ -22,12 +22,15 @@ export async function createService(data: ServicePayload) {
 
         let studioId: string | null = parsed.data.studioId || null;
 
-        if (!studioId && parsed.data.studioSessionId) {
+        if (parsed.data.studioSessionId) {
             const studioSession = await db.query.studioSession.findFirst({
                 where: eq(schema.studioSession.id, parsed.data.studioSessionId),
                 columns: { studioId: true }
             });
             if (!studioSession) return { status: "error", message: "Studio session not found" };
+            if (studioId && studioSession.studioId !== studioId) {
+                return { status: "error", message: "Studio session does not belong to the selected studio" };
+            }
             studioId = studioSession.studioId;
         }
 
@@ -35,13 +38,8 @@ export async function createService(data: ServicePayload) {
             return { status: "error", message: "Unable to determine owning studio" };
         }
 
-        const member = await db.query.member.findFirst({
-            where: and(
-                eq(schema.member.userId, userSession.user.id),
-                eq(schema.member.studioId, studioId)
-            )
-        });
-        if (!member) return { status: "error", message: "Unauthorized access to studio" };
+        const hasManagePermission = await checkStudioManagePermission(userSession.user.id, studioId);
+        if (!hasManagePermission) return { status: "error", message: "Unauthorized access to studio" };
 
         const newServiceId = uuidv4();
 
@@ -111,6 +109,22 @@ export async function updateService(id: string, data: ServicePayload) {
         const userSession = await auth.api.getSession({ headers: await headers() });
         if (!userSession?.user) return { status: "error", message: "Unauthorized" };
 
+        const hasManagePermission = await checkStudioManagePermission(userSession.user.id, existing.studioId);
+        if (!hasManagePermission) return { status: "error", message: "Unauthorized access to studio" };
+
+        if (parsed.data.studioSessionId && parsed.data.studioSessionId !== existing.studioSessionId) {
+            const studioSession = await db.query.studioSession.findFirst({
+                where: and(
+                    eq(schema.studioSession.id, parsed.data.studioSessionId),
+                    eq(schema.studioSession.studioId, existing.studioId),
+                ),
+                columns: { id: true },
+            });
+            if (!studioSession) {
+                return { status: "error", message: "Studio session not found for this studio" };
+            }
+        }
+
         const existingVariants = await db.query.serviceVariant.findMany({
             where: eq(schema.serviceVariant.serviceId, id),
         });
@@ -143,7 +157,7 @@ export async function updateService(id: string, data: ServicePayload) {
                 description: parsed.data.description,
                 features: parsed.data.features ?? [],
                 category: parsed.data.category as any,
-                studioSessionId: parsed.data.studioSessionId ?? "",
+                studioSessionId: parsed.data.studioSessionId || existing.studioSessionId,
             }).where(eq(schema.service.id, id));
 
             for (const variant of parsed.data.variants) {
@@ -234,13 +248,8 @@ export async function deleteService(id: string) {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
-        const member = await db.query.member.findFirst({
-            where: and(
-                eq(schema.member.userId, session.user.id),
-                eq(schema.member.studioId, studioId)
-            )
-        });
-        if (!member) return { status: "error", message: "Unauthorized access to studio" };
+        const hasManagePermission = await checkStudioManagePermission(session.user.id, studioId);
+        if (!hasManagePermission) return { status: "error", message: "Unauthorized access to studio" };
 
         await db.delete(schema.service).where(eq(schema.service.id, id));
         revalidatePath(`/studios/[slug]`, "page");
@@ -587,8 +596,31 @@ export async function bulkUpdateServiceDiscounts(serviceIds: string[], discountP
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) return { status: "error", message: "Unauthorized" };
 
+        if (!Number.isFinite(discountPercentage) || discountPercentage < 0 || discountPercentage > 100) {
+            return { status: "error", message: "Discount percentage must be between 0 and 100" };
+        }
+        if (!Array.isArray(serviceIds) || serviceIds.length === 0) {
+            return { status: "error", message: "No services selected" };
+        }
+
+        const targetServices = await db.query.service.findMany({
+            where: inArray(schema.service.id, serviceIds),
+            columns: { id: true, studioId: true },
+        });
+        if (targetServices.length === 0) {
+            return { status: "error", message: "No matching services found" };
+        }
+
+        const distinctStudioIds = [...new Set(targetServices.map((s) => s.studioId))];
+        for (const sId of distinctStudioIds) {
+            const allowed = await checkStudioManagePermission(session.user.id, sId);
+            if (!allowed) {
+                return { status: "error", message: "Unauthorized access to one or more studios" };
+            }
+        }
+
         await db.update(schema.service)
-            .set({ discountPercentage })
+            .set({ discountPercentage: Math.round(discountPercentage) })
             .where(inArray(schema.service.id, serviceIds));
             
         return { status: "success", message: "Discounts updated successfully" };

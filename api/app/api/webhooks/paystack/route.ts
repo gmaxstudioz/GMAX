@@ -20,23 +20,43 @@ function generateReceiptNumber(): string {
 
 const PORTAL_URL = process.env.PORTAL_URL ?? "";
 
+function timingSafeEqualStr(a: string, b: string): boolean {
+    const bufA = Buffer.from(a, "utf8");
+    const bufB = Buffer.from(b, "utf8");
+    if (bufA.length !== bufB.length) return false;
+    return crypto.timingSafeEqual(bufA, bufB);
+}
+
 export async function POST(req: Request) {
+    const secret = process.env.PAYSTACK_SECRET_KEY;
+    if (!secret) {
+        console.error("[Webhook] PAYSTACK_SECRET_KEY is not configured");
+        return new Response("Server Misconfigured", { status: 500 });
+    }
+
     const rawBody = await req.text();
     const signature = req.headers.get("x-paystack-signature");
-    const secret = process.env.PAYSTACK_SECRET_KEY!;
+    if (!signature) {
+        return new Response("Unauthorized", { status: 401 });
+    }
 
     const expectedSignature = crypto
         .createHmac("sha512", secret)
         .update(rawBody)
         .digest("hex");
 
-    if (signature !== expectedSignature) {
+    if (!timingSafeEqualStr(signature, expectedSignature)) {
         return new Response("Unauthorized", { status: 401 });
     }
 
-    const payload = JSON.parse(rawBody);
+    let payload: any;
+    try {
+        payload = JSON.parse(rawBody);
+    } catch {
+        return new Response("Bad Request", { status: 400 });
+    }
 
-    if (payload.event !== "charge.success") {
+    if (payload?.event !== "charge.success" || typeof payload?.data?.reference !== "string") {
         return Response.json({ received: true });
     }
 
@@ -95,8 +115,15 @@ export async function POST(req: Request) {
         let bookingId = "";
 
         await db.transaction(async (tx) => {
-            // 1. Resolve client
-            let clientId = intent.existingClientId;
+            // 1. Resolve client (verify existingClientId belongs to intent.studioId)
+            let clientId: string | null = null;
+            if (intent.existingClientId) {
+                const scopedClient = await tx.query.client.findFirst({
+                    where: (c, { and, eq }) => and(eq(c.id, intent.existingClientId!), eq(c.studioId, intent.studioId)),
+                    columns: { id: true },
+                });
+                clientId = scopedClient?.id ?? null;
+            }
 
             if (!clientId) {
                 const phone = intent.clientPhone?.trim() ?? "";
@@ -240,6 +267,13 @@ export async function POST(req: Request) {
             return Response.json({ received: true });
         }
 
+        const persistedMeta = (foundPayment.paystackResponse ?? {}) as {
+            productId?: string;
+            buyerId?: string;
+            pendingProduct?: unknown;
+            pendingBuyer?: unknown;
+        };
+
         const paidAmount = Number(payload.data.amount ?? 0);
         const paidCurrency = String(payload.data.currency ?? "").toUpperCase();
         const expectedAmount = Math.round(Number(foundPayment.expectedAmount ?? foundPayment.amount) * 100);
@@ -248,20 +282,42 @@ export async function POST(req: Request) {
             console.error(
                 `[Webhook] Shop payment mismatch for ${reference}. expected ${expectedAmount} NGN, got ${paidAmount} ${paidCurrency}`
             );
+            const payloadObj =
+                typeof payload.data === "object" && payload.data !== null
+                    ? (payload.data as Record<string, unknown>)
+                    : {};
             await db.update(payment)
                 .set({
                     status: "PENDING",
-                    paystackResponse: payload.data,
+                    paystackResponse: {
+                        ...payloadObj,
+                        ...(persistedMeta.pendingProduct !== undefined ? { pendingProduct: persistedMeta.pendingProduct } : {}),
+                        ...(persistedMeta.pendingBuyer !== undefined ? { pendingBuyer: persistedMeta.pendingBuyer } : {}),
+                        ...(persistedMeta.productId !== undefined ? { productId: persistedMeta.productId } : {}),
+                        ...(persistedMeta.buyerId !== undefined ? { buyerId: persistedMeta.buyerId } : {}),
+                    },
                     paymentDate: new Date().toISOString(),
                 })
                 .where(eq(payment.id, foundPayment.id));
             return Response.json({ received: true });
         }
 
-        const { product_id, buyer_id } = payload.data.metadata ?? {};
+        const product_id = persistedMeta.productId;
+        const buyer_id = persistedMeta.buyerId;
+
+        if (
+            product_id &&
+            payload.data.metadata?.product_id &&
+            payload.data.metadata.product_id !== product_id
+        ) {
+            console.error(
+                `[Webhook] Metadata product_id mismatch for ${reference}: metadata=${payload.data.metadata.product_id}, persisted=${product_id}`
+            );
+            return Response.json({ received: true });
+        }
 
         if (!product_id || !buyer_id) {
-            console.error(`[Webhook] Missing metadata for shop reference: ${reference}`);
+            console.error(`[Webhook] Missing persisted product/buyer binding for shop reference: ${reference}`);
             return Response.json({ received: true });
         }
 

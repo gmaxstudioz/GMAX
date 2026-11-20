@@ -8,9 +8,30 @@ import { router } from '@/app/router';
 
 const schemaConverters = [new ZodToJsonSchemaConverter()]
 
+const configuredOrigins = [
+  ...(process.env.ALLOWED_ORIGINS?.split(",") ?? []),
+  process.env.PORTAL_URL ?? "",
+  process.env.BETTER_AUTH_URL ?? "",
+]
+  .map((o) => o.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+
+const allowedOriginSet = new Set(configuredOrigins);
+
+if (allowedOriginSet.size === 0) {
+  console.warn("[CORS] No ALLOWED_ORIGINS, PORTAL_URL, or BETTER_AUTH_URL configured — CORSPlugin falling back to permissive origin reflection.");
+}
+
 const handler = new OpenAPIHandler(router, {
   plugins: [
-    new CORSPlugin(),
+    new CORSPlugin({
+      origin: (origin) => {
+        if (allowedOriginSet.size === 0) {
+          return origin;
+        }
+        return allowedOriginSet.has(origin.replace(/\/+$/, "")) ? origin : null;
+      },
+    }),
     new SmartCoercionPlugin({ schemaConverters }),
     new OpenAPIReferencePlugin({ 
         schemaConverters,

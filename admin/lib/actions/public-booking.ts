@@ -5,6 +5,11 @@ import * as schema from "@/lib/schema";
 import { eq, and, ilike, inArray, gte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
+import crypto from "crypto";
+
+function escapeLikePattern(value: string): string {
+    return value.replace(/[\\%_]/g, "\\$&");
+}
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || "";
 const PAYSTACK_BASE = "https://api.paystack.co";
@@ -40,10 +45,15 @@ function generateReceiptNumber(): string {
 
 export async function checkClientName(studioId: string, name: string) {
     try {
+        const trimmed = name.trim();
+        if (trimmed.replace(/[\\%_\s]/g, "").length < 2) {
+            return { exists: false };
+        }
+        const escapedName = escapeLikePattern(trimmed);
         const existing = await db.query.client.findFirst({
             where: and(
                 eq(schema.client.studioId, studioId),
-                ilike(schema.client.name, name)
+                ilike(schema.client.name, escapedName)
             ),
             columns: { id: true, name: true, phone: true }
         });
@@ -86,64 +96,138 @@ export async function createPublicBooking(data: {
     selectedVariantId?: string;
     addonIds?: string[];
     sessionCount: number;
-    bookingDate: string; // "YYYY-MM-DD"
+    bookingDate: string; // "YYYY-MM-DD" or "YYYY-MM-DDTHH:mm(:ss)"
+    bookingTime?: string; // "HH:mm" or "HH:mm:ss"
     notes?: string;
 }) {
     try {
+        if (!Number.isInteger(data.sessionCount) || data.sessionCount < 1 || data.sessionCount > 50) {
+            return { status: "error", message: "Invalid session count (must be between 1 and 50)" };
+        }
+        const dateTimeMatch = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(data.bookingDate);
+        if (!dateTimeMatch) {
+            return { status: "error", message: "Invalid booking date format" };
+        }
+        let hours = dateTimeMatch[4] !== undefined ? Number(dateTimeMatch[4]) : 0;
+        let minutes = dateTimeMatch[5] !== undefined ? Number(dateTimeMatch[5]) : 0;
+        let seconds = dateTimeMatch[6] !== undefined ? Number(dateTimeMatch[6]) : 0;
+
+        if (data.bookingTime !== undefined) {
+            const timeMatch = /^(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(data.bookingTime);
+            if (!timeMatch) {
+                return { status: "error", message: "Invalid booking time format" };
+            }
+            hours = Number(timeMatch[1]);
+            minutes = Number(timeMatch[2]);
+            seconds = timeMatch[3] !== undefined ? Number(timeMatch[3]) : 0;
+        }
+
+        const y = Number(dateTimeMatch[1]);
+        const m = Number(dateTimeMatch[2]);
+        const d = Number(dateTimeMatch[3]);
+        if (
+            m < 1 || m > 12 ||
+            d < 1 || d > 31 ||
+            hours < 0 || hours > 23 ||
+            minutes < 0 || minutes > 59 ||
+            seconds < 0 || seconds > 59
+        ) {
+            return { status: "error", message: "Invalid booking date or time" };
+        }
+        const bookingDateUTC = new Date(Date.UTC(y, m - 1, d, hours, minutes, seconds));
+        if (
+            Number.isNaN(bookingDateUTC.getTime()) ||
+            bookingDateUTC.getUTCFullYear() !== y ||
+            bookingDateUTC.getUTCMonth() !== m - 1 ||
+            bookingDateUTC.getUTCDate() !== d
+        ) {
+            return { status: "error", message: "Invalid booking date" };
+        }
+
         const studio = await db.query.studio.findFirst({
             where: eq(schema.studio.id, data.studioId),
             with: { members: true },
         });
         if (!studio) return { status: "error", message: "Studio not found" };
 
-        // Check for an existing PENDING booking for the same client+service+date
-        // created in the last 5 minutes to catch double-submits and basic bots.
+        // Verify existingClientId belongs to data.studioId if supplied
+        let clientId: string | undefined;
         if (data.existingClientId) {
-            const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-            const recentDuplicate = await db.query.booking.findFirst({
+            const scopedClient = await db.query.client.findFirst({
                 where: and(
-                    eq(schema.booking.studioId, data.studioId),
-                    eq(schema.booking.clientId, data.existingClientId),
-                    eq(schema.booking.serviceId, data.serviceId),
-                    eq(schema.booking.bookingStatus, "PENDING"),
-                    gte(schema.booking.createdAt, fiveMinsAgo)
-                )
+                    eq(schema.client.id, data.existingClientId),
+                    eq(schema.client.studioId, data.studioId)
+                ),
+                columns: { id: true },
             });
+            clientId = scopedClient?.id;
+        }
 
-            if (recentDuplicate) {
-                return {
-                    status: "error",
-                    message: "A booking for this service was already submitted recently. Please wait a moment before trying again.",
-                };
+        if (!clientId) {
+            const normalizedPhone = data.clientPhone.trim();
+            const existingByContact = data.clientEmail
+                ? await db.query.client.findFirst({
+                      where: and(
+                          eq(schema.client.studioId, data.studioId),
+                          eq(schema.client.email, data.clientEmail)
+                      ),
+                      columns: { id: true },
+                  })
+                : normalizedPhone
+                  ? await db.query.client.findFirst({
+                        where: and(
+                            eq(schema.client.studioId, data.studioId),
+                            eq(schema.client.phone, normalizedPhone)
+                        ),
+                        columns: { id: true },
+                    })
+                  : null;
+
+            if (existingByContact) {
+                clientId = existingByContact.id;
+            } else {
+                const createdClient = await db.insert(schema.client).values({
+                    id: uuidv4(),
+                    name: data.clientName,
+                    phone: normalizedPhone,
+                    email: data.clientEmail || null,
+                    type: "regular",
+                    studioId: data.studioId,
+                }).returning().then(res => res[0]);
+                clientId = createdClient.id;
             }
         }
 
-        // Find or create client
-        let clientId = data.existingClientId;
+        // Check for an existing PENDING booking for the same client+service
+        // created in the last 5 minutes to catch double-submits and basic bots.
+        const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        const recentDuplicate = await db.query.booking.findFirst({
+            where: and(
+                eq(schema.booking.studioId, data.studioId),
+                eq(schema.booking.clientId, clientId),
+                eq(schema.booking.serviceId, data.serviceId),
+                eq(schema.booking.bookingStatus, "PENDING"),
+                gte(schema.booking.createdAt, fiveMinsAgo)
+            )
+        });
 
-        if (!clientId) {
-            const client = await db.insert(schema.client).values({
-                id: uuidv4(),
-                name: data.clientName,
-                phone: data.clientPhone.trim(),
-                email: data.clientEmail || null,
-                type: "regular",
-                studioId: data.studioId,
-            }).returning().then(res => res[0]);
-            
-            clientId = client.id;
+        if (recentDuplicate) {
+            return {
+                status: "error",
+                message: "A booking for this service was already submitted recently. Please wait a moment before trying again.",
+            };
         }
 
         const defaultMember =
             studio.members.find((m: any) => m.role === "owner") || studio.members[0];
         if (!defaultMember) return { status: "error", message: "No available staff member" };
 
-        // Construct date in UTC so server timezone doesn't shift it
-        const [y, m, d] = data.bookingDate.split("-").map(Number);
-        const bookingDateUTC = new Date(Date.UTC(y, m - 1, d));
-
         const service = await db.query.service.findFirst({
-            where: eq(schema.service.id, data.serviceId),
+            where: and(
+                eq(schema.service.id, data.serviceId),
+                eq(schema.service.studioId, data.studioId),
+                eq(schema.service.isActive, true)
+            ),
             with: { serviceVariants: true }
         });
         if (!service) throw new Error("Service not found");
@@ -154,14 +238,19 @@ export async function createPublicBooking(data: {
             
         if (!selectedVariant) throw new Error("Invalid service variant selected");
 
-        // Clean addon composite IDs to UUIDs for DB lookup
+        // Clean addon composite IDs to UUIDs for DB lookup (scoped to studioId & isAddon)
         const parsedAddons = (data.addonIds || []).map(str => {
             const parts = str.split(":");
             return { addonId: parts[0], variantId: parts[1] };
         });
         const cleanAddonIds = [...new Set(parsedAddons.map(p => p.addonId))];
         const addonsList = cleanAddonIds.length ? await db.query.service.findMany({ 
-            where: inArray(schema.service.id, cleanAddonIds), 
+            where: and(
+                inArray(schema.service.id, cleanAddonIds),
+                eq(schema.service.studioId, data.studioId),
+                eq(schema.service.isAddon, true),
+                eq(schema.service.isActive, true)
+            ),
             with: { serviceVariants: true } 
         }) : [];
 
@@ -214,7 +303,7 @@ export async function createPublicBooking(data: {
 
         if (!booking) throw new Error("Failed to create booking");
 
-        const reference = `gmax-pub-${uuidv4().slice(0, 8)}`;
+        const reference = `gmax-pub-${crypto.randomBytes(12).toString("hex")}`;
         const receiptNumber = generateReceiptNumber();
 
         const payment = await db.insert(schema.payment).values({

@@ -5,9 +5,17 @@ import { implement } from "@orpc/server";
 import { contract } from "@/app/contract";
 import { eq, sql } from "drizzle-orm";
 import { photo } from "@/lib/schema";
+import crypto from "crypto";
 
 const os = implement(contract).$context<BaseContext>();
 
+function verifyAccessCodeConstantTime(expected: string | null | undefined, actual: string): boolean {
+    if (!expected) return false;
+    const expectedBuf = Buffer.from(expected, "utf8");
+    const actualBuf = Buffer.from(actual, "utf8");
+    if (expectedBuf.length !== actualBuf.length) return false;
+    return crypto.timingSafeEqual(expectedBuf, actualBuf);
+}
 
 export const clientPhotoAccess = os.photo.clientAccess
     .use(optionalAuthMiddleware)
@@ -24,14 +32,10 @@ export const clientPhotoAccess = os.photo.clientAccess
             },
         });
 
-        if (!booking) throw errors.NOT_FOUND({
-            data: { resourceType: "Booking", resourceId: input.bookingId },
-        });
-
-        // Verify client identity by access code
-        if (!booking.accessCode || booking.accessCode !== input.accessCode) {
+        // Return uniform error for unknown booking or invalid access code
+        if (!booking || !verifyAccessCodeConstantTime(booking.accessCode, input.accessCode)) {
             throw errors.FORBIDDEN({
-                message: "Invalid access code.",
+                message: "Invalid booking or access code.",
             });
         }
 
@@ -67,14 +71,10 @@ export const clientDownloadPhoto = os.photo.clientDownload
             with: { client: true },
         });
 
-        if (!booking) throw errors.NOT_FOUND({
-            data: { resourceType: "Booking", resourceId: input.bookingId },
-        });
-
-        // Verify client identity by access code
-        if (!booking.accessCode || booking.accessCode !== input.accessCode) {
+        // Return uniform error for unknown booking or invalid access code
+        if (!booking || !verifyAccessCodeConstantTime(booking.accessCode, input.accessCode)) {
             throw errors.FORBIDDEN({
-                message: "Invalid access code.",
+                message: "Invalid booking or access code.",
             });
         }
 

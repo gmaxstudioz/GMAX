@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { format } from "date-fns";
@@ -23,8 +25,19 @@ interface Props {
     params: Promise<{ reference: string }>;
 }
 
+function maskClientName(name: string | null | undefined): string {
+    if (!name) return "Customer";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0];
+    return `${parts[0]} ${parts[1][0]}.`;
+}
+
 export default async function PaymentPage({ params }: Props) {
     const { reference } = await params;
+
+    if (!/^[A-Za-z0-9_-]{1,100}$/.test(reference)) {
+        return notFound();
+    }
 
     const payment = await db.query.payment.findFirst({
         where: (p, { eq }) => eq(p.paystackReference, reference),
@@ -32,12 +45,13 @@ export default async function PaymentPage({ params }: Props) {
             booking: {
                 with: {
                     client: true,
+                    payments: true,
                     service: {
-                        with: { studioSession: true },
+                        with: { studioSession: true, serviceVariants: true },
                     },
                     studio: true,
                     bookingAddons: {
-                        with: { service: true }
+                        with: { service: { with: { serviceVariants: true } } },
                     },
                 },
             },
@@ -48,9 +62,58 @@ export default async function PaymentPage({ params }: Props) {
 
     const booking = payment.booking;
     if (!booking) return notFound();
- 
+
     const studio = booking.studio;
-    const isAlreadyPaid = payment.status === "PAID";
+    let isAlreadyPaid = payment.status === "PAID";
+    let isLinkInvalid = payment.status === "CANCELLED" || booking.bookingStatus === "CANCELLED";
+
+    if (payment.status !== "PAID") {
+        const servicePrice = Number(
+            booking.service?.serviceVariants?.find((v: any) => v.id === booking.serviceVariantId)?.basePrice ??
+                booking.service?.serviceVariants?.[0]?.basePrice ??
+                0
+        );
+        const sessionTotal = servicePrice * booking.sessionCount;
+        const addonsTotal = (booking.bookingAddons || []).reduce((sum: number, a: any) => {
+            const addonService = a.service || a;
+            const variantId = addonService?.addonVariantId;
+            const variant = variantId
+                ? addonService?.serviceVariants?.find((v: any) => v.id === variantId)
+                : addonService?.serviceVariants?.[0];
+            return sum + Number(variant?.basePrice ?? 0);
+        }, 0);
+        const grandTotalKobo = Math.round(
+            (booking.totalAmount != null ? Number(booking.totalAmount) : sessionTotal + addonsTotal) * 100
+        );
+        const paidKobo = (booking.payments || [])
+            .filter((p: any) => p.status === "PAID")
+            .reduce((sum: number, p: any) => sum + Math.round(Number(p.amount) * 100), 0);
+        const balanceDueKobo = Math.max(0, grandTotalKobo - paidKobo);
+        const paymentAmountKobo = Math.round(Number(payment.amount) * 100);
+
+        if (balanceDueKobo <= 0) {
+            if (payment.status === "PENDING") {
+                await db
+                    .update(schema.payment)
+                    .set({ status: "CANCELLED" })
+                    .where(and(eq(schema.payment.id, payment.id), eq(schema.payment.status, "PENDING")));
+            }
+            isAlreadyPaid = true;
+            isLinkInvalid = false;
+        } else if (
+            booking.bookingStatus === "CANCELLED" ||
+            payment.status !== "PENDING" ||
+            paymentAmountKobo !== balanceDueKobo
+        ) {
+            if (payment.status === "PENDING") {
+                await db
+                    .update(schema.payment)
+                    .set({ status: "CANCELLED" })
+                    .where(and(eq(schema.payment.id, payment.id), eq(schema.payment.status, "PENDING")));
+            }
+            isLinkInvalid = true;
+        }
+    }
     const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
     const paystackPublicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "";
 
@@ -88,60 +151,66 @@ export default async function PaymentPage({ params }: Props) {
                 <Card className="shadow-xl border-0 bg-card/80 backdrop-blur-sm">
                     <CardContent className="space-y-6 pt-6">
                         {/* Booking Summary */}
-                        <div className="space-y-3">
-                            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Booking Summary</h2>
+                        {!isAlreadyPaid && (
+                            <div className="space-y-3">
+                                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Booking Summary</h2>
 
-                            <div className="flex items-center gap-3">
-                                <div className="rounded-lg bg-primary/10 p-2">
-                                    <PackageIcon className="h-4 w-4 text-primary" />
+                                <div className="flex items-center gap-3">
+                                    <div className="rounded-lg bg-primary/10 p-2">
+                                        <PackageIcon className="h-4 w-4 text-primary" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium">{booking.service?.name}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {booking.sessionCount} session{booking.sessionCount > 1 ? "s" : ""} · {totalDuration} minutes
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium">{booking.service?.name}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {booking.sessionCount} session{booking.sessionCount > 1 ? "s" : ""} · {totalDuration} minutes
+
+                                <div className="flex items-center gap-3">
+                                    <div className="rounded-lg bg-primary/10 p-2">
+                                        <CalendarIcon className="h-4 w-4 text-primary" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium">{format(new Date(booking.bookingDate), "EEEE, MMMM do, yyyy")}</p>
+                                        <p className="text-xs text-muted-foreground">{format(new Date(booking.bookingDate), "h:mm a")}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    <div className="rounded-lg bg-primary/10 p-2">
+                                        <UserIcon className="h-4 w-4 text-primary" />
+                                    </div>
+                                    <p className="text-sm font-medium">{maskClientName(booking.client?.name)}</p>
+                                </div>
+
+                                {addons.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 mt-1">
+                                        {addons.map((a: any) => (
+                                            <Badge key={a.id} variant="outline" className="text-xs">
+                                                + {a.name}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {!isAlreadyPaid && (
+                            <>
+                                <Separator />
+
+                                {/* Amount */}
+                                <div className="text-center space-y-1">
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Amount Due</p>
+                                    <p className="text-4xl font-bold tracking-tight">
+                                        {formatCurrency(Number(payment.amount))}
                                     </p>
                                 </div>
-                            </div>
 
-                            <div className="flex items-center gap-3">
-                                <div className="rounded-lg bg-primary/10 p-2">
-                                    <CalendarIcon className="h-4 w-4 text-primary" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium">{format(new Date(booking.bookingDate), "EEEE, MMMM do, yyyy")}</p>
-                                    <p className="text-xs text-muted-foreground">{format(new Date(booking.bookingDate), "h:mm a")}</p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                                <div className="rounded-lg bg-primary/10 p-2">
-                                    <UserIcon className="h-4 w-4 text-primary" />
-                                </div>
-                                <p className="text-sm font-medium">{booking.client?.name}</p>
-                            </div>
-
-                            {addons.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 mt-1">
-                                    {addons.map((a: any) => (
-                                        <Badge key={a.id} variant="outline" className="text-xs">
-                                            + {a.name}
-                                        </Badge>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        <Separator />
-
-                        {/* Amount */}
-                        <div className="text-center space-y-1">
-                            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Amount Due</p>
-                            <p className="text-4xl font-bold tracking-tight">
-                                {formatCurrency(Number(payment.amount))}
-                            </p>
-                        </div>
-
-                        <Separator />
+                                <Separator />
+                            </>
+                        )}
 
                         {/* Payment Action */}
                         {isAlreadyPaid ? (
@@ -152,6 +221,13 @@ export default async function PaymentPage({ params }: Props) {
                                 <h3 className="text-xl font-bold text-green-600">Payment Complete</h3>
                                 <p className="text-sm text-muted-foreground text-center">
                                     This payment has already been confirmed. Thank you!
+                                </p>
+                            </div>
+                        ) : isLinkInvalid ? (
+                            <div className="flex flex-col items-center gap-3 py-4">
+                                <h3 className="text-xl font-bold text-destructive">Payment Link Expired</h3>
+                                <p className="text-sm text-muted-foreground text-center">
+                                    This payment link is no longer valid because the booking balance has changed. Please request a new payment link.
                                 </p>
                             </div>
                         ) : (

@@ -1,6 +1,7 @@
 import { CompleteMultipartUploadCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from "next/server";
 import { S3 } from "@/lib/S3Client";
+import { MAX_MULTIPART_PART_NUMBER, requireS3KeyAccess } from "@/lib/s3-auth";
 import z from "zod";
 
 const schema = z.object({
@@ -9,9 +10,9 @@ const schema = z.object({
     parts: z.array(
         z.object({
             ETag: z.string(),
-            PartNumber: z.number().int().min(1),
+            PartNumber: z.number().int().min(1).max(MAX_MULTIPART_PART_NUMBER),
         })
-    ),
+    ).max(MAX_MULTIPART_PART_NUMBER),
 });
 
 export async function POST(req: Request) {
@@ -27,10 +28,12 @@ export async function POST(req: Request) {
         }
 
         const { key, uploadId, parts } = validation.data;
+        const authResult = await requireS3KeyAccess(req.headers, key, "upload");
+        if (!authResult.ok) return authResult.response;
 
         const command = new CompleteMultipartUploadCommand({
             Bucket: process.env.R2_BUCKET_NAME,
-            Key: key,
+            Key: authResult.key,
             UploadId: uploadId,
             MultipartUpload: {
                 Parts: parts.sort((a, b) => a.PartNumber - b.PartNumber),
@@ -41,7 +44,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({
             message: "Upload completed",
-            key,
+            key: authResult.key,
         });
     } catch (error) {
         console.error("Multipart complete error:", error);

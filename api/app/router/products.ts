@@ -2,12 +2,13 @@ import { contract } from "@/app/contract";
 import { db } from "@/lib/db";
 import { implement } from "@orpc/server";
 import { authMiddleware, optionalAuthMiddleware, BaseContext } from "./middleware";
+import { requireGlobalOwnerOrAdmin } from "@/lib/authz";
 import { v4 as uuidv4 } from "uuid";
 import crypto from "crypto";
 import { getPresignedUrl } from "@/lib/r2";
 import { sendAccessLinkEmail, sendSMS } from "@/lib/termii";
 import { product, buyer, productAccess, payment, buyerAccessToken } from "@/lib/schema";
-import { eq, and, or, inArray, asc, desc, ilike, sql } from "drizzle-orm";
+import { eq, and, gt, asc, desc, ilike, sql } from "drizzle-orm";
 import { getPostHogClient } from "@/lib/auth";
 
 // Initialize the oRPC implementation builder with the base context
@@ -85,10 +86,12 @@ async function mapProductToOutput(data: {
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 
-// Endpoint to create a new product catalog item
+// Endpoint to create a new product catalog item (shared catalog: platform admins or studio owners/developers via requireGlobalOwnerOrAdmin)
 export const createProduct = os.product.create
     .use(authMiddleware)
-    .handler(async ({ input, errors }) => {
+    .handler(async ({ input, context, errors }) => {
+        await requireGlobalOwnerOrAdmin(context.user.id);
+
         // Look up if a product title already exists using a case-insensitive check
         const existing = await db.query.product.findFirst({
             where: (p, { ilike }) => ilike(p.title, input.title),
@@ -123,7 +126,9 @@ export const createProduct = os.product.create
 // Endpoint to permanently remove a product from the system
 export const deleteProduct = os.product.delete
     .use(authMiddleware)
-    .handler(async ({ input, errors }) => {
+    .handler(async ({ input, context, errors }) => {
+        await requireGlobalOwnerOrAdmin(context.user.id);
+
         // Verify the product exists prior to executing deletion queries
         const existing = await db.query.product.findFirst({ 
             where: (p, { eq }) => eq(p.id, input.productId) 
@@ -139,7 +144,9 @@ export const deleteProduct = os.product.delete
 // Endpoint to modify data fields within an existing product
 export const updateProduct = os.product.update
     .use(authMiddleware)
-    .handler(async ({ input, errors }) => {
+    .handler(async ({ input, context, errors }) => {
+        await requireGlobalOwnerOrAdmin(context.user.id);
+
         const { productId, ...updateData } = input;
         
         // Verify target product profile exists before merging changes
@@ -231,16 +238,23 @@ export const purchaseProduct = os.product.purchase
             data: { resourceType: "Product", resourceId: input.productId },
         });
 
-        // Query if client already exists matching either the provided email OR phone string
+        // Look up existing buyer by email only; never overwrite existing contact info unauthenticated
         let buyerData = await db.query.buyer.findFirst({
-            where: (b, { or, eq }) => or(
-                eq(b.email, input.buyerEmail),
-                eq(b.phone, input.buyerPhone)
-            )
+            where: (b, { eq }) => eq(b.email, input.buyerEmail),
         });
 
         // Insert new client entity if lookup returns empty results
         if (!buyerData) {
+            if (input.buyerPhone) {
+                const phoneOwner = await db.query.buyer.findFirst({
+                    where: (b, { eq }) => eq(b.phone, input.buyerPhone),
+                });
+                if (phoneOwner) {
+                    throw errors.BAD_REQUEST({
+                        message: "This phone number is already linked to another registered email profile.",
+                    });
+                }
+            }
             const id = uuidv4();
             const [inserted] = await db.insert(buyer).values({
                 id,
@@ -250,32 +264,6 @@ export const purchaseProduct = os.product.purchase
                 updatedAt: new Date().toISOString(),
             }).returning();
             buyerData = inserted;
-        } else {
-            const updates: Record<string, string> = {};
-            if (input.buyerName && input.buyerName !== buyerData.name) updates.name = input.buyerName;
-            
-            // Protect against assigning a phone number already registered by another profile
-            if (input.buyerPhone && input.buyerPhone !== buyerData.phone) {
-                const phoneOwner = await db.query.buyer.findFirst({ 
-                    where: (b, { eq }) => eq(b.phone, input.buyerPhone) 
-                });
-                if (phoneOwner && phoneOwner.id !== buyerData.id) {
-                    throw errors.BAD_REQUEST({
-                        message: "This phone number is already linked to another registered email profile."
-                    });
-                }
-                updates.phone = input.buyerPhone;
-            }
-
-            // Apply updates to existing buyer reference row if payload details have changed
-            if (Object.keys(updates).length > 0) {
-                updates.updatedAt = new Date().toISOString();
-                const [updated] = await db.update(buyer)
-                    .set(updates)
-                    .where(eq(buyer.id, buyerData.id))
-                    .returning();
-                buyerData = updated;
-            }
         }
 
         // Assert customer does not have pre-existing active access to the resource
@@ -291,7 +279,7 @@ export const purchaseProduct = os.product.purchase
 
         // Calculate checkout pricing context structures
         const amount = effectivePrice(productData.price, productData.salePrice);
-        const reference = `gmax-shop-${uuidv4().slice(0, 8)}`;
+        const reference = `gmax-shop-${crypto.randomBytes(12).toString("hex")}`;
         const receiptNumber = generateReceiptNumber();
 
         // Log a pending payload invoice table record mapping the purchase variables
@@ -335,22 +323,60 @@ export const requestAccessLink = os.product.requestAccessLink
             where: (b, { eq }) => eq(b.email, input.email),
         });
 
-        // Mock confirmation success response immediately to safeguard system records from discovery scanners
+        // Return uniform generic response to avoid buyer enumeration or error side-channels
         if (!buyerData) return { sent: true };
+
+        // Require at least one purchased product access before sending paid notifications
+        const hasPurchase = await db.query.productAccess.findFirst({
+            where: (pa, { eq }) => eq(pa.buyerId, buyerData.id),
+            columns: { id: true },
+        });
+        if (!hasPurchase) return { sent: true };
 
         // Structure a random security link token and calculate an expiry window set to 15 minutes
         const token = generateToken();
         const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-
-        // Store access credentials string reference directly inside database records
         const tokenRecordId = uuidv4();
-        const [tokenRecord] = await db.insert(buyerAccessToken).values({
-            id: tokenRecordId,
-            buyerId: buyerData.id, 
-            token, 
-            expiresAt, 
-            used: false
-        }).returning();
+
+        // Enforce 60-second cooldown atomically per buyer using the database clock
+        const tokenRecord = await db.transaction(async (tx) => {
+            // Serialize concurrent token requests for the same buyer
+            await tx
+                .select({ id: buyer.id })
+                .from(buyer)
+                .where(eq(buyer.id, buyerData.id))
+                .for("update");
+
+            const [recentToken] = await tx
+                .select({ id: buyerAccessToken.id })
+                .from(buyerAccessToken)
+                .where(
+                    and(
+                        eq(buyerAccessToken.buyerId, buyerData.id),
+                        gt(buyerAccessToken.createdAt, sql`CURRENT_TIMESTAMP - INTERVAL '60 seconds'`),
+                    ),
+                )
+                .limit(1);
+
+            if (recentToken) {
+                return null;
+            }
+
+            const [inserted] = await tx
+                .insert(buyerAccessToken)
+                .values({
+                    id: tokenRecordId,
+                    buyerId: buyerData.id,
+                    token,
+                    expiresAt,
+                    used: false,
+                })
+                .returning();
+
+            return inserted ?? null;
+        });
+
+        if (!tokenRecord) return { sent: true };
 
         const accessLink = `${PORTAL_URL}/shop/access/${token}`;
         let deliveryMethod: "EMAIL" | "SMS" | null = null;
@@ -381,7 +407,7 @@ export const requestAccessLink = os.product.requestAccessLink
 
         if (!deliveryMethod) {
             console.error(`[Shop] No delivery channel available for buyer ${buyerData.id}`);
-            throw new Error("No delivery channel available for access link.");
+            return { sent: true };
         }
 
         console.info(
@@ -397,45 +423,44 @@ export const requestAccessLink = os.product.requestAccessLink
 export const verifyAccessToken = os.product.verifyAccessToken
     .use(optionalAuthMiddleware)
     .handler(async ({ input, errors }) => {
-        // Read match configurations and include cascade buyer authorization arrays
-        const record = await db.query.buyerAccessToken.findFirst({
-            where: (b, { eq }) => eq(b.token, input.token),
-            with: { 
-                buyer: { 
-                    with: { 
-                        productAccesses: { 
-                            with: { product: true } 
-                        } 
-                    } 
-                } 
-            },
-        });
+        const nowIso = new Date().toISOString();
 
-        // Reject request if access token does not exist, has been flagged used, or timestamp exceeds limits
-        if (!record || record.used || new Date(record.expiresAt) < new Date()) {
+        // Atomically consume a single-use, unexpired magic link token
+        const [consumed] = await db.update(buyerAccessToken)
+            .set({ used: true, expiresAt: new Date(0).toISOString() })
+            .where(
+                and(
+                    eq(buyerAccessToken.token, input.token),
+                    eq(buyerAccessToken.used, false),
+                    gt(buyerAccessToken.expiresAt, nowIso)
+                )
+            )
+            .returning();
+
+        if (!consumed) {
             throw errors.UNAUTHORIZED({ message: "Invalid or expired access link." });
         }
 
-        // Flag the magic link access token within data rows to ensure single-use guarantees
-        await db.update(buyerAccessToken)
-            .set({ used: true })
-            .where(eq(buyerAccessToken.id, record.id));
+        const buyerPurchases = await db.query.productAccess.findMany({
+            where: (pa, { eq }) => eq(pa.buyerId, consumed.buyerId),
+            with: { product: true },
+        });
 
-        // Create a new continuous session tracking string valid across 24 hours
+        // Create a 24-hour download session token (stored with used=true so it cannot be re-exchanged here)
         const sessionToken = generateToken();
         const newSessionId = uuidv4();
         await db.insert(buyerAccessToken).values({
             id: newSessionId,
-            buyerId: record.buyerId,
+            buyerId: consumed.buyerId,
             token: sessionToken,
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-            used: false,
+            used: true,
         });
 
         return {
-            buyerId: record.buyerId,
+            buyerId: consumed.buyerId,
             sessionToken,
-            purchases: record.buyer.productAccesses.map((p) => ({
+            purchases: buyerPurchases.map((p) => ({
                 productId: p.productId,
                 productTitle: p.product.title,
                 downloadCount: p.downloadCount,
@@ -451,13 +476,12 @@ export const verifyAccessToken = os.product.verifyAccessToken
 export const requestDownload = os.product.requestDownload
     .use(optionalAuthMiddleware)
     .handler(async ({ input, errors }) => {
-        // Check database for active browser session token properties
+        // Check database for active exchanged download session token (used === true and unexpired)
         const tokenRecord = await db.query.buyerAccessToken.findFirst({
             where: (b, { eq }) => eq(b.token, input.token),
         });
 
-        // Reject request processing if user credentials fail timestamp thresholds
-        if (!tokenRecord || tokenRecord.used || new Date(tokenRecord.expiresAt) < new Date()) {
+        if (!tokenRecord || !tokenRecord.used || new Date(tokenRecord.expiresAt) < new Date()) {
             throw errors.UNAUTHORIZED({ message: "Invalid or expired session." });
         }
 

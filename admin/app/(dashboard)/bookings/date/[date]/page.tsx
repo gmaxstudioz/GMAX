@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import * as schema from "@/lib/schema";
-import { eq, and, gte, lte, asc } from "drizzle-orm";
+import { eq, and, gte, lte, asc, inArray } from "drizzle-orm";
 import type { Metadata } from "next";
 import { format, parseISO, startOfDay, endOfDay } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,15 +55,28 @@ export default async function GlobalDailyBookingsPage({ params, searchParams }: 
         return <div>Unauthorized</div>;
     }
 
-    const myMemberships = await db.query.member.findMany({
-        where: eq(schema.member.userId, session.user.id)
-    });
+    const [dbUser, myMemberships] = await Promise.all([
+        db.query.user.findFirst({
+            where: eq(schema.user.id, session.user.id),
+            columns: { role: true },
+        }),
+        db.query.member.findMany({
+            where: eq(schema.member.userId, session.user.id),
+        }),
+    ]);
 
-    // 1. Fetch bookings with comprehensive relations
+    const isPlatformAdmin = dbUser?.role === "admin";
+    const allowedStudioIds = myMemberships.map((m) => m.studioId);
+    if (!isPlatformAdmin && allowedStudioIds.length === 0) {
+        redirect("/auth/waiting");
+    }
+
+    // 1. Fetch bookings scoped to authorized studios
     const dailyBookings = await db.query.booking.findMany({
         where: and(
             gte(schema.booking.bookingDate, start.toISOString()),
-            lte(schema.booking.bookingDate, end.toISOString())
+            lte(schema.booking.bookingDate, end.toISOString()),
+            !isPlatformAdmin ? inArray(schema.booking.studioId, allowedStudioIds) : undefined,
         ),
         with: {
             client: true,

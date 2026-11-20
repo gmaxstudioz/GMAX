@@ -42,13 +42,59 @@ import { EditClientDialog } from "../client/[clientId]/_components/edit-client-d
 import UpdateStudio from "./UpdateStudio";
 import StudioServices from "./StudioServices";
 import { Textarea } from "@/components/ui/textarea";
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import {
+    Pagination,
+    PaginationContent,
+    PaginationEllipsis,
+    PaginationItem,
+    PaginationLink,
+    PaginationNext,
+    PaginationPrevious,
+} from "@/components/ui/pagination";
 import { CalendarBooking } from "@/lib/schemas/calendar";
 import { AddBookingDialog } from "@/components/web/bookings/AddBookingDialog";
 import { ClientType } from "@/lib/schemas/client";
 import { Reviews } from "./Reviews";
 import { ViewToggle } from "@/components/web/ViewToggle";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+type PaginationEntry = number | "ellipsis-start" | "ellipsis-end";
+
+function getPaginationItems(currentPage: number, totalPages: number): PaginationEntry[] {
+    if (totalPages <= 5) {
+        return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const items: PaginationEntry[] = [1];
+    let start = Math.max(2, currentPage - 1);
+    let end = Math.min(totalPages - 1, currentPage + 1);
+
+    if (currentPage <= 3) {
+        end = Math.max(end, 3);
+    }
+    if (currentPage >= totalPages - 2) {
+        start = Math.min(start, totalPages - 2);
+    }
+
+    if (start > 3) {
+        items.push("ellipsis-start");
+    } else if (start === 3) {
+        items.push(2);
+    }
+
+    for (let p = start; p <= end; p++) {
+        items.push(p);
+    }
+
+    if (end < totalPages - 2) {
+        items.push("ellipsis-end");
+    } else if (end === totalPages - 2) {
+        items.push(totalPages - 1);
+    }
+
+    items.push(totalPages);
+    return items;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapPrismaBookingToBooking(b: any): Booking {
@@ -529,11 +575,15 @@ function Clients({ studioData, userRole }: { studioData: StudioWithRelations, us
                                     <PaginationItem>
                                         <PaginationPrevious onClick={() => setPage(p => Math.max(1, p - 1))} className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} />
                                     </PaginationItem>
-                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                                        <PaginationItem key={p}>
-                                            <PaginationLink isActive={p === page} onClick={() => setPage(p)} className="cursor-pointer">
-                                                {p}
-                                            </PaginationLink>
+                                    {getPaginationItems(page, totalPages).map((item) => (
+                                        <PaginationItem key={item}>
+                                            {typeof item === "number" ? (
+                                                <PaginationLink isActive={item === page} onClick={() => setPage(item)} className="cursor-pointer">
+                                                    {item}
+                                                </PaginationLink>
+                                            ) : (
+                                                <PaginationEllipsis />
+                                            )}
                                         </PaginationItem>
                                     ))}
                                     <PaginationItem>
@@ -1010,11 +1060,15 @@ function Staffs({
                                 <PaginationItem>
                                     <PaginationPrevious onClick={() => setPage(p => Math.max(1, p - 1))} className={effectivePage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} />
                                 </PaginationItem>
-                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                                    <PaginationItem key={p}>
-                                        <PaginationLink isActive={p === effectivePage} onClick={() => setPage(p)} className="cursor-pointer">
-                                            {p}
-                                        </PaginationLink>
+                                {getPaginationItems(effectivePage, totalPages).map((item) => (
+                                    <PaginationItem key={item}>
+                                        {typeof item === "number" ? (
+                                            <PaginationLink isActive={item === effectivePage} onClick={() => setPage(item)} className="cursor-pointer">
+                                                {item}
+                                            </PaginationLink>
+                                        ) : (
+                                            <PaginationEllipsis />
+                                        )}
                                     </PaginationItem>
                                 ))}
                                 <PaginationItem>

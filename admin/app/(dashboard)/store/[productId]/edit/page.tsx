@@ -13,6 +13,16 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { productId } = await params;
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) return { title: "Edit Product" };
+
+    const [dbUser, members] = await Promise.all([
+        db.query.user.findFirst({ where: eq(schema.user.id, session.user.id), columns: { role: true } }),
+        db.query.member.findMany({ where: eq(schema.member.userId, session.user.id), columns: { role: true } }),
+    ]);
+    const isAllowed = dbUser?.role === "admin" || members.some((m: any) => ["owner", "developer"].includes(m.role));
+    if (!isAllowed) return { title: "Edit Product" };
+
     const product = await db.query.product.findFirst({
         where: eq(schema.product.id, productId),
         columns: { title: true },
@@ -26,14 +36,21 @@ export default async function EditProductPage({ params }: Props) {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) redirect("/auth/login");
 
-    const members = await db.query.member.findMany({
-        where: eq(schema.member.userId, session.user.id),
-        columns: { role: true },
-    });
+    const [dbUser, members] = await Promise.all([
+        db.query.user.findFirst({
+            where: eq(schema.user.id, session.user.id),
+            columns: { role: true },
+        }),
+        db.query.member.findMany({
+            where: eq(schema.member.userId, session.user.id),
+            columns: { role: true },
+        }),
+    ]);
 
+    const isPlatformAdmin = dbUser?.role === "admin";
     const adminRoles = ["owner", "developer"];
     const hasAdminRole = members.some((m: any) => adminRoles.includes(m.role));
-    if (members.length > 0 && !hasAdminRole) redirect("/my-tasks");
+    if (!isPlatformAdmin && !hasAdminRole) redirect("/my-tasks");
 
     const [product, categories] = await Promise.all([
         db.query.product.findFirst({

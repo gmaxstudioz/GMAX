@@ -25,22 +25,64 @@ export async function approvePriceChange(bookingId: string) {
             return { status: "error", message: "No price change pending approval" };
         }
 
-        await db.update(schema.booking).set({
-                totalAmount: booking.pendingTotalAmount,
-                pendingTotalAmount: null,
-                priceApprovalStatus: "APPROVED",
-                priceApprovedBy: session.user.id,
-                priceApprovedAt: new Date().toISOString()
-            }).where(eq(schema.booking.id, bookingId));
+        const appliedProposal = await db.transaction(async (tx) => {
+            const [lockedBooking] = await tx
+                .select({
+                    priceApprovalStatus: schema.booking.priceApprovalStatus,
+                    pendingTotalAmount: schema.booking.pendingTotalAmount,
+                    priceChangedBy: schema.booking.priceChangedBy,
+                })
+                .from(schema.booking)
+                .where(eq(schema.booking.id, bookingId))
+                .for("update");
+
+            if (
+                !lockedBooking ||
+                lockedBooking.priceApprovalStatus !== "PENDING_APPROVAL" ||
+                !lockedBooking.pendingTotalAmount
+            ) {
+                return null;
+            }
+
+            await tx
+                .update(schema.booking)
+                .set({
+                    totalAmount: lockedBooking.pendingTotalAmount,
+                    pendingTotalAmount: null,
+                    priceApprovalStatus: "APPROVED",
+                    priceApprovedBy: session.user.id,
+                    priceApprovedAt: new Date().toISOString(),
+                })
+                .where(eq(schema.booking.id, bookingId));
+
+            await tx
+                .update(schema.payment)
+                .set({ status: "CANCELLED" })
+                .where(
+                    and(
+                        eq(schema.payment.bookingId, bookingId),
+                        eq(schema.payment.status, "PENDING")
+                    )
+                );
+
+            return {
+                pendingTotalAmount: lockedBooking.pendingTotalAmount,
+                priceChangedBy: lockedBooking.priceChangedBy,
+            };
+        });
+
+        if (!appliedProposal) {
+            return { status: "error", message: "No price change pending approval" };
+        }
 
         // Notify the manager who requested it
-        if (booking.priceChangedBy) {
-            const manager = await db.query.member.findFirst({ where: eq(schema.member.id, booking.priceChangedBy), with: { user: true } });
+        if (appliedProposal.priceChangedBy) {
+            const manager = await db.query.member.findFirst({ where: eq(schema.member.id, appliedProposal.priceChangedBy), with: { user: true } });
             if (manager) {
                 await db.insert(schema.userNotification).values({ id: uuidv4(), 
                         userId: manager.userId,
                         title: "Price Change Approved",
-                        message: `Your requested price change to ₦${booking.pendingTotalAmount} for a booking has been approved.`,
+                        message: `Your requested price change to ₦${appliedProposal.pendingTotalAmount} for a booking has been approved.`,
                         type: "SYSTEM",
                         bookingId: booking.id
                      });
