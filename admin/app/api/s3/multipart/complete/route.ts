@@ -33,7 +33,7 @@ export async function POST(req: Request) {
 
         const command = new CompleteMultipartUploadCommand({
             Bucket: process.env.R2_BUCKET_NAME,
-            Key: key,
+            Key: authResult.key,
             UploadId: uploadId,
             MultipartUpload: {
                 Parts: parts.sort((a, b) => a.PartNumber - b.PartNumber),
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({
             message: "Upload completed",
-            key,
+            key: authResult.key,
         });
     } catch (error) {
         console.error("Multipart complete error:", error);

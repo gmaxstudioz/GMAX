@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
         const command = new UploadPartCommand({
             Bucket: process.env.R2_BUCKET_NAME,
-            Key: key,
+            Key: authResult.key,
             UploadId: uploadId,
             PartNumber: partNumber,
         });

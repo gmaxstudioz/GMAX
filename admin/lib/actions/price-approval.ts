@@ -25,13 +25,51 @@ export async function approvePriceChange(bookingId: string) {
             return { status: "error", message: "No price change pending approval" };
         }
 
-        await db.update(schema.booking).set({
-                totalAmount: booking.pendingTotalAmount,
-                pendingTotalAmount: null,
-                priceApprovalStatus: "APPROVED",
-                priceApprovedBy: session.user.id,
-                priceApprovedAt: new Date().toISOString()
-            }).where(eq(schema.booking.id, bookingId));
+        const priceChangeApplied = await db.transaction(async (tx) => {
+            const [lockedBooking] = await tx
+                .select({
+                    priceApprovalStatus: schema.booking.priceApprovalStatus,
+                    pendingTotalAmount: schema.booking.pendingTotalAmount,
+                })
+                .from(schema.booking)
+                .where(eq(schema.booking.id, bookingId))
+                .for("update");
+
+            if (
+                !lockedBooking ||
+                lockedBooking.priceApprovalStatus !== "PENDING_APPROVAL" ||
+                !lockedBooking.pendingTotalAmount
+            ) {
+                return false;
+            }
+
+            await tx
+                .update(schema.booking)
+                .set({
+                    totalAmount: lockedBooking.pendingTotalAmount,
+                    pendingTotalAmount: null,
+                    priceApprovalStatus: "APPROVED",
+                    priceApprovedBy: session.user.id,
+                    priceApprovedAt: new Date().toISOString(),
+                })
+                .where(eq(schema.booking.id, bookingId));
+
+            await tx
+                .update(schema.payment)
+                .set({ status: "CANCELLED" })
+                .where(
+                    and(
+                        eq(schema.payment.bookingId, bookingId),
+                        eq(schema.payment.status, "PENDING")
+                    )
+                );
+
+            return true;
+        });
+
+        if (!priceChangeApplied) {
+            return { status: "error", message: "No price change pending approval" };
+        }
 
         // Notify the manager who requested it
         if (booking.priceChangedBy) {

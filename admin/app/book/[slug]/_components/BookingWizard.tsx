@@ -495,10 +495,14 @@ export function BookingWizard({ studioId, categories, addons, existingBookings, 
                                             value={value ?? 1}
                                             onChange={(e) => onChange(Number(e.target.value))}
                                             min={1}
+                                            max={50}
                                             className="max-w-[120px]"
                                         />
                                     )}
                                 />
+                                {errors.sessionCount && (
+                                    <p className="text-xs text-red-500">{errors.sessionCount.message}</p>
+                                )}
                             </div>
                         </div>
 

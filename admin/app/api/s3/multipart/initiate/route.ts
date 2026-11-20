@@ -2,7 +2,7 @@ import { CreateMultipartUploadCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { S3 } from "@/lib/S3Client";
-import { isBlockedContentType, requireS3DirectoryAccess, sanitizeFileName } from "@/lib/s3-auth";
+import { isBlockedContentType, requireS3DirectoryAccess, resolveUploadDirectory, sanitizeFileName } from "@/lib/s3-auth";
 import z from "zod";
 
 const schema = z.object({
@@ -32,7 +32,8 @@ export async function POST(req: Request) {
         const authResult = await requireS3DirectoryAccess(req.headers, dir);
         if (!authResult.ok) return authResult.response;
 
-        const key = `${dir}/${uuidv4()}-${sanitizeFileName(fileName)}`;
+        const resolvedDir = resolveUploadDirectory(dir, authResult.userId);
+        const key = `${resolvedDir}/${uuidv4()}-${sanitizeFileName(fileName)}`;
 
         const command = new CreateMultipartUploadCommand({
             Bucket: process.env.R2_BUCKET_NAME,

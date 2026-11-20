@@ -21,7 +21,7 @@ export async function DELETE(req: Request) {
 
         const command = new DeleteObjectCommand({
             Bucket: process.env.R2_BUCKET_NAME,
-            Key: key,
+            Key: authResult.key,
         });
 
         await S3.send(command);

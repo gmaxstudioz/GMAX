@@ -11,6 +11,7 @@ import {
     MAX_SINGLE_UPLOAD_BYTES,
     isBlockedContentType,
     requireS3DirectoryAccess,
+    resolveUploadDirectory,
     sanitizeFileName,
 } from "@/lib/s3-auth";
 
@@ -66,8 +67,9 @@ export async function POST(req: Request) {
         const authResult = await requireS3DirectoryAccess(req.headers, dir);
         if (!authResult.ok) return authResult.response;
 
+        const resolvedDir = resolveUploadDirectory(dir, authResult.userId);
         const safeFileName = sanitizeFileName(fileName);
-        const fileKey = `${dir}/${uuidv4()}-${safeFileName}`;
+        const fileKey = `${resolvedDir}/${uuidv4()}-${safeFileName}`;
 
         const command = new PutObjectCommand({
             Bucket: process.env.R2_BUCKET_NAME,

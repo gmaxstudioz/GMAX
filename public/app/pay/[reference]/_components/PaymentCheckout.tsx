@@ -83,10 +83,7 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
             return;
         }
 
-        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reference);
-        const actualRef = (purchaseType === "booking" && isUUID) 
-            ? `${reference}_bal_${Date.now()}` 
-            : reference;
+        const actualRef = reference;
 
         try {
             const popup = new window.PaystackPop();
@@ -99,9 +96,9 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
                 onSuccess: async () => {
                     setStatus("processing");
                     
-                    if (purchaseType === "booking") {
+                    if (purchaseType === "booking" && actualRef.startsWith("gmax-pub-")) {
                         const { data: result, error } = await tryCatch(verifyBookingPayment(actualRef));
-                        if (error || result?.status === "FAILED") {
+                        if (error || result?.status === "FAILED" || result?.status === "EXPIRED") {
                             setStatus("failed");
                             toast.error("Payment verification failed. Please contact support.");
                         } else {

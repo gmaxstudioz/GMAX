@@ -366,6 +366,34 @@ export const updateBooking = os.booking.update.use(authMiddleware).handler(
             MANAGEMENT_ROLES,
         );
 
+        if (updateData.studioId !== undefined && updateData.studioId !== existing.studioId) {
+            throw errors.BAD_REQUEST({ message: "Cannot transfer a booking to another studio." });
+        }
+        delete updateData.studioId;
+        delete updateData.createdBy;
+
+        if (updateData.clientId !== undefined) {
+            const targetClient = await db.query.client.findFirst({
+                where: (model, { eq, and }) =>
+                    and(eq(model.id, updateData.clientId!), eq(model.studioId, existing.studioId)),
+                columns: { id: true },
+            });
+            if (!targetClient) {
+                throw errors.BAD_REQUEST({ message: "Client does not belong to this studio." });
+            }
+        }
+
+        if (updateData.serviceId !== undefined) {
+            const targetService = await db.query.service.findFirst({
+                where: (model, { eq, and }) =>
+                    and(eq(model.id, updateData.serviceId!), eq(model.studioId, existing.studioId)),
+                columns: { id: true },
+            });
+            if (!targetService) {
+                throw errors.BAD_REQUEST({ message: "Service does not belong to this studio." });
+            }
+        }
+
         if (updateData.memberId !== undefined) {
             const targetMember = await db.query.member.findFirst({
                 where: (model, { eq, and }) =>
@@ -380,7 +408,7 @@ export const updateBooking = os.booking.update.use(authMiddleware).handler(
         if (addonIds !== undefined && addonIds.length > 0) {
             const validAddons = await db.query.service.findMany({
                 where: (model, { inArray, eq, and }) =>
-                    and(inArray(model.id, addonIds), eq(model.studioId, existing.studioId)),
+                    and(inArray(model.id, addonIds), eq(model.studioId, existing.studioId), eq(model.isAddon, true)),
                 columns: { id: true },
             });
             if (validAddons.length !== new Set(addonIds).size) {
@@ -389,6 +417,8 @@ export const updateBooking = os.booking.update.use(authMiddleware).handler(
         }
 
         await db.transaction(async (tx) => {
+            await tx.select({ id: booking.id }).from(booking).where(eq(booking.id, bookingId)).for("update");
+
             if (Object.keys(updateData).length > 0) {
                 const { bookingDate, ...restData } = updateData;
                 await tx
@@ -598,6 +628,9 @@ export const updateBookingStatus = os.booking.updateStatus.use(authMiddleware).h
             if (paymentStatus || deliveryStatus) {
                 throw errors.FORBIDDEN({ message: "Insufficient permissions to change payment or delivery status." });
             }
+        }
+        if (!isAdmin && callerMember?.role === "receptionist" && (paymentStatus || deliveryStatus)) {
+            throw errors.FORBIDDEN({ message: "Receptionists cannot change payment or delivery status." });
         }
 
         const updateData: any = {};
@@ -837,17 +870,153 @@ export const verifyBooking = os.booking.verifyBooking
         });
 
         if (!intent) {
-            return {
-                status: "FAILED" as const,
-                clientName: "",
-                serviceName: "",
-                bookingDate: "",
-                totalAmount: 0,
-                amountPaid: 0,
-                paymentPlan: "FULL" as const,
+            const existingPayment = await db.query.payment.findFirst({
+                where: (model, { eq }) => eq(model.paystackReference, input.reference),
+                with: {
+                    booking: {
+                        with: {
+                            client: true,
+                            service: true,
+                        },
+                    },
+                },
+            });
+
+            if (!existingPayment || !existingPayment.booking) {
+                return {
+                    status: "FAILED" as const,
+                    clientName: "",
+                    serviceName: "",
+                    bookingDate: "",
+                    totalAmount: 0,
+                    amountPaid: 0,
+                    paymentPlan: "FULL" as const,
+                    reference: input.reference,
+                    bookingId: null,
+                };
+            }
+
+            const payBooking = existingPayment.booking;
+            const baseResult = {
+                clientName: payBooking.client?.name ?? "",
+                serviceName: payBooking.service?.name ?? "Session",
+                bookingDate: new Date(payBooking.bookingDate).toISOString(),
+                totalAmount: Number(payBooking.totalAmount ?? 0),
+                amountPaid: Number(existingPayment.amount),
+                paymentPlan: payBooking.paymentPlan,
                 reference: input.reference,
-                bookingId: null,
+                bookingId: payBooking.id,
             };
+
+            if (existingPayment.status === "PAID") {
+                return { ...baseResult, status: "COMPLETED" as const };
+            }
+
+            if (existingPayment.status !== "PENDING") {
+                return { ...baseResult, status: "EXPIRED" as const, amountPaid: 0 };
+            }
+
+            try {
+                const verification = await paystackFetch<{
+                    status: boolean;
+                    data?: { status?: string; amount?: number; currency?: string; reference?: string };
+                }>(`/transaction/verify/${encodeURIComponent(input.reference)}`);
+
+                if (verification.status && verification.data?.status === "success") {
+                    const paidAmount = Number(verification.data.amount ?? 0);
+                    const expectedAmount = Math.round(Number(existingPayment.amount) * 100);
+                    const paidCurrency = String(verification.data.currency ?? "").toUpperCase();
+
+                    if (
+                        Number.isInteger(paidAmount) &&
+                        paidAmount === expectedAmount &&
+                        paidCurrency === "NGN"
+                    ) {
+                        const txResult = await db.transaction(async (tx) => {
+                            const [lockedBooking] = await tx
+                                .select({ id: booking.id, totalAmount: booking.totalAmount })
+                                .from(booking)
+                                .where(eq(booking.id, payBooking.id))
+                                .for("update");
+
+                            if (!lockedBooking) {
+                                return "FAILED" as const;
+                            }
+
+                            const lockedPayment = await tx.query.payment.findFirst({
+                                where: eq(payment.id, existingPayment.id),
+                            });
+
+                            if (lockedPayment?.status === "PAID") {
+                                return "COMPLETED" as const;
+                            }
+                            if (!lockedPayment || lockedPayment.status !== "PENDING") {
+                                return "EXPIRED" as const;
+                            }
+
+                            const allPayments = await tx.query.payment.findMany({
+                                where: eq(payment.bookingId, payBooking.id),
+                            });
+                            const paidBeforeKobo = allPayments
+                                .filter((p) => p.status === "PAID")
+                                .reduce((sum, p) => sum + Math.round(Number(p.amount) * 100), 0);
+                            const grandTotalKobo = Math.round(Number(lockedBooking.totalAmount ?? 0) * 100);
+                            const remainingBeforeKobo = Math.max(0, grandTotalKobo - paidBeforeKobo);
+
+                            if (remainingBeforeKobo < expectedAmount) {
+                                return "FAILED" as const;
+                            }
+
+                            await tx
+                                .update(payment)
+                                .set({
+                                    status: "PAID",
+                                    paystackResponse: verification.data as any,
+                                    paymentDate: new Date().toISOString(),
+                                })
+                                .where(and(eq(payment.id, existingPayment.id), eq(payment.status, "PENDING")));
+
+                            const totalPaidAfterKobo = paidBeforeKobo + expectedAmount;
+                            const newRemainingKobo = Math.max(0, grandTotalKobo - totalPaidAfterKobo);
+                            const newPaymentStatus = totalPaidAfterKobo >= grandTotalKobo ? "PAID" : "PARTIALLY_PAID";
+
+                            await tx
+                                .update(booking)
+                                .set({ paymentStatus: newPaymentStatus })
+                                .where(eq(booking.id, payBooking.id));
+
+                            const stalePendingIds = allPayments
+                                .filter(
+                                    (p) =>
+                                        p.id !== existingPayment.id &&
+                                        p.status === "PENDING" &&
+                                        (newRemainingKobo <= 0 ||
+                                            Math.round(Number(p.amount) * 100) !== newRemainingKobo)
+                                )
+                                .map((p) => p.id);
+
+                            if (stalePendingIds.length > 0) {
+                                await tx
+                                    .update(payment)
+                                    .set({ status: "CANCELLED" })
+                                    .where(inArray(payment.id, stalePendingIds));
+                            }
+
+                            return "COMPLETED" as const;
+                        });
+
+                        return {
+                            ...baseResult,
+                            status: txResult,
+                            ...(txResult !== "COMPLETED" ? { amountPaid: 0 } : {}),
+                        };
+                    }
+                }
+            } catch (err) {
+                console.error(`[Verify] Paystack verification failed for payment ${input.reference}:`, err);
+            }
+
+            return { ...baseResult, status: "PENDING" as const };
         }
 
         // If intent is still PENDING, verify with Paystack and process if paid

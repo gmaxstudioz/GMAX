@@ -10,10 +10,10 @@ export const MAX_SINGLE_UPLOAD_BYTES = 100 * 1024 * 1024; // 100 MB
 export const MAX_MULTIPART_PART_NUMBER = 10_000;
 
 const ALLOWED_S3_DIRECTORY_REGEX =
-    /^(?:academy\/thumbnails|portfolio|studio\/member\/profile|studio\/logo|studio\/media|store\/[A-Za-z0-9_-]{1,64}\/(?:productItem|thumbnail)|studio\/bookings\/[A-Za-z0-9_-]{1,64}\/photos)$/;
+    /^(?:academy\/thumbnails|portfolio|studio\/member\/profile(?:\/[A-Za-z0-9_-]{1,64})?|studio\/logo|studio\/media|store\/[A-Za-z0-9_-]{1,64}\/(?:productItem|thumbnail)|studio\/bookings\/[A-Za-z0-9_-]{1,64}\/photos)$/;
 
 const ALLOWED_S3_KEY_REGEX =
-    /^(?:academy\/thumbnails|portfolio|studio\/member\/profile|studio\/logo|studio\/media|store\/[A-Za-z0-9_-]{1,64}\/(?:productItem|thumbnail)|studio\/bookings\/[A-Za-z0-9_-]{1,64}\/photos)\/[A-Za-z0-9._-]+$/;
+    /^(?:academy\/thumbnails|portfolio|studio\/member\/profile\/[A-Za-z0-9_-]{1,64}|studio\/logo|studio\/media|store\/[A-Za-z0-9_-]{1,64}\/(?:productItem|thumbnail)|studio\/bookings\/[A-Za-z0-9_-]{1,64}\/photos)\/[A-Za-z0-9._-]+$/;
 
 const BLOCKED_CONTENT_TYPES = new Set([
     "text/html",
@@ -43,6 +43,58 @@ export function sanitizeFileName(rawName: string): string {
 type S3AuthResult =
     | { ok: true; userId: string }
     | { ok: false; response: NextResponse };
+
+export type S3KeyAuthResult =
+    | { ok: true; userId: string; key: string }
+    | { ok: false; response: NextResponse };
+
+export function resolveUploadDirectory(directory: string, userId: string): string {
+    if (directory === "studio/member/profile") {
+        return `studio/member/profile/${userId}`;
+    }
+    return directory;
+}
+
+export function normalizeS3ObjectKey(rawKey: string): string | null {
+    const trimmed = rawKey.trim();
+    if (!trimmed) return null;
+
+    const r2PublicUrl = (process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "").replace(/\/+$/, "");
+    let normalized = trimmed;
+
+    if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(trimmed) || trimmed.startsWith("//")) {
+        if (!r2PublicUrl) return null;
+        try {
+            const parsedKey = new URL(trimmed);
+            const parsedBase = new URL(r2PublicUrl);
+            const basePath = parsedBase.pathname.replace(/\/+$/, "");
+            if (
+                parsedKey.origin !== parsedBase.origin ||
+                (basePath &&
+                    parsedKey.pathname !== basePath &&
+                    !parsedKey.pathname.startsWith(`${basePath}/`))
+            ) {
+                return null;
+            }
+            normalized = parsedKey.pathname.slice(basePath.length).replace(/^\/+/, "");
+        } catch {
+            return null;
+        }
+    } else {
+        normalized = trimmed.replace(/^\/+/, "");
+    }
+
+    if (
+        !normalized ||
+        normalized.includes("..") ||
+        normalized.includes("\\") ||
+        /[\x00-\x1f\x7f?#]/.test(normalized)
+    ) {
+        return null;
+    }
+
+    return normalized;
+}
 
 async function authorizeTrustedLegacyKeyDelete(
     reqHeaders: Headers,
@@ -109,20 +161,6 @@ async function authorizeTrustedLegacyKeyDelete(
             };
         }
         return { ok: true, userId: dbUser.id };
-    }
-
-    const matchedUser = await db.query.user.findFirst({
-        where: inArray(schema.user.image, candidateKeys),
-        columns: { id: true },
-    });
-    if (matchedUser) {
-        if (isPlatformAdmin || matchedUser.id === dbUser.id) {
-            return { ok: true, userId: dbUser.id };
-        }
-        return {
-            ok: false,
-            response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
-        };
     }
 
     const matchedStudio = await db.query.studio.findFirst({
@@ -231,24 +269,21 @@ export async function requireS3DirectoryAccess(
 
     if (directory === "studio/member/profile") {
         if (mode === "delete") {
-            if (!key) {
-                return {
-                    ok: false,
-                    response: NextResponse.json({ error: "Invalid object key" }, { status: 400 }),
-                };
-            }
-            const r2PublicUrl = (process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "").replace(/\/+$/, "");
-            const candidateKeys = r2PublicUrl ? [key, `${r2PublicUrl}/${key}`] : [key];
-            const ownerUser = await db.query.user.findFirst({
-                where: inArray(schema.user.image, candidateKeys),
-                columns: { id: true },
-            });
-            if (!ownerUser || ownerUser.id !== dbUser.id) {
-                return {
-                    ok: false,
-                    response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
-                };
-            }
+            return {
+                ok: false,
+                response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+            };
+        }
+        return { ok: true, userId: dbUser.id };
+    }
+
+    if (directory.startsWith("studio/member/profile/")) {
+        const ownerUserId = directory.slice("studio/member/profile/".length);
+        if (!ownerUserId || ownerUserId !== dbUser.id) {
+            return {
+                ok: false,
+                response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+            };
         }
         return { ok: true, userId: dbUser.id };
     }
@@ -323,10 +358,11 @@ export async function requireS3DirectoryAccess(
 
 export async function requireS3KeyAccess(
     reqHeaders: Headers,
-    key: string,
+    rawKey: string,
     mode: "upload" | "delete" = "upload",
-): Promise<S3AuthResult> {
-    if (key.includes("..")) {
+): Promise<S3KeyAuthResult> {
+    const key = normalizeS3ObjectKey(rawKey);
+    if (!key) {
         return {
             ok: false,
             response: NextResponse.json({ error: "Invalid object key" }, { status: 400 }),
@@ -335,7 +371,8 @@ export async function requireS3KeyAccess(
 
     if (!ALLOWED_S3_KEY_REGEX.test(key)) {
         if (mode === "delete") {
-            return authorizeTrustedLegacyKeyDelete(reqHeaders, key);
+            const legacyResult = await authorizeTrustedLegacyKeyDelete(reqHeaders, key);
+            return legacyResult.ok ? { ...legacyResult, key } : legacyResult;
         }
         return {
             ok: false,
@@ -382,5 +419,5 @@ export async function requireS3KeyAccess(
         }
     }
 
-    return baseResult;
+    return { ...baseResult, key };
 }

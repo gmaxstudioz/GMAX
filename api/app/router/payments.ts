@@ -67,6 +67,10 @@ export const verifyPurchase = os.payment.verifyPurchase
             };
         }
 
+        if (paymentRecord.status !== "PENDING") {
+            return { verified: false };
+        }
+
         try {
             // Verify with Paystack
             const response = await paystackFetch<{
@@ -92,13 +96,90 @@ export const verifyPurchase = os.payment.verifyPurchase
 
                 try {
                     await db.transaction(async (tx) => {
+                        if (paymentRecord.bookingId) {
+                            const [lockedBooking] = await tx
+                                .select({ id: booking.id, totalAmount: booking.totalAmount })
+                                .from(booking)
+                                .where(eq(booking.id, paymentRecord.bookingId))
+                                .for("update");
+
+                            if (!lockedBooking) {
+                                throw new Error("STALE_OR_INVALID");
+                            }
+
+                            const currentPayments = await tx.query.payment.findMany({
+                                where: eq(payment.bookingId, paymentRecord.bookingId),
+                            });
+                            const currentRecord = currentPayments.find((p) => p.id === paymentRecord.id);
+                            if (currentRecord?.status === "PAID") {
+                                throw new Error("P2025");
+                            }
+                            if (!currentRecord || currentRecord.status !== "PENDING") {
+                                throw new Error("STALE_OR_INVALID");
+                            }
+
+                            const paidBeforeKobo = currentPayments
+                                .filter((p) => p.status === "PAID")
+                                .reduce((sum, p) => sum + Math.round(Number(p.amount) * 100), 0);
+                            const grandTotalKobo = Math.round(Number(lockedBooking.totalAmount ?? 0) * 100);
+                            const remainingBeforeKobo = Math.max(0, grandTotalKobo - paidBeforeKobo);
+                            if (remainingBeforeKobo < expectedAmount) {
+                                throw new Error("STALE_OR_INVALID");
+                            }
+                        }
+
                         const updateRes = await tx.update(payment)
-                            .set({ status: "PAID" })
-                            .where(and(eq(payment.id, paymentRecord.id), ne(payment.status, "PAID")))
+                            .set({
+                                status: "PAID",
+                                ...(isProductPurchase ? {} : { paystackResponse: response.data as any }),
+                            })
+                            .where(and(eq(payment.id, paymentRecord.id), eq(payment.status, "PENDING")))
                             .returning();
                         
                         if (updateRes.length === 0) {
-                            throw new Error("P2025");
+                            const latest = await tx.query.payment.findFirst({
+                                where: eq(payment.id, paymentRecord.id),
+                                columns: { status: true },
+                            });
+                            if (latest?.status === "PAID") {
+                                throw new Error("P2025");
+                            }
+                            throw new Error("STALE_OR_INVALID");
+                        }
+
+                        if (paymentRecord.bookingId) {
+                            const updatedPayments = await tx.query.payment.findMany({
+                                where: eq(payment.bookingId, paymentRecord.bookingId),
+                            });
+                            const [lockedBooking] = await tx
+                                .select({ totalAmount: booking.totalAmount })
+                                .from(booking)
+                                .where(eq(booking.id, paymentRecord.bookingId));
+                            const grandTotalKobo = Math.round(Number(lockedBooking?.totalAmount ?? 0) * 100);
+                            const totalPaidKobo = updatedPayments
+                                .filter((p) => p.status === "PAID")
+                                .reduce((sum, p) => sum + Math.round(Number(p.amount) * 100), 0);
+                            const newRemainingKobo = Math.max(0, grandTotalKobo - totalPaidKobo);
+                            const newPaymentStatus = totalPaidKobo >= grandTotalKobo ? "PAID" : "PARTIALLY_PAID";
+
+                            await tx.update(booking)
+                                .set({ paymentStatus: newPaymentStatus })
+                                .where(eq(booking.id, paymentRecord.bookingId));
+
+                            const stalePendingIds = updatedPayments
+                                .filter(
+                                    (p) =>
+                                        p.id !== paymentRecord.id &&
+                                        p.status === "PENDING" &&
+                                        (newRemainingKobo <= 0 || Math.round(Number(p.amount) * 100) !== newRemainingKobo)
+                                )
+                                .map((p) => p.id);
+
+                            if (stalePendingIds.length > 0) {
+                                await tx.update(payment)
+                                    .set({ status: "CANCELLED" })
+                                    .where(inArray(payment.id, stalePendingIds));
+                            }
                         }
 
                         if (isProductPurchase && productId && buyerId && !firstProductAccess) {
@@ -123,6 +204,9 @@ export const verifyPurchase = os.payment.verifyPurchase
                             verified: true,
                             buyerId: buyerId,
                         };
+                    }
+                    if (error.message === "STALE_OR_INVALID") {
+                        return { verified: false };
                     }
                     throw error;
                 }
@@ -192,10 +276,6 @@ export const verifyPurchase = os.payment.verifyPurchase
 
                 // ── Booking payment ──────────────────────────────────
                 if (paymentRecord.bookingId && paymentRecord.booking) {
-                    await db.update(booking)
-                        .set({ paymentStatus: "PAID" })
-                        .where(eq(booking.id, paymentRecord.bookingId));
-
                     // Send booking confirmation email
                     const clientEmail = paymentRecord.booking.client?.email;
                     if (clientEmail) {
@@ -258,12 +338,13 @@ export const getPublicPaymentDetails = os.payment.getPublicPaymentDetails
                 booking: {
                     with: {
                         client: true,
+                        payments: true,
                         service: {
-                            with: { studioSession: true },
+                            with: { studioSession: true, serviceVariants: true },
                         },
                         studio: true,
                         bookingAddons: {
-                            with: { service: true }
+                            with: { service: { with: { serviceVariants: true } } }
                         },
                     },
                 },
@@ -330,7 +411,58 @@ export const getPublicPaymentDetails = os.payment.getPublicPaymentDetails
             };
         }
 
-        const isAlreadyPaid = paymentRecord.status === "PAID";
+        let isAlreadyPaid = paymentRecord.status === "PAID";
+        let effectiveStatus = paymentRecord.status;
+
+        if (paymentRecord.booking && paymentRecord.status !== "PAID") {
+            const b = paymentRecord.booking;
+            const servicePrice = Number(
+                b.service?.serviceVariants?.find((v: any) => v.id === b.serviceVariantId)?.basePrice ??
+                    b.service?.serviceVariants?.[0]?.basePrice ??
+                    0
+            );
+            const sessionTotal = servicePrice * b.sessionCount;
+            const addonsTotal = (b.bookingAddons || []).reduce((sum: number, a: any) => {
+                const addonService = a.service || a;
+                const variantId = addonService?.addonVariantId;
+                const variant = variantId
+                    ? addonService?.serviceVariants?.find((v: any) => v.id === variantId)
+                    : addonService?.serviceVariants?.[0];
+                return sum + Number(variant?.basePrice ?? 0);
+            }, 0);
+            const grandTotalKobo = Math.round(
+                (b.totalAmount != null ? Number(b.totalAmount) : sessionTotal + addonsTotal) * 100
+            );
+            const paidKobo = (b.payments || [])
+                .filter((p: any) => p.status === "PAID")
+                .reduce((sum: number, p: any) => sum + Math.round(Number(p.amount) * 100), 0);
+            const balanceDueKobo = Math.max(0, grandTotalKobo - paidKobo);
+            const paymentAmountKobo = Math.round(Number(paymentRecord.amount) * 100);
+
+            if (balanceDueKobo <= 0) {
+                if (paymentRecord.status === "PENDING") {
+                    await db
+                        .update(payment)
+                        .set({ status: "CANCELLED" })
+                        .where(and(eq(payment.id, paymentRecord.id), eq(payment.status, "PENDING")));
+                }
+                isAlreadyPaid = true;
+                effectiveStatus = "PAID";
+            } else if (
+                b.bookingStatus === "CANCELLED" ||
+                paymentRecord.status !== "PENDING" ||
+                paymentAmountKobo !== balanceDueKobo
+            ) {
+                if (paymentRecord.status === "PENDING") {
+                    await db
+                        .update(payment)
+                        .set({ status: "CANCELLED" })
+                        .where(and(eq(payment.id, paymentRecord.id), eq(payment.status, "PENDING")));
+                }
+                isAlreadyPaid = false;
+                effectiveStatus = "CANCELLED";
+            }
+        }
 
         const bookingData = paymentRecord.booking ? {
             sessionCount: paymentRecord.booking.sessionCount,
@@ -372,7 +504,7 @@ export const getPublicPaymentDetails = os.payment.getPublicPaymentDetails
 
         return {
             amount: paymentRecord.amount.toString(),
-            status: paymentRecord.status,
+            status: effectiveStatus,
             isAlreadyPaid,
             booking: bookingData,
             productAccess: productAccessData,

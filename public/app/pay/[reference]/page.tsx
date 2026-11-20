@@ -63,6 +63,7 @@ export default async function PaymentPage({ params }: Props) {
  
     const studio = booking?.studio;
     const isAlreadyPaid = payment.isAlreadyPaid;
+    const isLinkInvalid = !isAlreadyPaid && payment.status === "CANCELLED";
     const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
     const paystackPublicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "";
 
@@ -204,6 +205,13 @@ export default async function PaymentPage({ params }: Props) {
                                         Access Your Downloads
                                     </Link>
                                 )}
+                            </div>
+                        ) : isLinkInvalid ? (
+                            <div className="flex flex-col items-center gap-3 py-4">
+                                <h3 className="text-xl font-bold text-destructive">Payment Link Expired</h3>
+                                <p className="text-sm text-muted-foreground text-center">
+                                    This payment link is no longer valid because the booking balance has changed. Please request a new payment link.
+                                </p>
                             </div>
                         ) : (
                             <PaymentCheckout

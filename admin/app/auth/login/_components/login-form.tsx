@@ -139,9 +139,18 @@ function LoginFormContent({
                 <Button type="submit" disabled={isPending}>
                   {isPending ? "Logging in..." : "Login"}
                 </Button>
-                {/* <FieldDescription className="text-center">
-                  Don&apos;t have an account? <a href="/auth/signup">Sign up</a>
-                </FieldDescription> */}
+                <FieldDescription className="text-center">
+                  Don&apos;t have an account?{" "}
+                  <Link
+                    href={
+                      redirectUrl !== "/"
+                        ? `/auth/signup?redirect=${encodeURIComponent(redirectUrl)}`
+                        : "/auth/signup"
+                    }
+                  >
+                    Sign up
+                  </Link>
+                </FieldDescription>
               </Field>
             </FieldGroup>
           </form>

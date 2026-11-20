@@ -54,20 +54,36 @@ export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: Medi
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
     const [photoToReplace, setPhotoToReplace] = useState<string | null>(null);
-    const [freshUrls, setFreshUrls] = useState<Record<string, string>>({});
+    const REFRESH_INTERVAL_MS = 45 * 60 * 1000;
+    const [freshUrls, setFreshUrls] = useState<
+        Record<string, { url: string; sourceKey: string; issuedAt: number }>
+    >({});
     const lastRefreshedAtRef = useRef<number>(0);
+    const photosRef = useRef(photos);
+
+    useEffect(() => {
+        photosRef.current = photos;
+    }, [photos]);
 
     const refreshAllUrls = useCallback(async () => {
         const { data: res, error } = await tryCatch(getBookingPhotosPresignedUrls(bookingId));
         if (!error && res?.status === "success" && res.urls) {
-            setFreshUrls(res.urls);
-            lastRefreshedAtRef.current = Date.now();
+            const issuedAt = Date.now();
+            const keyById = new Map(photosRef.current.map((p) => [p.id, p.r2Key]));
+            const nextUrls: Record<string, { url: string; sourceKey: string; issuedAt: number }> = {};
+            for (const [id, url] of Object.entries(res.urls)) {
+                const sourceKey = keyById.get(id);
+                if (sourceKey) {
+                    nextUrls[id] = { url, sourceKey, issuedAt };
+                }
+            }
+            setFreshUrls(nextUrls);
+            lastRefreshedAtRef.current = issuedAt;
         }
     }, [bookingId]);
 
     useEffect(() => {
         lastRefreshedAtRef.current = Date.now();
-        const REFRESH_INTERVAL_MS = 45 * 60 * 1000;
         const interval = setInterval(() => {
             void refreshAllUrls();
         }, REFRESH_INTERVAL_MS);
@@ -83,18 +99,34 @@ export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: Medi
             clearInterval(interval);
             window.removeEventListener("focus", handleFocus);
         };
-    }, [refreshAllUrls, photos]);
+    }, [refreshAllUrls]);
 
     const getMediaUrl = (key: string) =>
         key.startsWith("http://") || key.startsWith("https://") ? key : `${r2PublicUrl}/${key}`;
 
+    const getActivePhotoUrl = (photo: PhotoItem): string => {
+        const cached = freshUrls[photo.id];
+        if (
+            cached &&
+            cached.sourceKey === photo.r2Key &&
+            Date.now() - cached.issuedAt < REFRESH_INTERVAL_MS
+        ) {
+            return cached.url;
+        }
+        return getMediaUrl(photo.r2Key);
+    };
+
     const resolveFreshPhotoUrl = async (photo: PhotoItem): Promise<string> => {
         const { data: res, error } = await tryCatch(getBookingPhotoPresignedUrl(photo.id));
         if (!error && res?.status === "success" && res.url) {
-            setFreshUrls((prev) => ({ ...prev, [photo.id]: res.url }));
+            const issuedAt = Date.now();
+            setFreshUrls((prev) => ({
+                ...prev,
+                [photo.id]: { url: res.url, sourceKey: photo.r2Key, issuedAt },
+            }));
             return res.url;
         }
-        return freshUrls[photo.id] || getMediaUrl(photo.r2Key);
+        return getActivePhotoUrl(photo);
     };
 
     const handleApprove = (photoId: string) => {
@@ -180,7 +212,7 @@ export function MediaGallery({ photos, isManager, r2PublicUrl, bookingId }: Medi
                                 </div>
                             ) : (
                                 <Image
-                                    src={freshUrls[photo.id] || getMediaUrl(photo.r2Key)}
+                                    src={getActivePhotoUrl(photo)}
                                     alt={photo.fileName}
                                     className="object-cover w-full h-full"
                                     width={500}

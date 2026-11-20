@@ -11,7 +11,7 @@ export const publicBookingSchema = z.object({
     selectedServiceId: z.string().min(1, "Please select a service"),
     selectedVariantId: z.string().min(1, "Please select a service option"),
     selectedAddonIds: z.array(z.string()),
-    sessionCount: z.number().min(1, "Must be at least 1"),
+    sessionCount: z.number().int("Must be a whole number").min(1, "Must be at least 1").max(50, "Maximum 50 sessions"),
     extraPicturesCount: z.number().min(0).default(0),
     bookingDate: z.string().min(1, "Please select a date"),
     notes: z.string().optional(),

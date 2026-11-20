@@ -190,7 +190,16 @@ function SignupFormContent({
                     )}
                 </Button>
                 <FieldDescription className="text-center">
-                  Already have an account? <a href="/auth/login">Sign in</a>
+                  Already have an account?{" "}
+                  <a
+                    href={
+                      redirectUrl !== "/"
+                        ? `/auth/login?redirect=${encodeURIComponent(redirectUrl)}`
+                        : "/auth/login"
+                    }
+                  >
+                    Sign in
+                  </a>
                 </FieldDescription>
               </Field>
             </FieldGroup>

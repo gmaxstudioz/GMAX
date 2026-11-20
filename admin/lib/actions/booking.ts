@@ -591,15 +591,17 @@ export async function deletePhoto(photoId: string) {
             if (!keyAuth.ok) {
                 return { status: "error", message: "Unauthorized to delete photo key" };
             }
-            if (process.env.R2_BUCKET_NAME) {
-                try {
-                    await S3.send(new DeleteObjectCommand({
-                        Bucket: process.env.R2_BUCKET_NAME,
-                        Key: photo.r2Key,
-                    }));
-                } catch (r2Error) {
-                    console.error("[R2] Failed to delete file from storage:", r2Error);
-                }
+            if (!process.env.R2_BUCKET_NAME) {
+                return { status: "error", message: "Storage configuration missing; photo deletion cannot proceed" };
+            }
+            try {
+                await S3.send(new DeleteObjectCommand({
+                    Bucket: process.env.R2_BUCKET_NAME,
+                    Key: photo.r2Key,
+                }));
+            } catch (r2Error) {
+                console.error("[R2] Failed to delete file from storage:", r2Error);
+                return { status: "error", message: "Failed to delete photo from storage; please retry" };
             }
         }
 
@@ -639,8 +641,10 @@ export async function deleteBooking(bookingId: string) {
 
         const expectedPrefix = `studio/bookings/${booking.id}/photos/`;
         if (booking.photos && booking.photos.length > 0) {
+            let hasStorageKeys = false;
             for (const photo of booking.photos) {
                 if (!photo.r2Key) continue;
+                hasStorageKeys = true;
                 if (!photo.r2Key.startsWith(expectedPrefix)) {
                     return { status: "error", message: "Refusing to delete booking with foreign photo key" };
                 }
@@ -650,9 +654,12 @@ export async function deleteBooking(bookingId: string) {
                 }
             }
 
-            if (process.env.R2_BUCKET_NAME) {
-                for (const photo of booking.photos) {
-                    if (!photo.r2Key) continue;
+            if (hasStorageKeys && !process.env.R2_BUCKET_NAME) {
+                return { status: "error", message: "Storage configuration missing; cannot delete booking photos" };
+            }
+
+            for (const photo of booking.photos) {
+                if (photo.r2Key) {
                     try {
                         await S3.send(new DeleteObjectCommand({
                             Bucket: process.env.R2_BUCKET_NAME,
@@ -660,8 +667,10 @@ export async function deleteBooking(bookingId: string) {
                         }));
                     } catch (r2Error) {
                         console.error(`[R2] Failed to delete photo ${photo.r2Key}:`, r2Error);
+                        return { status: "error", message: "Failed to delete booking photos from storage; please retry" };
                     }
                 }
+                await db.delete(schema.photo).where(eq(schema.photo.id, photo.id));
             }
         }
 
@@ -730,6 +739,7 @@ export async function updateBookingFull(
         if (data.deliveryStatus) updateData.deliveryStatus = data.deliveryStatus;
         
         let priceChangeNotificationNeeded = false;
+        let shouldCancelPendingPayments = false;
         if (data.totalAmount !== undefined && data.totalAmount !== Number(booking.totalAmount)) {
             if (member.role === "manager") {
                 updateData.pendingTotalAmount = data.totalAmount.toString();
@@ -740,6 +750,7 @@ export async function updateBookingFull(
                 updateData.totalAmount = data.totalAmount.toString();
                 updateData.priceApprovalStatus = "APPROVED";
                 updateData.pendingTotalAmount = null;
+                shouldCancelPendingPayments = true;
             }
         }
         
@@ -753,6 +764,17 @@ export async function updateBookingFull(
         await db.update(schema.booking)
             .set(updateData)
             .where(eq(schema.booking.id, bookingId));
+
+        if (shouldCancelPendingPayments) {
+            await db.update(schema.payment)
+                .set({ status: "CANCELLED" })
+                .where(
+                    and(
+                        eq(schema.payment.bookingId, bookingId),
+                        eq(schema.payment.status, "PENDING")
+                    )
+                );
+        }
 
         // Handle addon updates
         if (data.addonIds !== undefined) {

@@ -88,6 +88,7 @@ export async function requireStudioMember(studioId: string): Promise<
 // Returns session + member + booking or an error.
 
 export const STUDIO_MANAGEMENT_ROLES = ["owner", "admin", "manager", "developer"] as const;
+export const RESCHEDULE_ROLES = ["owner", "admin", "manager", "developer", "photographer", "videographer"] as const;
 
 export async function requireBookingAccess(bookingId: string): Promise<
     {
