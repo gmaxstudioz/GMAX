@@ -54,7 +54,7 @@ export const verifyPurchase = os.payment.verifyPurchase
         });
 
         if (!paymentRecord) {
-            return { verified: false };
+            return { verified: false, status: "FAILED" as const };
         }
 
         const firstProductAccess = paymentRecord.productAccesses?.[0];
@@ -63,12 +63,13 @@ export const verifyPurchase = os.payment.verifyPurchase
         if (paymentRecord.status === "PAID") {
             return {
                 verified: true,
+                status: "PAID" as const,
                 buyerId: firstProductAccess?.buyerId,
             };
         }
 
         if (paymentRecord.status !== "PENDING") {
-            return { verified: false };
+            return { verified: false, status: "FAILED" as const };
         }
 
         try {
@@ -86,7 +87,7 @@ export const verifyPurchase = os.payment.verifyPurchase
                     console.error(
                         `[verifyPurchase] Amount/currency mismatch for ${input.reference}: expected ${expectedAmount} NGN, got ${paidAmount} ${paidCurrency}`
                     );
-                    return { verified: false };
+                    return { verified: false, status: "FAILED" as const };
                 }
 
                 const paystackRes = paymentRecord.paystackResponse as { pendingProduct?: { title: string }, pendingBuyer?: { name: string, email: string }, productId?: string, buyerId?: string } | null;
@@ -202,11 +203,12 @@ export const verifyPurchase = os.payment.verifyPurchase
                     if (error.message === "P2025") {
                         return {
                             verified: true,
+                            status: "PAID" as const,
                             buyerId: buyerId,
                         };
                     }
                     if (error.message === "STALE_OR_INVALID") {
-                        return { verified: false };
+                        return { verified: false, status: "FAILED" as const };
                     }
                     throw error;
                 }
@@ -270,7 +272,7 @@ export const verifyPurchase = os.payment.verifyPurchase
                         console.error("[verifyPurchase] Notification error:", notifErr);
                     }
 
-                    return { verified: true, buyerId };
+                    return { verified: true, status: "PAID" as const, buyerId };
                 }
 
 
@@ -317,16 +319,21 @@ export const verifyPurchase = os.payment.verifyPurchase
                         });
                     }
 
-                    return { verified: true };
+                    return { verified: true, status: "PAID" as const };
                 }
 
-                return { verified: true };
+                return { verified: true, status: "PAID" as const };
+            }
+
+            const gatewayStatus = String(response.data?.status ?? "").toLowerCase();
+            if (["failed", "abandoned", "reversed"].includes(gatewayStatus)) {
+                return { verified: false, status: "FAILED" as const };
             }
         } catch (e) {
             console.error("[verifyPurchase] Paystack verification failed:", e);
         }
 
-        return { verified: false };
+        return { verified: false, status: "PENDING" as const };
     });
 
 export const getPublicPaymentDetails = os.payment.getPublicPaymentDetails

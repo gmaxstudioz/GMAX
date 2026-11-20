@@ -104,6 +104,7 @@ export const verifyPurchaseContract = baseContract
     .input(z.object({ reference: z.string().min(1) }))
     .output(z.object({
         verified: z.boolean(),
+        status: z.enum(["PAID", "PENDING", "FAILED"]),
         buyerId: z.string().optional(),
     }));
 

@@ -153,7 +153,7 @@ import type { PublicPaymentDetailsOutput } from "@/lib/types/payment";
 
 /** GET /payments/verify-purchase — contract: verifyPurchaseContract */
 export const verifyPurchase = (reference: string) =>
-    get<{ verified: boolean; buyerId?: string }>("/payments/verify-purchase", { reference });
+    get<{ verified: boolean; status: "PAID" | "PENDING" | "FAILED"; buyerId?: string }>("/payments/verify-purchase", { reference });
 
 /** GET /payments/public-details/{reference} — contract: getPublicPaymentDetailsContract */
 export const getPublicPaymentDetails = (reference: string) =>

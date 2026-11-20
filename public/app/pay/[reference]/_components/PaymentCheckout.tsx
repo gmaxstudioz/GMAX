@@ -34,7 +34,7 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
     const router = useRouter();
     const isEmailMasked = !email || email.includes("*");
     const [payerEmail, setPayerEmail] = useState(isEmailMasked ? "" : email);
-    const [status, setStatus] = useState<"idle" | "processing" | "pending" | "success" | "failed">("idle");
+    const [status, setStatus] = useState<"idle" | "processing" | "pending" | "verification_error" | "success" | "failed">("idle");
     const [scriptLoaded, setScriptLoaded] = useState(false);
     const [countdown, setCountdown] = useState(5);
 
@@ -65,29 +65,46 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
         return () => clearTimeout(timer);
     }, [status, countdown, purchaseType, router]);
 
+    const verifyBookingStatus = async (refToVerify: string) => {
+        const { data: result, error } = await tryCatch(verifyBookingPayment(refToVerify));
+        if (error || !result) {
+            setStatus("verification_error");
+            toast.error("Unable to verify payment right now. Please re-check your payment status.");
+        } else if (result.status === "COMPLETED") {
+            setStatus("success");
+            toast.success("Payment successful!");
+        } else if (result.status === "FAILED" || result.status === "EXPIRED") {
+            setStatus("failed");
+            toast.error("Payment verification failed. Please contact support.");
+        } else {
+            setStatus("pending");
+            toast.info("Payment is still being confirmed. Please check status again in a moment.");
+        }
+    };
+
     const verifyReference = async (refToVerify: string) => {
         setStatus("processing");
 
         if (purchaseType === "booking" && refToVerify.startsWith("gmax-pub-")) {
-            const { data: result, error } = await tryCatch(verifyBookingPayment(refToVerify));
-            if (error || !result || result.status === "FAILED" || result.status === "EXPIRED") {
-                setStatus("failed");
-                toast.error("Payment verification failed. Please contact support.");
-            } else if (result.status === "COMPLETED") {
-                setStatus("success");
-                toast.success("Payment successful!");
-            } else {
-                setStatus("pending");
-                toast.info("Payment is still being confirmed. Please check status again in a moment.");
-            }
+            await verifyBookingStatus(refToVerify);
         } else {
             const { data: result, error } = await tryCatch(verifyPurchase(refToVerify));
-            if (error || !result?.verified) {
-                setStatus("failed");
-                toast.error("Payment verification failed. Please contact support.");
-            } else {
+            if (error || !result) {
+                setStatus("verification_error");
+                toast.error("Unable to verify payment right now. Please re-check your payment status.");
+            } else if (result.verified || result.status === "PAID") {
                 setStatus("success");
                 toast.success("Payment successful!");
+            } else if (result.status === "PENDING") {
+                if (purchaseType === "booking") {
+                    await verifyBookingStatus(refToVerify);
+                } else {
+                    setStatus("pending");
+                    toast.info("Payment is still being confirmed. Please check status again in a moment.");
+                }
+            } else {
+                setStatus("failed");
+                toast.error("Payment verification failed. Please contact support.");
             }
         }
     };
@@ -207,6 +224,25 @@ export function PaymentCheckout({ reference, email, amount, publicKey, purchaseT
                 </div>
                 <Button onClick={() => void verifyReference(reference)} variant="outline" className="mt-2">
                     Check Payment Status
+                </Button>
+            </div>
+        );
+    }
+
+    if (status === "verification_error") {
+        return (
+            <div className="flex flex-col items-center gap-4 py-8">
+                <div className="h-16 w-16 rounded-full bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center">
+                    <XCircleIcon className="h-8 w-8 text-amber-600" />
+                </div>
+                <div className="text-center space-y-2">
+                    <h3 className="text-xl font-bold text-amber-600">Could Not Verify Payment</h3>
+                    <p className="text-muted-foreground text-sm max-w-sm">
+                        We hit a temporary error checking your payment status. Do not pay again — retry verification for reference: <strong>{reference}</strong>
+                    </p>
+                </div>
+                <Button onClick={() => void verifyReference(reference)} variant="outline" className="mt-2">
+                    Retry Verification
                 </Button>
             </div>
         );
